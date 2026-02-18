@@ -175,6 +175,34 @@ class GetConsumableSerializer(GetServiceItemSerializer):
     valid_until = serpy.Field()
 
 
+class GetConsumableForInvoiceSerializer(serpy.Serializer):
+    """Consumable payload for invoice detail (Consumable has service_item, not service)."""
+
+    id = serpy.Field()
+    unit_type = serpy.Field()
+    how_many = serpy.Field()
+    sort_priority = serpy.Field()
+    valid_until = serpy.Field()
+    user = serpy.MethodField()
+    service = serpy.MethodField()
+    is_team_allowed = serpy.MethodField()
+
+    def get_user(self, obj):
+        if obj.user_id and obj.user:
+            return GetUserSmallSerializer(obj.user, many=False).data
+        return None
+
+    def get_service(self, obj):
+        if obj.service_item_id and obj.service_item:
+            return GetServiceSmallSerializer(obj.service_item.service, many=False).data
+        return None
+
+    def get_is_team_allowed(self, obj):
+        if obj.service_item_id and obj.service_item:
+            return obj.service_item.is_team_allowed
+        return False
+
+
 class GetFinancingOptionSerializer(serpy.Serializer):
     id = serpy.Field()
     academy = serpy.MethodField()
@@ -572,6 +600,26 @@ class GetPlanOfferSerializer(serpy.Serializer):
         return None
 
 
+class GetPaymentMethodSmallSerializer(serpy.Serializer):
+    """Minimal payment method for invoice list (id, title, is_backed)."""
+
+    id = serpy.Field()
+    title = serpy.Field()
+    is_backed = serpy.Field()
+
+
+class GetProofOfPaymentSerializer(serpy.Serializer):
+    """Proof of payment for invoice detail (staff/externally-managed invoices)."""
+
+    id = serpy.Field()
+    reference = serpy.Field()
+    status = serpy.Field()
+    confirmation_image_url = serpy.Field()
+    provided_payment_details = serpy.Field()
+    created_at = serpy.Field()
+    created_by = GetUserSmallSerializer(many=False, required=False)
+
+
 class GetInvoiceSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     amount = serpy.Field()
@@ -579,6 +627,12 @@ class GetInvoiceSmallSerializer(serpy.Serializer):
     paid_at = serpy.Field()
     status = serpy.Field()
     user = GetUserSmallSerializer(many=False)
+    standalone_consumables = serpy.MethodField()
+    payment_method = GetPaymentMethodSmallSerializer(required=False, many=False)
+    created_at = serpy.Field()
+
+    def get_standalone_consumables(self, obj):
+        return list(obj.standalone_consumables.values_list("id", flat=True))
 
 
 class GetMentorshipServiceSerializer(serpy.Serializer):
@@ -1009,6 +1063,9 @@ class GetInvoiceSerializer(GetInvoiceSmallSerializer):
     refunded_at = serpy.Field()
     amount_breakdown = serpy.Field()
     credit_notes = serpy.MethodField()
+    standalone_consumables = serpy.MethodField()
+    payment_method = serpy.MethodField()
+    proof = serpy.MethodField()
 
     def get_credit_notes(self, obj):
         import logging
@@ -1031,6 +1088,21 @@ class GetInvoiceSerializer(GetInvoiceSmallSerializer):
                 f"GetInvoiceSerializer.get_credit_notes: RelatedManager error for Invoice(id={obj.id}).credit_notes: {e}"
             )
             return []
+
+    def get_standalone_consumables(self, obj):
+        consumables_qs = obj.standalone_consumables.select_related("service_item__service", "user")
+        consumables = list(consumables_qs)
+        return GetConsumableForInvoiceSerializer(consumables, many=True).data
+
+    def get_payment_method(self, obj):
+        if obj.payment_method_id and obj.payment_method:
+            return GetPaymentMethod(obj.payment_method, many=False).data
+        return None
+
+    def get_proof(self, obj):
+        if getattr(obj, "proof_id", None) and getattr(obj, "proof", None):
+            return GetProofOfPaymentSerializer(obj.proof, many=False).data
+        return None
 
 
 class GetAbstractIOweYouSerializer(serpy.Serializer):

@@ -225,6 +225,14 @@ CAPABILITIES = [
         "description": "Read user service consumables to understand how many units are available",
     },
     {
+        "slug": "read_service_stock_status",
+        "description": "View service stock scheduler status for a user to debug consumable issues (sysadmin only)",
+    },
+    {
+        "slug": "crud_consumable",
+        "description": "Create or grant consumables for users (staff-only; requires non-card, non-crypto payment method)",
+    },
+    {
         "slug": "read_invoice",
         "description": "Read invoice information",
     },

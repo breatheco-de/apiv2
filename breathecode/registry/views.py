@@ -1220,7 +1220,10 @@ class AssetMeView(APIView, GenerateLookupsMixin):
         expand = self.request.GET.get("expand")
 
         if "big" in self.request.GET:
-            serializer = AssetMidSerializer(items, many=True)
+            expand_fields = ["readme"]
+            if expand is not None:
+                expand_fields = list(set(expand_fields + expand.split(",")))
+            serializer = AssetExpandableSerializer(items, many=True, expand=expand_fields)
         elif expand is not None:
             serializer = AssetExpandableSerializer(items, many=True, expand=expand.split(","))
         else:
@@ -1570,15 +1573,19 @@ class AcademyAssetActionView(APIView):
             return False
 
     @acapable_of("crud_asset")
-    async def post(self, request, action_slug, academy_id=None):
+    async def post(self, request, action_slug, asset_slug=None, academy_id=None):
         if action_slug not in ["test", "pull", "push", "analyze_seo", "claim_asset", "create_repo"]:
             raise ValidationException(f"Invalid action {action_slug}")
 
-        # Check if 'assets' key exists
-        if "assets" not in request.data:
-            raise ValidationException("Assets not found in the body of the request.")
+        # Use asset_slug from URL path for single-asset action, or "assets" from body for bulk
+        if asset_slug is not None:
+            assets = [asset_slug]
+        elif "assets" in request.data:
+            assets = request.data["assets"]
+        else:
+            raise ValidationException("Assets not found in the body of the request. Pass 'assets' array or use the URL path with asset slug.")
 
-        assets = request.data["assets"]
+        assets = list(assets) if isinstance(assets, (list, tuple)) else [assets]
 
         # Check if the assets list is empty
         if not assets:
@@ -1882,7 +1889,15 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
         items = items.filter(**lookup).distinct()
         items = handler.queryset(items)
 
-        serializer = AcademyAssetSerializer(items, many=True)
+        expand = self.request.GET.get("expand")
+
+        if "big" in self.request.GET:
+            expand_fields = ["readme"]
+            if expand is not None:
+                expand_fields = list(set(expand_fields + expand.split(",")))
+            serializer = AssetExpandableSerializer(items, many=True, expand=expand_fields)
+        else:
+            serializer = AcademyAssetSerializer(items, many=True)
 
         return handler.response(serializer.data)
 

@@ -1733,10 +1733,12 @@ class AcademyConsumableView(APIView):
         lang = get_user_language(request)
         utc_now = timezone.now()
 
-        # Start with consumables that belong to the academy through subscriptions or plan_financings
+        # Start with consumables that belong to the academy through subscriptions, plan_financings, or staff grant
         items = Consumable.objects.filter(
             Q(valid_until__gte=utc_now) | Q(valid_until=None),
-            Q(subscription__academy_id=academy_id) | Q(plan_financing__academy_id=academy_id),
+            Q(subscription__academy_id=academy_id)
+            | Q(plan_financing__academy_id=academy_id)
+            | Q(standalone_invoice__bag__academy_id=academy_id),
         ).exclude(how_many=0)
 
         # Filter by users if provided (comma-separated list of user IDs)
@@ -1778,6 +1780,35 @@ class AcademyConsumableView(APIView):
         }
 
         return Response(balance)
+
+
+class AcademyServiceStockStatusView(APIView):
+    """
+    Academy GET endpoint to debug service stock (scheduler) status for a user.
+    Returns schedulers that should issue consumables, their health/diagnosis, and optional balance.
+    """
+
+    @capable_of("read_service_stock_status")
+    def get(self, request, user_id, academy_id=None):
+        lang = get_user_language(request)
+        include_balance = request.GET.get("include_balance", "").lower() in ("true", "1", "y")
+        data = actions.get_service_stock_status_for_user(
+            user_id=user_id,
+            academy_id=academy_id,
+            include_balance=include_balance,
+            request=request if include_balance else None,
+        )
+        if data is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="User not found or has no link to this academy",
+                    es="Usuario no encontrado o no tiene vínculo con esta academia",
+                    slug="user-not-found",
+                ),
+                code=404,
+            )
+        return Response(data)
 
 
 class MentorshipServiceSetView(APIView):
@@ -2443,7 +2474,11 @@ class MeInvoiceView(APIView):
         lang = get_user_language(request)
 
         if invoice_id:
-            item = Invoice.objects.filter(id=invoice_id, user=request.user).first()
+            item = (
+                Invoice.objects.select_related("proof", "proof__created_by", "payment_method")
+                .filter(id=invoice_id, user=request.user)
+                .first()
+            )
 
             if not item:
                 raise ValidationException(
@@ -2458,6 +2493,7 @@ class MeInvoiceView(APIView):
         if status := request.GET.get("status"):
             items = items.filter(status__in=status.split(","))
 
+        items = items.select_related("payment_method")
         items = handler.queryset(items)
         serializer = GetInvoiceSmallSerializer(items, many=True)
 
@@ -2604,7 +2640,11 @@ class AcademyInvoiceView(APIView):
         lang = get_user_language(request)
 
         if invoice_id:
-            item = Invoice.objects.filter(id=invoice_id, academy__id=academy_id).first()
+            item = (
+                Invoice.objects.select_related("proof", "proof__created_by", "payment_method")
+                .filter(id=invoice_id, academy__id=academy_id)
+                .first()
+            )
 
             if not item:
                 raise ValidationException(
@@ -2616,6 +2656,23 @@ class AcademyInvoiceView(APIView):
 
         items = Invoice.objects.filter(academy__id=academy_id)
 
+        if user_param := request.GET.get("user"):
+            if user_param.isdigit():
+                user = User.objects.filter(id=int(user_param)).first()
+            else:
+                user = User.objects.filter(email=user_param).first()
+            if not user:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="User not found",
+                        es="Usuario no encontrado",
+                        slug="user-not-found",
+                    ),
+                    code=404,
+                )
+            items = items.filter(user=user)
+
         if status := request.GET.get("status"):
             items = items.filter(status__in=status.split(","))
 
@@ -2625,8 +2682,9 @@ class AcademyInvoiceView(APIView):
         if date_end is not None:
             items = items.filter(paid_at__lte=date_end)
 
+        items = items.select_related("payment_method")
         items = handler.queryset(items)
-        serializer = GetInvoiceSerializer(items, many=True)
+        serializer = GetInvoiceSmallSerializer(items, many=True)
 
         return handler.response(serializer.data)
 
@@ -4429,6 +4487,7 @@ class ConsumableCheckoutView(APIView):
                     how_many=total_items,
                     mentorship_service_set=mentorship_service_set,
                     event_type_set=event_type_set,
+                    standalone_invoice=invoice,
                 )
 
                 consumable.save()
@@ -6035,6 +6094,25 @@ class AcademyPlanSubscriptionView(APIView):
         data["coupons"] = s2.data
 
         return Response(data)
+
+
+class AcademyGrantConsumableView(APIView):
+    """
+    Academy-only POST to grant consumables to a user.
+    Requires crud_consumable, proof of payment (file or reference), and a non-card/non-crypto payment method.
+    """
+
+    @capable_of("crud_consumable")
+    def post(self, request, academy_id=None):
+        lang = get_user_language(request)
+        proof = actions.validate_and_create_proof_of_payment(request, request.user, academy_id, lang)
+        try:
+            invoice = actions.grant_consumables_for_user(request, proof, academy_id, lang)
+        except Exception as e:
+            proof.delete()
+            raise e
+        serializer = GetInvoiceSerializer(invoice, many=False)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class CurrencyView(APIView):
