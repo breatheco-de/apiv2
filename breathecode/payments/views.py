@@ -2616,6 +2616,23 @@ class AcademyInvoiceView(APIView):
 
         items = Invoice.objects.filter(academy__id=academy_id)
 
+        if user_param := request.GET.get("user"):
+            if user_param.isdigit():
+                user = User.objects.filter(id=int(user_param)).first()
+            else:
+                user = User.objects.filter(email=user_param).first()
+            if not user:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="User not found",
+                        es="Usuario no encontrado",
+                        slug="user-not-found",
+                    ),
+                    code=404,
+                )
+            items = items.filter(user=user)
+
         if status := request.GET.get("status"):
             items = items.filter(status__in=status.split(","))
 
