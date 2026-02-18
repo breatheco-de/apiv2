@@ -608,6 +608,18 @@ class GetPaymentMethodSmallSerializer(serpy.Serializer):
     is_backed = serpy.Field()
 
 
+class GetProofOfPaymentSerializer(serpy.Serializer):
+    """Proof of payment for invoice detail (staff/externally-managed invoices)."""
+
+    id = serpy.Field()
+    reference = serpy.Field()
+    status = serpy.Field()
+    confirmation_image_url = serpy.Field()
+    provided_payment_details = serpy.Field()
+    created_at = serpy.Field()
+    created_by = GetUserSmallSerializer(many=False, required=False)
+
+
 class GetInvoiceSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     amount = serpy.Field()
@@ -1052,6 +1064,7 @@ class GetInvoiceSerializer(GetInvoiceSmallSerializer):
     credit_notes = serpy.MethodField()
     standalone_consumables = serpy.MethodField()
     payment_method = serpy.MethodField()
+    proof = serpy.MethodField()
 
     def get_credit_notes(self, obj):
         import logging
@@ -1083,6 +1096,11 @@ class GetInvoiceSerializer(GetInvoiceSmallSerializer):
     def get_payment_method(self, obj):
         if obj.payment_method_id and obj.payment_method:
             return GetPaymentMethod(obj.payment_method, many=False).data
+        return None
+
+    def get_proof(self, obj):
+        if getattr(obj, "proof_id", None) and getattr(obj, "proof", None):
+            return GetProofOfPaymentSerializer(obj.proof, many=False).data
         return None
 
 

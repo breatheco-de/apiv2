@@ -2443,7 +2443,11 @@ class MeInvoiceView(APIView):
         lang = get_user_language(request)
 
         if invoice_id:
-            item = Invoice.objects.filter(id=invoice_id, user=request.user).first()
+            item = (
+                Invoice.objects.select_related("proof", "proof__created_by", "payment_method")
+                .filter(id=invoice_id, user=request.user)
+                .first()
+            )
 
             if not item:
                 raise ValidationException(
@@ -2605,7 +2609,11 @@ class AcademyInvoiceView(APIView):
         lang = get_user_language(request)
 
         if invoice_id:
-            item = Invoice.objects.filter(id=invoice_id, academy__id=academy_id).first()
+            item = (
+                Invoice.objects.select_related("proof", "proof__created_by", "payment_method")
+                .filter(id=invoice_id, academy__id=academy_id)
+                .first()
+            )
 
             if not item:
                 raise ValidationException(
