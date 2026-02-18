@@ -175,6 +175,34 @@ class GetConsumableSerializer(GetServiceItemSerializer):
     valid_until = serpy.Field()
 
 
+class GetConsumableForInvoiceSerializer(serpy.Serializer):
+    """Consumable payload for invoice detail (Consumable has service_item, not service)."""
+
+    id = serpy.Field()
+    unit_type = serpy.Field()
+    how_many = serpy.Field()
+    sort_priority = serpy.Field()
+    valid_until = serpy.Field()
+    user = serpy.MethodField()
+    service = serpy.MethodField()
+    is_team_allowed = serpy.MethodField()
+
+    def get_user(self, obj):
+        if obj.user_id and obj.user:
+            return GetUserSmallSerializer(obj.user, many=False).data
+        return None
+
+    def get_service(self, obj):
+        if obj.service_item_id and obj.service_item:
+            return GetServiceSmallSerializer(obj.service_item.service, many=False).data
+        return None
+
+    def get_is_team_allowed(self, obj):
+        if obj.service_item_id and obj.service_item:
+            return obj.service_item.is_team_allowed
+        return False
+
+
 class GetFinancingOptionSerializer(serpy.Serializer):
     id = serpy.Field()
     academy = serpy.MethodField()
@@ -1038,8 +1066,9 @@ class GetInvoiceSerializer(GetInvoiceSmallSerializer):
             return []
 
     def get_standalone_consumables(self, obj):
-        consumables = obj.standalone_consumables.all()
-        return GetConsumableSerializer(consumables, many=True).data
+        consumables_qs = obj.standalone_consumables.select_related("service_item__service", "user")
+        consumables = list(consumables_qs)
+        return GetConsumableForInvoiceSerializer(consumables, many=True).data
 
 
 class GetAbstractIOweYouSerializer(serpy.Serializer):
