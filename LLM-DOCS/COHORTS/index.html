@@ -1,0 +1,4299 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://breathecode.herokuapp.com/LLM-DOCS/COHORTS/">
+      
+      
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.12">
+    
+    
+      
+        <title>Cohort Information API Endpoints - 4geeks</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.2afb09e1.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../css/custom.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#cohort-information-api-endpoints" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="4geeks" class="md-header__button md-logo" aria-label="4geeks" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            4geeks
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Cohort Information API Endpoints
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7M9 21a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-1H9z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7M9 21v-1h6v1a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1m3-17a5 5 0 0 0-5 5c0 2.05 1.23 3.81 3 4.58V16h4v-2.42c1.77-.77 3-2.53 3-4.58a5 5 0 0 0-5-5"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/breatheco-de/apiv2" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    breatheco-de/apiv2
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="4geeks" class="md-nav__button md-logo" aria-label="4geeks" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    4geeks
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/breatheco-de/apiv2" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    breatheco-de/apiv2
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Welcome
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../4geeks-libraries/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    4Geeks libraries
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Getting started
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Getting started
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_1" id="__nav_3_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Set up
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_1">
+            <span class="md-nav__icon md-icon"></span>
+            Set up
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_1_1" id="__nav_3_1_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Works locally
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_1_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_1_1">
+            <span class="md-nav__icon md-icon"></span>
+            Works locally
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/setup/works-locally/introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Introduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/setup/works-locally/devcontainer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Devcontainer
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/setup/works-locally/on-host-os/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Works on host Operative System
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_1_2" id="__nav_3_1_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Works on the cloud
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_1_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_1_2">
+            <span class="md-nav__icon md-icon"></span>
+            Works on the cloud
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/setup/works-on-the-cloud/introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Introduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/setup/works-on-the-cloud/gitpod/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Works on Gitpod
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/setup/works-on-the-cloud/codespaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Works on Codespaces
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/available-commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Available Commands
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Essential
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Essential
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_1" id="__nav_4_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Django
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_1">
+            <span class="md-nav__icon md-icon"></span>
+            Django
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/django/introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Introduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/django/urls/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    URLs
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/django/views/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Views
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/django/models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Models
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/django/admin/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Admin
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/django/commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Django commands
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/django/signals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Signals and receivers
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/django/templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Templates
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Django Rest Framework
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            Django Rest Framework
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/django-rest-framework/introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Introduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/django-rest-framework/views/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Views
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/django-rest-framework/serializers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Serializers
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/django-rest-framework/validators/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Validators
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/serpy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Serpy
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Celery
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_4">
+            <span class="md-nav__icon md-icon"></span>
+            Celery
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/celery/introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Introduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/celery/tasks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Tasks
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/celery/calling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Calling
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_5" id="__nav_4_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    4geeks
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_5">
+            <span class="md-nav__icon md-icon"></span>
+            4geeks
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/4geeks/actions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Actions
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_5_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_5_2" id="__nav_4_5_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Services
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_5_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_5_2">
+            <span class="md-nav__icon md-icon"></span>
+            Services
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/4geeks/services/introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Introduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_5_2_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_5_2_2" id="__nav_4_5_2_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    First-party
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="4" aria-labelledby="__nav_4_5_2_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_5_2_2">
+            <span class="md-nav__icon md-icon"></span>
+            First-party
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/4geeks/services/first-party/using-services/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Using services
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/4geeks/services/first-party/writing-services/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Writing services
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/4geeks/services/first-party/token/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Token
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Advanced
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Advanced
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../advanced/supervisor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Supervisor
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Celery
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_2">
+            <span class="md-nav__icon md-icon"></span>
+            Celery
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../advanced/celery/application/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Application
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../advanced/celery/canvas/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Canvas
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../advanced/celery/periodic-tasks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Periodic tasks
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../advanced/celery/routing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Routing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../advanced/celery/settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Settings
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Program Manager
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            Program Manager
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../program-manager/blocking-users/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Blocking Users
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Payments
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            Payments
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../payments/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Payments Module
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_2" id="__nav_7_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Subscription Seats
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_2">
+            <span class="md-nav__icon md-icon"></span>
+            Subscription Seats
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../payments/subscription-seats-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Subscription Seats - Quick Start Guide
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../payments/subscription-seats-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    API Documentation &amp; Postman Collection
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_3" id="__nav_7_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Auto-Recharge
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_3">
+            <span class="md-nav__icon md-icon"></span>
+            Auto-Recharge
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../payments/auto-recharge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Auto-Recharge System
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../payments/auto-recharge-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Auto-Recharge Architecture
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Testing
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            Testing
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../testing/running-tests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Running tests
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../testing/parametrize/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Multiple parameters
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_8_3" id="__nav_8_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Mixins
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_8_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8_3">
+            <span class="md-nav__icon md-icon"></span>
+            Mixins
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../testing/mixins/bc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    bc
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../testing/mixins/bc-fake/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    bc.fake
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../testing/mixins/bc-request/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    bc.request
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../testing/mixins/bc-database/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    bc.database
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../testing/mixins/bc-datetime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    bc.datetime
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../testing/mixins/bc-format/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    bc.format
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../testing/mixins/bc-check/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    bc.check
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../testing/mixins/bc-cache/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    bc.cache
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../testing/mixins/bc-random/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    bc.random
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_8_4" id="__nav_8_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Mocks
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_8_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8_4">
+            <span class="md-nav__icon md-icon"></span>
+            Mocks
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../testing/mocks/using-mocks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Using mocks
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../testing/mocks/mock-requests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Mock requests
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Troubleshooting
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            Troubleshooting
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../troubleshooting/check_task_status/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Task Status Diagnostic Tool
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Workflows
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            Workflows
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../workflows/file-uploading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    File uploading
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Infrastructure
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            Infrastructure
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../infrastructure/journal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Journal
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../infrastructure/web/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Web
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../infrastructure/infra-env/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Environment variables
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_11_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_11_4" id="__nav_11_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Studies
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_11_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11_4">
+            <span class="md-nav__icon md-icon"></span>
+            Studies
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../infrastructure/studies/http-clients/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Better HTTP client
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../infrastructure/studies/django-workers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Better Django worker
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12" >
+        
+          
+          <label class="md-nav__link" for="__nav_12" id="__nav_12_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Not placed yet
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12">
+            <span class="md-nav__icon md-icon"></span>
+            Not placed yet
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../infrastructure/environment-variables/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Environment variables
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/fixtures/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Fixtures
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_12_3" id="__nav_12_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Deployments
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_12_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12_3">
+            <span class="md-nav__icon md-icon"></span>
+            Deployments
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../deployment/environment-variables/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Environment variables
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../deployment/configuring-the-github-secrets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Configuring the Github secrets
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_12_4" id="__nav_12_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Apps
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_12_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12_4">
+            <span class="md-nav__icon md-icon"></span>
+            Apps
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12_4_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_12_4_1" id="__nav_12_4_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Monitoring
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_12_4_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12_4_1">
+            <span class="md-nav__icon md-icon"></span>
+            Monitoring
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../apps/monitoring/introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Intro to monitoring
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../apps/monitoring/scripts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Monitoring Scripts
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../apps/activities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Activities
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../apps/admissions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    4Geeks.Admissions
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_12_5" id="__nav_12_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Security
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_12_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12_5">
+            <span class="md-nav__icon md-icon"></span>
+            Security
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../security/introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Introduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../security/authentication-class/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Authentication classes
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../security/capabilities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Capabilities
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../security/schema-link/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Schema link
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_12_6" id="__nav_12_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Services
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_12_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12_6">
+            <span class="md-nav__icon md-icon"></span>
+            Services
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12_6_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_12_6_1" id="__nav_12_6_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Google Cloud
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_12_6_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12_6_1">
+            <span class="md-nav__icon md-icon"></span>
+            Google Cloud
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../services/google_cloud/google-cloud-functions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Google Cloud Functions
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../services/google_cloud/storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Storage
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12_6_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_12_6_2" id="__nav_12_6_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Slack
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_12_6_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12_6_2">
+            <span class="md-nav__icon md-icon"></span>
+            Slack
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../services/slack%20integration/icons/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Icons
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_12_7" id="__nav_12_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Signals
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_12_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12_7">
+            <span class="md-nav__icon md-icon"></span>
+            Signals
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../signals/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Quickstart
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#core-cohort-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      Core Cohort Information
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Core Cohort Information">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-get-cohort-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Get Cohort Details
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-get-current-users-cohorts" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Get Current User's Cohorts
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#students-teachers-and-staff" class="md-nav__link">
+    <span class="md-ellipsis">
+      Students, Teachers, and Staff
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Students, Teachers, and Staff">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#3-get-cohort-users-students-teachers-tas-reviewers" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Get Cohort Users (Students, Teachers, TAs, Reviewers)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-get-specific-user-in-cohort" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. Get Specific User in Cohort
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#syllabus-and-technologies" class="md-nav__link">
+    <span class="md-ellipsis">
+      Syllabus and Technologies
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Syllabus and Technologies">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#5-get-syllabus-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. Get Syllabus Information
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-get-syllabus-versions" class="md-nav__link">
+    <span class="md-ellipsis">
+      6. Get Syllabus Versions
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#schedule-and-time-slots" class="md-nav__link">
+    <span class="md-ellipsis">
+      Schedule and Time Slots
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Schedule and Time Slots">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#7-get-cohort-time-slots" class="md-nav__link">
+    <span class="md-ellipsis">
+      7. Get Cohort Time Slots
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-get-specific-time-slot" class="md-nav__link">
+    <span class="md-ellipsis">
+      8. Get Specific Time Slot
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#assignments-and-tasks" class="md-nav__link">
+    <span class="md-ellipsis">
+      Assignments and Tasks
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Assignments and Tasks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#9-get-cohort-tasksassignments" class="md-nav__link">
+    <span class="md-ellipsis">
+      9. Get Cohort Tasks/Assignments
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#10-get-student-tasks" class="md-nav__link">
+    <span class="md-ellipsis">
+      10. Get Student Tasks
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#activity-timeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      Activity Timeline
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Activity Timeline">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#11-get-cohort-activity" class="md-nav__link">
+    <span class="md-ellipsis">
+      11. Get Cohort Activity
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12-get-student-activity" class="md-nav__link">
+    <span class="md-ellipsis">
+      12. Get Student Activity
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#13-get-my-activity" class="md-nav__link">
+    <span class="md-ellipsis">
+      13. Get My Activity
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cohort-history-and-logs" class="md-nav__link">
+    <span class="md-ellipsis">
+      Cohort History and Logs
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Cohort History and Logs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#14-get-cohort-history-log" class="md-nav__link">
+    <span class="md-ellipsis">
+      14. Get Cohort History Log
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#15-get-user-cohort-history" class="md-nav__link">
+    <span class="md-ellipsis">
+      15. Get User Cohort History
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#nps-and-feedback" class="md-nav__link">
+    <span class="md-ellipsis">
+      NPS and Feedback
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="NPS and Feedback">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#16-get-cohort-surveys" class="md-nav__link">
+    <span class="md-ellipsis">
+      16. Get Cohort Surveys
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#17-get-survey-answers" class="md-nav__link">
+    <span class="md-ellipsis">
+      17. Get Survey Answers
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#18-get-my-survey-answers" class="md-nav__link">
+    <span class="md-ellipsis">
+      18. Get My Survey Answers
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reviews-and-testimonials" class="md-nav__link">
+    <span class="md-ellipsis">
+      Reviews and Testimonials
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Reviews and Testimonials">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#19-get-reviews" class="md-nav__link">
+    <span class="md-ellipsis">
+      19. Get Reviews
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#additional-cohort-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      Additional Cohort Data
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Additional Cohort Data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#20-get-academy-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      20. Get Academy Information
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#21-get-public-cohorts" class="md-nav__link">
+    <span class="md-ellipsis">
+      21. Get Public Cohorts
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage Examples
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Usage Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#get-complete-cohort-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Get Complete Cohort Overview
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#calculate-days-remaining" class="md-nav__link">
+    <span class="md-ellipsis">
+      Calculate Days Remaining
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get-technologies-being-taught" class="md-nav__link">
+    <span class="md-ellipsis">
+      Get Technologies Being Taught
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#calculate-nps-score" class="md-nav__link">
+    <span class="md-ellipsis">
+      Calculate NPS Score
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#authentication-and-permissions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Authentication and Permissions
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rate-limiting-and-caching" class="md-nav__link">
+    <span class="md-ellipsis">
+      Rate Limiting and Caching
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="cohort-information-api-endpoints">Cohort Information API Endpoints</h1>
+<p>This document provides a comprehensive list of all API endpoints needed to gather complete information about a cohort, including students, teachers, syllabus, schedule, feedback, and activity data.</p>
+<h2 id="core-cohort-information">Core Cohort Information</h2>
+<h3 id="1-get-cohort-details">1. Get Cohort Details</h3>
+<p><strong>Endpoint:</strong> <code>GET /v1/admissions/academy/cohort/{cohort_id}</code>
+- <strong>Purpose:</strong> Get basic cohort information (name, dates, stage, syllabus, etc.)
+- <strong>Parameters:</strong> <code>cohort_id</code> (can be numeric ID or slug)
+- <strong>Response includes:</strong>
+  - Basic info: <code>id</code>, <code>slug</code>, <code>name</code>, <code>kickoff_date</code>, <code>ending_date</code>, <code>current_day</code>, <code>stage</code>
+  - Syllabus: <code>syllabus_version</code> with syllabus details and technologies
+  - Schedule: <code>schedule</code> information
+  - Academy: <code>academy</code> details
+  - Settings: <code>private</code>, <code>never_ends</code>, <code>remote_available</code>, <code>timezone</code>
+  - Micro-cohorts: <code>micro_cohorts</code> if applicable</p>
+<h3 id="2-get-current-users-cohorts">2. Get Current User's Cohorts</h3>
+<p><strong>Endpoint:</strong> <code>GET /v1/admissions/academy/cohort/me</code>
+- <strong>Purpose:</strong> Get cohorts for the authenticated user
+- <strong>Query Parameters:</strong>
+  - <code>upcoming=true/false</code> - Filter by upcoming/past cohorts
+  - <code>stage=INACTIVE,PREWORK,STARTED,FINAL_PROJECT,ENDED</code> - Filter by stage
+- <strong>Response:</strong> List of cohorts the user belongs to</p>
+<h2 id="students-teachers-and-staff">Students, Teachers, and Staff</h2>
+<h3 id="3-get-cohort-users-students-teachers-tas-reviewers">3. Get Cohort Users (Students, Teachers, TAs, Reviewers)</h3>
+<p><strong>Endpoint:</strong> <code>GET /v1/admissions/academy/cohort/{cohort_id}/user</code>
+- <strong>Purpose:</strong> Get all users in a specific cohort
+- <strong>Query Parameters:</strong>
+  - <code>roles=STUDENT,TEACHER,ASSISTANT,REVIEWER</code> - Filter by role
+  - <code>educational_status=ACTIVE,POSTPONED,SUSPENDED,GRADUATED,DROPPED,NOT_COMPLETING</code>
+  - <code>finantial_status=FULLY_PAID,UP_TO_DATE,LATE</code>
+  - <code>tasks=true</code> - Include task information
+  - <code>plans=true</code> - Include plan information
+- <strong>Response includes:</strong>
+  - User details: <code>id</code>, <code>first_name</code>, <code>last_name</code>, <code>email</code>, <code>github</code>
+  - Role: <code>role</code> (STUDENT, TEACHER, ASSISTANT, REVIEWER)
+  - Status: <code>educational_status</code>, <code>finantial_status</code>
+  - Cohort info: <code>cohort</code> details
+  - Tasks: If <code>tasks=true</code>, includes assignment data
+  - Plans: If <code>plans=true</code>, includes subscription/plan data</p>
+<h3 id="4-get-specific-user-in-cohort">4. Get Specific User in Cohort</h3>
+<p><strong>Endpoint:</strong> <code>GET /v1/admissions/academy/cohort/{cohort_id}/user/{user_id}</code>
+- <strong>Purpose:</strong> Get detailed information about a specific user in the cohort
+- <strong>Response:</strong> Detailed user information with cohort-specific data</p>
+<h2 id="syllabus-and-technologies">Syllabus and Technologies</h2>
+<h3 id="5-get-syllabus-information">5. Get Syllabus Information</h3>
+<p><strong>Endpoint:</strong> <code>GET /v1/admissions/public/syllabus</code>
+- <strong>Purpose:</strong> Get syllabus details including technologies
+- <strong>Query Parameters:</strong>
+  - <code>id={syllabus_id}</code> - Get specific syllabus
+- <strong>Response includes:</strong>
+  - <code>name</code>, <code>slug</code>, <code>main_technologies</code> (comma-separated)
+  - <code>duration_in_hours</code>, <code>duration_in_days</code>, <code>week_hours</code>
+  - <code>github_url</code>, <code>logo</code>
+  - <code>private</code>, <code>is_documentation</code></p>
+<h3 id="6-get-syllabus-versions">6. Get Syllabus Versions</h3>
+<p><strong>Endpoint:</strong> <code>GET /v1/admissions/academy/syllabus/version</code>
+- <strong>Purpose:</strong> Get all syllabus versions for an academy
+- <strong>Response:</strong> List of syllabus versions with detailed information</p>
+<h2 id="schedule-and-time-slots">Schedule and Time Slots</h2>
+<h3 id="7-get-cohort-time-slots">7. Get Cohort Time Slots</h3>
+<p><strong>Endpoint:</strong> <code>GET /v1/admissions/academy/cohort/{cohort_id}/timeslot</code>
+- <strong>Purpose:</strong> Get schedule/time slots for the cohort
+- <strong>Query Parameters:</strong>
+  - <code>recurrency_type=DAILY,WEEKLY,MONTHLY</code> - Filter by recurrence
+- <strong>Response includes:</strong>
+  - <code>starting_at</code>, <code>ending_at</code>
+  - <code>recurrent</code>, <code>recurrency_type</code>
+  - <code>timezone</code></p>
+<h3 id="8-get-specific-time-slot">8. Get Specific Time Slot</h3>
+<p><strong>Endpoint:</strong> <code>GET /v1/admissions/academy/cohort/{cohort_id}/timeslot/{timeslot_id}</code>
+- <strong>Purpose:</strong> Get details of a specific time slot</p>
+<h2 id="assignments-and-tasks">Assignments and Tasks</h2>
+<h3 id="9-get-cohort-tasksassignments">9. Get Cohort Tasks/Assignments</h3>
+<p><strong>Endpoint:</strong> <code>GET /v1/assignments/academy/cohort/{cohort_id}/task</code>
+- <strong>Purpose:</strong> Get all tasks/assignments for the cohort
+- <strong>Query Parameters:</strong>
+  - <code>task_type=EXERCISE,PROJECT,QUIZ,LESSON</code> - Filter by task type
+  - <code>task_status=PENDING,STARTED,COMPLETED</code> - Filter by status
+  - <code>revision_status=PENDING,APPROVED,REJECTED</code> - Filter by revision status
+  - <code>educational_status=ACTIVE,GRADUATED</code> - Filter by student status
+  - <code>student={user_ids}</code> - Filter by specific students
+  - <code>like={search_term}</code> - Search in title/associated_slug
+- <strong>Response includes:</strong>
+  - Task details: <code>id</code>, <code>title</code>, <code>description</code>, <code>task_type</code>
+  - Status: <code>task_status</code>, <code>revision_status</code>
+  - User: <code>user</code> information
+  - Cohort: <code>cohort</code> information
+  - Delivery: <code>github_url</code>, <code>live_url</code>, <code>delivery_date</code></p>
+<h3 id="10-get-student-tasks">10. Get Student Tasks</h3>
+<p><strong>Endpoint:</strong> <code>GET /v1/assignments/user/me/task</code>
+- <strong>Purpose:</strong> Get tasks for the authenticated user
+- <strong>Query Parameters:</strong>
+  - <code>cohort={cohort_id_or_slug}</code> - Filter by cohort
+  - <code>task_type</code>, <code>task_status</code>, <code>revision_status</code> - Same as above
+  - <code>associated_slug={slug}</code> - Filter by syllabus module</p>
+<h2 id="activity-timeline">Activity Timeline</h2>
+<h3 id="11-get-cohort-activity">11. Get Cohort Activity</h3>
+<p><strong>Endpoint:</strong> <code>GET /v1/activity/cohort/{cohort_id}</code>
+- <strong>Purpose:</strong> Get activity timeline for the cohort
+- <strong>Query Parameters:</strong>
+  - <code>slug={activity_type}</code> - Filter by activity type
+  - Available activities: <code>breathecode_login</code>, <code>classroom_attendance</code>, <code>lesson_opened</code>, <code>exercise_success</code>, <code>nps_survey_answered</code>, etc.
+- <strong>Response includes:</strong>
+  - Activity details: <code>slug</code>, <code>data</code>, <code>day</code>, <code>created_at</code>
+  - User: <code>user_id</code>, <code>email</code>
+  - Cohort: <code>cohort</code> slug</p>
+<h3 id="12-get-student-activity">12. Get Student Activity</h3>
+<p><strong>Endpoint:</strong> <code>GET /v1/activity/academy/student/{student_id}</code>
+- <strong>Purpose:</strong> Get activity timeline for a specific student
+- <strong>Query Parameters:</strong>
+  - <code>slug={activity_type}</code> - Filter by activity type
+  - <code>cohort={cohort_slug}</code> - Filter by cohort</p>
+<h3 id="13-get-my-activity">13. Get My Activity</h3>
+<p><strong>Endpoint:</strong> <code>GET /v1/activity/me</code>
+- <strong>Purpose:</strong> Get activity for the authenticated user
+- <strong>Query Parameters:</strong>
+  - <code>slug={activity_type}</code>, <code>cohort={cohort_slug}</code>, <code>user_id</code>, <code>email</code></p>
+<h2 id="cohort-history-and-logs">Cohort History and Logs</h2>
+<h3 id="14-get-cohort-history-log">14. Get Cohort History Log</h3>
+<p><strong>Endpoint:</strong> <code>GET /v1/admissions/academy/cohort/{cohort_id}/log</code>
+- <strong>Purpose:</strong> Get detailed cohort history and daily logs
+- <strong>Response includes:</strong>
+  - Daily logs with attendance, progress, and notes
+  - Current day information
+  - Historical data for each day</p>
+<h3 id="15-get-user-cohort-history">15. Get User Cohort History</h3>
+<p><strong>Endpoint:</strong> <code>GET /v1/admissions/me/cohort/user/log</code>
+- <strong>Purpose:</strong> Get user's cohort history
+- <strong>Query Parameters:</strong>
+  - <code>cohort_id={id}</code> - Get history for specific cohort
+- <strong>Response:</strong> User's history log for cohorts</p>
+<h2 id="nps-and-feedback">NPS and Feedback</h2>
+<h3 id="16-get-cohort-surveys">16. Get Cohort Surveys</h3>
+<p><strong>Endpoint:</strong> <code>GET /v1/feedback/academy/survey</code>
+- <strong>Purpose:</strong> Get surveys for the academy
+- <strong>Query Parameters:</strong>
+  - <code>cohort={cohort_id}</code> - Filter by cohort
+- <strong>Response includes:</strong>
+  - Survey details: <code>id</code>, <code>title</code>, <code>status</code>, <code>created_at</code>, <code>sent_at</code>
+  - Cohort: <code>cohort</code> information
+  - Scores: <code>scores</code> (NPS scores)
+  - Response rate: <code>response_rate</code></p>
+<h3 id="17-get-survey-answers">17. Get Survey Answers</h3>
+<p><strong>Endpoint:</strong> <code>GET /v1/feedback/academy/answer</code>
+- <strong>Purpose:</strong> Get NPS/feedback answers
+- <strong>Query Parameters:</strong>
+  - <code>cohort={cohort_slugs}</code> - Filter by cohort
+  - <code>user={user_ids}</code> - Filter by users
+  - <code>score={score}</code> - Filter by NPS score
+  - <code>status=PENDING,SENT,ANSWERED</code> - Filter by status
+  - <code>survey={survey_ids}</code> - Filter by survey
+- <strong>Response includes:</strong>
+  - Answer details: <code>id</code>, <code>score</code>, <code>comment</code>, <code>status</code>
+  - User: <code>user</code> information
+  - Cohort: <code>cohort</code> information
+  - Survey: <code>survey</code> information
+  - Created: <code>created_at</code></p>
+<h3 id="18-get-my-survey-answers">18. Get My Survey Answers</h3>
+<p><strong>Endpoint:</strong> <code>GET /v1/feedback/user/me/answer</code>
+- <strong>Purpose:</strong> Get current user's survey answers</p>
+<h2 id="reviews-and-testimonials">Reviews and Testimonials</h2>
+<h3 id="19-get-reviews">19. Get Reviews</h3>
+<p><strong>Endpoint:</strong> <code>GET /v1/feedback/review</code>
+- <strong>Purpose:</strong> Get reviews/testimonials
+- <strong>Query Parameters:</strong>
+  - <code>cohort={cohort_id}</code> - Filter by cohort
+  - <code>user={user_id}</code> - Filter by user
+- <strong>Response includes:</strong>
+  - Review details: <code>id</code>, <code>total_rating</code>, <code>comments</code>, <code>status</code>
+  - Platform: <code>platform</code> information
+  - User: <code>author</code> information
+  - Cohort: <code>cohort</code> information</p>
+<h2 id="additional-cohort-data">Additional Cohort Data</h2>
+<h3 id="20-get-academy-information">20. Get Academy Information</h3>
+<p><strong>Endpoint:</strong> <code>GET /v1/admissions/academy/{academy_id}</code>
+- <strong>Purpose:</strong> Get academy details
+- <strong>Response includes:</strong>
+  - Academy info: <code>name</code>, <code>slug</code>, <code>timezone</code>, <code>logo_url</code>
+  - Contact: <code>feedback_email</code>, <code>legal_name</code></p>
+<h3 id="21-get-public-cohorts">21. Get Public Cohorts</h3>
+<p><strong>Endpoint:</strong> <code>GET /v1/admissions/cohort/all</code>
+- <strong>Purpose:</strong> Get public cohorts (for public-facing applications)
+- <strong>Query Parameters:</strong>
+  - <code>upcoming=true/false</code> - Filter by upcoming/past
+  - <code>academy={academy_slugs}</code> - Filter by academy
+  - <code>stage={stages}</code> - Filter by stage
+  - <code>location={academy_slugs}</code> - Filter by location</p>
+<h2 id="usage-examples">Usage Examples</h2>
+<h3 id="get-complete-cohort-overview">Get Complete Cohort Overview</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># 1. Get basic cohort info</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>GET<span class="w"> </span>/v1/admissions/academy/cohort/123
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># 2. Get all users (students, teachers, TAs)</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>GET<span class="w"> </span>/v1/admissions/academy/cohort/123/user?roles<span class="o">=</span>STUDENT,TEACHER,ASSISTANT,REVIEWER
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># 3. Get schedule</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>GET<span class="w"> </span>/v1/admissions/academy/cohort/123/timeslot
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="c1"># 4. Get assignments</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>GET<span class="w"> </span>/v1/assignments/academy/cohort/123/task
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="c1"># 5. Get activity timeline</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>GET<span class="w"> </span>/v1/activity/cohort/123
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="c1"># 6. Get NPS scores</span>
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>GET<span class="w"> </span>/v1/feedback/academy/answer?cohort<span class="o">=</span>cohort-slug
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="c1"># 7. Get cohort history</span>
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>GET<span class="w"> </span>/v1/admissions/academy/cohort/123/log
+</code></pre></div>
+<h3 id="calculate-days-remaining">Calculate Days Remaining</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1">// From cohort data</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kd">const</span><span class="w"> </span><span class="nx">kickoffDate</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nb">Date</span><span class="p">(</span><span class="nx">cohort</span><span class="p">.</span><span class="nx">kickoff_date</span><span class="p">);</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="kd">const</span><span class="w"> </span><span class="nx">endingDate</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nb">Date</span><span class="p">(</span><span class="nx">cohort</span><span class="p">.</span><span class="nx">ending_date</span><span class="p">);</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="kd">const</span><span class="w"> </span><span class="nx">currentDay</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">cohort</span><span class="p">.</span><span class="nx">current_day</span><span class="p">;</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="kd">const</span><span class="w"> </span><span class="nx">totalDays</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">Math</span><span class="p">.</span><span class="nx">ceil</span><span class="p">((</span><span class="nx">endingDate</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">kickoffDate</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="p">(</span><span class="mf">1000</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">60</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">60</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">24</span><span class="p">));</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="kd">const</span><span class="w"> </span><span class="nx">daysRemaining</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">totalDays</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">currentDay</span><span class="p">;</span>
+</code></pre></div>
+<h3 id="get-technologies-being-taught">Get Technologies Being Taught</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1">// From syllabus data</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kd">const</span><span class="w"> </span><span class="nx">technologies</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">cohort</span><span class="p">.</span><span class="nx">syllabus_version</span><span class="p">.</span><span class="nx">syllabus</span><span class="p">.</span><span class="nx">main_technologies</span><span class="p">.</span><span class="nx">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">);</span>
+</code></pre></div>
+<h3 id="calculate-nps-score">Calculate NPS Score</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1">// From survey answers</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kd">const</span><span class="w"> </span><span class="nx">promoters</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">answers</span><span class="p">.</span><span class="nx">filter</span><span class="p">(</span><span class="nx">a</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">a</span><span class="p">.</span><span class="nx">score</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mf">9</span><span class="p">).</span><span class="nx">length</span><span class="p">;</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="kd">const</span><span class="w"> </span><span class="nx">detractors</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">answers</span><span class="p">.</span><span class="nx">filter</span><span class="p">(</span><span class="nx">a</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">a</span><span class="p">.</span><span class="nx">score</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="mf">6</span><span class="p">).</span><span class="nx">length</span><span class="p">;</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="kd">const</span><span class="w"> </span><span class="nx">total</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">answers</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="kd">const</span><span class="w"> </span><span class="nx">npsScore</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">((</span><span class="nx">promoters</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">detractors</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="nx">total</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">100</span><span class="p">;</span>
+</code></pre></div>
+<h2 id="authentication-and-permissions">Authentication and Permissions</h2>
+<p>Most endpoints require authentication and specific permissions:
+- <code>read_all_cohort</code> - Read cohort information
+- <code>read_single_cohort</code> - Read single cohort (for students)
+- <code>crud_cohort</code> - Create/update/delete cohorts
+- <code>read_assignment</code> - Read assignments
+- <code>read_activity</code> - Read activity data
+- <code>read_nps_answers</code> - Read NPS/feedback data</p>
+<h2 id="rate-limiting-and-caching">Rate Limiting and Caching</h2>
+<ul>
+<li>Most endpoints support caching with <code>Cache-Control</code> headers</li>
+<li>Pagination is available for list endpoints using <code>limit</code> and <code>offset</code></li>
+<li>Some endpoints support sorting with <code>sort</code> parameter</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.f8cc74c7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.c8b220af.min.js"></script>
+      
+    
+  </body>
+</html>
