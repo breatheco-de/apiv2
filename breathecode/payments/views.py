@@ -2643,7 +2643,7 @@ class AcademyInvoiceView(APIView):
             items = items.filter(paid_at__lte=date_end)
 
         items = handler.queryset(items)
-        serializer = GetInvoiceSerializer(items, many=True)
+        serializer = GetInvoiceSmallSerializer(items, many=True)
 
         return handler.response(serializer.data)
 

@@ -579,6 +579,10 @@ class GetInvoiceSmallSerializer(serpy.Serializer):
     paid_at = serpy.Field()
     status = serpy.Field()
     user = GetUserSmallSerializer(many=False)
+    standalone_consumables = serpy.MethodField()
+
+    def get_standalone_consumables(self, obj):
+        return list(obj.standalone_consumables.values_list("id", flat=True))
 
 
 class GetMentorshipServiceSerializer(serpy.Serializer):
@@ -1009,6 +1013,7 @@ class GetInvoiceSerializer(GetInvoiceSmallSerializer):
     refunded_at = serpy.Field()
     amount_breakdown = serpy.Field()
     credit_notes = serpy.MethodField()
+    standalone_consumables = serpy.MethodField()
 
     def get_credit_notes(self, obj):
         import logging
@@ -1031,6 +1036,10 @@ class GetInvoiceSerializer(GetInvoiceSmallSerializer):
                 f"GetInvoiceSerializer.get_credit_notes: RelatedManager error for Invoice(id={obj.id}).credit_notes: {e}"
             )
             return []
+
+    def get_standalone_consumables(self, obj):
+        consumables = obj.standalone_consumables.all()
+        return GetConsumableSerializer(consumables, many=True).data
 
 
 class GetAbstractIOweYouSerializer(serpy.Serializer):
