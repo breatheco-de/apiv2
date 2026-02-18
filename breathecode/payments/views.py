@@ -2458,6 +2458,7 @@ class MeInvoiceView(APIView):
         if status := request.GET.get("status"):
             items = items.filter(status__in=status.split(","))
 
+        items = items.select_related("payment_method")
         items = handler.queryset(items)
         serializer = GetInvoiceSmallSerializer(items, many=True)
 
@@ -2642,6 +2643,7 @@ class AcademyInvoiceView(APIView):
         if date_end is not None:
             items = items.filter(paid_at__lte=date_end)
 
+        items = items.select_related("payment_method")
         items = handler.queryset(items)
         serializer = GetInvoiceSmallSerializer(items, many=True)
 

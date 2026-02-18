@@ -600,6 +600,14 @@ class GetPlanOfferSerializer(serpy.Serializer):
         return None
 
 
+class GetPaymentMethodSmallSerializer(serpy.Serializer):
+    """Minimal payment method for invoice list (id, title, is_backed)."""
+
+    id = serpy.Field()
+    title = serpy.Field()
+    is_backed = serpy.Field()
+
+
 class GetInvoiceSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     amount = serpy.Field()
@@ -608,6 +616,7 @@ class GetInvoiceSmallSerializer(serpy.Serializer):
     status = serpy.Field()
     user = GetUserSmallSerializer(many=False)
     standalone_consumables = serpy.MethodField()
+    payment_method = GetPaymentMethodSmallSerializer(required=False, many=False)
 
     def get_standalone_consumables(self, obj):
         return list(obj.standalone_consumables.values_list("id", flat=True))
@@ -1042,6 +1051,7 @@ class GetInvoiceSerializer(GetInvoiceSmallSerializer):
     amount_breakdown = serpy.Field()
     credit_notes = serpy.MethodField()
     standalone_consumables = serpy.MethodField()
+    payment_method = serpy.MethodField()
 
     def get_credit_notes(self, obj):
         import logging
@@ -1069,6 +1079,11 @@ class GetInvoiceSerializer(GetInvoiceSmallSerializer):
         consumables_qs = obj.standalone_consumables.select_related("service_item__service", "user")
         consumables = list(consumables_qs)
         return GetConsumableForInvoiceSerializer(consumables, many=True).data
+
+    def get_payment_method(self, obj):
+        if obj.payment_method_id and obj.payment_method:
+            return GetPaymentMethod(obj.payment_method, many=False).data
+        return None
 
 
 class GetAbstractIOweYouSerializer(serpy.Serializer):
