@@ -54,6 +54,7 @@ from breathecode.mentorship.serializers import GETMentorSmallSerializer
 from breathecode.notify.models import SlackTeam
 from breathecode.payments.actions import user_has_active_4geeks_plus_plans
 from breathecode.services.discord import Discord
+from breathecode.services.github import Github, GithubAuthException
 
 # from breathecode.services.google_apps.google_apps import GoogleApps
 from breathecode.services.google_cloud import FunctionV1, FunctionV2
@@ -4108,15 +4109,51 @@ class ProfileMePictureView(APIView):
 
 
 class GithubMeView(APIView):
+    permission_classes = [IsAuthenticated]
 
-    def delete(self, request):
-        instance = CredentialsGithub.objects.filter(user=request.user).first()
+    async def get(self, request):
+        credentials = await CredentialsGithub.objects.filter(user_id=request.user.id).afirst()
+        if not credentials:
+            raise ValidationException(
+                "This user does not have a Github account associated with this account",
+                code=404,
+                slug="not-found",
+            )
+
+        valid = False
+        if credentials.token:
+            try:
+
+                def _check_github_token():
+                    github = Github(token=credentials.token)
+                    github.get("/user")
+                    return True
+
+                valid = await sync_to_async(_check_github_token)()
+            except GithubAuthException:
+                valid = False
+            except Exception:
+                valid = False
+
+        return Response(
+            {
+                "username": credentials.username or "",
+                "avatar_url": credentials.avatar_url or "",
+                "name": credentials.name or "",
+                "scopes": credentials.scopes or "",
+                "valid": valid,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    async def delete(self, request):
+        instance = await CredentialsGithub.objects.filter(user_id=request.user.id).afirst()
         if not instance:
             raise ValidationException(
                 "This user not have Github account associated with with account", code=404, slug="not-found"
             )
 
-        instance.delete()
+        await instance.adelete()
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
