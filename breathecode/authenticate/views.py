@@ -1854,6 +1854,11 @@ def get_github_token(request, token=None):
     if url == None:
         raise ValidationException("No callback URL specified", slug="no-callback-url")
 
+    try:
+        scope_retry = int(request.query_params.get("scope_retry", 0))
+    except (ValueError, TypeError):
+        scope_retry = 0
+
     scopes = request.query_params.get("scope", "user:email")
     if token is not None:
         _tkn = Token.get_valid(token)
@@ -1868,9 +1873,10 @@ def get_github_token(request, token=None):
     except Exception:
         pass
 
+    redirect_base = os.getenv("GITHUB_REDIRECT_URL", "").strip()
     params = {
         "client_id": os.getenv("GITHUB_CLIENT_ID", ""),
-        "redirect_uri": os.getenv("GITHUB_REDIRECT_URL", "") + f"?url={url}",
+        "redirect_uri": redirect_base + f"?url={url}&scope_retry={scope_retry}",
         "scope": scopes,
     }
 
@@ -1894,13 +1900,13 @@ async def save_github_token(request):
 
         return default
 
-    async def redirect_to_get_access_token():
+    async def redirect_to_get_access_token(scope_retry_value=0):
         nonlocal token
 
         if token is None:
             token, _ = await Token.aget_or_create(user=user, token_type="login")
 
-        redirect = f"/v1/auth/github/{token.key}?scope={scopes}&url={url}"
+        redirect = f"/v1/auth/github/{token.key}?scope={scopes}&url={url}&scope_retry={scope_retry_value}"
         if settings.DEBUG:
             return HttpResponse(f"Redirect to: <a href='{redirect}'>{redirect}</a>")
 
@@ -1924,16 +1930,22 @@ async def save_github_token(request):
     except Exception:
         pass
 
+    try:
+        scope_retry = int(request.query_params.get("scope_retry", 0))
+    except (ValueError, TypeError):
+        scope_retry = 0
+
     code = request.query_params.get("code", None)
     if code == None:
         raise ValidationException("No github code specified", slug="no-code")
 
     token = request.query_params.get("user", None)
 
+    redirect_uri = os.getenv("GITHUB_REDIRECT_URL", "").strip()
     payload = {
         "client_id": os.getenv("GITHUB_CLIENT_ID", ""),
         "client_secret": os.getenv("GITHUB_SECRET", ""),
-        "redirect_uri": os.getenv("GITHUB_REDIRECT_URL", ""),
+        "redirect_uri": redirect_uri,
         "code": code,
     }
     headers = {"Accept": "application/json"}
@@ -2077,7 +2089,7 @@ async def save_github_token(request):
             github_credentials.granted = False
             await github_credentials.asave()
 
-        return await redirect_to_get_access_token()
+        return await redirect_to_get_access_token(scope_retry_value=0)
 
     required_scopes = await aget_github_scopes(user, "user:email")
 
@@ -2086,7 +2098,23 @@ async def save_github_token(request):
         github_credentials.granted = False
         await github_credentials.asave()
 
-        return await redirect_to_get_access_token()
+        if scope_retry >= 2:
+            academy = await ProfileAcademy.objects.filter(user=user).select_related("academy").afirst()
+            academy_for_message = academy.academy if academy else None
+            return render_message(
+                request,
+                "GitHub didn't assign the scopes needed to continue. Please authorize the application with "
+                "organization access in your GitHub account or organization settings, or try again later.",
+                btn_label="Back to app",
+                btn_url=url,
+                academy=academy_for_message,
+                status=403,
+            )
+
+        redirect = f"/v1/auth/github/{token.key}?scope={scopes}&url={url}&scope_retry={scope_retry + 1}"
+        if settings.DEBUG:
+            return HttpResponse(f"Redirect to: <a href='{redirect}'>{redirect}</a>")
+        return HttpResponseRedirect(redirect_to=redirect)
 
     elif github_credentials.granted is False:
         github_credentials.granted = True
