@@ -4158,6 +4158,57 @@ class GithubMeView(APIView):
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
+class GithubUserByIdView(APIView):
+    """
+    GET /v1/auth/github/<user_id>: academy staff with read_student can check
+    a student's GitHub connection in the given academy. Requires Academy header or academy query param.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    @capable_of("read_student")
+    def get(self, request, user_id, academy_id=None):
+        profile = ProfileAcademy.objects.filter(
+            academy_id=academy_id, user_id=user_id, role__slug="student"
+        ).first()
+        if not profile:
+            raise ValidationException(
+                "Student not found in this academy",
+                code=404,
+                slug="profile-academy-not-found",
+            )
+
+        credentials = CredentialsGithub.objects.filter(user_id=user_id).first()
+        if not credentials:
+            raise ValidationException(
+                "This user does not have a Github account associated with this account",
+                code=404,
+                slug="not-found",
+            )
+
+        valid = False
+        if credentials.token:
+            try:
+                github = Github(token=credentials.token)
+                github.get("/user")
+                valid = True
+            except GithubAuthException:
+                valid = False
+            except Exception:
+                valid = False
+
+        return Response(
+            {
+                "username": credentials.username or "",
+                "avatar_url": credentials.avatar_url or "",
+                "name": credentials.name or "",
+                "scopes": credentials.scopes or "",
+                "valid": valid,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
 # app/user/:id
 class AppUserView(APIView):
     permission_classes = [AllowAny]
