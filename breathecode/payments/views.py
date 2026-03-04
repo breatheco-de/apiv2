@@ -1811,6 +1811,124 @@ class AcademyServiceStockStatusView(APIView):
         return Response(data)
 
 
+class AcademyServiceStockRegenerateView(APIView):
+    """
+    Academy POST endpoint to regenerate service stock schedulers and consumables immediately.
+    It supports one target per request: plan_financing_id or subscription_id.
+    """
+
+    @capable_of("crud_consumable")
+    def post(self, request, academy_id=None):
+        lang = get_user_language(request)
+
+        plan_financing_id = request.data.get("plan_financing_id")
+        subscription_id = request.data.get("subscription_id")
+        seat_id = request.data.get("seat_id")
+
+        def parse_int(value, field_name):
+            if value is None:
+                return None
+
+            if isinstance(value, int):
+                return value
+
+            if isinstance(value, str) and value.isdigit():
+                return int(value)
+
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"{field_name} must be an integer",
+                    es=f"{field_name} debe ser un entero",
+                    slug=f"invalid-{field_name}",
+                ),
+                code=400,
+            )
+
+        plan_financing_id = parse_int(plan_financing_id, "plan_financing_id")
+        subscription_id = parse_int(subscription_id, "subscription_id")
+        seat_id = parse_int(seat_id, "seat_id")
+
+        try:
+            data = actions.regenerate_service_stock_for_target(
+                academy_id=academy_id,
+                plan_financing_id=plan_financing_id,
+                subscription_id=subscription_id,
+                seat_id=seat_id,
+            )
+        except ValidationException:
+            raise
+        except Exception as error:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Could not regenerate service stock schedulers: {error}",
+                    es=f"No se pudieron regenerar los service stock schedulers: {error}",
+                    slug="service-stock-regeneration-failed",
+                ),
+                code=500,
+            )
+
+        return Response(data)
+
+
+class AcademyServiceStockConsumableRegenerateView(APIView):
+    """
+    Academy POST endpoint to regenerate consumables for one service stock scheduler immediately.
+    """
+
+    @capable_of("crud_consumable")
+    def post(self, request, academy_id=None):
+        lang = get_user_language(request)
+        service_stock_scheduler_id = request.data.get("service_stock_scheduler_id")
+
+        if service_stock_scheduler_id is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="service_stock_scheduler_id is required",
+                    es="service_stock_scheduler_id es requerido",
+                    slug="missing-service-stock-scheduler-id",
+                ),
+                code=400,
+            )
+
+        if isinstance(service_stock_scheduler_id, int):
+            scheduler_id = service_stock_scheduler_id
+        elif isinstance(service_stock_scheduler_id, str) and service_stock_scheduler_id.isdigit():
+            scheduler_id = int(service_stock_scheduler_id)
+        else:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="service_stock_scheduler_id must be an integer",
+                    es="service_stock_scheduler_id debe ser un entero",
+                    slug="invalid-service-stock-scheduler-id",
+                ),
+                code=400,
+            )
+
+        try:
+            data = actions.regenerate_consumable_for_service_stock_scheduler(
+                academy_id=academy_id,
+                service_stock_scheduler_id=scheduler_id,
+            )
+        except ValidationException:
+            raise
+        except Exception as error:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Could not regenerate consumables for service stock scheduler: {error}",
+                    es=f"No se pudieron regenerar los consumables para el service stock scheduler: {error}",
+                    slug="service-stock-consumable-regeneration-failed",
+                ),
+                code=500,
+            )
+
+        return Response(data)
+
+
 class MentorshipServiceSetView(APIView):
     permission_classes = [AllowAny]
     extensions = APIViewExtensions(sort="-id", paginate=True)
