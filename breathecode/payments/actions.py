@@ -1526,7 +1526,22 @@ def regenerate_consumable_for_service_stock_scheduler(
     consumables_count_after = scheduler.consumables.count()
 
     if execution_error is None and consumables_count_after <= consumables_count_before:
-        execution_error = "No consumable was created during regeneration"
+        issues = check_scheduler_renewal_issues(scheduler, timezone.now())
+        prioritized_issue = None
+        priority_tokens = [
+            "needs to be paid",
+            "is expired",
+            "has invalid status",
+            "has no linked resource",
+            "does not need renewal yet",
+        ]
+
+        for token in priority_tokens:
+            prioritized_issue = next((x for x in issues if token in x), None)
+            if prioritized_issue:
+                break
+
+        execution_error = prioritized_issue or "No consumable was created during regeneration"
         error_stage = "post_condition"
 
     if execution_error:
