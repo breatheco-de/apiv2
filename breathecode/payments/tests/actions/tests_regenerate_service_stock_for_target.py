@@ -176,3 +176,28 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(response["error_stage"], "build_service_stock_scheduler")
         self.assertTrue("SubscriptionSeat with id 999999 not found" in response["execution_error"])
         self.assertTrue("Failed while building service stock schedulers:" in response["message"])
+
+    @pytest.mark.django_db
+    def test_regenerate_service_stock_for_target__fails_if_no_scheduler_was_created(self):
+        plan_financing = {
+            "next_payment_at": timezone.now() + relativedelta(months=1),
+            "plan_expires_at": timezone.now() + relativedelta(months=2),
+            "monthly_price": 100,
+        }
+        model = self.bc.database.create(
+            country=1,
+            city=1,
+            academy=1,
+            user=1,
+            plan_financing=plan_financing,
+        )
+
+        with patch.object(actions, "_run_service_stock_build_task_sync", MagicMock()):
+            response = actions.regenerate_service_stock_for_target(
+                academy_id=model.academy.id,
+                plan_financing_id=model.plan_financing.id,
+            )
+
+        self.assertEqual(response["status"], "failed")
+        self.assertEqual(response["error_stage"], "post_condition")
+        self.assertEqual(response["execution_error"], "No service stock scheduler was created during regeneration")
