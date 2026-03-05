@@ -1926,7 +1926,8 @@ class AcademyServiceStockConsumableRegenerateView(APIView):
                 code=500,
             )
 
-        return Response(data)
+        response_status = status.HTTP_200_OK if data.get("status") == "success" else status.HTTP_409_CONFLICT
+        return Response(data, status=response_status)
 
 
 class MentorshipServiceSetView(APIView):

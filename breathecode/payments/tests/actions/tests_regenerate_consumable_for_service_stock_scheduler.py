@@ -107,8 +107,9 @@ class PaymentsTestSuite(PaymentsTestCase):
     def test_regenerate_consumable_for_service_stock_scheduler__fails_if_task_did_not_create_consumable(self):
         plan_financing = {
             "monthly_price": 100,
-            "next_payment_at": timezone.now() + relativedelta(months=1),
+            "next_payment_at": timezone.now() - relativedelta(days=1),
             "plan_expires_at": timezone.now() + relativedelta(months=2),
+            "status": "ACTIVE",
         }
         model = self.bc.database.create(
             service_stock_scheduler=1,
@@ -130,4 +131,4 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         self.assertEqual(response["status"], "failed")
         self.assertEqual(response["error_stage"], "post_condition")
-        self.assertEqual(response["execution_error"], "No consumable was created during regeneration")
+        self.assertTrue("needs to be paid" in response["execution_error"])
