@@ -1806,11 +1806,12 @@ class AcademyRoleView(APIView):
     @capable_of("manage_academy_roles")
     def get(self, request, academy_id=None):
         academy = _get_academy_or_404(academy_id)
-        roles = (
+        roles = list(
             Role.objects.filter(Q(academy__isnull=True) | Q(academy_id=academy_id))
             .prefetch_related("capabilities")
-            .order_by("slug")
         )
+        # Custom roles (academy-owned) first, then native; within each group order by name
+        roles.sort(key=lambda r: (r.academy_id is None, (r.name or r.slug or "").lower()))
         result = []
         for role in roles:
             item = RoleBigSerializer(role).data
