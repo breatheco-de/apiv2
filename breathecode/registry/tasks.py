@@ -615,14 +615,20 @@ def async_synchonize_repository_content(self, webhook, override_meta=True):
                 all_readme_files = Q(readme_url__icontains=f"{base_repo_url}/blob/{default_branch}/{file_path}")
 
                 # Conditional query for when 'learn.json' is in file_path
-                learn_json_files = (
-                    Q(
-                        asset_type__in=["EXERCISE", "PROJECT"],
-                        readme_url__icontains=f"{base_repo_url}/blob/{default_branch}/",
-                    )
-                    if "learn.json" in file_path
-                    else Q()
-                )
+                if "learn.json" in file_path:
+                    dir_path = os.path.dirname(file_path)
+                    if dir_path:
+                        learn_json_files = Q(
+                            asset_type__in=["EXERCISE", "PROJECT"],
+                            readme_url__icontains=f"{base_repo_url}/blob/{default_branch}/{dir_path}/",
+                        )
+                    else:
+                        learn_json_files = Q(
+                            asset_type__in=["EXERCISE", "PROJECT"],
+                            readme_url__icontains=f"{base_repo_url}/blob/{default_branch}/",
+                        )
+                else:
+                    learn_json_files = Q()
 
                 # Execute the combined query
                 assets = Asset.objects.filter(all_readme_files | learn_json_files)

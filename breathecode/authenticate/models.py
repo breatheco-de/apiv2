@@ -47,9 +47,10 @@ __all__ = [
     "Token",
 ]
 
-TOKEN_TYPE = ["login", "one_time", "temporal", "permanent"]
+TOKEN_TYPE = ["login", "one_time", "temporal", "permanent", "short"]
 LOGIN_TOKEN_LIFETIME = timezone.timedelta(days=7)
-TEMPORAL_TOKEN_LIFETIME = timezone.timedelta(minutes=10)
+TEMPORAL_TOKEN_LIFETIME = timezone.timedelta(hours=24)
+SHORT_TOKEN_LIFETIME = timezone.timedelta(minutes=15)
 
 
 class UserProxy(User):
@@ -757,6 +758,10 @@ class Token(rest_framework.authtoken.models.Token):
         if without_expire_at and self.token_type == "temporal":
             utc_now = timezone.now()
             self.expires_at = utc_now + TEMPORAL_TOKEN_LIFETIME
+
+        if without_expire_at and self.token_type == "short":
+            utc_now = timezone.now()
+            self.expires_at = utc_now + SHORT_TOKEN_LIFETIME
 
         if self.token_type == "one_time" or self.token_type == "permanent":
             self.expires_at = None

@@ -12,6 +12,7 @@ Configuration is done through TRUSTED_DOMAINS and TRUSTED_URLS sets in breatheco
 """
 
 import logging
+import os
 import re
 import requests
 from urllib.parse import urlparse
@@ -53,6 +54,27 @@ class AssetErrorLogType:
     INVALID_IMAGE = "invalid-image"
     README_SYNTAX = "readme-syntax-error"
     INVALID_TELEMETRY = "invalid-telemetry"
+    INVALID_TEMPLATE_SUBDIRECTORY = "invalid-template-subdirectory"
+
+
+def get_base_path_from_readme_url(readme_url):
+    """
+    Extract the base path (subdirectory) from a GitHub readme_url.
+
+    For .../blob/<branch>/README.md returns "" (root).
+    For .../blob/<branch>/projects/myproject/README.md returns "projects/myproject".
+
+    Returns:
+        str: The directory path, or "" if at repo root or URL has no path.
+    """
+    if not readme_url:
+        return ""
+    match = re.search(r"\/blob\/([\w\d_\-]+)\/(.+)", readme_url)
+    if not match:
+        return ""
+    _branch, path = match.groups()
+    base_path = os.path.dirname(path)
+    return base_path.strip("/") if base_path else ""
 
 
 def is_url(value):
@@ -520,10 +542,33 @@ class ExerciseValidator(AssetValidator):
 
 class ProjectValidator(ExerciseValidator):
     warns = ["difficulty"]
-    errors = ["readme", "preview", "telemetry"]
+    errors = ["readme", "preview", "telemetry", "template_subdirectory"]
 
     def __init__(self, _asset, log_errors=False, reset_errors=False):
         super().__init__(_asset, log_errors, reset_errors)
+
+    def template_subdirectory(self):
+        """
+        For PROJECTs in a subdirectory: template in learn.json cannot be "self";
+        if set, it must be a URL (template repo). Enforced as part of asset integrity test.
+        """
+        if self.asset.asset_type != "PROJECT":
+            return
+        base_path = get_base_path_from_readme_url(self.asset.readme_url)
+        if not base_path:
+            return
+        template_url = (self.asset.template_url or "").strip()
+        if template_url == "self":
+            self.error(
+                AssetErrorLogType.INVALID_TEMPLATE_SUBDIRECTORY,
+                "For projects in a subdirectory, template in learn.json cannot be 'self'; "
+                "if set, it must be a URL (e.g. a template repo).",
+            )
+        if template_url and template_url != "self" and not is_url(template_url):
+            self.error(
+                AssetErrorLogType.INVALID_TEMPLATE_SUBDIRECTORY,
+                "For projects in a subdirectory, template in learn.json must be a valid URL when set.",
+            )
 
 
 class QuizValidator(AssetValidator):

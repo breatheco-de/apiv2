@@ -29,6 +29,7 @@ from .utils import (
     AssetErrorLogType,
     AssetException,
     ExerciseValidator,
+    get_base_path_from_readme_url,
     LessonValidator,
     OriginalityWrapper,
     ProjectValidator,
@@ -1538,38 +1539,44 @@ def pull_learnpack_asset(github, asset: Asset, override_meta):
     else:
         lang = "." + lang
 
+    base_path = get_base_path_from_readme_url(asset.readme_url)
+    ref = branch_name or "main"
+
     # Try to get README file with better error handling
     readme_file = None
     readme_filename = f"README{lang}.md"
+    readme_path = f"{base_path}/{readme_filename}" if base_path else readme_filename
     try:
-        readme_file = repo.get_contents(readme_filename)
-        logger.debug(f"Successfully retrieved {readme_filename} from {org_name}/{repo_name}")
+        readme_file = repo.get_contents(readme_path, ref=ref)
+        logger.debug(f"Successfully retrieved {readme_path} from {org_name}/{repo_name}")
     except Exception as e:
         error_str = str(e).lower()
         if "404" in error_str or "not found" in error_str:
-            raise Exception(f"README file '{readme_filename}' not found in repository {org_name}/{repo_name}")
+            raise Exception(f"README file '{readme_path}' not found in repository {org_name}/{repo_name}")
         elif "403" in error_str or "forbidden" in error_str:
             logger.warning(
-                f"Access forbidden for {readme_filename} in repository {org_name}/{repo_name}. "
+                f"Access forbidden for {readme_path} in repository {org_name}/{repo_name}. "
                 f"Repository is accessible but file permissions may be restricted."
             )
-            raise Exception(f"Access forbidden to README file '{readme_filename}' in repository {org_name}/{repo_name}")
+            raise Exception(f"Access forbidden to README file '{readme_path}' in repository {org_name}/{repo_name}")
         elif "401" in error_str or "unauthorized" in error_str:
             raise Exception(
-                f"Authentication failed when accessing README file '{readme_filename}' in repository {org_name}/{repo_name}"
+                f"Authentication failed when accessing README file '{readme_path}' in repository {org_name}/{repo_name}"
             )
         else:
             raise Exception(
-                f"Error retrieving README file '{readme_filename}' from repository {org_name}/{repo_name}: {str(e)}"
+                f"Error retrieving README file '{readme_path}' from repository {org_name}/{repo_name}: {str(e)}"
             )
 
     # Try to get configuration file with better error handling
     learn_file = None
     config_files = ["learn.json", ".learn/learn.json", "bc.json", ".learn/bc.json"]
+    if base_path:
+        config_files = [f"{base_path}/{c}" for c in config_files]
 
     for config_filename in config_files:
         try:
-            learn_file = repo.get_contents(config_filename)
+            learn_file = repo.get_contents(config_filename, ref=ref)
             logger.debug(f"Successfully retrieved config file {config_filename} from {org_name}/{repo_name}")
             break
         except Exception as e:
@@ -2181,6 +2188,7 @@ def push_project_or_exercise_to_github(asset_slug, create_or_update=False, organ
         has_existing_repo = bool(asset.readme_url and "github.com" in asset.readme_url) or bool(
             asset.url and "github.com" in asset.url
         )
+        branch_name = None
 
         if has_existing_repo:
             # Repository exists, we're in update mode
@@ -2302,6 +2310,9 @@ def push_project_or_exercise_to_github(asset_slug, create_or_update=False, organ
             repo = github.get_repo(f"{org_name}/{repo_name}")
             logger.debug(f"Using existing repository {org_name}/{repo_name}")
 
+        base_path = get_base_path_from_readme_url(asset.readme_url) if operation_mode == "update" else ""
+        branch = branch_name or "main"
+
         # Upload preview image first (if exists)
         if asset.preview and asset.config:
             logger.debug(f"Uploading preview image for asset {asset.slug}")
@@ -2378,21 +2389,23 @@ def push_project_or_exercise_to_github(asset_slug, create_or_update=False, organ
                             extension = ".png"  # Default
 
                     preview_filename = f"preview{extension}"
+                    preview_path = f"{base_path}/{preview_filename}" if base_path else preview_filename
 
                     # Upload image to repository
                     try:
                         result = set_blob_content(
                             repo,
-                            preview_filename,
+                            preview_path,
                             image_content,
                             preview_filename,
+                            branch=branch,
                             create_or_update=True,
                             is_binary=True,
                         )
 
                         if result and "commit" in result:
                             # Update asset.config with new preview URL
-                            new_preview_url = f"{asset.url}/blob/main/{preview_filename}?raw=true"
+                            new_preview_url = f"{asset.url}/blob/{branch}/{preview_path}?raw=true"
                             asset.config["preview"] = new_preview_url
                             asset.preview = new_preview_url
                             asset.save()
@@ -2421,12 +2434,14 @@ def push_project_or_exercise_to_github(asset_slug, create_or_update=False, organ
 
             # Determine config file location
             config_files = ["learn.json", ".learn/learn.json", "bc.json", ".learn/bc.json"]
-            config_path = "learn.json"  # Default
+            if base_path:
+                config_files = [f"{base_path}/{c}" for c in config_files]
+            config_path = config_files[0]  # Default
 
             # Try to find existing config file location
             for config_file in config_files:
                 try:
-                    existing_file = get_blob_content(repo, config_file)
+                    existing_file = get_blob_content(repo, config_file, branch=branch)
                     if existing_file is not None:
                         config_path = config_file
                         logger.debug(f"Found existing config at {config_file}")
@@ -2437,7 +2452,9 @@ def push_project_or_exercise_to_github(asset_slug, create_or_update=False, organ
             # Upload or update config file
             try:
                 logger.debug(f"Attempting to upload/update {config_path} in {repo.full_name}")
-                result = set_blob_content(repo, config_path, config_content, "learn.json", create_or_update=True)
+                result = set_blob_content(
+                    repo, config_path, config_content, "learn.json", branch=branch, create_or_update=True
+                )
                 if result and "commit" in result:
                     asset.github_commit_hash = result["commit"].sha
                     logger.debug(f"Successfully uploaded/updated {config_path}")
@@ -2469,10 +2486,13 @@ def push_project_or_exercise_to_github(asset_slug, create_or_update=False, organ
             # Decode the readme content
             readme_content = base64.b64decode(translation_asset.readme_raw.encode("utf-8")).decode("utf-8")
 
+            readme_path = f"{base_path}/{readme_filename}" if base_path else readme_filename
             # Upload or update README file
             try:
-                logger.debug(f"Attempting to upload/update {readme_filename} in {repo.full_name}")
-                result = set_blob_content(repo, readme_filename, readme_content, readme_filename, create_or_update=True)
+                logger.debug(f"Attempting to upload/update {readme_path} in {repo.full_name}")
+                result = set_blob_content(
+                    repo, readme_path, readme_content, readme_filename, branch=branch, create_or_update=True
+                )
                 if result and "commit" in result:
                     if translation_asset == asset:
                         asset.github_commit_hash = result["commit"].sha

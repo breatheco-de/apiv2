@@ -134,6 +134,9 @@ def forward_asset_url(request, asset_slug=None):
             else:
                 return HttpResponseRedirect(redirect_to=url)
 
+        if asset.asset_type == "PROJECT" and asset.is_in_subdirectory and asset.readme_url:
+            return HttpResponseRedirect(redirect_to=asset.readme_url)
+
         validator(asset.url)
         if asset.gitpod:
             return HttpResponseRedirect(redirect_to="https://gitpod.io#" + asset.url)

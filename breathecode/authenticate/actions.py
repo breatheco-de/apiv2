@@ -293,7 +293,7 @@ def reset_password(users=None, extra=None, academy=None):
         raise Exception("Missing users")
 
     for user in users:
-        token, created = Token.get_or_create(user, token_type="temporal")
+        token, created = Token.get_or_create(user, token_type="short")
 
         # returns true or false if the email was send
         return send_email_message(

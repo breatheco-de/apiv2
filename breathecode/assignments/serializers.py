@@ -165,7 +165,7 @@ class TaskGETDeliverSerializer(TaskGETSerializer):
     delivery_url = serpy.MethodField()
 
     def get_delivery_url(self, obj):
-        token, created = Token.get_or_create(obj.user, token_type="temporal")
+        token, created = Token.get_or_create(obj.user, token_type="short")
         return os.getenv("API_URL") + f"/v1/assignment/task/{str(obj.id)}/deliver/{token}"
 
 

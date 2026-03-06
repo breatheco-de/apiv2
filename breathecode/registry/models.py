@@ -19,7 +19,7 @@ from breathecode.admissions.models import Academy, SyllabusVersion
 from breathecode.assessment.models import Assessment
 
 from .signals import asset_readme_modified, asset_saved, asset_slug_modified, asset_status_updated, asset_title_modified
-from .utils import AssetErrorLogType
+from .utils import AssetErrorLogType, get_base_path_from_readme_url
 
 __all__ = ["AssetTechnology", "Asset", "AssetAlias", "AssetFlag", "ContentSite"]
 logger = logging.getLogger(__name__)
@@ -783,6 +783,15 @@ class Asset(models.Model):
         repo_name = result.group(2)
 
         return org_name, repo_name, branch_name
+
+    @property
+    def is_in_subdirectory(self):
+        """
+        True when this asset's readme_url points to a file inside a repo subdirectory
+        (e.g. .../blob/main/projects/myproject/README.md). When True for a PROJECT,
+        do not use asset.url as "clone and start"; use template_url or treat as read-only.
+        """
+        return bool(get_base_path_from_readme_url(self.readme_url))
 
     def get_readme(self, parse=None, remove_frontmatter=False, silent=True):
 

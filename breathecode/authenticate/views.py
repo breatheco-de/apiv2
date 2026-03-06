@@ -179,7 +179,7 @@ class TemporalTokenView(ObtainAuthToken):
 
         token_type = request.data.get("token_type", "temporal")
 
-        allowed_token_types = ["temporal", "one_time"]
+        allowed_token_types = ["temporal", "one_time", "short"]
         if token_type not in allowed_token_types:
             raise ValidationException(
                 f'The token type must be one of {", ".join(allowed_token_types)}',
@@ -2525,7 +2525,7 @@ def get_discord_token(request):
         logger.debug("User does not have an active 4Geeks Plus subscription")
         return Response(status=status.HTTP_403_FORBIDDEN)
 
-    token, created = Token.get_or_create(user=user, token_type="temporal")
+    token, created = Token.get_or_create(user=user, token_type="short")
     if not token:
         raise ValidationError
     query_string = f"token={token}|cohort_slug={cohort_slug}|url={url}".encode("utf-8")
@@ -3261,7 +3261,7 @@ def get_google_token(request, token=None):
     if token is not None:
         # you can only connect to google with temporal short lasting tokens
         token = Token.get_valid(token)
-        if token is None or token.token_type not in ["temporal", "one_time"]:
+        if token is None or token.token_type not in ["temporal", "one_time", "short"]:
             raise ValidationException("Invalid or inactive token", code=403, slug="invalid-token")
 
     # set academy settings automatically
@@ -3375,7 +3375,7 @@ async def save_google_token(request):
     token = None
     if "token" in state and state["token"][0] != "":
         token = await Token.aget_valid(state["token"][0])
-        if not token or token.token_type not in ["temporal", "one_time"]:
+        if not token or token.token_type not in ["temporal", "one_time", "short"]:
             logger.debug(f'Token {state["token"][0]} not found or is expired')
             raise ValidationException(
                 "Token was not found or is expired, please use a different token", code=404, slug="token-not-found"

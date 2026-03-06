@@ -47,8 +47,9 @@ BreatheCode uses different token types for different purposes:
 
 | Token Type | Purpose | Lifetime | Use Case |
 |------------|---------|----------|----------|
-| `login` | Standard authentication | Configurable (default: 30 days) | Regular user sessions |
-| `temporal` | Temporary access | Short-lived (hours) | One-time operations |
+| `login` | Standard authentication | Configurable (default: 7 days) | Regular user sessions |
+| `temporal` | Temporary access | 24 hours | Member password reset link, time-limited operations |
+| `short` | Sensitive operations | 15 minutes | Password reset email, invite links, OAuth links |
 | `permanent` | Long-term access | No expiration | Service accounts, integrations |
 
 ---
