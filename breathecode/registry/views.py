@@ -1430,12 +1430,16 @@ class AcademyAssetActionView(APIView):
                     override_meta = data["override_meta"]
                 await apull_from_github(asset.slug, override_meta=override_meta)
             elif action_slug == "push":
-                if asset.asset_type not in ["ARTICLE", "LESSON", "QUIZ"]:
+                if asset.asset_type not in ["ARTICLE", "LESSON", "QUIZ", "PROJECT", "EXERCISE"]:
                     raise ValidationException(
                         f"Asset type {asset.asset_type} cannot be pushed to GitHub, please update the Github repository manually"
                     )
-
-                await apush_to_github(asset.slug, owner=user)
+                if asset.asset_type in ["PROJECT", "EXERCISE"]:
+                    await apush_project_or_exercise_to_github(
+                        asset.slug, create_or_update=False
+                    )
+                else:
+                    await apush_to_github(asset.slug, owner=user)
             elif action_slug == "create_repo":
                 if asset.asset_type not in ["PROJECT", "EXERCISE"]:
                     raise ValidationException(
@@ -1534,12 +1538,16 @@ class AcademyAssetActionView(APIView):
                     override_meta = data["override_meta"]
                 await apull_from_github(asset.slug, override_meta=override_meta)
             elif action_slug == "push":
-                if asset.asset_type not in ["ARTICLE", "LESSON", "QUIZ"]:
+                if asset.asset_type not in ["ARTICLE", "LESSON", "QUIZ", "PROJECT", "EXERCISE"]:
                     raise ValidationException(
-                        "Only lessons, articles, and quizzes can be pushed to github, please update the Github repository yourself and come back to pull the changes from here"
+                        "Only lessons, articles, quizzes, projects, and exercises can be pushed to github"
                     )
-
-                await apush_to_github(asset.slug, owner=user)
+                if asset.asset_type in ["PROJECT", "EXERCISE"]:
+                    await apush_project_or_exercise_to_github(
+                        asset.slug, create_or_update=False
+                    )
+                else:
+                    await apush_to_github(asset.slug, owner=user)
             elif action_slug == "create_repo":
                 if asset.asset_type not in ["PROJECT", "EXERCISE"]:
                     raise ValidationException(

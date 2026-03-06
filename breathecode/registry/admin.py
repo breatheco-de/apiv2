@@ -16,7 +16,6 @@ from .actions import (
     AssetThumbnailGenerator,
     add_syllabus_translations,
     get_user_from_github_username,
-    process_asset_config,
     push_to_github,
     scan_asset_originality,
 )
@@ -96,7 +95,8 @@ def make_internal(modeladmin, request, queryset):
 def process_config_object(modeladmin, request, queryset):
     assets = queryset.all()
     for a in assets:
-        process_asset_config(a, a.config)
+        if a.config:
+            a.apply_learn_config(a.config)
 
 
 def pull_content_from_github(modeladmin, request, queryset):

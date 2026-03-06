@@ -683,7 +683,7 @@ class AssetParser:
 
         # Check repo access
         if not self.github_service.repo_exists(owner, repo):
-            raise Exception(f"Repository {owner}/{repo} not found or not accessible")
+            raise Exception(f"Repository {owner}/{repo} not found or not accessible. Who's the owner of this asset? does it have access? Also check the github url's")
 
         # Initialize metadata
         metadata = {
@@ -922,54 +922,12 @@ class AssetParser:
 
     def _extract_learn_json_metadata(self, config, metadata):
         """
-        Extract metadata from learn.json configuration.
-        
-        Args:
-            config: Parsed learn.json configuration
-            metadata: Dictionary to populate with extracted metadata
+        Extract metadata from learn.json configuration using canonical Asset mapping.
         """
-        if "projectType" in config:
-            pt = config["projectType"]
-            if pt == "project":
-                metadata["asset_type"] = "PROJECT"
-            elif pt == "exercise":
-                metadata["asset_type"] = "EXERCISE"
-        if "title" in config:
-            if isinstance(config["title"], str):
-                metadata["title"] = config["title"]
-            elif isinstance(config["title"], dict):
-                # Multi-language title: prefer language from readme filename (e.g. .es.md)
-                preferred_lang = metadata.get("lang")
-                if preferred_lang and preferred_lang in config["title"]:
-                    metadata["title"] = config["title"][preferred_lang]
-                else:
-                    metadata["title"] = config["title"].get("en") or config["title"].get("us")
+        from breathecode.registry.models import Asset
 
-        if "description" in config:
-            if isinstance(config["description"], str):
-                metadata["description"] = config["description"]
-            elif isinstance(config["description"], dict):
-                # Multi-language description: prefer language from readme filename (e.g. .es.md)
-                preferred_lang = metadata.get("lang")
-                if preferred_lang and preferred_lang in config["description"]:
-                    metadata["description"] = config["description"][preferred_lang]
-                else:
-                    metadata["description"] = config["description"].get("en") or config["description"].get("us")
-
-        if "difficulty" in config:
-            metadata["difficulty"] = config["difficulty"]
-
-        if "duration" in config:
-            metadata["duration"] = config["duration"]
-
-        if "technologies" in config:
-            metadata["technologies"] = config["technologies"]
-
-        if "slug" in config:
-            metadata["slug"] = config["slug"]
-
-        if "preview" in config:
-            metadata["preview"] = config["preview"]
+        extracted = Asset.learn_config_to_metadata(config, metadata.get("lang"))
+        metadata.update(extracted)
 
     def _extract_frontmatter(self, content):
         """
