@@ -64,6 +64,16 @@ from .models import (
 logger = getLogger(__name__)
 
 
+def _raise_if_task_manager_failed(task_handler: Any) -> None:
+    task_manager = getattr(task_handler, "task_manager", None)
+    if task_manager is None:
+        return
+
+    if task_manager.status in ["ERROR", "ABORTED"]:
+        message = task_manager.status_message or "Task execution failed"
+        raise Exception(message)
+
+
 def calculate_relative_delta(unit: float, unit_type: str):
     delta_args = {}
     if unit_type == "DAY":
@@ -1445,6 +1455,165 @@ def get_service_stock_status_for_user(
         payload["consumables_balance"] = balance
 
     return payload
+
+
+def _run_service_stock_build_task_sync(target_type: str, target_id: int, seat_id: Optional[int] = None) -> None:
+    if target_type == "plan_financing":
+        task_handler = tasks.build_service_stock_scheduler_from_plan_financing
+    else:
+        task_handler = tasks.build_service_stock_scheduler_from_subscription
+
+    kwargs = {}
+    if seat_id is not None:
+        kwargs["seat_id"] = seat_id
+
+    if hasattr(task_handler, "apply"):
+        task_handler.apply(args=[target_id], kwargs=kwargs, throw=True)
+        _raise_if_task_manager_failed(task_handler)
+        return
+
+    task_handler(target_id, **kwargs)
+
+
+def _run_renew_consumable_task_sync(service_stock_scheduler_id: int) -> None:
+    task_handler = tasks.renew_consumables
+
+    if hasattr(task_handler, "apply"):
+        task_handler.apply(args=[service_stock_scheduler_id], throw=True)
+        _raise_if_task_manager_failed(task_handler)
+        return
+
+    task_handler(service_stock_scheduler_id)
+
+
+def regenerate_consumable_for_service_stock_scheduler(
+    academy_id: int,
+    service_stock_scheduler_id: int,
+) -> dict:
+    from breathecode.payments.models import ServiceStockScheduler
+
+    academy_q = (
+        Q(plan_handler__subscription__academy_id=academy_id)
+        | Q(plan_handler__plan_financing__academy_id=academy_id)
+        | Q(subscription_handler__subscription__academy_id=academy_id)
+        | Q(subscription_seat__billing_team__subscription__academy_id=academy_id)
+        | Q(subscription_billing_team__subscription__academy_id=academy_id)
+        | Q(plan_financing_seat__team__financing__academy_id=academy_id)
+        | Q(plan_financing_team__financing__academy_id=academy_id)
+    )
+
+    scheduler = ServiceStockScheduler.objects.filter(id=service_stock_scheduler_id).filter(academy_q).first()
+    if not scheduler:
+        raise ValidationException(
+            translation(
+                en="Service stock scheduler not found in this academy",
+                es="Service stock scheduler no encontrado en esta academia",
+                slug="service-stock-scheduler-not-found",
+            ),
+            code=404,
+        )
+
+    execution_error = None
+    error_stage = None
+    try:
+        _run_renew_consumable_task_sync(service_stock_scheduler_id)
+    except (AbortTask, RetryTask, Exception) as error:
+        execution_error = str(error)
+        error_stage = "renew_consumable"
+
+    if execution_error:
+        status = "failed"
+    else:
+        status = "success"
+
+    return {
+        "scheduler": {
+            "id": service_stock_scheduler_id,
+            "academy_id": academy_id,
+        },
+        "status": status,
+        "error_stage": error_stage,
+        "execution_error": execution_error,
+        "message": (
+            "Consumable regeneration executed successfully"
+            if status == "success"
+            else f"Failed while renewing consumables for service stock scheduler: {execution_error}"
+        ),
+    }
+
+
+def regenerate_service_stock_for_target(
+    academy_id: int,
+    plan_financing_id: Optional[int] = None,
+    subscription_id: Optional[int] = None,
+    seat_id: Optional[int] = None,
+) -> dict:
+    """
+    Regenerate service stock schedulers and consumables synchronously for one target.
+    Returns an immediate execution payload so the client can re-fetch schedulers in a separate request.
+    """
+    from breathecode.payments.models import PlanFinancing, Subscription
+
+    if bool(plan_financing_id) == bool(subscription_id):
+        raise ValidationException(
+            translation(
+                en="Provide exactly one target: plan_financing_id or subscription_id",
+                es="Debes enviar exactamente un objetivo: plan_financing_id o subscription_id",
+                slug="invalid-target",
+            ),
+            code=400,
+        )
+
+    target_type = "plan_financing" if plan_financing_id else "subscription"
+    target_id = plan_financing_id if plan_financing_id else subscription_id
+
+    if target_type == "plan_financing":
+        target = PlanFinancing.objects.filter(id=target_id, academy_id=academy_id).first()
+    else:
+        target = Subscription.objects.filter(id=target_id, academy_id=academy_id).first()
+
+    if not target:
+        raise ValidationException(
+            translation(
+                en=f"{target_type} not found in this academy",
+                es=f"{target_type} no encontrado en esta academia",
+                slug="target-not-found",
+            ),
+            code=404,
+        )
+
+    user_id = target.user_id
+
+    execution_error = None
+    error_stage = None
+    try:
+        _run_service_stock_build_task_sync(target_type, target_id, seat_id=seat_id)
+    except (AbortTask, RetryTask, Exception) as error:
+        execution_error = str(error)
+        error_stage = "build_service_stock_scheduler"
+
+    if execution_error:
+        status = "failed"
+    else:
+        status = "success"
+
+    return {
+        "target": {
+            "type": target_type,
+            "id": target_id,
+            "academy_id": academy_id,
+            "user_id": user_id,
+            "seat_id": seat_id,
+        },
+        "status": status,
+        "error_stage": error_stage,
+        "execution_error": execution_error,
+        "message": (
+            "Service stock regeneration executed successfully"
+            if status == "success"
+            else f"Failed while building service stock schedulers: {execution_error}"
+        ),
+    }
 
 
 # Default configuration for coupon statistics
