@@ -572,7 +572,7 @@ class MemberView(APIView, GenerateLookupsMixin):
                     code=400,
                 )
 
-            if role_obj.academy_id is not None and role_obj.academy_id != academy_id:
+            if role_obj.academy_id is not None and str(role_obj.academy_id) != str(academy_id):
                 raise ValidationException(
                     translation(
                         lang,
