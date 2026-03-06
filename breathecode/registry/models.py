@@ -1222,6 +1222,8 @@ class Asset(models.Model):
 
         return config
 
+    @property
+    def is_in_subdirectory(self):
         """
         True when this asset's readme_url points to a file inside a repo subdirectory
         (e.g. .../blob/main/projects/myproject/README.md). When True for a PROJECT,
