@@ -1515,11 +1515,34 @@ def regenerate_consumable_for_service_stock_scheduler(
 
     execution_error = None
     error_stage = None
+    consumables_count_before = scheduler.consumables.count()
     try:
         _run_renew_consumable_task_sync(service_stock_scheduler_id)
     except (AbortTask, RetryTask, Exception) as error:
         execution_error = str(error)
         error_stage = "renew_consumable"
+
+    scheduler.refresh_from_db()
+    consumables_count_after = scheduler.consumables.count()
+
+    if execution_error is None and consumables_count_after <= consumables_count_before:
+        issues = check_scheduler_renewal_issues(scheduler, timezone.now())
+        prioritized_issue = None
+        priority_tokens = [
+            "needs to be paid",
+            "is expired",
+            "has invalid status",
+            "has no linked resource",
+            "does not need renewal yet",
+        ]
+
+        for token in priority_tokens:
+            prioritized_issue = next((x for x in issues if token in x), None)
+            if prioritized_issue:
+                break
+
+        execution_error = prioritized_issue or "No consumable was created during regeneration"
+        error_stage = "post_condition"
 
     if execution_error:
         status = "failed"
@@ -1552,7 +1575,7 @@ def regenerate_service_stock_for_target(
     Regenerate service stock schedulers and consumables synchronously for one target.
     Returns an immediate execution payload so the client can re-fetch schedulers in a separate request.
     """
-    from breathecode.payments.models import PlanFinancing, Subscription
+    from breathecode.payments.models import PlanFinancing, ServiceStockScheduler, Subscription
 
     if bool(plan_financing_id) == bool(subscription_id):
         raise ValidationException(
@@ -1586,11 +1609,30 @@ def regenerate_service_stock_for_target(
 
     execution_error = None
     error_stage = None
+    schedulers_count_before = (
+        ServiceStockScheduler.objects.filter(plan_handler__plan_financing_id=target_id).count()
+        if target_type == "plan_financing"
+        else ServiceStockScheduler.objects.filter(
+            Q(subscription_handler__subscription_id=target_id) | Q(plan_handler__subscription_id=target_id)
+        ).count()
+    )
     try:
         _run_service_stock_build_task_sync(target_type, target_id, seat_id=seat_id)
     except (AbortTask, RetryTask, Exception) as error:
         execution_error = str(error)
         error_stage = "build_service_stock_scheduler"
+
+    schedulers_count_after = (
+        ServiceStockScheduler.objects.filter(plan_handler__plan_financing_id=target_id).count()
+        if target_type == "plan_financing"
+        else ServiceStockScheduler.objects.filter(
+            Q(subscription_handler__subscription_id=target_id) | Q(plan_handler__subscription_id=target_id)
+        ).count()
+    )
+
+    if execution_error is None and schedulers_count_before == 0 and schedulers_count_after == 0:
+        execution_error = "No service stock scheduler was created during regeneration"
+        error_stage = "post_condition"
 
     if execution_error:
         status = "failed"

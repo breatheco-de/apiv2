@@ -38,23 +38,22 @@ class PaymentsTestSuite(PaymentsTestCase):
             country=1,
             city=1,
             service_item={"how_many": -1},
-            service={"type": "SEAT"},
-            plan_financing=plan_financing,
+            service={"type": "COHORT_SET"},
+            cohort_set=1,
+            plan_financing={"selected_cohort_set_id": 1, **plan_financing},
             plan_service_item_handler=1,
         )
 
-        with patch.object(actions, "_run_renew_consumable_task_sync", MagicMock()) as renew_mock:
-            response = actions.regenerate_consumable_for_service_stock_scheduler(
-                academy_id=model.academy.id,
-                service_stock_scheduler_id=model.service_stock_scheduler.id,
-            )
+        response = actions.regenerate_consumable_for_service_stock_scheduler(
+            academy_id=model.academy.id,
+            service_stock_scheduler_id=model.service_stock_scheduler.id,
+        )
 
         self.assertEqual(response["status"], "success")
         self.assertEqual(response["error_stage"], None)
         self.assertEqual(response["execution_error"], None)
         self.assertEqual(response["scheduler"]["id"], model.service_stock_scheduler.id)
         self.assertEqual(response["scheduler"]["academy_id"], model.academy.id)
-        self.assertEqual(renew_mock.call_args_list, [((model.service_stock_scheduler.id,), {})])
 
     """
     🔽🔽🔽 Scheduler not found in academy
@@ -103,3 +102,33 @@ class PaymentsTestSuite(PaymentsTestCase):
             response["message"],
             f"Failed while renewing consumables for service stock scheduler: The plan financing {model.plan_financing.id} is over",
         )
+
+    @pytest.mark.django_db
+    def test_regenerate_consumable_for_service_stock_scheduler__fails_if_task_did_not_create_consumable(self):
+        plan_financing = {
+            "monthly_price": 100,
+            "next_payment_at": timezone.now() - relativedelta(days=1),
+            "plan_expires_at": timezone.now() + relativedelta(months=2),
+            "status": "ACTIVE",
+        }
+        model = self.bc.database.create(
+            service_stock_scheduler=1,
+            plan={"is_renewable": False},
+            academy={"available_as_saas": True},
+            country=1,
+            city=1,
+            service_item={"how_many": -1},
+            service={"type": "SEAT"},
+            plan_financing=plan_financing,
+            plan_service_item_handler=1,
+        )
+
+        with patch.object(actions, "_run_renew_consumable_task_sync", MagicMock()):
+            response = actions.regenerate_consumable_for_service_stock_scheduler(
+                academy_id=model.academy.id,
+                service_stock_scheduler_id=model.service_stock_scheduler.id,
+            )
+
+        self.assertEqual(response["status"], "failed")
+        self.assertEqual(response["error_stage"], "post_condition")
+        self.assertTrue("needs to be paid" in response["execution_error"])
