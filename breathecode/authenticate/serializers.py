@@ -259,10 +259,14 @@ class RoleSmallSerializer(serpy.Serializer):
 
     id = serpy.MethodField()
     slug = serpy.Field()
+    display_slug = serpy.MethodField()
     name = serpy.Field()
 
     def get_id(self, obj):
         return obj.slug
+
+    def get_display_slug(self, obj):
+        return obj.display_slug
 
 
 class RoleBigSerializer(serpy.Serializer):
@@ -270,12 +274,16 @@ class RoleBigSerializer(serpy.Serializer):
 
     id = serpy.MethodField()
     slug = serpy.Field()
+    display_slug = serpy.MethodField()
     name = serpy.Field()
     capabilities = serpy.MethodField()
 
     # this id is needed for zapier.com
     def get_id(self, obj):
         return obj.slug
+
+    def get_display_slug(self, obj):
+        return obj.display_slug
 
     def get_capabilities(self, obj):
         return obj.capabilities.all().values_list("slug", flat=True)

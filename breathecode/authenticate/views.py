@@ -93,6 +93,7 @@ from .forms import (
 )
 from .models import (
     AcademyAuthSettings,
+    Capability,
     CredentialsDiscord,
     CredentialsFacebook,
     CredentialsGithub,
@@ -571,6 +572,17 @@ class MemberView(APIView, GenerateLookupsMixin):
                     code=400,
                 )
 
+            if role_obj.academy_id is not None and role_obj.academy_id != academy_id:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="This role is not available for this academy.",
+                        es="Este rol no está disponible para esta academia.",
+                        slug="role-not-available-for-academy",
+                    ),
+                    code=400,
+                )
+
             if role_obj and role_obj.slug == "student":
                 raise ValidationException(
                     translation(
@@ -621,6 +633,17 @@ class MemberView(APIView, GenerateLookupsMixin):
                         en="Role not found",
                         es="Rol no encontrado",
                         slug="role-not-found",
+                    ),
+                    code=400,
+                )
+
+            if role_obj.academy_id is not None and role_obj.academy_id != academy_id:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="This role is not available for this academy.",
+                        es="Este rol no está disponible para esta academia.",
+                        slug="role-not-available-for-academy",
                     ),
                     code=400,
                 )
@@ -1746,6 +1769,254 @@ class AcademyCapabilitiesView(APIView):
         capabilities_list = sorted(list(capabilities_set))
 
         return Response(capabilities_list, status=status.HTTP_200_OK)
+
+
+def _get_academy_or_404(academy_id):
+    academy = Academy.objects.filter(id=academy_id).first()
+    if not academy:
+        raise ValidationException(
+            translation(
+                en=f"Academy with id '{academy_id}' not found",
+                es=f"Academia con id '{academy_id}' no encontrada",
+            ),
+            slug="academy-not-found",
+            code=404,
+        )
+    return academy
+
+
+class AcademyCapabilityListView(APIView):
+    """List all capabilities (slug, description) for building academy role forms. Admin and academy admin only."""
+
+    permission_classes = [IsAuthenticated]
+
+    @capable_of("manage_academy_roles")
+    def get(self, request, academy_id=None):
+        _get_academy_or_404(academy_id)
+        capabilities = Capability.objects.all().order_by("slug")
+        data = [{"slug": c.slug, "description": c.description or ""} for c in capabilities]
+        return Response(data, status=status.HTTP_200_OK)
+
+
+class AcademyRoleView(APIView):
+    """List roles for an academy (native + custom) or create a custom role. Admin and academy admin only."""
+
+    permission_classes = [IsAuthenticated]
+
+    @capable_of("manage_academy_roles")
+    def get(self, request, academy_id=None):
+        academy = _get_academy_or_404(academy_id)
+        roles = (
+            Role.objects.filter(Q(academy__isnull=True) | Q(academy_id=academy_id))
+            .prefetch_related("capabilities")
+            .order_by("slug")
+        )
+        result = []
+        for role in roles:
+            item = RoleBigSerializer(role).data
+            item["native"] = role.academy_id is None
+            result.append(item)
+        return Response(result, status=status.HTTP_200_OK)
+
+    @capable_of("manage_academy_roles")
+    def post(self, request, academy_id=None):
+        from breathecode.authenticate.role_definitions import get_extended_roles
+
+        lang = get_user_language(request)
+        academy = _get_academy_or_404(academy_id)
+        name = request.data.get("name")
+        slug_base = request.data.get("slug")
+        capabilities_slugs = request.data.get("capabilities") or []
+
+        if not name or not isinstance(name, str) or not name.strip():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="name is required and must be a non-empty string",
+                    es="name es obligatorio y debe ser una cadena no vacía",
+                ),
+                slug="invalid-name",
+                code=400,
+            )
+        if not slug_base or not isinstance(slug_base, str) or not slug_base.strip():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="slug is required and must be a non-empty string",
+                    es="slug es obligatorio y debe ser una cadena no vacía",
+                ),
+                slug="invalid-slug",
+                code=400,
+            )
+        slug_base = slug_base.strip().lower()
+        if not re.match(r"^[a-z0-9_]+$", slug_base):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="slug must contain only lowercase letters, numbers and underscores",
+                    es="slug debe contener solo letras minúsculas, números y guiones bajos",
+                ),
+                slug="invalid-slug-format",
+                code=400,
+            )
+        native_slugs = {r["slug"] for r in get_extended_roles()}
+        if slug_base in native_slugs:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"slug '{slug_base}' is reserved for a native role",
+                    es=f"slug '{slug_base}' está reservado para un rol nativo",
+                ),
+                slug="slug-reserved",
+                code=400,
+            )
+        full_slug = f"{slug_base}_{academy.id}"
+        if Role.objects.filter(slug=full_slug).exists():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"A role with slug '{slug_base}' already exists for this academy",
+                    es=f"Ya existe un rol con slug '{slug_base}' para esta academia",
+                ),
+                slug="role-already-exists",
+                code=400,
+            )
+        valid_caps = set(Capability.objects.values_list("slug", flat=True))
+        invalid = [s for s in capabilities_slugs if s not in valid_caps]
+        if invalid:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Invalid capability slugs: {invalid}",
+                    es=f"Slugs de capacidad no válidos: {invalid}",
+                ),
+                slug="invalid-capabilities",
+                code=400,
+            )
+        role = Role.objects.create(slug=full_slug, name=name.strip(), academy=academy)
+        for cap_slug in capabilities_slugs:
+            role.capabilities.add(cap_slug)
+        data = RoleBigSerializer(role).data
+        data["native"] = False
+        return Response(data, status=status.HTTP_201_CREATED)
+
+
+class AcademyRoleSlugView(APIView):
+    """Get, update or delete an academy role by slug. Only custom roles (academy-owned) can be updated/deleted."""
+
+    permission_classes = [IsAuthenticated]
+
+    def _get_role_for_academy(self, academy_id, role_slug):
+        academy = _get_academy_or_404(academy_id)
+        role = (
+            Role.objects.filter(Q(academy__isnull=True) | Q(academy_id=academy_id))
+            .filter(slug=role_slug)
+            .prefetch_related("capabilities")
+            .first()
+        )
+        if not role:
+            raise ValidationException(
+                translation(
+                    en=f"Role with slug '{role_slug}' not found for this academy",
+                    es=f"Rol con slug '{role_slug}' no encontrado para esta academia",
+                ),
+                slug="role-not-found",
+                code=404,
+            )
+        return academy, role
+
+    @capable_of("manage_academy_roles")
+    def get(self, request, academy_id=None, role_slug=None):
+        academy, role = self._get_role_for_academy(academy_id, role_slug)
+        data = RoleBigSerializer(role).data
+        data["native"] = role.academy_id is None
+        return Response(data, status=status.HTTP_200_OK)
+
+    @capable_of("manage_academy_roles")
+    def put(self, request, academy_id=None, role_slug=None):
+        lang = get_user_language(request)
+        academy, role = self._get_role_for_academy(academy_id, role_slug)
+        if role.academy_id is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Native roles cannot be updated",
+                    es="Los roles nativos no se pueden actualizar",
+                ),
+                slug="native-role-read-only",
+                code=400,
+            )
+        name = request.data.get("name")
+        capabilities_slugs = request.data.get("capabilities")
+        if name is not None:
+            if not isinstance(name, str) or not name.strip():
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="name must be a non-empty string",
+                        es="name debe ser una cadena no vacía",
+                    ),
+                    slug="invalid-name",
+                    code=400,
+                )
+            role.name = name.strip()
+            role.save()
+        if capabilities_slugs is not None:
+            valid_caps = set(Capability.objects.values_list("slug", flat=True))
+            invalid = [s for s in capabilities_slugs if s not in valid_caps]
+            if invalid:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Invalid capability slugs: {invalid}",
+                        es=f"Slugs de capacidad no válidos: {invalid}",
+                    ),
+                    slug="invalid-capabilities",
+                    code=400,
+                )
+            role.capabilities.clear()
+            for cap_slug in capabilities_slugs:
+                role.capabilities.add(cap_slug)
+        data = RoleBigSerializer(role).data
+        data["native"] = False
+        return Response(data, status=status.HTTP_200_OK)
+
+    @capable_of("manage_academy_roles")
+    def delete(self, request, academy_id=None, role_slug=None):
+        lang = get_user_language(request)
+        academy, role = self._get_role_for_academy(academy_id, role_slug)
+        if role.academy_id is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Native roles cannot be deleted",
+                    es="Los roles nativos no se pueden eliminar",
+                ),
+                slug="native-role-read-only",
+                code=400,
+            )
+        if ProfileAcademy.objects.filter(role=role).exists():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Cannot delete role: it is assigned to one or more members",
+                    es="No se puede eliminar el rol: está asignado a uno o más miembros",
+                ),
+                slug="role-in-use",
+                code=400,
+            )
+        if UserInvite.objects.filter(role=role).exists():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Cannot delete role: it is used in one or more invites",
+                    es="No se puede eliminar el rol: se usa en una o más invitaciones",
+                ),
+                slug="role-in-use",
+                code=400,
+            )
+        role.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class UserSettingsView(APIView):

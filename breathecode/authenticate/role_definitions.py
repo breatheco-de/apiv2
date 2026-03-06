@@ -264,6 +264,10 @@ CAPABILITIES = [
         "slug": "crud_hook",
         "description": "Create, update, and delete webhook subscriptions for academy token",
     },
+    {
+        "slug": "manage_academy_roles",
+        "description": "Create, update, and delete academy custom roles and assign capabilities (admin and academy admin only)",
+    },
 ]
 
 BASE_ROLES = [
@@ -804,6 +808,7 @@ def get_extended_roles():
                 "crud_plan",
                 "crud_academyservice",
                 "crud_academy_payment_settings",
+                "manage_academy_roles",
             ],
         }
     )

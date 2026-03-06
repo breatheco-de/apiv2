@@ -132,9 +132,24 @@ class Role(models.Model):
     slug = models.SlugField(max_length=25, primary_key=True)
     name = models.CharField(max_length=255, blank=True, null=True, default=None)
     capabilities = models.ManyToManyField(Capability)
+    academy = models.ForeignKey(
+        Academy,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="custom_roles",
+        help_text="Null for native (platform) roles; set for academy-owned custom roles.",
+    )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    @property
+    def display_slug(self):
+        """Slug without academy id suffix, for UI display. Native roles return slug as-is."""
+        if self.academy_id is not None and self.slug.endswith(f"_{self.academy_id}"):
+            return self.slug.removesuffix(f"_{self.academy_id}")
+        return self.slug
 
     def __str__(self):
         return f"{self.name} ({self.slug})"

@@ -10,6 +10,7 @@ from breathecode.admissions.models import Academy
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.marketing.serializers import GetCourseSmallSerializer
 from breathecode.utils import serpy
+from breathecode.utils.validators import language_codes_for_lookup, languages_equivalent
 
 from .models import (
     Asset,
@@ -1185,8 +1186,9 @@ class AssetPUTSerializer(serializers.ModelSerializer):
         if category is None:
             raise ValidationException("Asset category cannot be null", status.HTTP_400_BAD_REQUEST)
 
-        if lang != category.lang:
-            translated_category = category.all_translations.filter(lang=lang).first()
+        if not languages_equivalent(lang, category.lang):
+            codes = language_codes_for_lookup(lang)
+            translated_category = category.all_translations.filter(lang__in=codes).first() if codes else None
             if translated_category is None:
                 raise ValidationException(
                     "Asset category is in a different language than the asset itself and we could not find a category translation that matches the same language",
@@ -1355,8 +1357,9 @@ class AssetPUTMeSerializer(serializers.ModelSerializer):
             except Exception:
                 pass
 
-        if category and lang != category.lang:
-            translated_category = category.all_translations.filter(lang=lang).first()
+        if category and not languages_equivalent(lang, category.lang):
+            codes = language_codes_for_lookup(lang)
+            translated_category = category.all_translations.filter(lang__in=codes).first() if codes else None
             if translated_category is None:
                 raise ValidationException(
                     "Asset category is in a different language than the asset itself and we could not find a category translation that matches the same language",

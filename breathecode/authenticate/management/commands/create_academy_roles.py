@@ -26,14 +26,18 @@ class Command(BaseCommand):
                 _cap.description = c["description"]
                 _cap.save()
 
-        # Get all roles (base + extended) from centralized role definitions
+        # Get all roles (base + extended) from centralized role definitions.
+        # Only create/update native roles (academy_id null); do not touch academy-owned custom roles.
         roles = get_extended_roles()
 
         for r in roles:
             _r = Role.objects.filter(slug=r["slug"]).first()
             if _r is None:
-                _r = Role(slug=r["slug"], name=r["name"])
+                _r = Role(slug=r["slug"], name=r["name"], academy=None)
                 _r.save()
+            elif _r.academy_id is not None:
+                # Academy-owned custom role; skip (platform does not manage it)
+                continue
             else:
                 if _r.name != r["name"]:
                     _r.name = r["name"]
