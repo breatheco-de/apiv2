@@ -1104,13 +1104,23 @@ class AcademyEventTypeSetView(APIView):
                 if isinstance(event_type_ids, str)
                 else event_type_ids
             )
-            event_types_to_add = EventType.objects.filter(id__in=ids, academy__id=academy_id)
+            # Allow event types the academy owns, or has access to (shared or via visibility)
+            event_type_access_q = (
+                Q(academy__id=academy_id)
+                | Q(allow_shared_creation=True)
+                | Q(visibility_settings__academy_id=academy_id)
+            )
+            event_types_to_add = (
+                EventType.objects.filter(id__in=ids)
+                .filter(event_type_access_q)
+                .distinct()
+            )
             if not event_types_to_add.exists() or event_types_to_add.count() != len(ids):
                 raise ValidationException(
                     translation(
                         lang,
-                        en=f"One or more event types don't exist or don't belong to academy {academy_id}",
-                        es=f"Uno o más tipos de evento no existen o no pertenecen a la academia {academy_id}",
+                        en="One or more event types don't exist or you don't have access to them",
+                        es="Uno o más tipos de evento no existen o no tienes acceso a ellos",
                     ),
                     slug="event-type-not-in-academy",
                     code=400,
@@ -1182,8 +1192,13 @@ class AcademyEventTypeSetView(APIView):
         if errors:
             raise ValidationException(errors, code=400)
 
-        # Filter event types by academy
-        items = EventType.objects.filter(query, academy__id=academy_id)
+        # Event types the academy has access to: owns, shared, or visible via visibility_settings
+        event_type_access_q = (
+            Q(academy__id=academy_id)
+            | Q(allow_shared_creation=True)
+            | Q(visibility_settings__academy_id=academy_id)
+        )
+        items = EventType.objects.filter(query).filter(event_type_access_q).distinct()
 
         if not items.exists():
             errors.append(
