@@ -10,3 +10,7 @@ class RegistryConfig(AppConfig):
     def ready(self):
         logger.debug("Loading provisioning.receivers")
         from . import receivers  # noqa: F401
+        try:
+            import breathecode.services.hostinger.client  # noqa: F401 - register Hostinger VPS client
+        except ImportError:
+            pass

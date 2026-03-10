@@ -14,6 +14,7 @@ from .models import (
     ProvisioningBill,
     ProvisioningContainer,
     ProvisioningProfile,
+    ProvisioningVPS,
 )
 
 logger = logging.getLogger(__name__)
@@ -172,3 +173,12 @@ class ProvisioningProfileAdmin(admin.ModelAdmin):
 
     def member_list(self, obj):
         return format_html(", ".join([str(pa) for pa in obj.members.all()]))
+
+
+@admin.register(ProvisioningVPS)
+class ProvisioningVPSAdmin(admin.ModelAdmin):
+    list_display = ("id", "user", "academy", "vendor", "status", "hostname", "ip_address", "provisioned_at", "deleted_at", "created_at")
+    list_filter = ["status", "academy", "vendor"]
+    search_fields = ["user__email", "hostname", "ip_address", "external_id"]
+    raw_id_fields = ["user", "academy", "vendor", "consumed_consumable"]
+    readonly_fields = ["root_password_encrypted"]

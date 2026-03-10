@@ -38,6 +38,9 @@ ENVIRONMENT = os.environ.get("ENV")
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = "5ar3h@ha%y*dc72z=8-ju7@4xqm0o59*@k*c2i=xacmy2r=%4a"
 
+# Encryption key for sensitive fields (e.g. VPS root password). Rotating invalidates existing encrypted values.
+ENCRYPTION_SECRET_KEY = os.environ.get("ENCRYPTION_SECRET_KEY", "")
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = ENVIRONMENT == "development" or ENVIRONMENT == "test"
 
