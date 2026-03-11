@@ -3,7 +3,7 @@ from collections import OrderedDict
 
 from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import Permission, User
-from django.db.models import Q
+from django.db.models import ObjectDoesNotExist, Q
 from django.utils import timezone
 
 from breathecode.admissions.actions import ImportCohortTimeSlots
@@ -1238,10 +1238,13 @@ class CohortSerializerMixin(serializers.ModelSerializer):
                             "each micro cohort must have a syllabus linked to a Specialty.",
                             slug="micro-cohort-syllabus-required",
                         )
-                    has_specialty = (
-                        syllabus.specialty_with_one_syllabus is not None
-                        or syllabus.specialties_with_many_syllabus.exists()
-                    )
+                    try:
+                        has_specialty = (
+                            syllabus.specialty_with_one_syllabus is not None
+                            or syllabus.specialties_with_many_syllabus.exists()
+                        )
+                    except ObjectDoesNotExist:
+                        has_specialty = syllabus.specialties_with_many_syllabus.exists()
                     if not has_specialty:
                         raise ValidationException(
                             f"Micro cohort '{cohort.name}' (id={cohort.id}) uses syllabus "
