@@ -14,14 +14,14 @@ def get_pusher_client():
     global _pusher_client
 
     if _pusher_client is None:
-        app_id = getattr(settings, "PUSHER_APP_ID", os.environ.get("PUSHER_APP_ID", ""))
-        key = getattr(settings, "PUSHER_KEY", os.environ.get("PUSHER_KEY", ""))
-        secret = getattr(settings, "PUSHER_SECRET", os.environ.get("PUSHER_SECRET", ""))
-        host = getattr(settings, "PUSHER_HOST", os.environ.get("PUSHER_HOST", "stream.4geeks.ai"))
-        port = int(getattr(settings, "PUSHER_PORT", os.environ.get("PUSHER_PORT", "443")))
+        app_id = getattr(settings, "SOKETI_APP_ID", os.environ.get("SOKETI_APP_ID", ""))
+        key = getattr(settings, "SOKETI_KEY", os.environ.get("SOKETI_KEY", ""))
+        secret = getattr(settings, "SOKETI_SECRET", os.environ.get("SOKETI_SECRET", ""))
+        host = getattr(settings, "SOKETI_HOST", os.environ.get("SOKETI_HOST", "stream.4geeks.ai"))
+        port = int(getattr(settings, "SOKETI_PORT", os.environ.get("SOKETI_PORT", "443")))
 
         if not app_id or not key or not secret:
-            logger.warning("Pusher credentials not configured. Survey events will not be sent.")
+            logger.warning("Soketi credentials not configured. Survey events will not be sent.")
             return None
 
         _pusher_client = pusher.Pusher(app_id=app_id, key=key, secret=secret, ssl=True, host=host, port=port)
@@ -31,7 +31,7 @@ def get_pusher_client():
 
 def send_survey_event(user_id: int, survey_response_id: int, questions: list, trigger_context: dict):
     """
-    Send survey event to Pusher for a specific user.
+    Send survey event to Soketi for a specific user.
 
     Args:
         user_id: ID of the user to send the event to
@@ -41,7 +41,7 @@ def send_survey_event(user_id: int, survey_response_id: int, questions: list, tr
     """
     client = get_pusher_client()
     if client is None:
-        logger.warning(f"Cannot send survey event to user {user_id}: Pusher not configured")
+        logger.warning(f"Cannot send survey event to user {user_id}: Soketi not configured for Pusher client")
         return False
 
     try:
@@ -54,7 +54,7 @@ def send_survey_event(user_id: int, survey_response_id: int, questions: list, tr
         }
 
         client.trigger(channel, event, payload)
-        logger.info(f"Survey event sent to user {user_id} via Pusher channel {channel}")
+        logger.info(f"Survey event sent to user {user_id} via Soketi (Pusher client) channel {channel}")
         return True
 
     except Exception as e:

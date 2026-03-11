@@ -1,5 +1,5 @@
 """
-Script para verificar que Pusher está configurado correctamente.
+Script para verificar que Pusher está configurado correctamente para conectarse al servidor Soketi.
 
 Ejecutar con:
   poetry run python test_pusher_connection.py
@@ -23,28 +23,28 @@ from django.contrib.auth.models import User
 from breathecode.feedback.services.pusher_service import get_pusher_client, send_survey_event
 
 print("=" * 60)
-print("VERIFICACIÓN DE CONFIGURACIÓN DE PUSHER")
+print("VERIFICACIÓN DE CONFIGURACIÓN DE SOKETI PARA LA CONEXIÓN CON PUSHER")
 print("=" * 60)
 print()
 
 # 1. Verificar variables de entorno
 print("1. Verificando variables de entorno...")
-app_id = os.environ.get("PUSHER_APP_ID", "")
-key = os.environ.get("PUSHER_KEY", "")
-secret = os.environ.get("PUSHER_SECRET", "")
-host = os.environ.get("PUSHER_HOST", "stream.4geeks.ai")
-port = os.environ.get("PUSHER_PORT", "")
+app_id = os.environ.get("SOKETI_APP_ID", "")
+key = os.environ.get("SOKETI_KEY", "")
+secret = os.environ.get("SOKETI_SECRET", "")
+host = os.environ.get("SOKETI_HOST", "")
+port = os.environ.get("SOKETI_PORT", "")
 
 
-print(f"   PUSHER_APP_ID: {'✅ Configurado' if app_id else '❌ No configurado'}")
-print(f"   PUSHER_KEY: {'✅ Configurado' if key else '❌ No configurado'}")
-print(f"   PUSHER_SECRET: {'✅ Configurado' if secret else '❌ No configurado'}")
-print(f"   PUSHER_HOST: {'✅ Configurado' if host else '❌ No configurado'}")
-print(f"   PUSHER_PORT: {'✅ Configurado' if port else '❌ No configurado'}")
+print(f"   SOKETI_APP_ID: {'✅ Configurado' if app_id else '❌ No configurado'}")
+print(f"   SOKETI_KEY: {'✅ Configurado' if key else '❌ No configurado'}")
+print(f"   SOKETI_SECRET: {'✅ Configurado' if secret else '❌ No configurado'}")
+print(f"   SOKETI_HOST: {'✅ Configurado' if host else '❌ No configurado'}")
+print(f"   SOKETI_PORT: {'✅ Configurado' if port else '❌ No configurado'}")
 print()
 
 if not app_id or not key or not secret or not host or not port:
-    print("❌ ERROR: Faltan variables de entorno de Pusher")
+    print("❌ ERROR: Faltan variables de entorno de Soketi")
     print("   Configura las variables en Heroku o en tu archivo .env")
     sys.exit(1)
 
@@ -72,7 +72,7 @@ else:
 print()
 
 # 4. Probar enviar un evento de prueba
-print("4. Enviando evento de prueba a Pusher...")
+print("4. Enviando evento de prueba a Soketi con el cliente de Pusher...")
 print(f"   Canal: public-user-{user.id}")
 print("   Evento: survey")
 
@@ -93,7 +93,7 @@ result = send_survey_event(
 )
 
 if result:
-    print("   ✅ Evento enviado correctamente a Pusher")
+    print("   ✅ Evento enviado correctamente a Soketi")
     print()
     print("   📋 Para verificar que el evento llegó:")
     print(f"   1. En el frontend, suscríbete al canal: public-user-{user.id}")
