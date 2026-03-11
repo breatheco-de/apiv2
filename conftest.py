@@ -381,9 +381,12 @@ def sign_jwt_link():
 
 @pytest.fixture(autouse=True, scope="function")
 def get_app_keys() -> Generator[None, None, None]:
-    actions.get_app_keys.cache_clear()
-    actions.get_optional_scopes_set.cache_clear()
-    actions.get_app.cache_clear()
+    if hasattr(actions.get_app_keys, "cache_clear"):
+        actions.get_app_keys.cache_clear()
+    if hasattr(actions.get_optional_scopes_set, "cache_clear"):
+        actions.get_optional_scopes_set.cache_clear()
+    if hasattr(actions.get_app, "cache_clear"):
+        actions.get_app.cache_clear()
 
     yield
 

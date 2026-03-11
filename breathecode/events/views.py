@@ -2085,6 +2085,109 @@ def ical_academies_repr(slugs=None, ids=None):
     return ret
 
 
+def _get_ical_student_response(request, user_id: int) -> HttpResponse:
+    """Build iCal feed for a student's cohort schedule (CohortTimeSlots). Used by ICalStudentView and ICalStudentMeView."""
+    cohort_ids = (
+        CohortUser.objects.filter(user__id=user_id, cohort__ending_date__isnull=False, cohort__never_ends=False)
+        .values_list("cohort_id", flat=True)
+        .exclude(cohort__stage="DELETED")
+    )
+
+    items = CohortTimeSlot.objects.filter(cohort__id__in=cohort_ids).order_by("id")
+
+    upcoming = request.GET.get("upcoming")
+    if upcoming == "true":
+        now = timezone.now()
+        items = items.filter(cohort__kickoff_date__gte=now)
+
+    key = server_id()
+
+    calendar = iCalendar()
+    calendar.add("prodid", f"-//4Geeks//Student Schedule ({user_id}) {key}//EN")
+    calendar.add("METHOD", "PUBLISH")
+    calendar.add("X-WR-CALNAME", "Academy - Schedule")
+    calendar.add("X-WR-CALDESC", "")
+    calendar.add("REFRESH-INTERVAL;VALUE=DURATION", "PT15M")
+
+    url = os.getenv("API_URL")
+    if url:
+        url = re.sub(r"/$", "", url) + "/v1/events/ical/student/" + str(user_id)
+        calendar.add("url", url)
+
+    calendar.add("version", "2.0")
+
+    for item in items:
+        event = iEvent()
+
+        event.add("summary", item.cohort.name)
+        event.add("uid", f"breathecode_cohort_time_slot_{item.id}_{key}")
+
+        stamp = DatetimeInteger.to_datetime(item.timezone, item.starting_at)
+        starting_at = fix_datetime_weekday(item.cohort.kickoff_date, stamp, next=True)
+        event.add("dtstart", starting_at)
+        event.add("dtstamp", stamp)
+
+        until_date = item.removed_at or item.cohort.ending_date
+
+        if not until_date:
+            until_date = timezone.make_aware(datetime(year=2100, month=12, day=31, hour=12, minute=00, second=00))
+
+        ending_at = DatetimeInteger.to_datetime(item.timezone, item.ending_at)
+        ending_at = fix_datetime_weekday(item.cohort.kickoff_date, ending_at, next=True)
+        event.add("dtend", ending_at)
+
+        if item.recurrent:
+            utc_ending_at = ending_at.astimezone(pytz.UTC)
+
+            # is possible hour of cohort.ending_date are wrong filled, I's assumes the max diff between
+            # summer/winter timezone should have two hours
+            delta = timedelta(
+                hours=utc_ending_at.hour - until_date.hour + 3,
+                minutes=utc_ending_at.minute - until_date.minute,
+                seconds=utc_ending_at.second - until_date.second,
+            )
+
+            event.add("rrule", {"freq": item.recurrency_type, "until": until_date + delta})
+
+        teacher = CohortUser.objects.filter(role="TEACHER", cohort__id=item.cohort.id).first()
+
+        if teacher:
+            organizer = vCalAddress(f"MAILTO:{teacher.user.email}")
+
+            if teacher.user.first_name and teacher.user.last_name:
+                organizer.params["cn"] = vText(f"{teacher.user.first_name} " f"{teacher.user.last_name}")
+            elif teacher.user.first_name:
+                organizer.params["cn"] = vText(teacher.user.first_name)
+            elif teacher.user.last_name:
+                organizer.params["cn"] = vText(teacher.user.last_name)
+
+            organizer.params["role"] = vText("OWNER")
+            event["organizer"] = organizer
+
+        location = item.cohort.academy.name
+
+        if item.cohort.academy.website_url:
+            location = f"{location} ({item.cohort.academy.website_url})"
+        event["location"] = vText(item.cohort.online_meeting_url or item.cohort.academy.name)
+
+        calendar.add_component(event)
+
+    calendar_text = calendar.to_ical()
+
+    response = HttpResponse(calendar_text, content_type="text/calendar")
+    response["Content-Disposition"] = 'attachment; filename="calendar.ics"'
+    return response
+
+
+class ICalStudentMeView(APIView):
+    """iCal feed for the authenticated user's cohort schedule. Use this URL in Google Calendar etc."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return _get_ical_student_response(request, request.user.id)
+
+
 class ICalStudentView(APIView):
     permission_classes = [AllowAny]
 
@@ -2092,96 +2195,7 @@ class ICalStudentView(APIView):
         if not User.objects.filter(id=user_id).count():
             raise ValidationException("Student not exist", 404, slug="student-not-exist")
 
-        cohort_ids = (
-            CohortUser.objects.filter(user__id=user_id, cohort__ending_date__isnull=False, cohort__never_ends=False)
-            .values_list("cohort_id", flat=True)
-            .exclude(cohort__stage="DELETED")
-        )
-
-        items = CohortTimeSlot.objects.filter(cohort__id__in=cohort_ids).order_by("id")
-
-        upcoming = request.GET.get("upcoming")
-        if upcoming == "true":
-            now = timezone.now()
-            items = items.filter(cohort__kickoff_date__gte=now)
-
-        key = server_id()
-
-        calendar = iCalendar()
-        calendar.add("prodid", f"-//4Geeks//Student Schedule ({user_id}) {key}//EN")
-        calendar.add("METHOD", "PUBLISH")
-        calendar.add("X-WR-CALNAME", "Academy - Schedule")
-        calendar.add("X-WR-CALDESC", "")
-        calendar.add("REFRESH-INTERVAL;VALUE=DURATION", "PT15M")
-
-        url = os.getenv("API_URL")
-        if url:
-            url = re.sub(r"/$", "", url) + "/v1/events/ical/student/" + str(user_id)
-            calendar.add("url", url)
-
-        calendar.add("version", "2.0")
-
-        for item in items:
-            event = iEvent()
-
-            event.add("summary", item.cohort.name)
-            event.add("uid", f"breathecode_cohort_time_slot_{item.id}_{key}")
-
-            stamp = DatetimeInteger.to_datetime(item.timezone, item.starting_at)
-            starting_at = fix_datetime_weekday(item.cohort.kickoff_date, stamp, next=True)
-            event.add("dtstart", starting_at)
-            event.add("dtstamp", stamp)
-
-            until_date = item.removed_at or item.cohort.ending_date
-
-            if not until_date:
-                until_date = timezone.make_aware(datetime(year=2100, month=12, day=31, hour=12, minute=00, second=00))
-
-            ending_at = DatetimeInteger.to_datetime(item.timezone, item.ending_at)
-            ending_at = fix_datetime_weekday(item.cohort.kickoff_date, ending_at, next=True)
-            event.add("dtend", ending_at)
-
-            if item.recurrent:
-                utc_ending_at = ending_at.astimezone(pytz.UTC)
-
-                # is possible hour of cohort.ending_date are wrong filled, I's assumes the max diff between
-                # summer/winter timezone should have two hours
-                delta = timedelta(
-                    hours=utc_ending_at.hour - until_date.hour + 3,
-                    minutes=utc_ending_at.minute - until_date.minute,
-                    seconds=utc_ending_at.second - until_date.second,
-                )
-
-                event.add("rrule", {"freq": item.recurrency_type, "until": until_date + delta})
-
-            teacher = CohortUser.objects.filter(role="TEACHER", cohort__id=item.cohort.id).first()
-
-            if teacher:
-                organizer = vCalAddress(f"MAILTO:{teacher.user.email}")
-
-                if teacher.user.first_name and teacher.user.last_name:
-                    organizer.params["cn"] = vText(f"{teacher.user.first_name} " f"{teacher.user.last_name}")
-                elif teacher.user.first_name:
-                    organizer.params["cn"] = vText(teacher.user.first_name)
-                elif teacher.user.last_name:
-                    organizer.params["cn"] = vText(teacher.user.last_name)
-
-                organizer.params["role"] = vText("OWNER")
-                event["organizer"] = organizer
-
-            location = item.cohort.academy.name
-
-            if item.cohort.academy.website_url:
-                location = f"{location} ({item.cohort.academy.website_url})"
-            event["location"] = vText(item.cohort.online_meeting_url or item.cohort.academy.name)
-
-            calendar.add_component(event)
-
-        calendar_text = calendar.to_ical()
-
-        response = HttpResponse(calendar_text, content_type="text/calendar")
-        response["Content-Disposition"] = 'attachment; filename="calendar.ics"'
-        return response
+        return _get_ical_student_response(request, user_id)
 
 
 class ICalCohortsView(APIView):

@@ -1,0 +1,12 @@
+Your VPS is ready
+
+Use the following details to connect via SSH:
+
+Hostname / IP: {{ hostname|default:ip_address }}{% if ip_address and hostname %} ({{ ip_address }}){% endif %}
+SSH User: {{ ssh_user|default:"root" }}
+SSH Port: {{ ssh_port|default:"22" }}
+Root Password: {{ root_password }}
+
+Example: ssh {{ ssh_user|default:"root" }}@{{ ip_address|default:hostname }} -p {{ ssh_port|default:"22" }}
+
+Keep your password secure and do not share it.

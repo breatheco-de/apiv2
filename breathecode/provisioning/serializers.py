@@ -6,7 +6,7 @@ from rest_framework import serializers
 
 from breathecode.utils import serpy
 
-from .models import ProvisioningBill, ProvisioningContainer
+from .models import ProvisioningBill, ProvisioningContainer, ProvisioningVPS
 
 
 class AcademySerializer(serpy.Serializer):
@@ -296,3 +296,85 @@ class ProvisioningBillSerializer(serializers.ModelSerializer):
             )
 
         return data
+
+
+# --- VPS serializers ---
+
+
+class VPSListSerializer(serpy.Serializer):
+    """VPS list item (no root_password)."""
+
+    id = serpy.Field()
+    status = serpy.Field()
+    hostname = serpy.Field()
+    ip_address = serpy.Field()
+    ssh_user = serpy.Field()
+    ssh_port = serpy.Field()
+    plan_slug = serpy.Field()
+    error_message = serpy.Field()
+    requested_at = serpy.Field()
+    provisioned_at = serpy.Field()
+    deleted_at = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+
+
+class VPSDetailSerializer(serpy.Serializer):
+    """VPS detail; include root_password only when context has show_password=True (owner)."""
+
+    id = serpy.Field()
+    status = serpy.Field()
+    hostname = serpy.Field()
+    ip_address = serpy.Field()
+    ssh_user = serpy.Field()
+    ssh_port = serpy.Field()
+    plan_slug = serpy.Field()
+    error_message = serpy.Field()
+    requested_at = serpy.Field()
+    provisioned_at = serpy.Field()
+    deleted_at = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+    root_password = serpy.MethodField()
+
+    def get_root_password(self, obj):
+        if not (self.context or {}).get("show_password"):
+            return None
+        from breathecode.utils.encryption import decrypt
+        if not obj.root_password_encrypted:
+            return None
+        try:
+            return decrypt(obj.root_password_encrypted)
+        except Exception:
+            return None
+
+
+class VPSRequestSerializer(serializers.Serializer):
+    """Request body for POST me/vps (optional plan_slug)."""
+
+    plan_slug = serializers.CharField(required=False, allow_blank=True, max_length=100)
+
+
+class AcademyVPSListSerializer(serpy.Serializer):
+    """Academy VPS report row (user info, no root_password)."""
+
+    id = serpy.Field()
+    status = serpy.Field()
+    hostname = serpy.Field()
+    ip_address = serpy.Field()
+    ssh_user = serpy.Field()
+    ssh_port = serpy.Field()
+    plan_slug = serpy.Field()
+    error_message = serpy.Field()
+    requested_at = serpy.Field()
+    provisioned_at = serpy.Field()
+    deleted_at = serpy.Field()
+    created_at = serpy.Field()
+    user_id = serpy.MethodField()
+    user_email = serpy.MethodField()
+
+    def get_user_id(self, obj):
+        return obj.user_id
+
+    def get_user_email(self, obj):
+        return getattr(obj.user, "email", None) if obj.user else None
