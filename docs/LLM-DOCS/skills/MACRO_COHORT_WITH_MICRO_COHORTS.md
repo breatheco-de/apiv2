@@ -137,6 +137,33 @@ is_macro = bool(
 
 ---
 
+## Retrieving the Certificate Specialty from a Cohort (API only)
+
+The agent may need to know which **certificate specialty** (e.g. "Full-Stack Web Development") is associated with a cohort. Do it in two steps using the API.
+
+### Step 1: Get the cohort and read the syllabus slug
+
+**Request:** `GET /v1/admissions/academy/cohort/{id_or_slug}`  
+**Headers:** `Authorization`, `Academy: <academy_id>`
+
+From the response, read `syllabus_version`. Inside it you get the syllabus (e.g. `syllabus_version.syllabus.slug` or the syllabus id). If the cohort has no `syllabus_version`, there is no syllabus and no certificate specialty for that cohort.
+
+### Step 2: Get the specialty that uses that syllabus
+
+**Request:** `GET /v1/certificate/academy/specialty?syllabus_slug={syllabus_slug}`  
+**Headers:** `Authorization`, `Academy: <academy_id>`
+
+Use the syllabus slug from step 1 as `syllabus_slug`. The response is the list of academy specialties; filter or take the one that matches the cohort’s syllabus (typically one result when using `syllabus_slug`). That is the certificate specialty for the cohort.
+
+**Note:** The academy specialty list only includes specialties that have that syllabus in their **syllabuses** (many-to-many). If the cohort’s syllabus is linked to a specialty only via the legacy one-to-one link, it may not appear here; in that case the list can be empty even though the cohort has a syllabus.
+
+### When there is no specialty
+
+- Cohort response has no `syllabus_version` → no syllabus, so no certificate specialty.
+- Step 2 returns an empty list → either no specialty is linked to that syllabus, or the specialty is linked in a way the list endpoint does not expose. Micro cohorts are required to have a syllabus linked to a specialty (creation will fail with `micro-cohort-syllabus-must-have-specialty` if not).
+
+---
+
 ## Checklist for the Agent
 
 When creating a macro cohort with multiple micro cohorts (all via API):
@@ -144,6 +171,7 @@ When creating a macro cohort with multiple micro cohorts (all via API):
 1. [ ] Create each micro cohort via `POST /v1/admissions/academy/cohort` and note each `id`.
 2. [ ] Create the macro cohort via `POST /v1/admissions/academy/cohort` with `micro_cohorts` (list of those IDs) and optionally `cohorts_order` (e.g. `"10,11"`). Or create the macro first, then `PUT /v1/admissions/academy/cohort/{id}` with `micro_cohorts` and/or `cohorts_order`.
 3. [ ] If users were already in the macro cohort before linking, run `add_user_to_micro_cohorts` or ask users to call `POST /v1/admissions/me/micro-cohorts/sync/<macro_cohort_slug>` so they are added to the new micro cohorts.
+4. [ ] When the agent needs the **certificate specialty** for a cohort: get the cohort with `GET /v1/admissions/academy/cohort/{id_or_slug}`, read the syllabus slug from `syllabus_version`, then call `GET /v1/certificate/academy/specialty?syllabus_slug={syllabus_slug}` (see [Retrieving the Certificate Specialty from a Cohort (API only)](#retrieving-the-certificate-specialty-from-a-cohort-api-only)).
 
 ---
 
@@ -156,3 +184,4 @@ When creating a macro cohort with multiple micro cohorts (all via API):
 - **Management command:** `breathecode.admissions.management.commands.add_user_to_micro_cohorts`
 - **Cohort creation:** [COHORTS_CREATE.md](../../LLM-DOCS/COHORTS_CREATE.md)
 - **Macro cohort reporting:** [COHORT_REPORT_CALCULATION.md](../../LLM-DOCS/COHORT_REPORT_CALCULATION.md) (macro case: progress and dates aggregated across micro cohorts)
+- **Certificate specialty (API):** `GET /v1/certificate/academy/specialty?syllabus_slug=...` — use syllabus slug from the cohort’s `syllabus_version`.

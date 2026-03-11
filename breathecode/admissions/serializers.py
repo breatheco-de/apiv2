@@ -14,6 +14,8 @@ from breathecode.authenticate.models import CredentialsDiscord, CredentialsGithu
 from breathecode.authenticate.serializers import GetPermissionSmallSerializer, SettingsSerializer
 from breathecode.utils import localize_query, serializers, serpy
 
+from breathecode.certificate.models import Specialty
+
 from .actions import haversine, test_syllabus
 from .models import (
     COHORT_STAGE,
@@ -1185,21 +1187,38 @@ class CohortSerializerMixin(serializers.ModelSerializer):
         academy = self.context.get("academy")
         if academy is not None:
             if "micro_cohorts" in data and data["micro_cohorts"] is not None:
-                ids = data["micro_cohorts"]
-                if not isinstance(ids, list):
+                raw_ids = data["micro_cohorts"]
+                if not isinstance(raw_ids, list):
                     raise ValidationException(
                         "micro_cohorts must be a list of cohort IDs", slug="micro-cohorts-must-be-list"
                     )
-                for i, id_val in enumerate(ids):
-                    if not isinstance(id_val, int):
+                ids = []
+                for id_val in raw_ids:
+                    if isinstance(id_val, int):
+                        ids.append(id_val)
+                    elif isinstance(id_val, str):
+                        for part in id_val.split(","):
+                            part = part.strip()
+                            if part:
+                                try:
+                                    ids.append(int(part))
+                                except ValueError:
+                                    raise ValidationException(
+                                        "micro_cohorts must contain only integer cohort IDs",
+                                        slug="micro-cohorts-invalid-id",
+                                    )
+                    else:
                         try:
-                            ids[i] = int(id_val)
+                            ids.append(int(id_val))
                         except (TypeError, ValueError):
                             raise ValidationException(
                                 "micro_cohorts must contain only integer cohort IDs",
                                 slug="micro-cohorts-invalid-id",
                             )
-                cohorts = Cohort.objects.filter(id__in=ids, academy=academy)
+                data["micro_cohorts"] = ids
+                cohorts = Cohort.objects.filter(id__in=ids, academy=academy).select_related(
+                    "syllabus_version", "syllabus_version__syllabus"
+                )
                 if cohorts.count() != len(ids):
                     found = set(cohorts.values_list("id", flat=True))
                     missing = [x for x in ids if x not in found]
@@ -1207,6 +1226,25 @@ class CohortSerializerMixin(serializers.ModelSerializer):
                         f"Micro cohort id(s) not found or not in this academy: {missing}",
                         slug="micro-cohorts-not-found",
                     )
+                for cohort in cohorts:
+                    syllabus = cohort.syllabus_version.syllabus if cohort.syllabus_version else None
+                    if not syllabus:
+                        raise ValidationException(
+                            f"Micro cohort '{cohort.name}' (id={cohort.id}) has no syllabus; "
+                            "each micro cohort must have a syllabus linked to a Specialty.",
+                            slug="micro-cohort-syllabus-required",
+                        )
+                    has_specialty = (
+                        syllabus.specialty_with_one_syllabus is not None
+                        or syllabus.specialties_with_many_syllabus.exists()
+                    )
+                    if not has_specialty:
+                        raise ValidationException(
+                            f"Micro cohort '{cohort.name}' (id={cohort.id}) uses syllabus "
+                            f"'{syllabus.slug}' which is not associated to any Specialty. "
+                            "Each micro cohort's syllabus must be linked to a real Specialty.",
+                            slug="micro-cohort-syllabus-must-have-specialty",
+                        )
             if "cohorts_order" in data and data["cohorts_order"] is not None:
                 order_str = data["cohorts_order"]
                 if not isinstance(order_str, str):
