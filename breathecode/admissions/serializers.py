@@ -1182,6 +1182,46 @@ class CohortSerializerMixin(serializers.ModelSerializer):
             else:
                 raise ValidationException(f"Language property should be a string not a {type(language)}")
 
+        academy = self.context.get("academy")
+        if academy is not None:
+            if "micro_cohorts" in data and data["micro_cohorts"] is not None:
+                ids = data["micro_cohorts"]
+                if not isinstance(ids, list):
+                    raise ValidationException(
+                        "micro_cohorts must be a list of cohort IDs", slug="micro-cohorts-must-be-list"
+                    )
+                for i, id_val in enumerate(ids):
+                    if not isinstance(id_val, int):
+                        try:
+                            ids[i] = int(id_val)
+                        except (TypeError, ValueError):
+                            raise ValidationException(
+                                "micro_cohorts must contain only integer cohort IDs",
+                                slug="micro-cohorts-invalid-id",
+                            )
+                cohorts = Cohort.objects.filter(id__in=ids, academy=academy)
+                if cohorts.count() != len(ids):
+                    found = set(cohorts.values_list("id", flat=True))
+                    missing = [x for x in ids if x not in found]
+                    raise ValidationException(
+                        f"Micro cohort id(s) not found or not in this academy: {missing}",
+                        slug="micro-cohorts-not-found",
+                    )
+            if "cohorts_order" in data and data["cohorts_order"] is not None:
+                order_str = data["cohorts_order"]
+                if not isinstance(order_str, str):
+                    raise ValidationException(
+                        "cohorts_order must be a comma-separated string of cohort IDs",
+                        slug="cohorts-order-must-be-string",
+                    )
+                for part in order_str.split(","):
+                    part = part.strip()
+                    if part and not part.isdigit():
+                        raise ValidationException(
+                            "cohorts_order must be comma-separated cohort IDs",
+                            slug="cohorts-order-invalid-format",
+                        )
+
         return data
 
 
@@ -1189,6 +1229,10 @@ class CohortSerializer(CohortSerializerMixin):
     academy = AcademySerializer(many=False, required=False, read_only=True)
     ending_date = serializers.DateTimeField(required=False, allow_null=True)
     is_hidden_on_prework = serializers.BooleanField(required=False, allow_null=True)
+    micro_cohorts = serializers.PrimaryKeyRelatedField(
+        queryset=Cohort.objects.all(), many=True, required=False, allow_null=True
+    )
+    cohorts_order = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
     class Meta:
         model = Cohort
@@ -1214,17 +1258,24 @@ class CohortSerializer(CohortSerializerMixin):
             "is_hidden_on_prework",
             "available_as_saas",
             "shortcuts",
+            "micro_cohorts",
+            "cohorts_order",
         )
 
     def create(self, validated_data):
         del self.context["request"]
+        micro_cohorts = validated_data.pop("micro_cohorts", None) or []
+        cohorts_order = validated_data.pop("cohorts_order", None) or ""
         cohort = Cohort.objects.create(**validated_data, **self.context)
-
+        if micro_cohorts:
+            cohort.micro_cohorts.set(micro_cohorts)
+        if cohorts_order is not None:
+            cohort.cohorts_order = cohorts_order
+            cohort.save(update_fields=["cohorts_order", "updated_at"])
         if cohort.schedule:
             x = ImportCohortTimeSlots(cohort.id)
             x.clean()
             x.sync()
-
         return cohort
 
 
@@ -1241,6 +1292,10 @@ class CohortPUTSerializer(CohortSerializerMixin):
     stage = serializers.CharField(required=False)
     language = serializers.CharField(required=False)
     is_hidden_on_prework = serializers.BooleanField(required=False, allow_null=True)
+    micro_cohorts = serializers.PrimaryKeyRelatedField(
+        queryset=Cohort.objects.all(), many=True, required=False, allow_null=True
+    )
+    cohorts_order = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
     class Meta:
         model = Cohort
@@ -1265,19 +1320,27 @@ class CohortPUTSerializer(CohortSerializerMixin):
             "is_hidden_on_prework",
             "available_as_saas",
             "shortcuts",
+            "micro_cohorts",
+            "cohorts_order",
         )
 
     def update(self, instance, validated_data):
         last_schedule = instance.schedule
+        micro_cohorts = validated_data.pop("micro_cohorts", None)
+        cohorts_order = validated_data.pop("cohorts_order", None)
 
         update_timeslots = "schedule" in validated_data and last_schedule != validated_data["schedule"]
         cohort = super().update(instance, validated_data)
 
+        if micro_cohorts is not None:
+            cohort.micro_cohorts.set(micro_cohorts)
+        if cohorts_order is not None:
+            cohort.cohorts_order = cohorts_order
+            cohort.save(update_fields=["cohorts_order", "updated_at"])
         if update_timeslots:
             x = ImportCohortTimeSlots(cohort.id)
             x.clean()
             x.sync()
-
         return cohort
 
 
