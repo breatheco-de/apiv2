@@ -17,19 +17,14 @@ def get_pusher_client():
         app_id = getattr(settings, "PUSHER_APP_ID", os.environ.get("PUSHER_APP_ID", ""))
         key = getattr(settings, "PUSHER_KEY", os.environ.get("PUSHER_KEY", ""))
         secret = getattr(settings, "PUSHER_SECRET", os.environ.get("PUSHER_SECRET", ""))
-        cluster = getattr(settings, "PUSHER_CLUSTER", os.environ.get("PUSHER_CLUSTER", "us2"))
+        host = getattr(settings, "PUSHER_HOST", os.environ.get("PUSHER_HOST", "stream.4geeks.ai"))
+        port = int(getattr(settings, "PUSHER_PORT", os.environ.get("PUSHER_PORT", "443")))
 
         if not app_id or not key or not secret:
             logger.warning("Pusher credentials not configured. Survey events will not be sent.")
             return None
 
-        _pusher_client = pusher.Pusher(
-            app_id=app_id,
-            key=key,
-            secret=secret,
-            cluster=cluster,
-            ssl=True,
-        )
+        _pusher_client = pusher.Pusher(app_id=app_id, key=key, secret=secret, ssl=True, host=host, port=port)
 
     return _pusher_client
 
@@ -65,4 +60,3 @@ def send_survey_event(user_id: int, survey_response_id: int, questions: list, tr
     except Exception as e:
         logger.error(f"Error sending survey event to user {user_id}: {str(e)}", exc_info=True)
         return False
-

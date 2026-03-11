@@ -560,6 +560,8 @@ PUSHER_APP_ID = os.environ.get("PUSHER_APP_ID", "")
 PUSHER_KEY = os.environ.get("PUSHER_KEY", "")
 PUSHER_SECRET = os.environ.get("PUSHER_SECRET", "")
 PUSHER_CLUSTER = os.environ.get("PUSHER_CLUSTER", "us2")
+PUSHER_HOST = os.environ.get("PUSHER_HOST", "stream.4geeks.ai")
+PUSHER_PORT = os.environ.get("PUSHER_PORT", "")
 
 MB = 1024 * 1024
 
