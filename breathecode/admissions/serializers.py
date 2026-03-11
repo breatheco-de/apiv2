@@ -1204,15 +1204,19 @@ class CohortSerializerMixin(serializers.ModelSerializer):
                                     ids.append(int(part))
                                 except ValueError:
                                     raise ValidationException(
-                                        "micro_cohorts must contain only integer cohort IDs",
+                                        f"micro_cohorts must contain only integer cohort IDs; "
+                                        f"invalid value {part!r} (type: {type(part).__name__})",
                                         slug="micro-cohorts-invalid-id",
                                     )
+                    elif hasattr(id_val, "pk"):
+                        ids.append(id_val.pk)
                     else:
                         try:
                             ids.append(int(id_val))
                         except (TypeError, ValueError):
                             raise ValidationException(
-                                "micro_cohorts must contain only integer cohort IDs",
+                                f"micro_cohorts must contain only integer cohort IDs; "
+                                f"invalid value {id_val!r} (type: {type(id_val).__name__})",
                                 slug="micro-cohorts-invalid-id",
                             )
                 data["micro_cohorts"] = ids

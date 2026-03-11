@@ -821,7 +821,7 @@ class Asset(models.Model):
         if "preview" in config:
             self.preview = config["preview"]
         else:
-            raise Exception("Missing preview URL")
+            raise Exception("Missing preview URL, you can specify a 'preview' property in the learn.json file that points to a remote image url like https://example.com/image.png")
 
         if "video-id" in config:
             self.solution_video_url = get_video_url(str(config["video-id"]))
