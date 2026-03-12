@@ -251,3 +251,62 @@ class ProvisioningContainer(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+
+class ProvisioningVPS(models.Model):
+    """VPS instance provisioned for a student (e.g. via Hostinger). One active per user per academy."""
+
+    VPS_STATUS_PENDING = "PENDING"
+    VPS_STATUS_PROVISIONING = "PROVISIONING"
+    VPS_STATUS_ACTIVE = "ACTIVE"
+    VPS_STATUS_ERROR = "ERROR"
+    VPS_STATUS_DELETED = "DELETED"
+    VPS_STATUS_CHOICES = (
+        (VPS_STATUS_PENDING, "Pending"),
+        (VPS_STATUS_PROVISIONING, "Provisioning"),
+        (VPS_STATUS_ACTIVE, "Active"),
+        (VPS_STATUS_ERROR, "Error"),
+        (VPS_STATUS_DELETED, "Deleted"),
+    )
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    vendor = models.ForeignKey(ProvisioningVendor, on_delete=models.SET_NULL, null=True, default=None)
+    consumed_consumable = models.ForeignKey(
+        "payments.Consumable",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Consumable used at request time; used to reimburse on provisioning failure.",
+    )
+
+    status = models.CharField(max_length=20, choices=VPS_STATUS_CHOICES, default=VPS_STATUS_PENDING, db_index=True)
+    hostname = models.CharField(max_length=255, blank=True, default="")
+    ip_address = models.GenericIPAddressField(null=True, blank=True, default=None)
+    ssh_user = models.CharField(max_length=100, blank=True, default="")
+    ssh_port = models.PositiveIntegerField(default=22)
+    root_password_encrypted = models.TextField(blank=True, default="")
+
+    external_id = models.CharField(max_length=100, blank=True, null=True, default=None)
+    plan_slug = models.CharField(max_length=100, blank=True, null=True, default=None)
+    error_message = models.TextField(blank=True, default="")
+
+    requested_at = models.DateTimeField(null=True, blank=True, default=None)
+    provisioned_at = models.DateTimeField(null=True, blank=True, default=None)
+    deleted_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="When the VPS was deprovisioned; useful for vendor charge analysis (e.g. active duration).",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    class Meta:
+        verbose_name = "Provisioning VPS"
+        verbose_name_plural = "Provisioning VPS"
+
+    def __str__(self):
+        return f"VPS {self.id} ({self.user_id}, {self.academy_id}, {self.status})"

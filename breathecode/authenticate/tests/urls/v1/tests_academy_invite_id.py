@@ -329,6 +329,7 @@ class MemberPatchDuckTestSuite(AuthTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(json["detail"], "invalid-status")
 
+    @patch("breathecode.authenticate.tasks.async_validate_email_invite.delay", MagicMock())
     def test_academy_invite_id_patch__no_status_provided(self):
         """Test PATCH /academy/invite/:id without status (no changes)"""
         user_invite = {"status": "ACCEPTED", "token": "original-token-123"}

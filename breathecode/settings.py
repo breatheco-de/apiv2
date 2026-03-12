@@ -38,6 +38,9 @@ ENVIRONMENT = os.environ.get("ENV")
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = "5ar3h@ha%y*dc72z=8-ju7@4xqm0o59*@k*c2i=xacmy2r=%4a"
 
+# Encryption key for sensitive fields (e.g. VPS root password). Rotating invalidates existing encrypted values.
+ENCRYPTION_SECRET_KEY = os.environ.get("ENCRYPTION_SECRET_KEY", "")
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = ENVIRONMENT == "development" or ENVIRONMENT == "test"
 
@@ -555,11 +558,12 @@ heroku_redis_ssl_host = {
 if IS_REDIS_WITH_SSL_ON_HEROKU:
     heroku_redis_ssl_host["address"] += "?ssl_cert_reqs=none"
 
-# Pusher Configuration
-PUSHER_APP_ID = os.environ.get("PUSHER_APP_ID", "")
-PUSHER_KEY = os.environ.get("PUSHER_KEY", "")
-PUSHER_SECRET = os.environ.get("PUSHER_SECRET", "")
-PUSHER_CLUSTER = os.environ.get("PUSHER_CLUSTER", "us2")
+# Soketi Configuration
+SOKETI_APP_ID = os.environ.get("SOKETI_APP_ID", "")
+SOKETI_KEY = os.environ.get("SOKETI_KEY", "")
+SOKETI_SECRET = os.environ.get("SOKETI_SECRET", "")
+SOKETI_HOST = os.environ.get("SOKETI_HOST", "stream.4geeks.ai")
+SOKETI_PORT = os.environ.get("SOKETI_PORT", "")
 
 MB = 1024 * 1024
 

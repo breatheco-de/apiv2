@@ -287,7 +287,7 @@ Create a configuration that triggers when the syllabus is completed.
   - `"syllabus"`: The syllabus slug (e.g., `"full-stack"`)
   - `"version"`: Optional, specific version number (integer)
   - **Do NOT include `"module"`** - that's only for module completion surveys
-- **`cohorts`**: 
+- **`cohorts`**:
   - Empty array `[]` = applies to all cohorts
   - Array of cohort IDs = only applies to those specific cohorts
 - **`asset_slugs`**: Not used for syllabus completion (leave as empty array `[]`)
@@ -358,7 +358,7 @@ When a user completes all modules in a syllabus, the system automatically:
 1. **Detects completion**: The system checks if ALL modules in the syllabus are complete using `_is_syllabus_complete()`
 2. **Finds active studies**: Looks for active `SurveyStudy` instances with `syllabus_completed` trigger type
 3. **Matches filters**: Checks if the user's syllabus slug and version match your configuration
-4. **Creates response**: Creates a `SurveyResponse` and sends a Pusher event to show the survey in real-time
+4. **Creates response**: Creates a `SurveyResponse` and sends a Soketi event (using Pusher client) to show the survey in real-time
 
 ### Syllabus Filtering
 
