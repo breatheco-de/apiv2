@@ -55,6 +55,7 @@ class AssetErrorLogType:
     README_SYNTAX = "readme-syntax-error"
     INVALID_TELEMETRY = "invalid-telemetry"
     INVALID_TEMPLATE_SUBDIRECTORY = "invalid-template-subdirectory"
+    MISSING_PREVIEW = "missing-preview"
 
 
 def get_base_path_from_readme_url(readme_url):
