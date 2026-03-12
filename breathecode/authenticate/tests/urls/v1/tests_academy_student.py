@@ -1181,8 +1181,8 @@ class StudentPostTestSuite(AuthTestCase):
             currency=1,
             cohort_set=1,
             cohort_set_cohort=1,
-            financing_option={"how_many_months": 1, "monthly_price": 0},
-            plan=1,
+            financing_option={"how_many_months": 1, "monthly_price": 1},
+            plan={"is_renewable": False, "time_of_life": 1, "time_of_life_unit": "MONTH", "status": "ACTIVE"},
         )
         plan = self.bc.database.get("payments.Plan", 1, dict=False)
         self.bc.request.authenticate(model.user[0])
@@ -1203,7 +1203,7 @@ class StudentPostTestSuite(AuthTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertIn("id", json)
-        self.assertEqual(json["email"], "dude@dude.dude")
+        self.assertEqual(json["email"], model.user[1].email)
 
         from breathecode.payments.models import Bag, Invoice
 
