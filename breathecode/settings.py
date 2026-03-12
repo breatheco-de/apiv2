@@ -558,11 +558,12 @@ heroku_redis_ssl_host = {
 if IS_REDIS_WITH_SSL_ON_HEROKU:
     heroku_redis_ssl_host["address"] += "?ssl_cert_reqs=none"
 
-# Pusher Configuration
-PUSHER_APP_ID = os.environ.get("PUSHER_APP_ID", "")
-PUSHER_KEY = os.environ.get("PUSHER_KEY", "")
-PUSHER_SECRET = os.environ.get("PUSHER_SECRET", "")
-PUSHER_CLUSTER = os.environ.get("PUSHER_CLUSTER", "us2")
+# Soketi Configuration
+SOKETI_APP_ID = os.environ.get("SOKETI_APP_ID", "")
+SOKETI_KEY = os.environ.get("SOKETI_KEY", "")
+SOKETI_SECRET = os.environ.get("SOKETI_SECRET", "")
+SOKETI_HOST = os.environ.get("SOKETI_HOST", "stream.4geeks.ai")
+SOKETI_PORT = os.environ.get("SOKETI_PORT", "")
 
 MB = 1024 * 1024
 

@@ -1,6 +1,7 @@
 ---
 name: bc-admissions-create-macro-cohort
 description: Use when creating a macro cohort (main cohort) that contains multiple micro cohorts via the API; do NOT use for a single cohort, for only listing/reading cohorts, or for retrieving a cohort's certificate specialty.
+requires: []
 ---
 
 # Skill: Create a Macro Cohort with Multiple Micro Cohorts
@@ -29,11 +30,67 @@ Use this skill when the user asks to create a **macro cohort**, a **cohort with 
 
 ## Endpoints
 
-| Action | Method | Path | Headers | Body (required) | Response |
-|--------|--------|------|---------|-----------------|----------|
-| Create cohort (micro or macro) | POST | `/v1/admissions/academy/cohort` | `Authorization`, `Academy: <academy_id>` | `name`, `slug`, `syllabus`, `kickoff_date`, `ending_date`, `stage`. For macro only: `micro_cohorts` (list of cohort IDs), optionally `cohorts_order` (string, e.g. `"10,11"`) | Cohort object; include and store `id` for linking. |
-| Update cohort (link/change micro cohorts) | PUT | `/v1/admissions/academy/cohort/{cohort_id}` | `Authorization`, `Academy: <academy_id>` | At least one of: `micro_cohorts` (list of cohort IDs), `cohorts_order` (string) | Updated cohort object. |
+| Action | Method | Path | Headers | Body | Response |
+|--------|--------|------|---------|------|----------|
+| Create cohort (micro or macro) | POST | `/v1/admissions/academy/cohort` | `Authorization`, `Academy: <academy_id>` | See request samples below. | Cohort object; store `id` for linking. |
+| Update cohort (link/change micro cohorts) | PUT | `/v1/admissions/academy/cohort/{cohort_id}` | `Authorization`, `Academy: <academy_id>` | At least one of: `micro_cohorts`, `cohorts_order`. See request sample. | Updated cohort object. |
 | Sync current user into macro's micro cohorts | POST | `/v1/admissions/me/micro-cohorts/sync/<macro_cohort_slug>` | `Authorization` | None | Sync result. |
+
+**Create micro cohort — request (POST `/v1/admissions/academy/cohort`):**
+```json
+{
+  "name": "Frontend Jan 2026",
+  "slug": "frontend-jan-2026",
+  "syllabus": "front-end-development.v2",
+  "kickoff_date": "2026-01-15T09:00:00Z",
+  "ending_date": "2026-04-15T17:00:00Z",
+  "never_ends": false,
+  "stage": "STARTED",
+  "online_meeting_url": "https://meet.example.com/room",
+  "available_as_saas": true
+}
+```
+Save the returned `id` (e.g. 1277) to use in the macro's `micro_cohorts`.
+
+**Create macro cohort — request (POST `/v1/admissions/academy/cohort`):**
+```json
+{
+  "name": "My first macro cohort",
+  "slug": "my-first-macro-cohort",
+  "syllabus": "front-end-development.v2",
+  "kickoff_date": "2026-03-11T15:59:00Z",
+  "ending_date": "2026-06-25T15:59:00Z",
+  "never_ends": false,
+  "available_as_saas": false,
+  "micro_cohorts": [1277, 1278],
+  "cohorts_order": "1277,1278"
+}
+```
+Use the IDs from the micro cohorts created in Step 1. All must belong to the same academy.
+
+**Create cohort — response (201, micro or macro):**
+```json
+{
+  "id": 1280,
+  "name": "My first macro cohort",
+  "slug": "my-first-macro-cohort",
+  "syllabus_version": {"id": 5, "version": "2", "syllabus": {"slug": "front-end-development"}},
+  "kickoff_date": "2026-03-11T15:59:00Z",
+  "ending_date": "2026-06-25T15:59:00Z",
+  "stage": "STARTED",
+  "micro_cohorts": [1277, 1278],
+  "cohorts_order": "1277,1278"
+}
+```
+Always store `id` from the response for later use (e.g. linking or PUT).
+
+**Update cohort (link micro cohorts) — request (PUT `/v1/admissions/academy/cohort/{cohort_id}`):**
+```json
+{
+  "micro_cohorts": [1277, 1278],
+  "cohorts_order": "1277,1278"
+}
+```
 
 To verify a cohort is a macro or to read its micro cohorts and order, use `GET /v1/admissions/academy/cohort/{id_or_slug}`; the response includes `micro_cohorts` and `cohorts_order` when present.
 

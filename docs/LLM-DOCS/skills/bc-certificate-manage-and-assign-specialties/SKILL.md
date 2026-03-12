@@ -1,6 +1,7 @@
 ---
 name: bc-certificate-manage-and-assign-specialties
 description: Use when academy staff need to see which certificate specialties are offered, filter by syllabus, or assign a specialty to a student by issuing a certificate; do NOT use for creating/editing specialties or linking syllabi (not exposed by this API), or for listing a student's own certificates (use certificate me endpoint).
+requires: []
 ---
 
 # Skill: Manage and Assign Certificate Specialties
@@ -32,11 +33,59 @@ Use this skill when the user asks to **list or view academy specialties**, **see
 | Action | Method | Path | Headers | Body / Query | Response |
 |--------|--------|------|---------|--------------|----------|
 | List academy specialties | GET | `/v1/certificate/academy/specialty` | `Authorization`, `Academy: <academy_id>` | Optional: `syllabus_slug=<slug>`, `like=<text>` | List of specialties (id, slug, name, status, syllabus, syllabuses). |
-| Issue certificate for one student | POST | `/v1/certificate/cohort/<cohort_id>/student/<student_id>` | `Authorization`, `Academy: <academy_id>` | Optional: `{ "layout_slug": "default" }` | 201, certificate (user_specialty) object. |
-| Issue certificates for cohort | POST | `/v1/certificate/cohort/<cohort_id>` | `Authorization`, `Academy: <academy_id>` | Optional: `{ "layout_slug": "default" }` | 201, list of certificate objects. |
+| Issue certificate for one student | POST | `/v1/certificate/cohort/<cohort_id>/student/<student_id>` | `Authorization`, `Academy: <academy_id>` | Optional; see request sample. | 201, certificate (user_specialty) object; see response sample. |
+| Issue certificates for cohort | POST | `/v1/certificate/cohort/<cohort_id>` | `Authorization`, `Academy: <academy_id>` | Optional; see request sample. | 201, list of certificate objects. |
 | Get one student's certificate | GET | `/v1/certificate/cohort/<cohort_id>/student/<student_id>` | `Authorization`, `Academy: <academy_id>` | — | Certificate object or 404. |
 | List academy certificates | GET | `/v1/certificate/` | `Authorization`, `Academy: <academy_id>` | Optional: `user_id=<id>`, `like=<name>`, `sort` | Paginated list of issued certificates. |
 | Delete certificates (bulk) | DELETE | `/v1/certificate/` | `Authorization`, `Academy: <academy_id>` | Query: `id=1&id=2` (ids of user_specialty) | 204 No Content. |
+
+**Issue certificate for one student — request (POST `/v1/certificate/cohort/<cohort_id>/student/<student_id>`):**
+```json
+{
+  "layout_slug": "default"
+}
+```
+Body is optional; omit or use `"layout_slug": "default"` if the academy has a default layout.
+
+**Issue certificate for one student — response (201):**
+```json
+{
+  "id": 200,
+  "user": {"id": 50, "first_name": "Jane", "last_name": "Doe"},
+  "specialty": {"id": 1, "slug": "full-stack", "name": "Full-Stack Web Development"},
+  "cohort": {"id": 10, "name": "Cohort Jan 2026"},
+  "layout": {"slug": "default"},
+  "status": "PERSISTED",
+  "created_at": "2026-03-11T12:00:00Z"
+}
+```
+
+**Issue certificates for cohort — request (POST `/v1/certificate/cohort/<cohort_id>`):**
+```json
+{
+  "layout_slug": "default"
+}
+```
+
+**Issue certificates for cohort — response (201):**
+```json
+[
+  {
+    "id": 200,
+    "user": {"id": 50, "first_name": "Jane", "last_name": "Doe"},
+    "specialty": {"id": 1, "slug": "full-stack", "name": "Full-Stack Web Development"},
+    "cohort": {"id": 10, "name": "Cohort Jan 2026"},
+    "status": "PERSISTED"
+  },
+  {
+    "id": 201,
+    "user": {"id": 51, "first_name": "John", "last_name": "Smith"},
+    "specialty": {"id": 1, "slug": "full-stack", "name": "Full-Stack Web Development"},
+    "cohort": {"id": 10, "name": "Cohort Jan 2026"},
+    "status": "PERSISTED"
+  }
+]
+```
 
 All academy endpoints require capability `read_certificate` for GET and `crud_certificate` for POST/DELETE.
 

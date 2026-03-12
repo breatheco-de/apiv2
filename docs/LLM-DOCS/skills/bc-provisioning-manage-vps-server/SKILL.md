@@ -1,6 +1,7 @@
 ---
 name: bc-provisioning-manage-vps-server
 description: Use when a user, student or academy staff needs to request, list, view, or deprovision a VPS via the API; do NOT use for granting VPS credits via plans or payments.
+requires: []
 ---
 
 # Skill: Manage VPS Provisioning via the API
@@ -33,12 +34,50 @@ Use this skill when the user asks to **request a VPS**, **list my VPSs**, **get 
 
 | Action | Method | Path | Headers | Body / Query | Response |
 |--------|--------|------|---------|--------------|----------|
-| List my VPSs | GET | `/v1/provisioning/me/vps` | `Authorization` | — | List of VPSs (id, status, hostname, ip_address, ssh_user, ssh_port, etc.; no root_password). |
-| Request a VPS | POST | `/v1/provisioning/me/vps` | `Authorization` | Optional: `{ "plan_slug": "..." }` | 202 Accepted, VPS object (id, status PENDING). |
-| Get one VPS (with password) | GET | `/v1/provisioning/me/vps/<vps_id>` | `Authorization` | — | VPS detail including `root_password` for owner. |
+| List my VPSs | GET | `/v1/provisioning/me/vps` | `Authorization` | — | List of VPSs; see response sample. |
+| Request a VPS | POST | `/v1/provisioning/me/vps` | `Authorization` | Optional; see request sample. | 202 Accepted, VPS object; see response sample. |
+| Get one VPS (with password) | GET | `/v1/provisioning/me/vps/<vps_id>` | `Authorization` | — | VPS detail including `root_password` for owner; see response sample. |
 | List academy VPSs | GET | `/v1/provisioning/academy/vps` | `Authorization`, `Academy: <academy_id>` | Optional: `?user_id=<user_id>` | List of VPSs for academy (no root_password). |
 | Deprovision VPS | DELETE | `/v1/provisioning/academy/vps/<vps_id>` | `Authorization`, `Academy: <academy_id>` | — | 204 No Content. |
 | List provisioning profiles | GET | `/v1/provisioning/academy/provisioningprofile` | `Authorization`, `Academy: <academy_id>` | — | List of profiles (vendor, academy, cohort_ids, member_ids). |
+
+**Request a VPS — request (POST `/v1/provisioning/me/vps`):**
+```json
+{
+  "plan_slug": "default"
+}
+```
+Body is optional; omit or send empty object to use default.
+
+**Request a VPS — response (202 Accepted):**
+```json
+{
+  "id": 100,
+  "status": "PENDING",
+  "hostname": null,
+  "ip_address": null,
+  "ssh_user": null,
+  "ssh_port": null,
+  "academy": {"id": 1, "name": "Academy 1"},
+  "user": 50
+}
+```
+Later the VPS may move to `ACTIVE` or `ERROR`; use GET to fetch updated details and `root_password` when ACTIVE.
+
+**Get one VPS — response (GET `/v1/provisioning/me/vps/<vps_id>`, owner only):**
+```json
+{
+  "id": 100,
+  "status": "ACTIVE",
+  "hostname": "vps-100.example.com",
+  "ip_address": "192.168.1.10",
+  "ssh_user": "root",
+  "ssh_port": 22,
+  "root_password": "generated-secret-password",
+  "academy": {"id": 1, "name": "Academy 1"},
+  "user": 50
+}
+```
 
 Base path for all: `/v1/provisioning/`. Academy endpoints require capability `crud_provisioning_activity`.
 

@@ -1,6 +1,7 @@
 ---
 name: bc-provisioning-settings-and-credentials
 description: Use when academy staff need to create or update provisioning profiles (academy–vendor link) or set credentials and settings for an academy; do NOT use for requesting or listing VPS (use bc-provisioning-manage-vps-server).
+requires: []
 ---
 
 # Skill: Set Provisioning Settings and Credentials
@@ -36,14 +37,58 @@ Use this skill when the user asks to **create or update a provisioning profile**
 | Action | Method | Path | Headers | Body | Response |
 |--------|--------|------|---------|------|----------|
 | List profiles | GET | `/v1/provisioning/academy/provisioningprofile` | `Authorization`, `Academy: <academy_id>` | — | List of profiles (id, vendor, academy, cohort_ids, member_ids). |
-| Create profile | POST | `/v1/provisioning/academy/provisioningprofile` | `Authorization`, `Academy: <academy_id>` | vendor_id (required), cohort_ids, member_ids (optional) | 201, profile object. |
+| Create profile | POST | `/v1/provisioning/academy/provisioningprofile` | `Authorization`, `Academy: <academy_id>` | See request sample below. | 201, profile object (see response sample). |
 | Get profile | GET | `/v1/provisioning/academy/provisioningprofile/<profile_id>` | `Authorization`, `Academy: <academy_id>` | — | Profile object. |
-| Update profile | PUT | `/v1/provisioning/academy/provisioningprofile/<profile_id>` | `Authorization`, `Academy: <academy_id>` | vendor_id, cohort_ids, member_ids (optional) | Profile object. |
+| Update profile | PUT | `/v1/provisioning/academy/provisioningprofile/<profile_id>` | `Authorization`, `Academy: <academy_id>` | Optional: vendor_id, cohort_ids, member_ids. | Profile object. |
 | Delete profile | DELETE | `/v1/provisioning/academy/provisioningprofile/<profile_id>` | `Authorization`, `Academy: <academy_id>` | — | 204 No Content. |
-| List academy configs | GET | `/v1/provisioning/academy/provisioningacademy` | `Authorization`, `Academy: <academy_id>` | — | List (id, vendor, academy_id, credentials_set, container_idle_timeout, max_active_containers; no credentials). |
-| Create academy config | POST | `/v1/provisioning/academy/provisioningacademy` | `Authorization`, `Academy: <academy_id>` | vendor_id, credentials_token (required); credentials_key, container_idle_timeout, max_active_containers, allowed_machine_type_ids (optional) | 201, config object (credentials masked). |
+| List academy configs | GET | `/v1/provisioning/academy/provisioningacademy` | `Authorization`, `Academy: <academy_id>` | — | List of configs (id, vendor, academy_id, credentials_set, container_idle_timeout, max_active_containers; no credentials). |
+| Create academy config | POST | `/v1/provisioning/academy/provisioningacademy` | `Authorization`, `Academy: <academy_id>` | See request sample below. | 201, config object (credentials not echoed; see response sample). |
 | Get academy config | GET | `/v1/provisioning/academy/provisioningacademy/<provisioning_academy_id>` | `Authorization`, `Academy: <academy_id>` | — | Config object (credentials_set, no raw credentials). |
-| Update academy config | PUT | `/v1/provisioning/academy/provisioningacademy/<provisioning_academy_id>` | `Authorization`, `Academy: <academy_id>` | credentials_token, credentials_key, container_idle_timeout, max_active_containers, allowed_machine_type_ids (all optional) | Config object. |
+| Update academy config | PUT | `/v1/provisioning/academy/provisioningacademy/<provisioning_academy_id>` | `Authorization`, `Academy: <academy_id>` | All optional; omit credentials to leave unchanged. | Config object. |
+
+**Create profile — request (POST `/v1/provisioning/academy/provisioningprofile`):**
+```json
+{
+  "vendor_id": 1,
+  "cohort_ids": [5, 6],
+  "member_ids": [101, 102]
+}
+```
+
+**Create profile — response (201):**
+```json
+{
+  "id": 42,
+  "vendor": {"id": 1, "name": "Codespaces"},
+  "academy": {"id": 1, "name": "Academy 1"},
+  "cohort_ids": [5, 6],
+  "member_ids": [101, 102]
+}
+```
+
+**Create academy config — request (POST `/v1/provisioning/academy/provisioningacademy`):**
+```json
+{
+  "vendor_id": 1,
+  "credentials_token": "secret-token-value",
+  "credentials_key": null,
+  "container_idle_timeout": 15,
+  "max_active_containers": 2,
+  "allowed_machine_type_ids": [1, 2]
+}
+```
+
+**Create academy config — response (201):**
+```json
+{
+  "id": 10,
+  "vendor": {"id": 1, "name": "Codespaces"},
+  "academy_id": 1,
+  "credentials_set": true,
+  "container_idle_timeout": 15,
+  "max_active_containers": 2
+}
+```
 
 Capabilities: `read_provisioning_activity` for GET; `crud_provisioning_activity` for POST, PUT, DELETE.
 

@@ -672,7 +672,11 @@ class AssetParser:
         # Parse the URL
         url_info = self.github_service.parse_github_url(readme_url)
         if not url_info:
-            raise Exception("Could not parse GitHub URL")
+            raise Exception(
+                "Expected a GitHub URL pointing to a repository file "
+                f"(for example: https://github.com/owner/repo/blob/branch/path/to/file), "
+                f"but received '{readme_url}', which could not be parsed."
+            )
 
         owner = url_info["owner"]
         repo = url_info["repo"]
@@ -680,11 +684,19 @@ class AssetParser:
         file_path = url_info.get("path")
 
         if not file_path:
-            raise Exception("URL must point to a specific file")
+            raise Exception(
+                "Expected the GitHub URL to point to a specific file including branch and path "
+                f"(for example: https://github.com/{owner}/{repo}/blob/{branch}/path/to/file), "
+                f"but received a URL that resolves to the repository or a directory instead: '{readme_url}'."
+            )
 
         # Check repo access
         if not self.github_service.repo_exists(owner, repo):
-            raise Exception(f"Repository {owner}/{repo} not found or not accessible. Who's the owner of this asset? does it have access? Also check the github url's")
+            raise Exception(
+                f"Expected repository '{owner}/{repo}' to be accessible to read asset metadata, "
+                "but GitHub reported that it does not exist or cannot be accessed with the current credentials. "
+                "Verify the repository name, visibility, and permissions for the token/user being used."
+            )
 
         # Initialize metadata
         metadata = {
@@ -700,7 +712,11 @@ class AssetParser:
         response = self.github_service.get(f"/repos/{owner}/{repo}/contents/{file_path}?ref={branch}")
 
         if not response or response.get("type") != "file":
-            raise Exception(f"File not found at {file_path}")
+            raise Exception(
+                f"Expected a file at path '{file_path}' in repository '{owner}/{repo}' on branch '{branch}', "
+                "but GitHub did not return a file object at that location. This usually means the path is wrong, "
+                "points to a folder, or the file does not exist."
+            )
 
         # Decode content
         import base64

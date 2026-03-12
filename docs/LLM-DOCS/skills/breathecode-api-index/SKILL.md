@@ -1,6 +1,7 @@
 ---
 name: breathecode-api-index
 description: Always load this skill first when working with the BreatheCode API. It maps user requests to the correct domain skill(s) to load next. Do NOT use this skill to execute API calls directly — it only routes to other skills.
+requires: []
 ---
 
 # BreatheCode API Index
@@ -16,7 +17,7 @@ This skill is the entry point for all BreatheCode API interactions. Its only job
 
 ---
 
-## How to Use This Index
+## Workflow
 
 1. Read the user's request.
 2. Identify the domain(s) from the table below.
