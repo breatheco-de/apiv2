@@ -1,4 +1,5 @@
 import logging
+import os
 from datetime import timedelta
 from typing import Any
 
@@ -362,12 +363,23 @@ class GetLiveClassBigSerializer(serpy.Serializer):
     created_at = serpy.Field()
     updated_at = serpy.Field()
 
+    student_join_url = serpy.MethodField()
+    staff_join_url = serpy.MethodField()
+
     def get_cohort(self, obj):
         if obj.cohort:
             return CohortSmallSerializer(obj.cohort).data
         elif obj.cohort_time_slot:
             return CohortSmallSerializer(obj.cohort_time_slot.cohort).data
         return None
+
+    def get_student_join_url(self, obj):
+        api_url = os.getenv("API_URL", "").rstrip("/")
+        return f"{api_url}/v1/events/me/event/liveclass/join/{obj.hash}" if api_url and obj.hash else None
+
+    def get_staff_join_url(self, obj):
+        api_url = os.getenv("API_URL", "").rstrip("/")
+        return f"{api_url}/v1/events/academy/event/liveclass/join/{obj.hash}" if api_url and obj.hash else None
 
 
 class GetLiveClassJoinSerializer(GetLiveClassSerializer):

@@ -24,6 +24,7 @@ from breathecode.authenticate.models import ProfileAcademy
 from breathecode.notify.actions import get_template_content
 from breathecode.provisioning import tasks
 from breathecode.provisioning.serializers import (
+    AcademyVPSListSerializer,
     GetProvisioningBillDetailSerializer,
     GetProvisioningBillSerializer,
     GetProvisioningBillSmallSerializer,
@@ -33,6 +34,9 @@ from breathecode.provisioning.serializers import (
     ProvisioningBillHTMLSerializer,
     ProvisioningBillSerializer,
     ProvisioningUserConsumptionHTMLResumeSerializer,
+    VPSDetailSerializer,
+    VPSListSerializer,
+    VPSRequestSerializer,
 )
 from breathecode.utils import capable_of, cut_csv
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
@@ -40,8 +44,8 @@ from breathecode.utils.decorators import has_permission
 from breathecode.utils.io.file import count_csv_rows
 from breathecode.utils.views import private_view, render_message
 
-from .actions import get_provisioning_vendor
-from .models import BILL_STATUS, ProvisioningBill, ProvisioningProfile, ProvisioningUserConsumption
+from .actions import get_provisioning_vendor, request_vps
+from .models import BILL_STATUS, ProvisioningBill, ProvisioningProfile, ProvisioningUserConsumption, ProvisioningVPS
 
 
 @private_view()
@@ -778,6 +782,96 @@ class ProvisioningProfileView(APIView):
         serializer = GetProvisioningProfile(items, many=True)
 
         return handler.response(serializer.data)
+
+
+class MeVPSView(APIView):
+    """GET: list current user's VPS. POST: request a new VPS (consumes vps_server consumable)."""
+
+    extensions = APIViewExtensions(paginate=True)
+
+    def get(self, request):
+        handler = self.extensions(request)
+        items = ProvisioningVPS.objects.filter(user=request.user).order_by("-created_at")
+        items = handler.queryset(items)
+        serializer = VPSListSerializer(items, many=True)
+        return handler.response(serializer.data)
+
+    def post(self, request):
+        lang = get_user_language(request)
+        data = (request.data or {}).copy()
+        serializer = VPSRequestSerializer(data=data, context={"request": request, "lang": lang})
+        if not serializer.is_valid():
+            raise ValidationException(serializer.errors, code=400)
+        plan_slug = (serializer.validated_data.get("plan_slug") or "").strip() or None
+        try:
+            vps = request_vps(request.user, plan_slug=plan_slug)
+        except ValidationException:
+            raise
+        out_serializer = VPSListSerializer(vps)
+        return Response(out_serializer.data, status=status.HTTP_202_ACCEPTED)
+
+
+class MeVPSByIdView(APIView):
+    """GET: one VPS by id; only for owner; includes decrypted root_password for owner."""
+
+    def get(self, request, vps_id):
+        lang = get_user_language(request)
+        vps = ProvisioningVPS.objects.filter(id=vps_id, user=request.user).first()
+        if not vps:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="VPS not found or you do not have permission to view it.",
+                    es="VPS no encontrado o no tienes permiso para verlo.",
+                    slug="vps-not-found",
+                ),
+                code=404,
+            )
+        serializer = VPSDetailSerializer(vps, context={"show_password": True})
+        return Response(serializer.data)
+
+
+class AcademyVPSView(APIView):
+    """GET: report of all VPS for the academy; optional ?user_id= to filter by student."""
+
+    extensions = APIViewExtensions(paginate=True)
+
+    @capable_of("crud_provisioning_activity")
+    def get(self, request, academy_id=None):
+        handler = self.extensions(request)
+        qs = ProvisioningVPS.objects.filter(academy_id=academy_id).select_related("user").order_by("-created_at")
+        user_id = request.GET.get("user_id")
+        if user_id:
+            try:
+                uid = int(user_id)
+                qs = qs.filter(user_id=uid)
+            except ValueError:
+                pass
+        items = handler.queryset(qs)
+        serializer = AcademyVPSListSerializer(items, many=True)
+        return handler.response(serializer.data)
+
+
+class AcademyVPSByIdView(APIView):
+    """DELETE: academy deprovisions a student's VPS."""
+
+    @capable_of("crud_provisioning_activity")
+    def delete(self, request, academy_id=None, vps_id=None):
+        lang = get_user_language(request)
+        vps = ProvisioningVPS.objects.filter(id=vps_id, academy_id=academy_id).select_related("vendor", "academy").first()
+        if not vps:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="VPS not found or it does not belong to this academy.",
+                    es="VPS no encontrado o no pertenece a esta academia.",
+                    slug="vps-not-found",
+                ),
+                code=404,
+            )
+        from breathecode.provisioning.tasks import deprovision_vps_task
+        deprovision_vps_task.delay(vps.id)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 # class ContainerMeView(APIView):

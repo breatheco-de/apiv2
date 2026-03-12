@@ -1,0 +1,21 @@
+{
+    "slug": "vps_deprovisioned",
+    "name": "VPS Deprovisioned",
+    "description": "Email sent when a VPS has been deprovisioned (e.g. no credits at renewal)",
+    "category": "provisioning",
+    "channels": {
+        "email": {
+            "template_path": "vps_deprovisioned",
+            "default_subject": "Your VPS has been deprovisioned"
+        }
+    },
+    "variables": [
+        {
+            "name": "hostname",
+            "description": "Former VPS hostname",
+            "source": "Passed in data dict",
+            "example": "vps-12345.example.com",
+            "required": false
+        }
+    ]
+}

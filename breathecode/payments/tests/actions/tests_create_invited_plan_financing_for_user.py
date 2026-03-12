@@ -25,8 +25,8 @@ class CreateInvitedPlanFinancingForUserTestSuite(PaymentsTestCase):
             cohort={"available_as_saas": True},
             cohort_set=1,
             cohort_set_cohort=1,
-            financing_option={"how_many_months": 1, "monthly_price": 0},
-            plan=1,
+            financing_option={"how_many_months": 1, "monthly_price": 1},
+            plan={"is_renewable": False, "time_of_life": 1, "time_of_life_unit": "MONTH", "status": "ACTIVE"},
         )
         create_invited_plan_financing_for_user(
             user=model.user,
@@ -47,10 +47,10 @@ class CreateInvitedPlanFinancingForUserTestSuite(PaymentsTestCase):
         self.assertEqual(invoices.count(), 1)
         invoice = invoices.first()
         self.assertEqual(invoice.status, "FULFILLED")
-        self.assertEqual(invoice.amount, 0)
+        self.assertEqual(invoice.amount, 1)
         from breathecode.payments import tasks
 
-        tasks.build_plan_financing.delay.assert_called_once_with(bag.id, invoice.id, is_free=True)
+        tasks.build_plan_financing.delay.assert_called_once_with(bag.id, invoice.id, is_free=False)
 
     def test_plan_cohort_mismatch_raises(self):
         """Raises when plan's cohort_set does not include the cohort."""
@@ -58,11 +58,11 @@ class CreateInvitedPlanFinancingForUserTestSuite(PaymentsTestCase):
             user=1,
             academy=1,
             currency=1,
-            cohort=1,
+            cohort={"available_as_saas": True},
             cohort_set=1,
             cohort_set_cohort=1,
-            financing_option={"how_many_months": 1, "monthly_price": 0},
-            plan=1,
+            financing_option={"how_many_months": 1, "monthly_price": 1},
+            plan={"is_renewable": False, "time_of_life": 1, "time_of_life_unit": "MONTH", "status": "ACTIVE"},
         )
         cohort2 = self.bc.database.create(cohort=1, academy=model.academy).cohort
         with self.assertRaises(ValidationException) as cm:
@@ -86,8 +86,8 @@ class CreateInvitedPlanFinancingForUserTestSuite(PaymentsTestCase):
             cohort={"available_as_saas": True},
             cohort_set=1,
             cohort_set_cohort=1,
-            financing_option={"how_many_months": 1, "monthly_price": 0},
-            plan=1,
+            financing_option={"how_many_months": 1, "monthly_price": 1},
+            plan={"is_renewable": False, "time_of_life": 1, "time_of_life_unit": "MONTH", "status": "ACTIVE"},
         )
         model.academy.main_currency = None
         model.academy.save(update_fields=["main_currency_id"])
@@ -112,8 +112,8 @@ class CreateInvitedPlanFinancingForUserTestSuite(PaymentsTestCase):
             cohort={"available_as_saas": True},
             cohort_set=1,
             cohort_set_cohort=1,
-            financing_option={"how_many_months": 1, "monthly_price": 0},
-            plan=1,
+            financing_option={"how_many_months": 1, "monthly_price": 1},
+            plan={"is_renewable": False, "time_of_life": 1, "time_of_life_unit": "MONTH", "status": "ACTIVE"},
         )
         from breathecode.payments.models import Plan
 
@@ -141,7 +141,7 @@ class CreateInvitedPlanFinancingForUserTestSuite(PaymentsTestCase):
             cohort_set=1,
             cohort_set_cohort=1,
             financing_option={"how_many_months": 6, "monthly_price": 100},
-            plan=1,
+            plan={"is_renewable": False, "time_of_life": 1, "time_of_life_unit": "MONTH", "status": "ACTIVE"},
         )
         with self.assertRaises(ValidationException) as cm:
             create_invited_plan_financing_for_user(
