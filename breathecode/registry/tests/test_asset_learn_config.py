@@ -1,7 +1,8 @@
 """Tests for Asset learn.json mapping: apply_learn_config, to_learn_config, learn_config_to_metadata, sync_fields_to_learn_config."""
 
 import pytest
-from breathecode.registry.models import Asset, AssetTechnology
+from breathecode.registry.models import Asset, AssetErrorLog, AssetTechnology
+from breathecode.registry.utils import AssetErrorLogType
 
 
 @pytest.mark.django_db
@@ -99,6 +100,52 @@ def test_apply_learn_config_raises_for_quiz():
     )
     with pytest.raises(Exception, match="Can only process exercise and project config"):
         asset.apply_learn_config({"title": "Q", "preview": "https://x.com/p.png"})
+
+
+@pytest.mark.django_db
+def test_apply_learn_config_missing_preview_logs_error_and_continues():
+    """When preview is missing, apply_learn_config logs error, sets sync_status ERROR, and still applies rest of config."""
+    tech = AssetTechnology.get_or_create("python")
+    asset = Asset.objects.create(
+        slug="test-exercise",
+        title="Old Title",
+        description="Old Desc",
+        asset_type="EXERCISE",
+        lang="us",
+        preview="https://example.com/old.png",
+    )
+    config = {
+        "slug": "test-exercise",
+        "title": "New Title",
+        "description": "New Desc",
+        "difficulty": "EASY",
+        "duration": 3,
+        "technologies": ["python"],
+        "projectType": "tutorial",
+        "grading": "incremental",
+    }
+    result = asset.apply_learn_config(config)
+    assert result is asset
+    asset.refresh_from_db()
+    # No exception; rest of config was applied
+    assert asset.title == "New Title"
+    assert asset.description == "New Desc"
+    assert asset.difficulty == "EASY"
+    assert asset.duration == 3
+    assert list(asset.technologies.values_list("slug", flat=True)) == ["python"]
+    # Preview unchanged (missing in config)
+    assert asset.preview == "https://example.com/old.png"
+    # Error recorded on asset
+    assert asset.sync_status == "ERROR"
+    expected_msg = (
+        "Missing preview URL, you can specify a 'preview' property in the learn.json file "
+        "that points to a remote image url like https://example.com/image.png"
+    )
+    assert asset.status_text == expected_msg
+    # AssetErrorLog created
+    error_log = AssetErrorLog.objects.filter(asset=asset, slug=AssetErrorLogType.MISSING_PREVIEW).first()
+    assert error_log is not None
+    assert error_log.status_text == expected_msg
 
 
 @pytest.mark.django_db
