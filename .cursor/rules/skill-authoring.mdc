@@ -65,6 +65,9 @@ The frontmatter `description` is read by the skill registry to decide whether to
 ### Endpoints
 - Document only the endpoints this skill actually uses.
 - For each endpoint include: method, path, required headers, required body fields, and what the response returns that matters.
+- **Include sample JSON payloads** for both request and response:
+  - **Request**: Show a full example request body (for POST/PUT/PATCH) with realistic values for every required field.
+  - **Response**: Show a full example response body (or the relevant subset) so the agent knows the shape and key fields to use in later steps.
 - Do not document endpoints that belong in a different skill.
 
 ### Edge Cases
@@ -135,6 +138,7 @@ A skill should cover exactly one task a user would ask for by name. If you find 
 - Avoid passive voice and vague language ("should", "might", "can be used to").
 - JSON examples must use realistic placeholder values, not abstract placeholders like `<string>`.
 - Every example must include all required fields — no incomplete snippets.
+- Request and response examples in the Endpoints section must be full sample JSON payloads (request body and response body), not just field lists.
 
 ---
 
@@ -152,3 +156,4 @@ A skill should cover exactly one task a user would ask for by name. If you find 
 | Skill name without domain prefix (e.g. `create-cohort`) | Skills don't group, registry becomes unscannable at scale |
 | Underscores or camelCase in skill name | Violates the agentskills.io spec, may break validation |
 | Near-duplicate names (e.g. `admissions-create-cohort` and `admissions-cohort-create`) | Registry picks wrong skill, inconsistent behavior |
+| Documenting endpoints without sample request/response JSON payloads | Agent cannot reliably construct requests or parse responses |

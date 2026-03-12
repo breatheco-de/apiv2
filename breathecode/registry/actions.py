@@ -1241,14 +1241,16 @@ def pull_learnpack_asset(github, asset: Asset, override_meta):
 
         github_service = GithubService()
         solution_url_info = github_service.parse_github_url(asset.solution_url)
-        solution_path = solution_url_info.get("path")
-        solution_branch = solution_url_info.get("branch")
-        solution_owner = solution_url_info.get("owner")
-        solution_repo = solution_url_info.get("repo")
 
-        if solution_path and solution_branch:
+        solution_path = solution_url_info.get("path") if solution_url_info else None
+        solution_branch = solution_url_info.get("branch") if solution_url_info else None
+        solution_owner = solution_url_info.get("owner") if solution_url_info else None
+        solution_repo_name = solution_url_info.get("repo") if solution_url_info else None
+
+        if solution_path and solution_branch and solution_owner and solution_repo_name:
             try:
-                solution_repo = github.get_repo(f"{solution_owner}/{solution_repo}")
+                repo_full_name = f"{solution_owner}/{solution_repo_name}"
+                solution_repo = github.get_repo(repo_full_name)
                 solution_blob = get_blob_content(solution_repo, solution_path, branch=solution_branch)
                 if solution_blob is not None:
                     raw_content = base64.b64decode(solution_blob.content).decode("utf-8")
@@ -1257,23 +1259,40 @@ def pull_learnpack_asset(github, asset: Asset, override_meta):
                         f"Successfully retrieved solution README from {asset.solution_url} for asset {asset.slug}"
                     )
                 else:
-                    error_msg = f"Solution file '{solution_path}' not found in repository on branch '{solution_branch}'"
+                    error_msg = (
+                        f"Expected a solution file at '{solution_path}' in repository '{repo_full_name}' "
+                        f"on branch '{solution_branch}', but GitHub did not return any file content."
+                    )
                     logger.error(f"{error_msg} for asset {asset.slug}")
                     raise Exception(error_msg)
             except Exception as e:
                 error_str = str(e).lower()
                 if "404" in error_str or "not found" in error_str:
-                    error_msg = f"Solution repository {solution_repo} not found or not accessible. Who's the owner of this asset? does it have access? Also check the github url's"
+                    error_msg = (
+                        f"Expected to read the solution from repository '{repo_full_name}' "
+                        f"(URL: {asset.solution_url}), but GitHub returned a 404/Not Found response. "
+                        f"Verify that the repository, branch '{solution_branch}', and file path '{solution_path}' exist."
+                    )
                 elif "403" in error_str or "forbidden" in error_str:
-                    error_msg = f"Access forbidden to solution repository {solution_repo}. Check GitHub credentials and repository permissions."
+                    error_msg = (
+                        f"Expected to read the solution from repository '{repo_full_name}', "
+                        f"but access was forbidden by GitHub. Check credentials and repository permissions."
+                    )
                 elif "401" in error_str or "unauthorized" in error_str:
-                    error_msg = f"GitHub authentication failed for solution repository {solution_repo}. Check GitHub credentials."
+                    error_msg = (
+                        f"Expected to authenticate against GitHub to read the solution from repository '{repo_full_name}', "
+                        f"but authentication failed. Check GitHub credentials."
+                    )
                 else:
-                    error_msg = f"Error accessing solution README file at {asset.solution_url}: {str(e)}"
+                    error_msg = (
+                        f"Expected to retrieve the solution file from GitHub using URL {asset.solution_url}, "
+                        f"but an unexpected error occurred: {str(e)}"
+                    )
 
                 logger.error(f"{error_msg} for asset {asset.slug}")
                 raise Exception(error_msg)
         else:
+            # Fallback: treat solution_url as a direct HTTP endpoint instead of a GitHub file URL.
             try:
                 response = requests.get(asset.solution_url)
                 if response.status_code == 200:
@@ -1284,11 +1303,17 @@ def pull_learnpack_asset(github, asset: Asset, override_meta):
                         f"Successfully retrieved solution README via direct GET from {asset.solution_url} for asset {asset.slug}"
                     )
                 else:
-                    error_msg = f"Failed to retrieve solution README via direct GET from {asset.solution_url}, status code: {response.status_code}"
+                    error_msg = (
+                        f"Expected HTTP 200 when requesting the solution README from {asset.solution_url}, "
+                        f"but received status code {response.status_code} instead."
+                    )
                     logger.error(f"{error_msg} for asset {asset.slug}")
                     raise Exception(error_msg)
             except Exception as e:
-                error_msg = f"Error making direct GET request to {asset.solution_url}: {str(e)}"
+                error_msg = (
+                    f"Expected to retrieve the solution README via direct HTTP GET from {asset.solution_url}, "
+                    f"but the request failed with error: {str(e)}"
+                )
                 logger.error(f"{error_msg} for asset {asset.slug}")
                 raise Exception(error_msg)
 
