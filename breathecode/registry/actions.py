@@ -157,6 +157,9 @@ def pull_from_github(asset_slug, author_id=None, override_meta=False):
         else:
             asset = pull_learnpack_asset(g, asset, override_meta=True)
 
+        if asset.sync_status == "ERROR":
+            return asset
+
         asset.status_text = "Successfully Synched"
         asset.sync_status = "OK"
         asset.last_synch_at = timezone.now()

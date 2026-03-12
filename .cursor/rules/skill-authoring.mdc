@@ -1,0 +1,154 @@
+---
+name: skill-authoring
+description: Use this skill when creating, editing, or reviewing agent skill files (SKILL.md). Triggers include any request to write a new skill, improve an existing skill, critique a skill, or define how an agent should learn to use an API or workflow. Do NOT use for general documentation tasks that are not intended to be loaded into an agent context.
+requires: []
+---
+
+# Skill Authoring Rules
+
+When asked to create or edit an agent skill file (SKILL.md), follow these rules strictly.
+
+---
+
+## Purpose of a Skill
+
+A skill is a markdown file loaded into an agent's context to teach it how to accomplish a specific, bounded task. It is **not** developer documentation — it is runtime instructions for a model. Every sentence should either help the agent decide what to do or tell it how to do it.
+
+---
+
+## Structure
+
+Every skill must start with YAML frontmatter, followed by these sections in order:
+
+```markdown
+---
+name: <domain>-<verb>-<resource>  # e.g. admissions-create-cohort, billing-cancel-plan
+description: <one sentence: when to use AND when not to use>
+requires:
+  - <other-skill-name>  # omit if no dependencies
+---
+
+# Skill: <Short Action-Oriented Title>
+
+## When to Use
+## Concepts (optional)
+## Workflow
+## Endpoints
+## Edge Cases
+## Checklist
+```
+
+The frontmatter `description` is read by the skill registry to decide whether to load this file at all. It must be a single sentence that includes at least one negative case ("do NOT use for..."). The `## When to Use` section inside the body gives the model finer-grained guidance once loaded. Both are required — they serve different audiences.
+
+---
+
+## Section Rules
+
+### When to Use
+- Always include this section, even if the trigger seems obvious.
+- State clearly when to use AND when NOT to use this skill.
+- Include at least one negative example to prevent over-triggering.
+- Keep it to 5 lines or fewer.
+
+### Concepts (optional)
+- Only include if domain terms need defining for the agent to reason correctly.
+- Skip if the workflow section is self-explanatory.
+- No implementation internals (no model paths, class names, or ORM details).
+
+### Workflow
+- This is the most important section.
+- Every step must be numbered and sequential.
+- If a step depends on output from a previous step, say so explicitly (e.g. "use the `id` returned in Step 1").
+- If order matters, explain WHY briefly — don't assume the agent will infer it.
+- If a prerequisite skill or external doc is required, name it explicitly and explain what to do if it's unavailable.
+
+### Endpoints
+- Document only the endpoints this skill actually uses.
+- For each endpoint include: method, path, required headers, required body fields, and what the response returns that matters.
+- Do not document endpoints that belong in a different skill.
+
+### Edge Cases
+- List failure modes the agent should handle gracefully.
+- For each edge case: what the agent will observe, and what it should do.
+- Do not leave the agent in a silent dead end (e.g. "if X returns empty, do Y, not nothing").
+
+### Checklist
+- End every skill with a numbered checklist the agent can use to self-verify completion.
+- Each item should be a concrete, observable action — not a vague principle.
+
+---
+
+## Naming Convention
+
+Skill names must follow the pattern `<domain>-<verb>-<resource>` in kebab-case (lowercase, hyphens only — no underscores, no uppercase). The spec does not allow underscores.
+
+- **domain**: the API or product area — one word (e.g. `admissions`, `billing`, `certificates`, `syllabus`)
+- **verb**: the action being performed (e.g. `create`, `enroll`, `cancel`, `list`, `issue`)
+- **resource**: the thing being acted on (e.g. `cohort`, `student`, `plan`, `certificate`)
+
+**Good names:**
+```
+admissions-create-cohort
+admissions-enroll-student
+admissions-list-cohorts
+billing-create-plan
+billing-cancel-plan
+certificates-issue-certificate
+syllabus-create-version
+```
+
+**Bad names — do not use:**
+```
+cohort-creator          # no domain prefix, noun-based
+new-cohort-flow         # vague, not action-resource pattern
+admissions-createCohort # camelCase not allowed
+admissions-create_cohort # underscores not allowed
+createCohort            # no domain, camelCase
+```
+
+The domain prefix is critical at scale — it groups related skills alphabetically and makes the skill index scannable. Never omit it, even for skills that seem obvious. Before naming a new skill, check existing skill names to avoid near-duplicates that would confuse the registry.
+
+---
+
+## Scope Rules
+
+### One skill = one user-facing task
+A skill should cover exactly one task a user would ask for by name. If you find yourself writing "this skill also covers...", that's a second skill.
+
+**Signs a skill needs to be split:**
+- It has more than one H2 workflow section
+- It covers both read and write operations on the same resource
+- It includes both API-facing and ops/admin-facing instructions (e.g. management commands)
+
+### What does NOT belong in a skill
+- Internal code references: model paths, class names, receiver functions, ORM queries
+- Management commands or shell scripts unless the skill is explicitly for ops tasks
+- Background implementation context ("this works because...")
+- Links to related files the agent cannot load or act on
+
+---
+
+## Tone and Style
+
+- Write for a model, not a developer. Assume zero context outside what's in the file.
+- Use imperative instructions: "Call X", "Save the returned id", "If Y is empty, do Z".
+- Avoid passive voice and vague language ("should", "might", "can be used to").
+- JSON examples must use realistic placeholder values, not abstract placeholders like `<string>`.
+- Every example must include all required fields — no incomplete snippets.
+
+---
+
+## Anti-Patterns to Avoid
+
+| Anti-pattern | Why it's a problem |
+|---|---|
+| Referencing external docs without fallback instructions | Agent silently fails if the doc isn't loaded |
+| Mixing API tasks with admin/ops tasks | Breaks agents that only have API access |
+| Including code internals (model paths, class names) | Adds noise, agent can't act on them |
+| Vague "when to use" in the opening paragraph | Skill may be applied in wrong contexts |
+| No negative examples in "When to Use" | Skill over-triggers on loosely related requests |
+| Silent failure paths in edge cases | Agent gets stuck without knowing what to do |
+| Steps that assume implicit ordering | Agent may call endpoints out of order |
+| Skill name without domain prefix (e.g. `create-cohort`) | Skills don't group, registry becomes unscannable at scale |
+| Underscores or camelCase in skill name | Violates the agentskills.io spec, may break validation |
+| Near-duplicate names (e.g. `admissions-create-cohort` and `admissions-cohort-create`) | Registry picks wrong skill, inconsistent behavior |
