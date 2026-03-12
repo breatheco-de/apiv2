@@ -1,0 +1,138 @@
+---
+name: breathecode-api-index-maintenance
+description: Use this rule when creating, renaming, or deleting a BreatheCode API skill, when a cross-domain workflow is discovered or changed, OR when any BreatheCode API endpoint is added, modified, or removed. Ensures skills and the index stay in sync with the actual API. Do NOT use for general skill authoring — use skill-authoring.mdc for that.
+---
+
+# BreatheCode API Index Maintenance
+
+The file `docs/llm-docs/skills/breathecode-api-index/SKILL.md` is the central routing index for all BreatheCode API skills. It must always reflect the current state of both the skill inventory and the API itself. Follow these rules whenever the API code or skill inventory changes.
+
+---
+
+## When to Update Skills and the Index
+
+There are two categories of triggers: **API changes** and **skill changes**. Both require updates to relevant skills and the index before a task is considered complete.
+
+### Triggered by API changes
+
+Update relevant skills and the index when any of the following happen to the BreatheCode API codebase:
+
+- A new endpoint is added
+- An existing endpoint's method, path, required fields, or response shape changes
+- An endpoint is deprecated or removed
+- A new domain app is added to the API
+- A field is renamed or its type changes
+
+**Do not treat API changes as code-only tasks.** Every API change has a skill obligation — see [Rule 6: API Changed](#rule-6-api-changed).
+
+### Triggered by skill changes
+
+Update `docs/llm-docs/skills/breathecode-api-index/SKILL.md` when any of the following happen:
+
+- A new domain skill is created
+- An existing skill is renamed
+- A skill is deleted
+- A new cross-domain workflow is discovered or documented
+- An existing cross-domain workflow changes
+
+Never create, rename, or delete a skill without updating the index in the same change.
+
+---
+
+## Rule 1: New Skill Created
+
+When a new skill is created under `docs/llm-docs/skills`:
+
+1. Identify the domain from the skill name (e.g. `bc-admissions-create-cohort` → domain is `bc-admissions`, bc stands for breathecode).
+2. Open `docs/llm-docs/skills/breathecode-api-index/SKILL.md`.
+3. Confirm the domain already exists in the **Domain Map** table. If not, add a new row with the domain name, a one-line description of what it covers, and `bc-domain-*` as the skill pattern.
+4. Do NOT add individual skill names to the domain map — the wildcard pattern (`bc-admissions-*`) is sufficient. The domain map is a routing guide, not an inventory list.
+5. If the new skill introduces a cross-domain dependency (i.e. it requires loading a skill from a different domain), add a row to the **Common Cross-Domain Workflows** table with the user-facing request description and all skills that must be loaded.
+
+---
+
+## Rule 2: Skill Renamed
+
+When an existing skill is renamed:
+
+1. Search the **Common Cross-Domain Workflows** table in the index for the old skill name.
+2. Replace every occurrence of the old name with the new name.
+3. If the domain prefix changed, also check the **Domain Map** table to confirm the domain row still exists.
+
+---
+
+## Rule 3: Skill Deleted
+
+When a skill is deleted:
+
+1. Search the **Common Cross-Domain Workflows** table for any reference to the deleted skill name.
+2. Remove or update the affected workflow rows.
+3. If the deleted skill was the only skill in its domain, remove the domain row from the **Domain Map** table.
+
+---
+
+## Rule 4: New Cross-Domain Workflow Discovered
+
+When writing a use-case skill and you discover it requires loading skills from more than one domain:
+
+1. Add a row to the **Common Cross-Domain Workflows** table.
+2. The row must include: the plain-language user request, and all skill names (or domain wildcards) that must be loaded, with a brief note explaining why each is needed.
+3. Keep the user request description generic enough to match how a real user would phrase it — not implementation-specific (e.g. "Enroll a student in a cohort", not "POST to /v1/admissions/academy/cohort/user").
+
+---
+
+## Rule 5: Index Accuracy Check
+
+Before finishing any task that involved creating or modifying skills OR API endpoints, verify:
+
+1. [ ] Every skill created or renamed is accounted for in the index (domain map row exists).
+2. [ ] Every cross-domain dependency introduced is listed in the cross-domain workflows table.
+3. [ ] No skill names in the cross-domain table are stale (pointing to deleted or renamed skills).
+4. [ ] The domain map contains no individual skill names — only domain-level wildcard patterns.
+5. [ ] If an API endpoint was changed, the relevant skill(s) have been updated to reflect the change.
+6. [ ] If a new API domain was added, a new domain row exists in the index domain map.
+
+---
+
+## Rule 6: API Changed
+
+When an API endpoint is added, modified, or removed:
+
+1. **Identify the domain** from the endpoint path (e.g. `/v1/admissions/...` → `bc-admissions` domain).
+2. **Find all skills in that domain** by scanning `docs/llm-docs/skills` for files and folders matching `bc-admissions-*`.
+3. **For each affected skill**, check whether the changed endpoint is documented in its `## Endpoints` section.
+4. **If the endpoint is documented in a skill**, update that skill:
+   - Changed method or path → update the endpoint reference
+   - New required field → add it to the body example and required fields list
+   - Removed field → remove it and check if any workflow step references it
+   - Removed endpoint → remove it from the skill; if it was the only endpoint, flag the skill as needing replacement or deletion
+   - Changed response shape → update any step that reads from the response (e.g. "save the returned `id`")
+5. **If no skill exists yet for the changed endpoint**, do nothing — but if the endpoint is part of a cross-domain workflow in the index, add a comment or note that the workflow may be affected.
+6. **If a new domain app was added to the API**, add a new row to the Domain Map in the index with the domain name, a one-line description, and the `bc-domain-*` wildcard pattern.
+
+**Do not silently skip this step.** If you are unsure which skill covers a changed endpoint, scan the skills directory and check. If no skill covers it, explicitly note this to the user.
+
+---
+
+## What the Index Must NOT Contain
+
+- Individual skill names in the Domain Map (use `bc-domain-*` wildcards only)
+- Endpoint documentation (that belongs in domain skills)
+- Implementation details about how the API works
+- Workflow steps (those belong in use-case skills)
+- Speculative cross-domain workflows that haven't been confirmed by an actual skill
+- References to Django Admin or any non-API tool (index and all skills are API-only; see skill-authoring rules)
+
+---
+
+## Format Reference
+
+**Domain Map row format:**
+```markdown
+| **domain-name** | One-line description of what this domain covers | `bc-domain-name-*` |
+```
+
+**Cross-Domain Workflow row format:**
+```markdown
+| User-facing request description | `skill-one` + `skill-two` (reason why skill-two is needed) |
+```

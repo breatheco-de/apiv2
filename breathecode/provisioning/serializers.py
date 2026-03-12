@@ -6,7 +6,14 @@ from rest_framework import serializers
 
 from breathecode.utils import serpy
 
-from .models import ProvisioningBill, ProvisioningContainer, ProvisioningVPS
+from .models import (
+    ProvisioningAcademy,
+    ProvisioningBill,
+    ProvisioningContainer,
+    ProvisioningProfile,
+    ProvisioningVPS,
+    ProvisioningVendor,
+)
 
 
 class AcademySerializer(serpy.Serializer):
@@ -161,6 +168,32 @@ class GetProvisioningProfile(serpy.Serializer):
     id = serpy.Field()
     vendor = GetProvisioningVendorSerializer(required=False)
     academy = AcademySerializer(required=False)
+    cohort_ids = serpy.MethodField()
+    member_ids = serpy.MethodField()
+
+    def get_cohort_ids(self, obj):
+        return list(obj.cohorts.values_list("id", flat=True))
+
+    def get_member_ids(self, obj):
+        return list(obj.members.values_list("id", flat=True))
+
+
+class ProvisioningProfileCreateUpdateSerializer(serializers.Serializer):
+    """Request body for POST/PUT provisioning profile."""
+
+    vendor_id = serializers.IntegerField(required=True)
+    cohort_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        allow_empty=True,
+        default=list,
+    )
+    member_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        allow_empty=True,
+        default=list,
+    )
 
 
 class GetProvisioningConsumptionKindSerializer(serpy.Serializer):
@@ -378,3 +411,52 @@ class AcademyVPSListSerializer(serpy.Serializer):
 
     def get_user_email(self, obj):
         return getattr(obj.user, "email", None) if obj.user else None
+
+
+# --- Provisioning academy (credentials and settings) ---
+
+
+class GetProvisioningAcademySerializer(serpy.Serializer):
+    """Response for ProvisioningAcademy; credentials never returned, only credentials_set flag."""
+
+    id = serpy.Field()
+    vendor = GetProvisioningVendorSerializer(required=False)
+    academy_id = serpy.Field()
+    credentials_set = serpy.MethodField()
+    container_idle_timeout = serpy.Field()
+    max_active_containers = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+
+    def get_credentials_set(self, obj):
+        return bool(obj.credentials_token or obj.credentials_key)
+
+
+class ProvisioningAcademyCreateSerializer(serializers.Serializer):
+    """Request body for POST provisioning academy config."""
+
+    vendor_id = serializers.IntegerField(required=True)
+    credentials_token = serializers.CharField(required=True, max_length=200, allow_blank=False)
+    credentials_key = serializers.CharField(required=False, max_length=200, allow_blank=True, default="")
+    container_idle_timeout = serializers.IntegerField(required=False, default=15, min_value=1)
+    max_active_containers = serializers.IntegerField(required=False, default=2, min_value=1)
+    allowed_machine_type_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        allow_empty=True,
+        default=list,
+    )
+
+
+class ProvisioningAcademyUpdateSerializer(serializers.Serializer):
+    """Request body for PUT provisioning academy config (all optional)."""
+
+    credentials_token = serializers.CharField(required=False, max_length=200, allow_blank=True)
+    credentials_key = serializers.CharField(required=False, max_length=200, allow_blank=True)
+    container_idle_timeout = serializers.IntegerField(required=False, min_value=1)
+    max_active_containers = serializers.IntegerField(required=False, min_value=1)
+    allowed_machine_type_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        allow_empty=True,
+    )

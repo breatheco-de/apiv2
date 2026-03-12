@@ -1,5 +1,5 @@
 ---
-name: admissions-create-macro-cohort
+name: bc-admissions-create-macro-cohort
 description: Use when creating a macro cohort (main cohort) that contains multiple micro cohorts via the API; do NOT use for a single cohort, for only listing/reading cohorts, or for retrieving a cohort's certificate specialty.
 ---
 
@@ -40,7 +40,7 @@ To verify a cohort is a macro or to read its micro cohorts and order, use `GET /
 ## Edge Cases
 
 - **Creation fails with missing syllabus or academy:** Tell the user that academy and syllabus (and syllabus version) must exist first; do not retry the same payload.
-- **Creation fails with `micro-cohort-syllabus-must-have-specialty`:** The micro cohort's syllabus is not linked to a certificate specialty. Tell the user to link that syllabus to a specialty in the certificate academy settings, then retry.
+- **Creation fails with `micro-cohort-syllabus-must-have-specialty`:** The micro cohort's syllabus is not linked to a certificate specialty. Tell the user to link that syllabus to a specialty via the certificate API, then retry.
 - **One or more micro cohort IDs do not exist or belong to another academy:** The API will reject the request. Tell the user that all IDs in `micro_cohorts` must be existing cohorts in the same academy; verify IDs from Step 1.
 - **Users were already in the macro before micro cohorts were linked:** New micro cohorts will not automatically get those users. Tell the user to use the sync endpoint per user or to run a bulk sync if available; do not leave this unmentioned.
 

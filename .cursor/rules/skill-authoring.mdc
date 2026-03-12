@@ -22,7 +22,7 @@ Every skill must start with YAML frontmatter, followed by these sections in orde
 
 ```markdown
 ---
-name: <domain>-<verb>-<resource>  # e.g. admissions-create-cohort, billing-cancel-plan
+name: bc-<domain>-<verb>-<resource>  # e.g. bc-admissions-create-cohort, bc-billing-cancel-plan
 description: <one sentence: when to use AND when not to use>
 requires:
   - <other-skill-name>  # omit if no dependencies
@@ -80,7 +80,7 @@ The frontmatter `description` is read by the skill registry to decide whether to
 
 ## Naming Convention
 
-Skill names must follow the pattern `<domain>-<verb>-<resource>` in kebab-case (lowercase, hyphens only — no underscores, no uppercase). The spec does not allow underscores.
+Skill names must follow the pattern `bc-<domain>-<verb>-<resource>` in kebab-case (lowercase, hyphens only — no underscores, no uppercase). The spec does not allow underscores. The "bc" at the beginning of the name stands for BreateCode.
 
 - **domain**: the API or product area — one word (e.g. `admissions`, `billing`, `certificates`, `syllabus`)
 - **verb**: the action being performed (e.g. `create`, `enroll`, `cancel`, `list`, `issue`)
@@ -88,21 +88,21 @@ Skill names must follow the pattern `<domain>-<verb>-<resource>` in kebab-case (
 
 **Good names:**
 ```
-admissions-create-cohort
-admissions-enroll-student
-admissions-list-cohorts
-billing-create-plan
-billing-cancel-plan
-certificates-issue-certificate
-syllabus-create-version
+bc-admissions-create-cohort
+bc-admissions-enroll-student
+bc-admissions-list-cohorts
+bc-billing-create-plan
+bc-billing-cancel-plan
+bc-certificates-issue-certificate
+bc-syllabus-create-version
 ```
 
 **Bad names — do not use:**
 ```
 cohort-creator          # no domain prefix, noun-based
 new-cohort-flow         # vague, not action-resource pattern
-admissions-createCohort # camelCase not allowed
-admissions-create_cohort # underscores not allowed
+bc-admissions-createCohort # camelCase not allowed
+bc-admissions-create_cohort # underscores not allowed
 createCohort            # no domain, camelCase
 ```
 
@@ -125,6 +125,7 @@ A skill should cover exactly one task a user would ask for by name. If you find 
 - Management commands or shell scripts unless the skill is explicitly for ops tasks
 - Background implementation context ("this works because...")
 - Links to related files the agent cannot load or act on
+- **References to Django Admin or any non-API tool.** Skills are API-only. Do not mention Admin, back-office UIs, or where to configure things outside the API. If an operation is not exposed by the API, say so without naming Admin (e.g. "the API does not expose X" or "must be configured first").
 
 ---
 
@@ -151,4 +152,5 @@ A skill should cover exactly one task a user would ask for by name. If you find 
 | Steps that assume implicit ordering | Agent may call endpoints out of order |
 | Skill name without domain prefix (e.g. `create-cohort`) | Skills don't group, registry becomes unscannable at scale |
 | Underscores or camelCase in skill name | Violates the agentskills.io spec, may break validation |
-| Near-duplicate names (e.g. `admissions-create-cohort` and `admissions-cohort-create`) | Registry picks wrong skill, inconsistent behavior |
+| Near-duplicate names (e.g. `bc-admissions-create-cohort` and `bc-admissions-cohort-create`) | Registry picks wrong skill, inconsistent behavior |
+| Mentioning Django Admin or directing users to configure things outside the API | Skills must describe only API behavior; do not reference Admin or other non-API tools |
