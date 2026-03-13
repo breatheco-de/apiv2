@@ -79,6 +79,38 @@ Some user requests touch multiple domains. Load ALL listed skills before proceed
 
 ---
 
+## API Conventions
+
+Assume these conventions for all BreatheCode API endpoints unless a domain skill or endpoint docs say otherwise.
+
+### Pagination
+
+- **Default:** List endpoints are paginated unless the domain skill or endpoint docs say otherwise.
+- **Query params:** `limit` (default 20), `offset` (default 0).
+- **Paginated response:** When envelope is used, the body has `count`, `first`, `next`, `previous`, `last`, and `results`; headers include `X-Total-Count` and `Link`.
+
+### Academy (staff) endpoints
+
+- **Rule:** Any endpoint whose path contains `/academy/` (after the app prefix, e.g. `/v1/admissions/academy/...`) is for **staff** (academy-scoped operations).
+- **Required header:** Send the **`Academy`** header with the academy ID (e.g. `Academy: 1`). Missing it returns an error (e.g. "Missing academy_id... or 'Academy' header").
+- **Examples:** `/v1/admissions/academy/cohort/user`, `/v1/assessment/academy/user/assessment`, `/v1/assignments/academy/coderevision/<id>`.
+
+### Error responses
+
+- **Structure:** Error responses are JSON with at least:
+  - **`detail`** (string): Human-readable message.
+  - **`status_code`** (integer): HTTP status (e.g. 400, 403, 404; 402 for payment-related errors).
+  - Optionally **`slug`** (string): Stable error code for client logic (e.g. `user-not-found`, `session_without_service`).
+  - Optionally **`data`** (object): Extra context.
+- The HTTP status of the response matches `status_code`.
+
+### Language and translated errors
+
+- **Header:** **`Accept-Language`** — send a language code (e.g. `en`, `es`) to request error messages (and other translated content) in that language when the API uses translation.
+- **Behavior:** The API uses the request's `Accept-Language` (or user/settings fallback) for translated messages; if omitted, the default is typically `en`.
+
+---
+
 ## Checklist
 
 1. [ ] Identified the domain(s) from the domain map.

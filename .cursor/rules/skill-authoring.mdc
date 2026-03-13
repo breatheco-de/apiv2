@@ -69,6 +69,9 @@ The frontmatter `description` is read by the skill registry to decide whether to
   - **Request**: Show a full example request body (for POST/PUT/PATCH) with realistic values for every required field.
   - **Response**: Show a full example response body (or the relevant subset) so the agent knows the shape and key fields to use in later steps.
 - Do not document endpoints that belong in a different skill.
+- **GET/list endpoints:** State whether the response is paginated. By convention (see API index), list endpoints are paginated; if a GET endpoint does **not** support pagination, say so explicitly.
+- **Paths containing `/academy/`:** Document that the request must include the **`Academy`** header with the academy ID (staff-only).
+- **Translated errors:** If the endpoint returns translated errors, mention that clients can send **`Accept-Language`** (e.g. `en`, `es`) to receive messages in that language.
 
 ### Edge Cases
 - List failure modes the agent should handle gracefully.
@@ -159,3 +162,6 @@ A skill should cover exactly one task a user would ask for by name. If you find 
 | Near-duplicate names (e.g. `bc-admissions-create-cohort` and `bc-admissions-cohort-create`) | Registry picks wrong skill, inconsistent behavior |
 | Mentioning Django Admin or directing users to configure things outside the API | Skills must describe only API behavior; do not reference Admin or other non-API tools |
 | Documenting endpoints without sample request/response JSON payloads | Agent cannot reliably construct requests or parse responses |
+| Documenting a GET list endpoint without pagination behavior | Agent may assume pagination when the endpoint is unpaginated, leading to wrong requests or response parsing |
+| Documenting an `/academy/` endpoint without mentioning the Academy header | Agent may omit the required header and receive 400/403 |
+| Documenting an endpoint that returns translated errors without mentioning Accept-Language | Clients may not know they can request a language for error messages |
