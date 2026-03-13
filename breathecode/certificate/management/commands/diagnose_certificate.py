@@ -229,7 +229,11 @@ class Command(BaseCommand):
         
         # Check 3: Specialty exists
         if cohort.syllabus_version:
-            specialty = Specialty.objects.filter(syllabus__id=cohort.syllabus_version.syllabus_id).first()
+            specialty = (
+                Specialty.objects.filter(syllabuses__id=cohort.syllabus_version.syllabus_id)
+                .distinct()
+                .first()
+            )
             if not specialty:
                 issues.append("Specialty has no Syllabus assigned")
                 self.stdout.write(self.style.ERROR("❌ Specialty has no Syllabus assigned"))
