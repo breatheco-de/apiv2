@@ -202,20 +202,24 @@ class CertificateTestSuite(CertificateTestCase):
             "signed_by": teacher_model["user"].first_name + " " + teacher_model["user"].last_name,
             "signed_by_role": "Director",
             "specialty": {
+                "academy": (
+                    {"id": model["specialty"].academy.id, "slug": model["specialty"].academy.slug, "name": model["specialty"].academy.name}
+                    if model["specialty"].academy_id
+                    else None
+                ),
                 "description": None,
                 "created_at": self.datetime_to_iso(model["specialty"].created_at),
+                "duration_in_hours": model["specialty"].duration_in_hours,
                 "id": 1,
                 "logo_url": None,
+                "metrics": model["specialty"].metrics,
                 "name": model["specialty"].name,
                 "slug": model["specialty"].slug,
+                "status": model["specialty"].status,
                 "syllabus": (
-                    {
-                        "id": model["specialty"].syllabus.id if model["specialty"].syllabus else None,
-                        "name": model["specialty"].syllabus.name if model["specialty"].syllabus else None,
-                        "slug": model["specialty"].syllabus.slug if model["specialty"].syllabus else None,
-                    }
-                    if model["specialty"].syllabus
-                    else None
+                    (lambda first: {"id": first.id, "name": first.name, "slug": first.slug} if first else None)(
+                        model["specialty"].syllabuses.first()
+                    )
                 ),
                 "syllabuses": [
                     {"id": s.id, "name": s.name, "slug": s.slug} for s in model["specialty"].syllabuses.all()

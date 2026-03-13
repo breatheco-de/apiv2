@@ -9,7 +9,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from breathecode.admissions.models import CohortUser
+from breathecode.admissions.models import Academy, CohortUser, Syllabus
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.authenticate.actions import get_user_language
 from breathecode.utils import GenerateLookupsMixin, HeaderLimitOffsetPagination, capable_of
@@ -36,11 +36,15 @@ class AcademySpecialtiesView(APIView, GenerateLookupsMixin):
     def get(self, request, academy_id=None):
         handler = self.extensions(request)
 
-        # Filter by the old syllabus (OneToOneField) and the new syllabuses (ManyToManyField)
+        # Include specialties linked via syllabi owned by academy OR owned by the academy
         # Exclude deleted specialties
-        items = Specialty.objects.filter(
-            syllabuses__academy_owner=academy_id
-        ).exclude(status=Specialty.DELETED).distinct()
+        items = (
+            Specialty.objects.filter(
+                Q(syllabuses__academy_owner=academy_id) | Q(academy_id=academy_id)
+            )
+            .exclude(status=Specialty.DELETED)
+            .distinct()
+        )
 
         like = request.GET.get("like")
         if like:
@@ -62,6 +66,175 @@ class AcademySpecialtiesView(APIView, GenerateLookupsMixin):
         serializer = SpecialtySerializer(items, many=True)
 
         return handler.response(serializer.data)
+
+    @capable_of("crud_certificate")
+    def post(self, request, academy_id=None):
+        data = request.data or {}
+        name = data.get("name")
+        slug = data.get("slug")
+        lang = get_user_language(request)
+        if not name or not slug:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="name and slug are required",
+                    es="name y slug son requeridos",
+                ),
+                code=400,
+                slug="missing-fields",
+            )
+        if Specialty.objects.filter(slug=slug).exists():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Specialty with slug '{slug}' already exists",
+                    es=f"Ya existe una especialidad con slug '{slug}'",
+                ),
+                code=400,
+                slug="specialty-slug-already-exists",
+            )
+        academy = Academy.objects.filter(id=academy_id).first()
+        if not academy:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Academy not found",
+                    es="Academia no encontrada",
+                ),
+                code=404,
+                slug="academy-not-found",
+            )
+        specialty = Specialty(
+            name=name,
+            slug=slug,
+            academy_id=academy_id,
+            description=data.get("description") or None,
+            logo_url=data.get("logo_url") or None,
+            duration_in_hours=data.get("duration_in_hours"),
+            expiration_day_delta=data.get("expiration_day_delta"),
+            status=data.get("status", Specialty.ACTIVE),
+        )
+        specialty.save()
+        serializer = SpecialtySerializer(specialty, many=False)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class AcademySpecialtyByIdView(APIView):
+    """Get or update a single academy-owned specialty."""
+
+    permission_classes = [AllowAny]
+
+    @capable_of("read_certificate")
+    def get(self, request, specialty_id, academy_id=None):
+        specialty = (
+            Specialty.objects.filter(
+                Q(id=specialty_id),
+                Q(academy_id=academy_id) | Q(syllabuses__academy_owner=academy_id),
+            )
+            .exclude(status=Specialty.DELETED)
+            .distinct()
+            .first()
+        )
+        if not specialty:
+            raise NotFound("Specialty not found")
+        serializer = SpecialtySerializer(specialty, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @capable_of("crud_certificate")
+    def put(self, request, specialty_id, academy_id=None):
+        return self._update(request, specialty_id, academy_id, partial=False)
+
+    @capable_of("crud_certificate")
+    def patch(self, request, specialty_id, academy_id=None):
+        return self._update(request, specialty_id, academy_id, partial=True)
+
+    def _update(self, request, specialty_id, academy_id, partial):
+        specialty = Specialty.objects.filter(id=specialty_id).first()
+        if not specialty:
+            raise NotFound("Specialty not found")
+        lang = get_user_language(request)
+        if specialty.academy_id is None or specialty.academy_id != academy_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="You can only update specialties that belong to your academy",
+                    es="Solo puedes actualizar especialidades que pertenecen a tu academia",
+                ),
+                code=403,
+                slug="academy-cannot-update-this-specialty",
+            )
+        data = request.data or {}
+        allowed = {
+            "name",
+            "slug",
+            "description",
+            "logo_url",
+            "duration_in_hours",
+            "expiration_day_delta",
+            "status",
+        }
+        for key in allowed:
+            if key in data:
+                setattr(specialty, key, data[key])
+        specialty.save()
+        serializer = SpecialtySerializer(specialty, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AcademySpecialtySyllabusView(APIView):
+    """Link a syllabus to a specialty (add to syllabuses ManyToMany)."""
+
+    permission_classes = [AllowAny]
+
+    @capable_of("crud_syllabus")
+    def post(self, request, specialty_id, academy_id=None):
+        specialty = (
+            Specialty.objects.filter(
+                Q(id=specialty_id),
+                Q(academy_id=academy_id) | Q(syllabuses__academy_owner=academy_id),
+            )
+            .exclude(status=Specialty.DELETED)
+            .distinct()
+            .first()
+        )
+        if not specialty:
+            raise NotFound("Specialty not found")
+        data = request.data or {}
+        syllabus_id = data.get("syllabus_id")
+        syllabus_slug = data.get("syllabus_slug")
+        lang = get_user_language(request)
+        if not syllabus_id and not syllabus_slug:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="syllabus_id or syllabus_slug is required",
+                    es="syllabus_id o syllabus_slug es requerido",
+                ),
+                code=400,
+                slug="missing-syllabus-identifier",
+            )
+        syllabus = None
+        if syllabus_id:
+            syllabus = Syllabus.objects.filter(id=syllabus_id).first()
+        if syllabus is None and syllabus_slug:
+            syllabus = Syllabus.objects.filter(slug=syllabus_slug).first()
+        if not syllabus:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Syllabus not found",
+                    es="Syllabus no encontrado",
+                ),
+                code=404,
+                slug="syllabus-not-found",
+            )
+        if specialty.syllabuses.filter(pk=syllabus.pk).exists():
+            # Idempotent: already linked
+            serializer = SpecialtySerializer(specialty, many=False)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        specialty.syllabuses.add(syllabus)
+        serializer = SpecialtySerializer(specialty, many=False)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class BadgesView(APIView, GenerateLookupsMixin):

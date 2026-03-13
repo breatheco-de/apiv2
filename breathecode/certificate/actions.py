@@ -164,7 +164,9 @@ def generate_certificate(user, cohort=None, layout=None):
             slug="missing-syllabus-version",
         )
 
-    specialty = Specialty.objects.filter(syllabus__id=cohort.syllabus_version.syllabus_id).first()
+    specialty = (
+        Specialty.objects.filter(syllabuses__id=cohort.syllabus_version.syllabus_id).distinct().first()
+    )
     if not specialty:
         raise ValidationException("Specialty has no Syllabus assigned", slug="missing-specialty")
 
@@ -289,7 +291,9 @@ def generate_certificate_ignoring_tasks(user, cohort=None, layout=None):
             slug="missing-syllabus-version",
         )
 
-    specialty = Specialty.objects.filter(syllabus__id=cohort.syllabus_version.syllabus_id).first()
+    specialty = (
+        Specialty.objects.filter(syllabuses__id=cohort.syllabus_version.syllabus_id).distinct().first()
+    )
     if not specialty:
         raise ValidationException("Specialty has no Syllabus assigned", slug="missing-specialty")
 

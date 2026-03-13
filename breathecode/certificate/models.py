@@ -50,7 +50,17 @@ class Specialty(models.Model):
         help_text="Current status of the specialty"
     )
 
-    # old syllabus
+    # Optional academy ownership; when set, academy staff with crud_certificate can create/update this specialty
+    academy = models.ForeignKey(
+        Academy,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        default=None,
+        related_name="specialties",
+    )
+
+    # old syllabus, deprecated
     syllabus = models.OneToOneField(
         Syllabus,
         on_delete=models.CASCADE,

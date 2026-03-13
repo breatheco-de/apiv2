@@ -1238,13 +1238,7 @@ class CohortSerializerMixin(serializers.ModelSerializer):
                             "each micro cohort must have a syllabus linked to a Specialty.",
                             slug="micro-cohort-syllabus-required",
                         )
-                    try:
-                        has_specialty = (
-                            syllabus.specialty_with_one_syllabus is not None
-                            or syllabus.specialties_with_many_syllabus.exists()
-                        )
-                    except ObjectDoesNotExist:
-                        has_specialty = syllabus.specialties_with_many_syllabus.exists()
+                    has_specialty = syllabus.specialties_with_many_syllabus.exists()
                     if not has_specialty:
                         raise ValidationException(
                             f"Micro cohort '{cohort.name}' (id={cohort.id}) uses syllabus "

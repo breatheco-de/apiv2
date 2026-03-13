@@ -1732,10 +1732,11 @@ class AcademyCohortView(APIView, GenerateLookupsMixin):
 
         specialty = request.GET.get("specialty", None)
         if specialty is not None:
-            # Filter by specialty slug through syllabus relationships
+            # Filter by specialty slug through syllabuses (ManyToMany)
             items = items.filter(
-                Q(syllabus_version__syllabus__specialty_with_one_syllabus__slug__in=specialty.split(",")) |
-                Q(syllabus_version__syllabus__specialties_with_many_syllabus__slug__in=specialty.split(","))
+                syllabus_version__syllabus__specialties_with_many_syllabus__slug__in=specialty.split(
+                    ","
+                )
             )
 
         syllabus = request.GET.get("syllabus", None)

@@ -37,6 +37,10 @@ class CertificateModelsMixin(ModelsMixin):
                 kargs["syllabus"] = just_one(models["syllabus"])
 
             models["specialty"] = create_models(specialty, "certificate.Specialty", **{**kargs, **syllabus_kwargs})
+            # Keep syllabuses (ManyToMany) in sync so specialty lookup by cohort syllabus works
+            for s in get_list(models["specialty"]):
+                if s.syllabus_id and not s.syllabuses.filter(pk=s.syllabus_id).exists():
+                    s.syllabuses.add(s.syllabus)
         if not "badge" in models and badge:
             kargs = {}
 

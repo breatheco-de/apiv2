@@ -47,6 +47,8 @@ from django.urls import path
 
 from .views import (
     AcademySpecialtiesView,
+    AcademySpecialtyByIdView,
+    AcademySpecialtySyllabusView,
     BadgesView,
     CertificateAcademyView,
     CertificateCohortView,
@@ -59,6 +61,11 @@ from .views import (
 app_name = "certificate"
 urlpatterns = [
     path("academy/specialty", AcademySpecialtiesView.as_view()),
+    path("academy/specialty/<int:specialty_id>", AcademySpecialtyByIdView.as_view()),
+    path(
+        "academy/specialty/<int:specialty_id>/syllabus",
+        AcademySpecialtySyllabusView.as_view(),
+    ),
     path("badge", BadgesView.as_view()),
     path("academy/layout", LayoutView.as_view()),
     path("token/<str:token>/", get_certificate),
