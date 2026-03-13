@@ -996,7 +996,7 @@ class ProvisioningAcademyView(APIView):
 
 
 class ProvisioningAcademyByIdView(APIView):
-    """GET one, PUT update provisioning academy config (credentials never returned)."""
+    """GET one, PUT update, DELETE provisioning academy config (credentials never returned)."""
 
     @capable_of("read_provisioning_activity")
     def get(self, request, academy_id=None, provisioning_academy_id=None):
@@ -1061,6 +1061,25 @@ class ProvisioningAcademyByIdView(APIView):
         pa.save()
         out = GetProvisioningAcademySerializer(pa)
         return Response(out.data)
+
+    @capable_of("crud_provisioning_activity")
+    def delete(self, request, academy_id=None, provisioning_academy_id=None):
+        pa = ProvisioningAcademy.objects.filter(
+            id=provisioning_academy_id,
+            academy_id=academy_id,
+        ).first()
+        if not pa:
+            raise ValidationException(
+                translation(
+                    get_user_language(request),
+                    en="Provisioning academy config not found.",
+                    es="Configuración de aprovisionamiento de academia no encontrada.",
+                    slug="provisioning-academy-not-found",
+                ),
+                code=404,
+            )
+        pa.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class MeVPSView(APIView):

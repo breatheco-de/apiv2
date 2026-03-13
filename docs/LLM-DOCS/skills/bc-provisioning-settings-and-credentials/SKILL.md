@@ -32,6 +32,8 @@ Use this skill when the user asks to **create or update a provisioning profile**
 
 7. **Update academy config.** Call `PUT /v1/provisioning/academy/provisioningacademy/<provisioning_academy_id>` with optional body fields: credentials_token, credentials_key, container_idle_timeout, max_active_containers, allowed_machine_type_ids. Omit credentials to leave them unchanged.
 
+8. **Delete academy config.** Call `DELETE /v1/provisioning/academy/provisioningacademy/<provisioning_academy_id>` with `Authorization` and `Academy: <academy_id>`. Returns 204 No Content. Deleting the config removes credentials and settings for that (academy, vendor); it does not delete the provisioning profile. To fully stop using a vendor, delete the profile (and optionally delete the config).
+
 **For VPS to work:** The academy must have at least one provisioning profile linking it to a vendor, and a provisioning academy config for that same vendor with `credentials_token` set. Create the profile first, then create the academy config for that vendor.
 
 ## Endpoints
@@ -48,6 +50,7 @@ Use this skill when the user asks to **create or update a provisioning profile**
 | Create academy config | POST | `/v1/provisioning/academy/provisioningacademy` | `Authorization`, `Academy: <academy_id>` | See request sample below. | 201, config object (credentials not echoed; see response sample). |
 | Get academy config | GET | `/v1/provisioning/academy/provisioningacademy/<provisioning_academy_id>` | `Authorization`, `Academy: <academy_id>` | — | Config object (credentials_set, no raw credentials). |
 | Update academy config | PUT | `/v1/provisioning/academy/provisioningacademy/<provisioning_academy_id>` | `Authorization`, `Academy: <academy_id>` | All optional; omit credentials to leave unchanged. | Config object. |
+| Delete academy config | DELETE | `/v1/provisioning/academy/provisioningacademy/<provisioning_academy_id>` | `Authorization`, `Academy: <academy_id>` | — | 204 No Content. |
 
 **Create profile — request (POST `/v1/provisioning/academy/provisioningprofile`):**
 ```json
@@ -108,7 +111,8 @@ Capabilities: `read_provisioning_activity` for GET; `crud_provisioning_activity`
 - **vendor-not-found (404):** vendor_id does not exist. Tell the user to use a valid vendor id; do not retry the same id.
 - **provisioning-profile-not-found (404):** profile_id or academy does not match. Verify profile_id and that the Academy header matches the profile's academy.
 - **provisioning-academy-already-exists (400):** POST academy config for (academy, vendor) when one already exists. Tell the user to use PUT to update the existing config instead.
-- **provisioning-academy-not-found (404):** provisioning_academy_id does not exist or does not belong to the academy. Verify id and Academy header.
+- **provisioning-academy-not-found (404):** provisioning_academy_id does not exist or does not belong to the academy. Verify id and Academy header. Applies to GET, PUT, and DELETE.
+- **Deleting academy config** does not delete the provisioning profile; to stop using a vendor entirely, delete the profile (and optionally the config).
 - **Invalid cohort_ids or member_ids:** IDs must belong to the academy. If the API returns validation errors, tell the user to use cohort/member ids for that academy only.
 
 ## Checklist
@@ -118,4 +122,5 @@ Capabilities: `read_provisioning_activity` for GET; `crud_provisioning_activity`
 3. To update or delete a profile: call `PUT` or `DELETE /v1/provisioning/academy/provisioningprofile/<profile_id>` with `Academy` header.
 4. To list or create academy configs: call `GET` or `POST /v1/provisioning/academy/provisioningacademy` with `Academy` header; for POST send vendor_id and credentials_token.
 5. To update academy config: call `PUT /v1/provisioning/academy/provisioningacademy/<id>` with optional body; omit credentials to leave unchanged.
-6. For VPS to work, ensure the academy has at least one profile and one academy config (same vendor) with credentials_token set.
+6. To delete academy config: call `DELETE /v1/provisioning/academy/provisioningacademy/<id>` with `Academy` header; returns 204.
+7. For VPS to work, ensure the academy has at least one profile and one academy config (same vendor) with credentials_token set.
