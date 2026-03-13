@@ -32,6 +32,7 @@ from breathecode.provisioning.serializers import (
     GetProvisioningProfile,
     GetProvisioningUserConsumptionDetailSerializer,
     GetProvisioningUserConsumptionSerializer,
+    GetProvisioningVendorSerializer,
     ProvisioningAcademyCreateSerializer,
     ProvisioningAcademyUpdateSerializer,
     ProvisioningBillHTMLSerializer,
@@ -779,6 +780,16 @@ class AcademyBillConsumptionsView(APIView):
         serializer = GetProvisioningUserConsumptionDetailSerializer(consumptions, many=True)
 
         return handler.response(serializer.data)
+
+
+class ProvisioningVendorView(APIView):
+    """GET: list all provisioning vendors (id, name, workspaces_url). Academy from Academy header."""
+
+    @capable_of("read_provisioning_activity")
+    def get(self, request, academy_id=None):
+        vendors = ProvisioningVendor.objects.all().order_by("name")
+        serializer = GetProvisioningVendorSerializer(vendors, many=True)
+        return Response(serializer.data)
 
 
 class ProvisioningProfileView(APIView):
