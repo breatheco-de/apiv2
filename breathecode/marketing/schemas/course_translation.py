@@ -30,6 +30,11 @@ COURSE_TRANSLATION_SCHEMAS: Dict[str, Dict[str, Any]] = {
                 "description": _non_empty_string(),
                 "icon_url": {"type": ["string", "null"], "format": "uri-reference"},
                 "duration": {"type": ["string", "null"]},
+                "time": {"type": ["string", "null"]},
+                "certificate": {"type": ["boolean", "null"]},
+                "exercises": {"type": ["integer", "null"]},
+                "projects": {"type": ["integer", "null"]},
+                "readings": {"type": ["integer", "null"]},
                 "topics": {
                     "type": ["array", "null"],
                     "items": _non_empty_string(),

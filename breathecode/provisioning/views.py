@@ -24,15 +24,23 @@ from breathecode.authenticate.models import ProfileAcademy
 from breathecode.notify.actions import get_template_content
 from breathecode.provisioning import tasks
 from breathecode.provisioning.serializers import (
+    AcademyVPSListSerializer,
+    GetProvisioningAcademySerializer,
     GetProvisioningBillDetailSerializer,
     GetProvisioningBillSerializer,
     GetProvisioningBillSmallSerializer,
     GetProvisioningProfile,
     GetProvisioningUserConsumptionDetailSerializer,
     GetProvisioningUserConsumptionSerializer,
+    ProvisioningAcademyCreateSerializer,
+    ProvisioningAcademyUpdateSerializer,
     ProvisioningBillHTMLSerializer,
     ProvisioningBillSerializer,
+    ProvisioningProfileCreateUpdateSerializer,
     ProvisioningUserConsumptionHTMLResumeSerializer,
+    VPSDetailSerializer,
+    VPSListSerializer,
+    VPSRequestSerializer,
 )
 from breathecode.utils import capable_of, cut_csv
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
@@ -40,8 +48,16 @@ from breathecode.utils.decorators import has_permission
 from breathecode.utils.io.file import count_csv_rows
 from breathecode.utils.views import private_view, render_message
 
-from .actions import get_provisioning_vendor
-from .models import BILL_STATUS, ProvisioningBill, ProvisioningProfile, ProvisioningUserConsumption
+from .actions import get_provisioning_vendor, request_vps
+from .models import (
+    BILL_STATUS,
+    ProvisioningAcademy,
+    ProvisioningBill,
+    ProvisioningProfile,
+    ProvisioningUserConsumption,
+    ProvisioningVPS,
+    ProvisioningVendor,
+)
 
 
 @private_view()
@@ -766,18 +782,364 @@ class AcademyBillConsumptionsView(APIView):
 
 
 class ProvisioningProfileView(APIView):
+    """GET: list profiles for academy. POST: create profile (academy from Academy header)."""
 
     extensions = APIViewExtensions(paginate=True)
 
+    @capable_of("read_provisioning_activity")
     def get(self, request, academy_id=None):
         handler = self.extensions(request)
 
-        items = ProvisioningProfile.objects.filter(academy__id=academy_id)
+        items = ProvisioningProfile.objects.filter(academy__id=academy_id).select_related("vendor", "academy")
 
         items = handler.queryset(items)
         serializer = GetProvisioningProfile(items, many=True)
 
         return handler.response(serializer.data)
+
+    @capable_of("crud_provisioning_activity")
+    def post(self, request, academy_id=None):
+        lang = get_user_language(request)
+        serializer = ProvisioningProfileCreateUpdateSerializer(data=request.data or {})
+        if not serializer.is_valid():
+            raise ValidationException(serializer.errors, code=400)
+        data = serializer.validated_data
+        vendor = ProvisioningVendor.objects.filter(id=data["vendor_id"]).first()
+        if not vendor:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Vendor not found.",
+                    es="Vendor no encontrado.",
+                    slug="vendor-not-found",
+                ),
+                code=404,
+            )
+        profile = ProvisioningProfile.objects.create(
+            academy_id=academy_id,
+            vendor=vendor,
+        )
+        if data.get("cohort_ids"):
+            profile.cohorts.set(
+                Cohort.objects.filter(id__in=data["cohort_ids"], academy_id=academy_id)
+            )
+        if data.get("member_ids"):
+            profile.members.set(
+                ProfileAcademy.objects.filter(id__in=data["member_ids"], academy_id=academy_id)
+            )
+        out = GetProvisioningProfile(profile)
+        return Response(out.data, status=status.HTTP_201_CREATED)
+
+
+class ProvisioningProfileByIdView(APIView):
+    """GET one, PUT update, DELETE provisioning profile (academy from Academy header)."""
+
+    @capable_of("read_provisioning_activity")
+    def get(self, request, academy_id=None, profile_id=None):
+        profile = (
+            ProvisioningProfile.objects.filter(id=profile_id, academy__id=academy_id)
+            .select_related("vendor", "academy")
+            .first()
+        )
+        if not profile:
+            raise ValidationException(
+                translation(
+                    get_user_language(request),
+                    en="Provisioning profile not found.",
+                    es="Perfil de aprovisionamiento no encontrado.",
+                    slug="provisioning-profile-not-found",
+                ),
+                code=404,
+            )
+        serializer = GetProvisioningProfile(profile)
+        return Response(serializer.data)
+
+    @capable_of("crud_provisioning_activity")
+    def put(self, request, academy_id=None, profile_id=None):
+        lang = get_user_language(request)
+        profile = ProvisioningProfile.objects.filter(id=profile_id, academy__id=academy_id).first()
+        if not profile:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Provisioning profile not found.",
+                    es="Perfil de aprovisionamiento no encontrado.",
+                    slug="provisioning-profile-not-found",
+                ),
+                code=404,
+            )
+        serializer = ProvisioningProfileCreateUpdateSerializer(data=request.data or {}, partial=True)
+        if not serializer.is_valid():
+            raise ValidationException(serializer.errors, code=400)
+        data = serializer.validated_data
+        if "vendor_id" in data:
+            vendor = ProvisioningVendor.objects.filter(id=data["vendor_id"]).first()
+            if not vendor:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Vendor not found.",
+                        es="Vendor no encontrado.",
+                        slug="vendor-not-found",
+                    ),
+                    code=404,
+                )
+            profile.vendor = vendor
+            profile.save()
+        if "cohort_ids" in data:
+            profile.cohorts.set(
+                Cohort.objects.filter(id__in=data["cohort_ids"], academy_id=academy_id)
+            )
+        if "member_ids" in data:
+            profile.members.set(
+                ProfileAcademy.objects.filter(id__in=data["member_ids"], academy_id=academy_id)
+            )
+        out = GetProvisioningProfile(profile)
+        return Response(out.data)
+
+    @capable_of("crud_provisioning_activity")
+    def delete(self, request, academy_id=None, profile_id=None):
+        lang = get_user_language(request)
+        profile = ProvisioningProfile.objects.filter(id=profile_id, academy__id=academy_id).first()
+        if not profile:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Provisioning profile not found.",
+                    es="Perfil de aprovisionamiento no encontrado.",
+                    slug="provisioning-profile-not-found",
+                ),
+                code=404,
+            )
+        profile.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ProvisioningAcademyView(APIView):
+    """GET: list academy configs (credentials masked). POST: create academy config (academy from header)."""
+
+    extensions = APIViewExtensions(paginate=True)
+
+    @capable_of("read_provisioning_activity")
+    def get(self, request, academy_id=None):
+        handler = self.extensions(request)
+        items = (
+            ProvisioningAcademy.objects.filter(academy_id=academy_id)
+            .select_related("vendor", "academy")
+            .prefetch_related("allowed_machine_types")
+        )
+        items = handler.queryset(items)
+        serializer = GetProvisioningAcademySerializer(items, many=True)
+        return handler.response(serializer.data)
+
+    @capable_of("crud_provisioning_activity")
+    def post(self, request, academy_id=None):
+        lang = get_user_language(request)
+        serializer = ProvisioningAcademyCreateSerializer(data=request.data or {})
+        if not serializer.is_valid():
+            raise ValidationException(serializer.errors, code=400)
+        data = serializer.validated_data
+        vendor = ProvisioningVendor.objects.filter(id=data["vendor_id"]).first()
+        if not vendor:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Vendor not found.",
+                    es="Vendor no encontrado.",
+                    slug="vendor-not-found",
+                ),
+                code=404,
+            )
+        existing = ProvisioningAcademy.objects.filter(
+            academy_id=academy_id,
+            vendor=vendor,
+        ).first()
+        if existing:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Provisioning config for this academy and vendor already exists.",
+                    es="Ya existe una configuración de aprovisionamiento para esta academia y vendor.",
+                    slug="provisioning-academy-already-exists",
+                ),
+                code=400,
+            )
+        from .models import ProvisioningMachineTypes
+
+        pa = ProvisioningAcademy.objects.create(
+            academy_id=academy_id,
+            vendor=vendor,
+            credentials_token=data["credentials_token"],
+            credentials_key=data.get("credentials_key") or "",
+            container_idle_timeout=data.get("container_idle_timeout", 15),
+            max_active_containers=data.get("max_active_containers", 2),
+        )
+        if data.get("allowed_machine_type_ids"):
+            machine_types = ProvisioningMachineTypes.objects.filter(
+                id__in=data["allowed_machine_type_ids"],
+                vendor=vendor,
+            )
+            pa.allowed_machine_types.set(machine_types)
+        out = GetProvisioningAcademySerializer(pa)
+        return Response(out.data, status=status.HTTP_201_CREATED)
+
+
+class ProvisioningAcademyByIdView(APIView):
+    """GET one, PUT update provisioning academy config (credentials never returned)."""
+
+    @capable_of("read_provisioning_activity")
+    def get(self, request, academy_id=None, provisioning_academy_id=None):
+        pa = (
+            ProvisioningAcademy.objects.filter(
+                id=provisioning_academy_id,
+                academy_id=academy_id,
+            )
+            .select_related("vendor", "academy")
+            .first()
+        )
+        if not pa:
+            raise ValidationException(
+                translation(
+                    get_user_language(request),
+                    en="Provisioning academy config not found.",
+                    es="Configuración de aprovisionamiento de academia no encontrada.",
+                    slug="provisioning-academy-not-found",
+                ),
+                code=404,
+            )
+        serializer = GetProvisioningAcademySerializer(pa)
+        return Response(serializer.data)
+
+    @capable_of("crud_provisioning_activity")
+    def put(self, request, academy_id=None, provisioning_academy_id=None):
+        lang = get_user_language(request)
+        pa = ProvisioningAcademy.objects.filter(
+            id=provisioning_academy_id,
+            academy_id=academy_id,
+        ).first()
+        if not pa:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Provisioning academy config not found.",
+                    es="Configuración de aprovisionamiento de academia no encontrada.",
+                    slug="provisioning-academy-not-found",
+                ),
+                code=404,
+            )
+        serializer = ProvisioningAcademyUpdateSerializer(data=request.data or {}, partial=True)
+        if not serializer.is_valid():
+            raise ValidationException(serializer.errors, code=400)
+        data = serializer.validated_data
+        if "credentials_token" in data:
+            pa.credentials_token = data["credentials_token"]
+        if "credentials_key" in data:
+            pa.credentials_key = data["credentials_key"]
+        if "container_idle_timeout" in data:
+            pa.container_idle_timeout = data["container_idle_timeout"]
+        if "max_active_containers" in data:
+            pa.max_active_containers = data["max_active_containers"]
+        if "allowed_machine_type_ids" in data:
+            from .models import ProvisioningMachineTypes
+
+            machine_types = ProvisioningMachineTypes.objects.filter(
+                id__in=data["allowed_machine_type_ids"],
+                vendor=pa.vendor,
+            )
+            pa.allowed_machine_types.set(machine_types)
+        pa.save()
+        out = GetProvisioningAcademySerializer(pa)
+        return Response(out.data)
+
+
+class MeVPSView(APIView):
+    """GET: list current user's VPS. POST: request a new VPS (consumes vps_server consumable)."""
+
+    extensions = APIViewExtensions(paginate=True)
+
+    def get(self, request):
+        handler = self.extensions(request)
+        items = ProvisioningVPS.objects.filter(user=request.user).order_by("-created_at")
+        items = handler.queryset(items)
+        serializer = VPSListSerializer(items, many=True)
+        return handler.response(serializer.data)
+
+    def post(self, request):
+        lang = get_user_language(request)
+        data = (request.data or {}).copy()
+        serializer = VPSRequestSerializer(data=data, context={"request": request, "lang": lang})
+        if not serializer.is_valid():
+            raise ValidationException(serializer.errors, code=400)
+        plan_slug = (serializer.validated_data.get("plan_slug") or "").strip() or None
+        try:
+            vps = request_vps(request.user, plan_slug=plan_slug)
+        except ValidationException:
+            raise
+        out_serializer = VPSListSerializer(vps)
+        return Response(out_serializer.data, status=status.HTTP_202_ACCEPTED)
+
+
+class MeVPSByIdView(APIView):
+    """GET: one VPS by id; only for owner; includes decrypted root_password for owner."""
+
+    def get(self, request, vps_id):
+        lang = get_user_language(request)
+        vps = ProvisioningVPS.objects.filter(id=vps_id, user=request.user).first()
+        if not vps:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="VPS not found or you do not have permission to view it.",
+                    es="VPS no encontrado o no tienes permiso para verlo.",
+                    slug="vps-not-found",
+                ),
+                code=404,
+            )
+        serializer = VPSDetailSerializer(vps, context={"show_password": True})
+        return Response(serializer.data)
+
+
+class AcademyVPSView(APIView):
+    """GET: report of all VPS for the academy; optional ?user_id= to filter by student."""
+
+    extensions = APIViewExtensions(paginate=True)
+
+    @capable_of("crud_provisioning_activity")
+    def get(self, request, academy_id=None):
+        handler = self.extensions(request)
+        qs = ProvisioningVPS.objects.filter(academy_id=academy_id).select_related("user").order_by("-created_at")
+        user_id = request.GET.get("user_id")
+        if user_id:
+            try:
+                uid = int(user_id)
+                qs = qs.filter(user_id=uid)
+            except ValueError:
+                pass
+        items = handler.queryset(qs)
+        serializer = AcademyVPSListSerializer(items, many=True)
+        return handler.response(serializer.data)
+
+
+class AcademyVPSByIdView(APIView):
+    """DELETE: academy deprovisions a student's VPS."""
+
+    @capable_of("crud_provisioning_activity")
+    def delete(self, request, academy_id=None, vps_id=None):
+        lang = get_user_language(request)
+        vps = ProvisioningVPS.objects.filter(id=vps_id, academy_id=academy_id).select_related("vendor", "academy").first()
+        if not vps:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="VPS not found or it does not belong to this academy.",
+                    es="VPS no encontrado o no pertenece a esta academia.",
+                    slug="vps-not-found",
+                ),
+                code=404,
+            )
+        from breathecode.provisioning.tasks import deprovision_vps_task
+        deprovision_vps_task.delay(vps.id)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 # class ContainerMeView(APIView):

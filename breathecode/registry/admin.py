@@ -10,12 +10,12 @@ from django.utils.html import format_html
 # from breathecode.admissions.admin import SyllabusVersionAdmin
 from breathecode.services.seo import SEOAnalyzer
 from breathecode.utils.admin import change_field
+from breathecode.utils.admin.widgets import PrettyJSONWidget
 
 from .actions import (
     AssetThumbnailGenerator,
     add_syllabus_translations,
     get_user_from_github_username,
-    process_asset_config,
     push_to_github,
     scan_asset_originality,
 )
@@ -95,7 +95,8 @@ def make_internal(modeladmin, request, queryset):
 def process_config_object(modeladmin, request, queryset):
     assets = queryset.all()
     for a in assets:
-        process_asset_config(a, a.config)
+        if a.config:
+            a.apply_learn_config(a.config)
 
 
 def pull_content_from_github(modeladmin, request, queryset):
@@ -372,6 +373,9 @@ class AssetForm(forms.ModelForm):
     class Meta:
         model = Asset
         fields = "__all__"
+        widgets = {
+            "config": PrettyJSONWidget(),
+        }
 
     def __init__(self, *args, **kwargs):
         super(AssetForm, self).__init__(*args, **kwargs)
@@ -506,6 +510,25 @@ class AcademySlugFilter(admin.SimpleListFilter):
         return queryset
 
 
+class SyncStatusFilter(admin.SimpleListFilter):
+
+    title = "Sync Status"
+
+    parameter_name = "sync_status_filter"
+
+    def lookups(self, request, model_admin):
+
+        from .models import ASSET_SYNC_STATUS
+
+        return ASSET_SYNC_STATUS
+
+    def queryset(self, request, queryset):
+
+        if self.value():
+            return queryset.filter(sync_status=self.value())
+        return queryset
+
+
 # Register your models here.
 @admin.register(Asset)
 class AssetAdmin(admin.ModelAdmin):
@@ -517,7 +540,7 @@ class AssetAdmin(admin.ModelAdmin):
     list_filter = [
         "asset_type",
         "status",
-        "sync_status",
+        SyncStatusFilter,
         "test_status",
         "lang",
         "external",

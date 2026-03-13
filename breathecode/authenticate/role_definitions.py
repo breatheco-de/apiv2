@@ -17,6 +17,10 @@ CAPABILITIES = [
         "description": "Read, or update your academy information (very high level, almost the academy admin)",
     },
     {
+        "slug": "manage_academy_flags",
+        "description": "Manage which academy features/flags can be edited by academy roles",
+    },
+    {
         "slug": "crud_member",
         "description": "Create, update or delete academy members (very high level, almost the academy admin)",
     },
@@ -168,6 +172,7 @@ CAPABILITIES = [
     },
     {"slug": "start_or_end_event", "description": "Start or end event"},
     {"slug": "read_provisioning_bill", "description": "Read provisioning activities and bills"},
+    {"slug": "read_provisioning_activity", "description": "Read provisioning profiles and academy config (list/get)"},
     {"slug": "crud_provisioning_activity", "description": "Create, update or delete provisioning activities"},
     {"slug": "read_service", "description": "Read service details"},
     {"slug": "crud_service", "description": "Create, update or delete service definitions"},
@@ -221,6 +226,14 @@ CAPABILITIES = [
         "description": "Read user service consumables to understand how many units are available",
     },
     {
+        "slug": "read_service_stock_status",
+        "description": "View service stock scheduler status for a user to debug consumable issues (sysadmin only)",
+    },
+    {
+        "slug": "crud_consumable",
+        "description": "Create or grant consumables for users (staff-only; requires non-card, non-crypto payment method)",
+    },
+    {
         "slug": "read_invoice",
         "description": "Read invoice information",
     },
@@ -251,6 +264,10 @@ CAPABILITIES = [
     {
         "slug": "crud_hook",
         "description": "Create, update, and delete webhook subscriptions for academy token",
+    },
+    {
+        "slug": "manage_academy_roles",
+        "description": "Create, update, and delete academy custom roles and assign capabilities (admin and academy admin only)",
     },
 ]
 
@@ -729,6 +746,8 @@ def get_extended_roles():
                 "read_freelance_projects",
                 "sync_organization_users",
                 "read_provisioning_bill",
+                "read_provisioning_activity",
+                "crud_provisioning_activity",
                 "read_calendly_organization",
                 "reset_calendly_organization",
                 "create_calendly_organization",
@@ -788,7 +807,11 @@ def get_extended_roles():
                 "crud_notification",
                 "read_hook",
                 "crud_hook",
+                "crud_service",
+                "crud_plan",
+                "crud_academyservice",
                 "crud_academy_payment_settings",
+                "manage_academy_roles",
             ],
         }
     )

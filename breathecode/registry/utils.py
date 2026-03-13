@@ -12,6 +12,7 @@ Configuration is done through TRUSTED_DOMAINS and TRUSTED_URLS sets in breatheco
 """
 
 import logging
+import os
 import re
 import requests
 from urllib.parse import urlparse
@@ -53,6 +54,28 @@ class AssetErrorLogType:
     INVALID_IMAGE = "invalid-image"
     README_SYNTAX = "readme-syntax-error"
     INVALID_TELEMETRY = "invalid-telemetry"
+    INVALID_TEMPLATE_SUBDIRECTORY = "invalid-template-subdirectory"
+    MISSING_PREVIEW = "missing-preview"
+
+
+def get_base_path_from_readme_url(readme_url):
+    """
+    Extract the base path (subdirectory) from a GitHub readme_url.
+
+    For .../blob/<branch>/README.md returns "" (root).
+    For .../blob/<branch>/projects/myproject/README.md returns "projects/myproject".
+
+    Returns:
+        str: The directory path, or "" if at repo root or URL has no path.
+    """
+    if not readme_url:
+        return ""
+    match = re.search(r"\/blob\/([\w\d_\-]+)\/(.+)", readme_url)
+    if not match:
+        return ""
+    _branch, path = match.groups()
+    base_path = os.path.dirname(path)
+    return base_path.strip("/") if base_path else ""
 
 
 def is_url(value):
@@ -520,10 +543,33 @@ class ExerciseValidator(AssetValidator):
 
 class ProjectValidator(ExerciseValidator):
     warns = ["difficulty"]
-    errors = ["readme", "preview", "telemetry"]
+    errors = ["readme", "preview", "telemetry", "template_subdirectory"]
 
     def __init__(self, _asset, log_errors=False, reset_errors=False):
         super().__init__(_asset, log_errors, reset_errors)
+
+    def template_subdirectory(self):
+        """
+        For PROJECTs in a subdirectory: template in learn.json cannot be "self";
+        if set, it must be a URL (template repo). Enforced as part of asset integrity test.
+        """
+        if self.asset.asset_type != "PROJECT":
+            return
+        base_path = get_base_path_from_readme_url(self.asset.readme_url)
+        if not base_path:
+            return
+        template_url = (self.asset.template_url or "").strip()
+        if template_url == "self":
+            self.error(
+                AssetErrorLogType.INVALID_TEMPLATE_SUBDIRECTORY,
+                "For projects in a subdirectory, template in learn.json cannot be 'self'; "
+                "if set, it must be a URL (e.g. a template repo).",
+            )
+        if template_url and template_url != "self" and not is_url(template_url):
+            self.error(
+                AssetErrorLogType.INVALID_TEMPLATE_SUBDIRECTORY,
+                "For projects in a subdirectory, template in learn.json must be a valid URL when set.",
+            )
 
 
 class QuizValidator(AssetValidator):
@@ -626,7 +672,11 @@ class AssetParser:
         # Parse the URL
         url_info = self.github_service.parse_github_url(readme_url)
         if not url_info:
-            raise Exception("Could not parse GitHub URL")
+            raise Exception(
+                "Expected a GitHub URL pointing to a repository file "
+                f"(for example: https://github.com/owner/repo/blob/branch/path/to/file), "
+                f"but received '{readme_url}', which could not be parsed."
+            )
 
         owner = url_info["owner"]
         repo = url_info["repo"]
@@ -634,11 +684,19 @@ class AssetParser:
         file_path = url_info.get("path")
 
         if not file_path:
-            raise Exception("URL must point to a specific file")
+            raise Exception(
+                "Expected the GitHub URL to point to a specific file including branch and path "
+                f"(for example: https://github.com/{owner}/{repo}/blob/{branch}/path/to/file), "
+                f"but received a URL that resolves to the repository or a directory instead: '{readme_url}'."
+            )
 
         # Check repo access
         if not self.github_service.repo_exists(owner, repo):
-            raise Exception(f"Repository {owner}/{repo} not found or not accessible")
+            raise Exception(
+                f"Expected repository '{owner}/{repo}' to be accessible to read asset metadata, "
+                "but GitHub reported that it does not exist or cannot be accessed with the current credentials. "
+                "Verify the repository name, visibility, and permissions for the token/user being used."
+            )
 
         # Initialize metadata
         metadata = {
@@ -654,7 +712,11 @@ class AssetParser:
         response = self.github_service.get(f"/repos/{owner}/{repo}/contents/{file_path}?ref={branch}")
 
         if not response or response.get("type") != "file":
-            raise Exception(f"File not found at {file_path}")
+            raise Exception(
+                f"Expected a file at path '{file_path}' in repository '{owner}/{repo}' on branch '{branch}', "
+                "but GitHub did not return a file object at that location. This usually means the path is wrong, "
+                "points to a folder, or the file does not exist."
+            )
 
         # Decode content
         import base64
@@ -775,6 +837,11 @@ class AssetParser:
             # Has learn.json, so it's likely an EXERCISE or PROJECT
             metadata["asset_type"] = "EXERCISE_OR_PROJECT"
             metadata["note"] = "This file is part of an EXERCISE or PROJECT (has learn.json). Use standard import flow."
+            # Infer language from readme URL filename (e.g. some-name.es.md -> spanish)
+            filename = file_path.split("/")[-1]
+            lang = self._infer_language_from_filename(filename)
+            if lang:
+                metadata["lang"] = lang
             # Try to fetch and parse learn.json
             learn_config = self._fetch_learn_json(owner, repo, branch, directory)
             if learn_config:
@@ -872,39 +939,12 @@ class AssetParser:
 
     def _extract_learn_json_metadata(self, config, metadata):
         """
-        Extract metadata from learn.json configuration.
-        
-        Args:
-            config: Parsed learn.json configuration
-            metadata: Dictionary to populate with extracted metadata
+        Extract metadata from learn.json configuration using canonical Asset mapping.
         """
-        if "title" in config:
-            if isinstance(config["title"], str):
-                metadata["title"] = config["title"]
-            elif isinstance(config["title"], dict):
-                # Multi-language title
-                metadata["title"] = config["title"].get("en") or config["title"].get("us")
+        from breathecode.registry.models import Asset
 
-        if "description" in config:
-            if isinstance(config["description"], str):
-                metadata["description"] = config["description"]
-            elif isinstance(config["description"], dict):
-                metadata["description"] = config["description"].get("en") or config["description"].get("us")
-
-        if "difficulty" in config:
-            metadata["difficulty"] = config["difficulty"]
-
-        if "duration" in config:
-            metadata["duration"] = config["duration"]
-
-        if "technologies" in config:
-            metadata["technologies"] = config["technologies"]
-
-        if "slug" in config:
-            metadata["slug"] = config["slug"]
-
-        if "preview" in config:
-            metadata["preview"] = config["preview"]
+        extracted = Asset.learn_config_to_metadata(config, metadata.get("lang"))
+        metadata.update(extracted)
 
     def _extract_frontmatter(self, content):
         """

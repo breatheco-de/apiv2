@@ -259,10 +259,14 @@ class RoleSmallSerializer(serpy.Serializer):
 
     id = serpy.MethodField()
     slug = serpy.Field()
+    display_slug = serpy.MethodField()
     name = serpy.Field()
 
     def get_id(self, obj):
         return obj.slug
+
+    def get_display_slug(self, obj):
+        return obj.display_slug
 
 
 class RoleBigSerializer(serpy.Serializer):
@@ -270,12 +274,16 @@ class RoleBigSerializer(serpy.Serializer):
 
     id = serpy.MethodField()
     slug = serpy.Field()
+    display_slug = serpy.MethodField()
     name = serpy.Field()
     capabilities = serpy.MethodField()
 
     # this id is needed for zapier.com
     def get_id(self, obj):
         return obj.slug
+
+    def get_display_slug(self, obj):
+        return obj.display_slug
 
     def get_capabilities(self, obj):
         return obj.capabilities.all().values_list("slug", flat=True)
@@ -1131,19 +1139,8 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
             if user is None:
                 raise ValidationException("User not found", slug="user-not-found")
 
-            # Validate that plans are not being added to existing users
-            if "plans" in validated_data and validated_data["plans"]:
-                raise ValidationException(
-                    translation(
-                        en=f"Cannot add payment plans when user already exists. User {user.id} ({user.email}) should be enrolled through their existing account or payment system.",
-                        es=f"No se pueden agregar planes de pago cuando el usuario ya existe. El usuario {user.id} ({user.email}) debe inscribirse a través de su cuenta existente o sistema de pago.",
-                    ),
-                    slug="cannot-add-plans-to-existing-user",
-                    code=400,
-                )
-
             email = user.email
-            token, created = Token.get_or_create(user, token_type="temporal")
+            token, created = Token.get_or_create(user, token_type="short")
             querystr = urllib.parse.urlencode(
                 {"callback": get_app_url() + f"?utm_medium=academy&utm_source={academy.slug}", "token": token}
             )
@@ -1152,8 +1149,25 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
             if "invite" in validated_data:
                 del validated_data["invite"]
 
-            if "plans" in validated_data:
-                del validated_data["plans"]
+            plans_for_user = []
+            if "plans" in validated_data and validated_data["plans"]:
+                plan_list = validated_data.pop("plans")
+                for plan_id in plan_list:
+                    plan = Plan.objects.filter(id=plan_id).first()
+                    if plan is None:
+                        raise ValidationException("Plan not found", slug="plan-not-found")
+                    plans_for_user.append(plan)
+
+            payment_method_for_plans = None
+            if "payment_method" in validated_data:
+                pm_id = validated_data.pop("payment_method")
+                if pm_id is not None:
+                    from breathecode.payments.models import PaymentMethod
+
+                    payment_method_for_plans = PaymentMethod.objects.filter(
+                        id=pm_id,
+                        academy_id=academy.id,
+                    ).first()
 
             profile_academy = ProfileAcademy.objects.create(
                 **{
@@ -1173,6 +1187,25 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                     role="STUDENT",
                     user=user,
                 )
+
+            if plans_for_user and cohort:
+                from breathecode.payments.actions import create_invited_plan_financing_for_user
+
+                author = self.context.get("request").user if self.context.get("request") else None
+                request = self.context.get("request")
+                lang = getattr(request, "LANG", None) if request else None
+                lang = lang or self.context.get("lang", "en") if isinstance(self.context.get("lang"), str) else "en"
+                single_cohort = cohort[0]
+                for plan in plans_for_user:
+                    create_invited_plan_financing_for_user(
+                        user=user,
+                        plan=plan,
+                        academy=academy,
+                        cohort=single_cohort,
+                        payment_method=payment_method_for_plans,
+                        author=author,
+                        lang=lang,
+                    )
 
             notify_actions.send_email_message(
                 "academy_invite",

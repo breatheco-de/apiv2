@@ -134,6 +134,9 @@ def forward_asset_url(request, asset_slug=None):
             else:
                 return HttpResponseRedirect(redirect_to=url)
 
+        if asset.asset_type == "PROJECT" and asset.is_in_subdirectory and asset.readme_url:
+            return HttpResponseRedirect(redirect_to=asset.readme_url)
+
         validator(asset.url)
         if asset.gitpod:
             return HttpResponseRedirect(redirect_to="https://gitpod.io#" + asset.url)
@@ -212,6 +215,9 @@ def handle_internal_link(request):
         _parsed = urlparse(file_path)
         _clean_path = _parsed.path
 
+        # Extract filename from path for Content-Disposition header
+        filename = Path(_clean_path).name
+
         # Construct the API URL for the file
         api_url = f"/repos/{org_name}/{repo_name}/contents/{_clean_path}"
         if branch_name:
@@ -242,14 +248,18 @@ def handle_internal_link(request):
         if response.get("content"):
             content_bytes = base64.b64decode(response["content"])
             content_type = ext_map.get(file_extension, "application/octet-stream")
-            return HttpResponse(content_bytes, content_type=content_type)
+            http_response = HttpResponse(content_bytes, content_type=content_type)
+            http_response["Content-Disposition"] = f'attachment; filename="{filename}"'
+            return http_response
 
         download_url = response.get("download_url")
         if download_url:
             r = requests.get(download_url, timeout=30)
             content_bytes = r.content
             content_type = ext_map.get(file_extension, "application/octet-stream")
-            return HttpResponse(content_bytes, content_type=content_type)
+            http_response = HttpResponse(content_bytes, content_type=content_type)
+            http_response["Content-Disposition"] = f'attachment; filename="{filename}"'
+            return http_response
 
         # 3) Fallback: fetch blob by sha via GitHub API
         sha = response.get("sha")
@@ -258,7 +268,9 @@ def handle_internal_link(request):
             if blob and blob.get("content"):
                 content_bytes = base64.b64decode(blob["content"])
                 content_type = ext_map.get(file_extension, "application/octet-stream")
-                return HttpResponse(content_bytes, content_type=content_type)
+                http_response = HttpResponse(content_bytes, content_type=content_type)
+                http_response["Content-Disposition"] = f'attachment; filename="{filename}"'
+                return http_response
 
         return render_message(request, "File content not found", status=404)
 
@@ -1211,7 +1223,10 @@ class AssetMeView(APIView, GenerateLookupsMixin):
         expand = self.request.GET.get("expand")
 
         if "big" in self.request.GET:
-            serializer = AssetMidSerializer(items, many=True)
+            expand_fields = ["readme"]
+            if expand is not None:
+                expand_fields = list(set(expand_fields + expand.split(",")))
+            serializer = AssetExpandableSerializer(items, many=True, expand=expand_fields)
         elif expand is not None:
             serializer = AssetExpandableSerializer(items, many=True, expand=expand.split(","))
         else:
@@ -1415,12 +1430,16 @@ class AcademyAssetActionView(APIView):
                     override_meta = data["override_meta"]
                 await apull_from_github(asset.slug, override_meta=override_meta)
             elif action_slug == "push":
-                if asset.asset_type not in ["ARTICLE", "LESSON", "QUIZ"]:
+                if asset.asset_type not in ["ARTICLE", "LESSON", "QUIZ", "PROJECT", "EXERCISE"]:
                     raise ValidationException(
                         f"Asset type {asset.asset_type} cannot be pushed to GitHub, please update the Github repository manually"
                     )
-
-                await apush_to_github(asset.slug, owner=user)
+                if asset.asset_type in ["PROJECT", "EXERCISE"]:
+                    await apush_project_or_exercise_to_github(
+                        asset.slug, create_or_update=False
+                    )
+                else:
+                    await apush_to_github(asset.slug, owner=user)
             elif action_slug == "create_repo":
                 if asset.asset_type not in ["PROJECT", "EXERCISE"]:
                     raise ValidationException(
@@ -1519,12 +1538,16 @@ class AcademyAssetActionView(APIView):
                     override_meta = data["override_meta"]
                 await apull_from_github(asset.slug, override_meta=override_meta)
             elif action_slug == "push":
-                if asset.asset_type not in ["ARTICLE", "LESSON"]:
+                if asset.asset_type not in ["ARTICLE", "LESSON", "QUIZ", "PROJECT", "EXERCISE"]:
                     raise ValidationException(
-                        "Only lessons and articles and be pushed to github, please update the Github repository yourself and come back to pull the changes from here"
+                        "Only lessons, articles, quizzes, projects, and exercises can be pushed to github"
                     )
-
-                await apush_to_github(asset.slug, owner=user)
+                if asset.asset_type in ["PROJECT", "EXERCISE"]:
+                    await apush_project_or_exercise_to_github(
+                        asset.slug, create_or_update=False
+                    )
+                else:
+                    await apush_to_github(asset.slug, owner=user)
             elif action_slug == "create_repo":
                 if asset.asset_type not in ["PROJECT", "EXERCISE"]:
                     raise ValidationException(
@@ -1561,15 +1584,19 @@ class AcademyAssetActionView(APIView):
             return False
 
     @acapable_of("crud_asset")
-    async def post(self, request, action_slug, academy_id=None):
+    async def post(self, request, action_slug, asset_slug=None, academy_id=None):
         if action_slug not in ["test", "pull", "push", "analyze_seo", "claim_asset", "create_repo"]:
             raise ValidationException(f"Invalid action {action_slug}")
 
-        # Check if 'assets' key exists
-        if "assets" not in request.data:
-            raise ValidationException("Assets not found in the body of the request.")
+        # Use asset_slug from URL path for single-asset action, or "assets" from body for bulk
+        if asset_slug is not None:
+            assets = [asset_slug]
+        elif "assets" in request.data:
+            assets = request.data["assets"]
+        else:
+            raise ValidationException("Assets not found in the body of the request. Pass 'assets' array or use the URL path with asset slug.")
 
-        assets = request.data["assets"]
+        assets = list(assets) if isinstance(assets, (list, tuple)) else [assets]
 
         # Check if the assets list is empty
         if not assets:
@@ -1873,7 +1900,15 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
         items = items.filter(**lookup).distinct()
         items = handler.queryset(items)
 
-        serializer = AcademyAssetSerializer(items, many=True)
+        expand = self.request.GET.get("expand")
+
+        if "big" in self.request.GET:
+            expand_fields = ["readme"]
+            if expand is not None:
+                expand_fields = list(set(expand_fields + expand.split(",")))
+            serializer = AssetExpandableSerializer(items, many=True, expand=expand_fields)
+        else:
+            serializer = AcademyAssetSerializer(items, many=True)
 
         return handler.response(serializer.data)
 

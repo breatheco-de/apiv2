@@ -1,8 +1,10 @@
 from django import forms
 from django.contrib import admin
+from django.contrib import messages
 from django.db.models import Count, Q
 from django.utils import timezone
 from django.utils.html import format_html
+import re
 
 from breathecode.payments import signals, tasks
 from breathecode.utils.admin.widgets import PrettyJSONWidget
@@ -117,6 +119,95 @@ class PlanOfferInline(admin.StackedInline):
     extra = 0
 
 
+def duplicate_plans(modeladmin, request, queryset):
+    """
+    Acción bulk para duplicar los planes seleccionados.
+    Añade un sufijo numérico (-2, -3, -4, etc.) al slug del plan duplicado.
+    """
+    duplicated_count = 0
+    error_count = 0
+
+    for original_plan in queryset:
+        try:
+            # Obtener el slug base (sin sufijos numéricos si ya los tiene)
+            base_slug = original_plan.slug
+            # Buscar si el slug ya tiene un sufijo numérico al final (ej: plan-2, plan-3)
+            match = re.match(r"^(.+)-(\d+)$", base_slug)
+            if match:
+                base_slug = match.group(1)
+
+            # Encontrar el siguiente número disponible
+            counter = 2
+            while True:
+                new_slug = f"{base_slug}-{counter}"
+                if not Plan.objects.filter(slug=new_slug).exists():
+                    break
+                counter += 1
+
+            # Crear el nuevo plan copiando todos los campos
+            new_plan = Plan(
+                slug=new_slug,
+                title=original_plan.title,
+                status=original_plan.status,
+                owner=original_plan.owner,
+                is_onboarding=original_plan.is_onboarding,
+                has_waiting_list=original_plan.has_waiting_list,
+                exclude_from_referral_program=original_plan.exclude_from_referral_program,
+                is_renewable=original_plan.is_renewable,
+                trial_duration=original_plan.trial_duration,
+                trial_duration_unit=original_plan.trial_duration_unit,
+                time_of_life=original_plan.time_of_life,
+                time_of_life_unit=original_plan.time_of_life_unit,
+                seat_service_price=original_plan.seat_service_price,
+                consumption_strategy=original_plan.consumption_strategy,
+                currency=original_plan.currency,
+                price_per_month=original_plan.price_per_month,
+                price_per_quarter=original_plan.price_per_quarter,
+                price_per_half=original_plan.price_per_half,
+                price_per_year=original_plan.price_per_year,
+                cohort_set=original_plan.cohort_set,
+                mentorship_service_set=original_plan.mentorship_service_set,
+                event_type_set=original_plan.event_type_set,
+                pricing_ratio_exceptions=original_plan.pricing_ratio_exceptions,
+            )
+            new_plan.save()
+
+            # Copiar las relaciones ManyToMany
+            new_plan.financing_options.set(original_plan.financing_options.all())
+            new_plan.add_ons.set(original_plan.add_ons.all())
+            new_plan.plan_addons.set(original_plan.plan_addons.all())
+            new_plan.invites.set(original_plan.invites.all())
+
+            # Copiar los service_items a través de PlanServiceItem
+            for plan_service_item in PlanServiceItem.objects.filter(plan=original_plan):
+                PlanServiceItem.objects.create(
+                    plan=new_plan,
+                    service_item=plan_service_item.service_item,
+                )
+
+            duplicated_count += 1
+        except Exception as e:
+            error_count += 1
+            messages.error(
+                request,
+                f"Error al duplicar el plan '{original_plan.slug}': {str(e)}",
+            )
+
+    if duplicated_count > 0:
+        messages.success(
+            request,
+            f"Se duplicaron exitosamente {duplicated_count} plan(es).",
+        )
+    if error_count > 0:
+        messages.warning(
+            request,
+            f"Hubo errores al duplicar {error_count} plan(es).",
+        )
+
+
+duplicate_plans.short_description = "Duplicar planes seleccionados"
+
+
 @admin.register(Plan)
 class PlanAdmin(admin.ModelAdmin):
     list_display = (
@@ -154,6 +245,7 @@ class PlanAdmin(admin.ModelAdmin):
     ]
     filter_horizontal = ("financing_options", "add_ons", "plan_addons")
     list_select_related = ("owner",)
+    actions = [duplicate_plans]
 
     fieldsets = (
         (

@@ -95,6 +95,8 @@ class MediaTestSuite(MediaTestCase):
                     "medias": 0,
                     "name": model["category"].name,
                     "slug": model["category"].slug,
+                    "is_manageable_by_academy": False,
+                    "academy": None,
                 }
             ],
         )
@@ -122,10 +124,55 @@ class MediaTestSuite(MediaTestCase):
                     "medias": 1,
                     "name": model["category"].name,
                     "slug": model["category"].slug,
+                    "is_manageable_by_academy": False,
+                    "academy": None,
                 }
             ],
         )
         self.assertEqual(self.all_category_dict(), [{**self.model_to_dict(model, "category")}])
+
+    @patch(GOOGLE_CLOUD_PATH["client"], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH["bucket"], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH["blob"], apply_google_cloud_blob_mock())
+    def test_category_filter_is_manageable_by_academy(self):
+        """List only system categories when is_manageable_by_academy=true."""
+        self.headers(academy=1)
+        model = self.generate_models(
+            authenticate=True,
+            profile_academy=True,
+            capability="read_media",
+            role="potato",
+            academy=True,
+            category=True,
+            category_kwargs={"is_manageable_by_academy": True, "academy_id": None},
+        )
+        url = reverse_lazy("media:category") + "?is_manageable_by_academy=true"
+        response = self.client.get(url)
+        json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(json), 1)
+        self.assertTrue(json[0]["is_manageable_by_academy"])
+        self.assertIsNone(json[0]["academy"])
+
+    @patch(GOOGLE_CLOUD_PATH["client"], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH["bucket"], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH["blob"], apply_google_cloud_blob_mock())
+    def test_category_filter_academy_isnull(self):
+        """List only system/global categories when academy_isnull=true."""
+        self.headers(academy=1)
+        model = self.generate_models(
+            authenticate=True,
+            profile_academy=True,
+            capability="read_media",
+            role="potato",
+            category=True,
+        )
+        url = reverse_lazy("media:category") + "?academy_isnull=true"
+        response = self.client.get(url)
+        json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(json), 1)
+        self.assertIsNone(json[0]["academy"])
 
     @patch(GOOGLE_CLOUD_PATH["client"], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH["bucket"], apply_google_cloud_bucket_mock())
@@ -141,17 +188,15 @@ class MediaTestSuite(MediaTestCase):
         }
         response = self.client.post(url, data)
         json = response.json()
-        expected = {
-            "id": 1,
-            **data,
-        }
+        expected_json = {"id": 1, **data, "academy": 1}
+        expected_db = {"id": 1, **data, "is_manageable_by_academy": False, "academy_id": 1}
 
         self.assertDatetime(json["created_at"])
         del json["created_at"]
 
-        self.assertEqual(json, expected)
+        self.assertEqual(json, expected_json)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.all_category_dict(), [expected])
+        self.assertEqual(self.all_category_dict(), [expected_db])
 
     @patch(GOOGLE_CLOUD_PATH["client"], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH["bucket"], apply_google_cloud_bucket_mock())

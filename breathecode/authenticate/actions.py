@@ -22,7 +22,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 import breathecode.notify.actions as notify_actions
-from breathecode.admissions.models import Academy, CohortUser
+from breathecode.admissions.models import Academy, CohortUser, UP_TO_DATE
 from breathecode.authenticate.models import CredentialsDiscord
 from breathecode.services.github import Github
 
@@ -293,7 +293,7 @@ def reset_password(users=None, extra=None, academy=None):
         raise Exception("Missing users")
 
     for user in users:
-        token, created = Token.get_or_create(user, token_type="temporal")
+        token, created = Token.get_or_create(user, token_type="short")
 
         # returns true or false if the email was send
         return send_email_message(
@@ -1151,14 +1151,16 @@ def accept_invite_action(data=None, token=None, lang="en"):
 
         cu = CohortUser.objects.filter(user=user, cohort=invite.cohort).first()
         if cu is None:
-            cu = CohortUser(user=user, cohort=invite.cohort, role=role.upper())
+            cu = CohortUser(user=user, cohort=invite.cohort, role=role.upper(), finantial_status=UP_TO_DATE)
             cu.save()
 
         plan = Plan.objects.filter(cohort_set__cohorts=invite.cohort, invites=invite).first()
 
+        invite_user = invite.user or user
+
         if (
             plan
-            and invite.user
+            and invite_user
             and invite.cohort.academy.main_currency
             and (
                 invite.cohort.available_as_saas == True
@@ -1183,8 +1185,18 @@ def accept_invite_action(data=None, token=None, lang="en"):
             bag.save()
 
             bag.plans.add(plan)
-            
-            plan_price = plan.financing_options.filter(how_many_months=1).first().monthly_price
+
+            financing_option = plan.financing_options.filter(how_many_months=1).first()
+            if not financing_option:
+                raise ValidationException(
+                    translation(
+                        en="This plan does not have a one-installment financing option configured. Please contact the academy.",
+                        es="Este plan no tiene configurada una opción de financiamiento de un mes. Por favor contacta a la academia.",
+                    ),
+                    slug="plan-without-one-month-financing-option",
+                    code=400,
+                )
+            plan_price = financing_option.monthly_price
             is_free = plan_price == 0
 
             externally_managed = invite.payment_method is not None
@@ -1214,7 +1226,7 @@ def accept_invite_action(data=None, token=None, lang="en"):
             invoice = Invoice(
                 amount=plan_price,
                 paid_at=utc_now,
-                user=invite.user,
+                user=invite_user,
                 bag=bag,
                 academy=bag.academy,
                 status="FULFILLED",

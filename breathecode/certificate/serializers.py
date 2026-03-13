@@ -135,14 +135,27 @@ class SpecialtySerializer(serpy.Serializer):
     # metrics
     metrics = serpy.Field()
 
-    # old syllabus
+    # academy (optional owner); null for global specialties
+    academy = serpy.MethodField()
+
+    # syllabus: first of syllabuses (for API compatibility); source of truth is syllabuses
     syllabus = serpy.MethodField()
 
-    # new syllabuses
+    # syllabuses: ManyToMany, source of truth for which syllabi this specialty uses
     syllabuses = serpy.MethodField()
 
+    def get_academy(self, obj):
+        if obj.academy_id is None:
+            return None
+        return {"id": obj.academy.id, "slug": obj.academy.slug, "name": obj.academy.name}
+
     def get_syllabus(self, obj):
-        return {"id": obj.syllabus.id, "name": obj.syllabus.name, "slug": obj.syllabus.slug} if obj.syllabus else None
+        first = obj.syllabuses.first()
+        return (
+            {"id": first.id, "name": first.name, "slug": first.slug}
+            if first is not None
+            else None
+        )
 
     def get_syllabuses(self, obj):
         return [{"id": s.id, "name": s.name, "slug": s.slug} for s in obj.syllabuses.all()]

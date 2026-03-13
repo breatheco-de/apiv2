@@ -507,6 +507,7 @@ def has_active_survey_studies(academy, trigger_types: list[str] | str) -> bool:
             academy=academy,
             survey_configurations__trigger_type__in=trigger_types,
             survey_configurations__is_active=True,
+            status=SurveyStudy.Status.ACTIVE,
         )
         .filter(Q(starts_at__lte=utc_now) | Q(starts_at__isnull=True))
         .filter(Q(ends_at__gte=utc_now) | Q(ends_at__isnull=True))
@@ -543,7 +544,7 @@ def create_survey_response(
     send_pusher: bool = True,
 ):
     """
-    Create a survey response and send Pusher event.
+    Create a survey response and send Soketi event via Pusher client.
 
     Args:
         survey_config: SurveyConfiguration instance
@@ -627,7 +628,7 @@ def create_survey_response(
             logger.exception("[survey-response] unable to update stats after create")
 
         if send_pusher:
-            # Send Pusher event
+            # Send Soketi event via Pusher client
             questions = (questions_snapshot or {}).get("questions", [])
             send_survey_event(user.id, survey_response.id, questions, trigger_context)
 

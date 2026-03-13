@@ -115,6 +115,11 @@ PERMISSIONS = [
         "description": "Permission to manage academy flags",
         "codename": "manage_academy_flags",
     },
+    {
+        "name": "Bill internal academies",
+        "description": "Allows creating and managing bills about bootcamp users and provisioning vendors",
+        "codename": "bill_internal_academies",
+    },
 ]
 
 GROUPS = [
@@ -156,7 +161,7 @@ GROUPS = [
     {"name": "Classes", "permissions": ["live_class_join"], "inherit": []},
     {"name": "Legacy", "permissions": ["get_my_certificate"], "inherit": ["Classes", "Events", "Mentorships"]},
     {"name": "Paid Student", "permissions": ["get_private_link"], "inherit": []},
-    {"name": "Sysadmin", "permissions": ["manage_academy_flags"], "inherit": []},
+    {"name": "Sysadmin", "permissions": ["manage_academy_flags", "bill_internal_academies"], "inherit": []},
 ]
 
 

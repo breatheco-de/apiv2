@@ -93,6 +93,8 @@ class MediaTestSuite(MediaTestCase):
                 "medias": 0,
                 "name": model["category"].name,
                 "slug": model["category"].slug,
+                "is_manageable_by_academy": False,
+                "academy": None,
             },
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -118,6 +120,8 @@ class MediaTestSuite(MediaTestCase):
                 "medias": 1,
                 "name": model["category"].name,
                 "slug": model["category"].slug,
+                "is_manageable_by_academy": False,
+                "academy": None,
             },
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -188,7 +192,13 @@ class MediaTestSuite(MediaTestCase):
         """Test /answer without auth"""
         self.headers(academy=1)
         model = self.generate_models(
-            authenticate=True, profile_academy=True, capability="crud_media", role="potato", category=True
+            authenticate=True,
+            profile_academy=True,
+            capability="crud_media",
+            role="potato",
+            academy=True,
+            category=True,
+            category_kwargs={"academy_id": 1},
         )
         url = reverse_lazy("media:category_slug", kwargs={"category_slug": model["category"].slug})
         data = {"slug": "they-killed-kenny", "name": "They killed kenny"}
@@ -205,18 +215,12 @@ class MediaTestSuite(MediaTestCase):
             {
                 "id": 1,
                 **data,
+                "academy": 1,
             },
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            self.all_category_dict(),
-            [
-                {
-                    "id": 1,
-                    **data,
-                }
-            ],
-        )
+        db_expected = {"id": 1, **data, "is_manageable_by_academy": False, "academy_id": 1}
+        self.assertEqual(self.all_category_dict(), [db_expected])
 
     @patch(GOOGLE_CLOUD_PATH["client"], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH["bucket"], apply_google_cloud_bucket_mock())
@@ -242,7 +246,13 @@ class MediaTestSuite(MediaTestCase):
         """Test /answer without auth"""
         self.headers(academy=1)
         model = self.generate_models(
-            authenticate=True, profile_academy=True, capability="crud_media", role="potato", category=True
+            authenticate=True,
+            profile_academy=True,
+            capability="crud_media",
+            role="potato",
+            academy=True,
+            category=True,
+            category_kwargs={"academy_id": 1},
         )
         url = reverse_lazy("media:category_slug", kwargs={"category_slug": model["category"].slug})
         response = self.client.delete(url)

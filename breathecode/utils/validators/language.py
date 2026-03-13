@@ -1,6 +1,33 @@
 from django.core.exceptions import ValidationError
 
-__all__ = ["validate_language_code"]
+__all__ = ["validate_language_code", "languages_equivalent", "language_codes_for_lookup"]
+
+
+def languages_equivalent(lang_a: str | None, lang_b: str | None) -> bool:
+    """
+    Return True if both codes refer to the same language (e.g. 'us' and 'en').
+    Case-insensitive; handles None/empty.
+    """
+    a = (lang_a or "").strip().lower()
+    b = (lang_b or "").strip().lower()
+    if a == b:
+        return True
+    return (a, b) in (("us", "en"), ("en", "us"))
+
+
+def language_codes_for_lookup(lang: str | None) -> list[str]:
+    """
+    Return codes to use when querying by language (e.g. filter(lang__in=...)).
+    For 'us' or 'en' returns ['us', 'en']; otherwise [normalized_lang]; None/empty -> [].
+    """
+    if not lang:
+        return []
+    normalized = lang.strip().lower()
+    if not normalized:
+        return []
+    if normalized in ("us", "en"):
+        return ["us", "en"]
+    return [normalized]
 
 
 def validate_language_code(value: str | None) -> None:

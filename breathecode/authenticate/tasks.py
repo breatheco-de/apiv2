@@ -372,3 +372,69 @@ def verify_user_invite_email(user_invite_id: int, **_):
         },
         academy=user_invite.academy,
     )
+
+
+@task(priority=TaskPriority.STUDENT.value)
+def process_bulk_student_upload(job_id: str, **_kwargs: Any) -> None:
+    """
+    Process bulk student upload: load job state from Redis (students, academy_id, author_user_id),
+    classify each row, create/skip, update Redis after each row.
+    """
+    from breathecode.authenticate.utils.bulk_student_manager import (
+        get_bulk_job_state,
+        process_bulk_student_row,
+        update_bulk_job_state,
+    )
+
+    state = get_bulk_job_state(job_id)
+    if state is None:
+        raise AbortTask(f"Bulk job {job_id} not found or expired")
+    if state.get("status") != "pending":
+        raise AbortTask(f"Bulk job {job_id} status is {state.get('status')}, expected pending")
+
+    students_list = state.get("students") or []
+    academy_id = state.get("academy_id")
+    author_user_id = state.get("author_user_id")
+    if not students_list or not academy_id or author_user_id is None:
+        raise AbortTask(f"Bulk job {job_id} missing students, academy_id, or author_user_id in state")
+
+    logger.info("Starting process_bulk_student_upload for job_id=%s total=%s", job_id, len(students_list))
+
+    update_bulk_job_state(job_id, status="processing")
+    results = list(state.get("results") or [])
+    processed = state.get("processed", 0)
+
+    for index, row_data in enumerate(students_list):
+        cohort_id = row_data.get("cohort_id")
+        payment_method = row_data.get("payment_method")
+        plans = row_data.get("plans") or []
+        try:
+            result = process_bulk_student_row(
+                academy_id=academy_id,
+                cohort_id=cohort_id,
+                row_data=row_data,
+                author_user_id=author_user_id,
+                invite=True,
+                payment_method=payment_method,
+                plans=plans,
+            )
+        except Exception as e:
+            logger.exception("process_bulk_student_row failed at index %s", index)
+            result = {
+                "index": index,
+                "email": (row_data.get("email") or "").strip().lower(),
+                "first_name": row_data.get("first_name"),
+                "last_name": row_data.get("last_name"),
+                "phone": row_data.get("phone"),
+                "classification": "NEW_USER",
+                "status": "failed",
+                "message": str(e),
+                "slug": "unexpected-error",
+            }
+        result["index"] = index
+        results.append(result)
+        processed += 1
+        update_bulk_job_state(job_id, processed=processed, results=results)
+
+    update_bulk_job_state(job_id, status="completed", processed=processed, results=results)
+    logger.info("Completed process_bulk_student_upload for job_id=%s processed=%s", job_id, processed)

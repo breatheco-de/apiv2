@@ -10,6 +10,7 @@ from breathecode.admissions.models import Academy
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.marketing.serializers import GetCourseSmallSerializer
 from breathecode.utils import serpy
+from breathecode.utils.validators import language_codes_for_lookup, languages_equivalent
 
 from .models import (
     Asset,
@@ -332,6 +333,7 @@ class AcademyAssetSerializer(AssetSerializer):
     owner = UserSerializer(required=False)
     config = serpy.Field()
     flag_seed = serpy.Field()
+    dependencies = serpy.Field()
 
     created_at = serpy.Field()
     updated_at = serpy.Field()
@@ -398,6 +400,7 @@ class AssetBigSerializer(AssetMidSerializer):
     delivery_formats = serpy.Field()
     delivery_regex_url = serpy.Field()
     template_url = serpy.Field()
+    is_in_subdirectory = serpy.Field()
     dependencies = serpy.Field()
 
     academy = AcademySmallSerializer(required=False)
@@ -499,6 +502,13 @@ class AssetExpandableSerializer(AssetMidSerializer):
 
                 if "telemetry_stats" in self.expand:
                     elem["telemetry_stats"] = obj.telemetry_stats if hasattr(obj, "telemetry_stats") else None
+
+                if "cluster" in self.expand:
+                    first_kw = obj.seo_keywords.first()
+                    if first_kw and first_kw.cluster:
+                        elem["cluster"] = KeywordClusterSmallSerializer(first_kw.cluster).data
+                    else:
+                        elem["cluster"] = None
 
                 if "readme" in self.expand:
                     url = obj.readme_url
@@ -1176,8 +1186,9 @@ class AssetPUTSerializer(serializers.ModelSerializer):
         if category is None:
             raise ValidationException("Asset category cannot be null", status.HTTP_400_BAD_REQUEST)
 
-        if lang != category.lang:
-            translated_category = category.all_translations.filter(lang=lang).first()
+        if not languages_equivalent(lang, category.lang):
+            codes = language_codes_for_lookup(lang)
+            translated_category = category.all_translations.filter(lang__in=codes).first() if codes else None
             if translated_category is None:
                 raise ValidationException(
                     "Asset category is in a different language than the asset itself and we could not find a category translation that matches the same language",
@@ -1224,7 +1235,54 @@ class AssetPUTSerializer(serializers.ModelSerializer):
 
                     async_remove_asset_preview_from_cloud.delay(hash)
 
-        return super().update(instance, {**validated_data, **data})
+        # Sync asset fields to config if config exists
+        if instance.config:
+            from breathecode.registry.actions import sync_asset_fields_to_config
+            
+            # Only sync fields that are actually being updated
+            fields_to_sync = {
+                key: validated_data[key] 
+                for key in validated_data 
+                if key in [
+                    "solution_url", "preview", "title", "description", "template_url",
+                    "difficulty", "duration", "gitpod", "agent", "solution_video_url",
+                    "intro_video_url", "delivery_instructions", "delivery_formats",
+                    "delivery_regex_url", "technologies"
+                ]
+            }
+            
+            if fields_to_sync:
+                updated_config = sync_asset_fields_to_config(instance, fields_to_sync)
+                if updated_config:
+                    data["config"] = updated_config
+                    # Flag asset as needing resync to GitHub if it has a GitHub URL
+                    if instance.readme_url and "github.com" in instance.readme_url:
+                        data["sync_status"] = "NEEDS_RESYNC"
+                        data["status_text"] = "Config updated locally - needs to be pushed to GitHub"
+
+        # Perform the update first
+        updated_instance = super().update(instance, {**validated_data, **data})
+        
+        # After successful update, trigger push for auto-subscribed assets if NEEDS_RESYNC was set
+        if updated_instance.sync_status == "NEEDS_RESYNC" and updated_instance.is_auto_subscribed:
+            owner_id = None
+            if updated_instance.owner:
+                owner_id = updated_instance.owner.id
+            elif updated_instance.author:
+                owner_id = updated_instance.author.id
+            
+            if owner_id and updated_instance.readme_url and "github.com" in updated_instance.readme_url:
+                if updated_instance.asset_type in ["LESSON", "ARTICLE", "QUIZ"]:
+                    from breathecode.registry.tasks import async_push_to_github_task
+                    async_push_to_github_task.delay(updated_instance.slug, owner_id=owner_id)
+                elif updated_instance.asset_type in ["PROJECT", "EXERCISE"]:
+                    from breathecode.registry.tasks import async_push_project_or_exercise_to_github
+                    async_push_project_or_exercise_to_github.delay(
+                        updated_instance.slug, 
+                        create_or_update=False
+                    )
+        
+        return updated_instance
 
 
 class AssetPUTMeSerializer(serializers.ModelSerializer):
@@ -1299,8 +1357,9 @@ class AssetPUTMeSerializer(serializers.ModelSerializer):
             except Exception:
                 pass
 
-        if category and lang != category.lang:
-            translated_category = category.all_translations.filter(lang=lang).first()
+        if category and not languages_equivalent(lang, category.lang):
+            codes = language_codes_for_lookup(lang)
+            translated_category = category.all_translations.filter(lang__in=codes).first() if codes else None
             if translated_category is None:
                 raise ValidationException(
                     "Asset category is in a different language than the asset itself and we could not find a category translation that matches the same language",
@@ -1347,4 +1406,51 @@ class AssetPUTMeSerializer(serializers.ModelSerializer):
 
                     async_remove_asset_preview_from_cloud.delay(hash)
 
-        return super().update(instance, {**validated_data, **data})
+        # Sync asset fields to config if config exists
+        if instance.config:
+            from breathecode.registry.actions import sync_asset_fields_to_config
+            
+            # Only sync fields that are actually being updated
+            fields_to_sync = {
+                key: validated_data[key] 
+                for key in validated_data 
+                if key in [
+                    "solution_url", "preview", "title", "description", "template_url",
+                    "difficulty", "duration", "gitpod", "agent", "solution_video_url",
+                    "intro_video_url", "delivery_instructions", "delivery_formats",
+                    "delivery_regex_url", "technologies"
+                ]
+            }
+            
+            if fields_to_sync:
+                updated_config = sync_asset_fields_to_config(instance, fields_to_sync)
+                if updated_config:
+                    data["config"] = updated_config
+                    # Flag asset as needing resync to GitHub if it has a GitHub URL
+                    if instance.readme_url and "github.com" in instance.readme_url:
+                        data["sync_status"] = "NEEDS_RESYNC"
+                        data["status_text"] = "Config updated locally - needs to be pushed to GitHub"
+
+        # Perform the update first
+        updated_instance = super().update(instance, {**validated_data, **data})
+        
+        # After successful update, trigger push for auto-subscribed assets if NEEDS_RESYNC was set
+        if updated_instance.sync_status == "NEEDS_RESYNC" and updated_instance.is_auto_subscribed:
+            owner_id = None
+            if updated_instance.owner:
+                owner_id = updated_instance.owner.id
+            elif updated_instance.author:
+                owner_id = updated_instance.author.id
+            
+            if owner_id and updated_instance.readme_url and "github.com" in updated_instance.readme_url:
+                if updated_instance.asset_type in ["LESSON", "ARTICLE", "QUIZ"]:
+                    from breathecode.registry.tasks import async_push_to_github_task
+                    async_push_to_github_task.delay(updated_instance.slug, owner_id=owner_id)
+                elif updated_instance.asset_type in ["PROJECT", "EXERCISE"]:
+                    from breathecode.registry.tasks import async_push_project_or_exercise_to_github
+                    async_push_project_or_exercise_to_github.delay(
+                        updated_instance.slug, 
+                        create_or_update=False
+                    )
+        
+        return updated_instance

@@ -204,12 +204,17 @@ async function getPaidInvoices() {
 
 ## Bonus: Academy Staff View
 
-If you have academy staff permissions, you can also view invoices for your academy:
+If you have academy staff permissions, you can view invoices for your academy:
 
 ```bash
 GET /v1/payments/academy/invoice
 Headers: Academy: {academy_id}
 ```
+
+**Query parameters** (all optional):
+- `user` – User ID or email. When provided, returns only invoices for that user (all billing for a single user).
+- `status` – Filter by status (comma-separated).
+- `date_start` / `date_end` – Filter by paid date range.
 
 Requires `read_invoice` capability.
 

@@ -6,11 +6,11 @@ import os
 import sys
 
 
-def execute(command):
+def execute(command, required=True):
     exit_code = os.system(command)
-
-    if exit_code:
+    if exit_code and required:
         sys.exit(1)
+    return exit_code == 0
 
 
 if __name__ == "__main__":
@@ -23,8 +23,8 @@ if __name__ == "__main__":
     execute("python manage.py migrate")
 
     print("")
-    print("Load fixtures")
-    execute("python manage.py loaddata breathecode/*/fixtures/dev_*.json")
+    print("Load fixtures (optional; server will start even if fixtures fail)")
+    execute("python manage.py loaddata breathecode/*/fixtures/dev_*.json", required=False)
 
     print("")
     print("Run server")

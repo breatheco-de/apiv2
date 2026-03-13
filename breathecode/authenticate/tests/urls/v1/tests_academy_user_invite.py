@@ -3,9 +3,12 @@ Test cases for /academy/user/me/invite && academy/user/invite
 """
 
 from random import choice
+from unittest.mock import MagicMock, patch
 
 from django.urls.base import reverse_lazy
 from rest_framework import status
+
+from breathecode.authenticate.serializers import UserInviteSerializer
 
 from ...mixins.new_auth_test_case import AuthTestCase
 
@@ -18,36 +21,15 @@ STATUSES = [
 
 
 def generate_user_invite(self, model, user_invite, arguments={}):
-    return {
-        "academy": {
-            "id": model.academy.id,
-            "name": model.academy.name,
-            "slug": model.academy.slug,
-            "logo_url": model.academy.logo_url,
-        },
-        "cohort": {
-            "id": model.cohort.id,
-            "name": model.cohort.name,
-            "slug": model.cohort.slug,
-        },
-        "created_at": self.bc.datetime.to_iso_string(user_invite.created_at),
-        "email": user_invite.email,
-        "first_name": user_invite.first_name,
-        "id": user_invite.id,
-        "invite_url": f"http://localhost:8000/v1/auth/member/invite/{user_invite.token}",
-        "last_name": user_invite.last_name,
-        "role": {
-            "id": model.role.slug,
-            "name": model.role.name,
-            "slug": model.role.slug,
-        },
-        "sent_at": user_invite.sent_at,
-        "status": user_invite.status,
-        "token": user_invite.token,
-        **arguments,
-    }
+    data = UserInviteSerializer(user_invite, many=False).data
+    for field in ["created_at", "sent_at", "opened_at", "clicked_at"]:
+        if data.get(field) is not None:
+            data[field] = self.bc.datetime.to_iso_string(data[field])
+    data.update(arguments)
+    return data
 
 
+@patch("breathecode.authenticate.tasks.async_validate_email_invite.delay", MagicMock())
 class AuthenticateTestSuite(AuthTestCase):
     """
     🔽🔽🔽 Auth

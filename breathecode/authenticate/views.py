@@ -10,6 +10,7 @@ import urllib.parse
 from datetime import timedelta
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlparse
+import uuid
 
 import aiohttp
 import requests
@@ -45,7 +46,7 @@ from rest_framework.schemas.openapi import AutoSchema
 import breathecode.activity.tasks as tasks_activity
 import breathecode.authenticate.tasks as auth_tasks
 import breathecode.notify.actions as notify_actions
-from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
+from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus, UP_TO_DATE
 from breathecode.authenticate.actions import get_user_settings, replace_user_email, sync_with_rigobot
 from breathecode.marketing.models import Course
 from breathecode.mentorship.models import MentorProfile
@@ -53,6 +54,7 @@ from breathecode.mentorship.serializers import GETMentorSmallSerializer
 from breathecode.notify.models import SlackTeam
 from breathecode.payments.actions import user_has_active_4geeks_plus_plans
 from breathecode.services.discord import Discord
+from breathecode.services.github import Github, GithubAuthException
 
 # from breathecode.services.google_apps.google_apps import GoogleApps
 from breathecode.services.google_cloud import FunctionV1, FunctionV2
@@ -61,6 +63,7 @@ from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExt
 from breathecode.utils.decorators import has_permission, superuser_required
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from breathecode.utils.shorteners import C
+from breathecode.utils.request import get_current_academy
 from breathecode.utils.views import private_view, render_message, set_query_parameter
 
 from .actions import (
@@ -90,6 +93,7 @@ from .forms import (
 )
 from .models import (
     AcademyAuthSettings,
+    Capability,
     CredentialsDiscord,
     CredentialsFacebook,
     CredentialsGithub,
@@ -176,7 +180,7 @@ class TemporalTokenView(ObtainAuthToken):
 
         token_type = request.data.get("token_type", "temporal")
 
-        allowed_token_types = ["temporal", "one_time"]
+        allowed_token_types = ["temporal", "one_time", "short"]
         if token_type not in allowed_token_types:
             raise ValidationException(
                 f'The token type must be one of {", ".join(allowed_token_types)}',
@@ -515,6 +519,10 @@ class MemberView(APIView, GenerateLookupsMixin):
         include = request.GET.get("include", "").split()
         if not "student" in include:
             items = items.exclude(role__slug="student")
+        
+        # Exclude deleted members by default unless explicitly included
+        if "deleted" not in include:
+            items = items.exclude(status="DELETED")
 
         roles = request.GET.get("roles", "")
         if roles != "":
@@ -539,7 +547,57 @@ class MemberView(APIView, GenerateLookupsMixin):
 
     @capable_of("crud_member")
     def post(self, request, academy_id=None):
-        serializer = MemberPOSTSerializer(data=request.data, context={"academy_id": academy_id, "request": request})
+        lang = get_user_language(request)
+        request_data = request.data.copy()
+        
+        # Check if trying to create with student role
+        if "role" in request_data:
+            role_value = request_data["role"]
+            role_obj = None
+
+            if isinstance(role_value, int) or (isinstance(role_value, str) and role_value.isnumeric()):
+                role_obj = Role.objects.filter(pk=int(role_value)).first()
+
+            if role_obj is None and isinstance(role_value, str):
+                role_obj = Role.objects.filter(slug=role_value).first()
+
+            if role_obj is None:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Role not found",
+                        es="Rol no encontrado",
+                        slug="role-not-found",
+                    ),
+                    code=400,
+                )
+
+            if role_obj.academy_id is not None and str(role_obj.academy_id) != str(academy_id):
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="This role is not available for this academy.",
+                        es="Este rol no está disponible para esta academia.",
+                        slug="role-not-available-for-academy",
+                    ),
+                    code=400,
+                )
+
+            if role_obj and role_obj.slug == "student":
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="This endpoint cannot create student profiles.",
+                        es="Este endpoint no puede crear perfiles de estudiantes.",
+                        slug="cannot-create-student-role",
+                    ),
+                    code=400,
+                )
+
+            # Normalize slug -> id for serializers expecting PK
+            request_data["role"] = role_obj.pk
+        
+        serializer = MemberPOSTSerializer(data=request_data, context={"academy_id": academy_id, "request": request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -549,26 +607,61 @@ class MemberView(APIView, GenerateLookupsMixin):
     def put(self, request, academy_id=None, user_id_or_email=None):
         lang = get_user_language(request)
 
-        user = ProfileAcademy.objects.filter(user__id=request.user.id, academy__id=academy_id).first()
-
-        if user.email is None or user.email.strip() == "":
-            raise ValidationException(
-                translation(
-                    lang,
-                    en="This mentor does not have an email address",
-                    es="Este mentor no tiene una dirección de correo electrónico",
-                    slug="email-not-found",
-                ),
-                code=400,
-            )
-
         already = None
         if user_id_or_email.isnumeric():
-            already = ProfileAcademy.objects.filter(user__id=user_id_or_email, academy_id=academy_id).first()
+            already = ProfileAcademy.objects.filter(user__id=user_id_or_email, academy_id=academy_id).exclude(role__slug="student").first()
         else:
             raise ValidationException("User id must be a numeric value", code=400, slug="user-id-is-not-numeric")
 
         request_data = {**request.data, "user": user_id_or_email, "academy": academy_id}
+        
+        # Check if trying to create or update with student role
+        if "role" in request_data:
+            role_value = request_data["role"]
+            role_obj = None
+
+            if isinstance(role_value, int) or (isinstance(role_value, str) and role_value.isnumeric()):
+                role_obj = Role.objects.filter(pk=int(role_value)).first()
+
+            if role_obj is None and isinstance(role_value, str):
+                role_obj = Role.objects.filter(slug=role_value).first()
+
+            if role_obj is None:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Role not found",
+                        es="Rol no encontrado",
+                        slug="role-not-found",
+                    ),
+                    code=400,
+                )
+
+            if role_obj.academy_id is not None and str(role_obj.academy_id) != str(academy_id):
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="This role is not available for this academy.",
+                        es="Este rol no está disponible para esta academia.",
+                        slug="role-not-available-for-academy",
+                    ),
+                    code=400,
+                )
+
+            if role_obj and role_obj.slug == "student":
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="This endpoint cannot update student profiles.",
+                        es="Este endpoint no puede crear o actualizar perfiles de estudiantes.",
+                        slug="cannot-update-student-role",
+                    ),
+                    code=400,
+                )
+
+            # Normalize slug -> id for serializers expecting PK
+            request_data["role"] = role_obj.pk
+        
         if already:
             serializer = MemberPUTSerializer(already, data=request_data)
             if serializer.is_valid():
@@ -584,9 +677,54 @@ class MemberView(APIView, GenerateLookupsMixin):
 
     @capable_of("crud_member")
     def delete(self, request, academy_id=None, user_id_or_email=None):
-        raise ValidationException(
-            "This functionality is under maintenance and it's not working", code=403, slug="delete-is-forbidden"
-        )
+        lang = get_user_language(request)
+
+        if user_id_or_email is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Missing user_id_or_email parameter",
+                    es="Falta el parámetro user_id_or_email",
+                    slug="missing-user-id",
+                ),
+                code=400,
+            )
+
+        # Find the ProfileAcademy record
+        profile_academy = None
+        if user_id_or_email.isnumeric():
+            profile_academy = ProfileAcademy.objects.filter(user__id=user_id_or_email, academy_id=academy_id).first()
+        else:
+            profile_academy = ProfileAcademy.objects.filter(user__email=user_id_or_email, academy_id=academy_id).first()
+
+        if profile_academy is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Profile academy not found for this user and academy",
+                    es="No se encontró el perfil de academia para este usuario y academia",
+                    slug="profile-academy-not-found",
+                ),
+                code=404,
+            )
+
+        # Validate that this is not a student role (students should use the /student endpoint)
+        if profile_academy.role.slug == "student":
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"This endpoint can only delete staff/member profiles (not {profile_academy.role.slug})",
+                    es=f"Este endpoint solo puede eliminar perfiles de personal/miembros (no {profile_academy.role.slug})",
+                    slug="trying-to-delete-student",
+                ),
+                code=400,
+            )
+
+        # Soft delete: set status to DELETED
+        profile_academy.status = "DELETED"
+        profile_academy.save()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
@@ -1240,6 +1378,157 @@ class V2AppCountryView(APIView):
         return serializer.filter()
 
 
+class BulkStudentUploadView(APIView):
+    """
+    POST /v1/auth/academy/student/invite/bulk: start bulk upload (202 + job_id) or soft run (?soft=true, 200 + results).
+    GET /v1/auth/academy/student/invite/bulk/<job_id>: return job status and results from Redis.
+    """
+
+    @capable_of("crud_student")
+    def get(self, request, academy_id=None, job_id=None):
+        from breathecode.authenticate.utils.bulk_student_manager import get_bulk_job_state
+
+        academy_id = academy_id or get_current_academy(request, return_id=True)
+        if not academy_id:
+            raise ValidationException(
+                "Missing academy_id parameter expected in query string or 'Academy' header",
+                code=403,
+                slug="missing-academy-id",
+            )
+        if not job_id:
+            raise ValidationException("Missing job_id", code=400, slug="missing-job-id")
+        state = get_bulk_job_state(job_id)
+        if state is None:
+            raise ValidationException("Bulk job not found or expired", code=404, slug="job-not-found")
+        if state.get("academy_id") != academy_id:
+            raise ValidationException("Job does not belong to this academy", code=404, slug="job-not-found")
+        response_state = {k: v for k, v in state.items() if k != "students"}
+        return Response(response_state, status=status.HTTP_200_OK)
+
+    @capable_of("crud_student")
+    def post(self, request, academy_id=None):
+        from breathecode.authenticate import tasks as auth_tasks
+        from breathecode.authenticate.utils.bulk_student_manager import (
+            set_bulk_job_state,
+            validate_bulk_student_row,
+        )
+
+        academy_id = academy_id or get_current_academy(request, return_id=True)
+        if not academy_id:
+            raise ValidationException(
+                "Missing academy_id parameter expected in query string or 'Academy' header",
+                code=403,
+                slug="missing-academy-id",
+            )
+
+        data = request.data or {}
+        students = data.get("students") or []
+        if not isinstance(students, list) or len(students) == 0:
+            raise ValidationException("students must be a non-empty array", code=400, slug="students-required")
+
+        from breathecode.payments.models import PaymentMethod, Plan
+
+        for row in students:
+            if not (row.get("email") or "").strip():
+                raise ValidationException("Each student must have an email", code=400, slug="email-required")
+            cohort_id = row.get("cohort_id")
+            if not cohort_id:
+                raise ValidationException(
+                    "Each student must have a cohort_id",
+                    code=400,
+                    slug="cohort-id-required",
+                )
+            cohort = Cohort.objects.filter(id=cohort_id, academy_id=academy_id).first()
+            if not cohort:
+                raise ValidationException(
+                    "Cohort not found or does not belong to this academy",
+                    slug="cohort-not-found",
+                    code=404,
+                )
+            if cohort.stage in ("INACTIVE", "DELETED", "ENDED"):
+                raise ValidationException(
+                    f"Cannot add students to a cohort that is {cohort.stage}",
+                    slug="cohort-not-available",
+                    code=400,
+                )
+            payment_method = row.get("payment_method")
+            if payment_method is not None and not PaymentMethod.objects.filter(
+                id=payment_method, academy_id=academy_id
+            ).exists():
+                raise ValidationException(
+                    "Payment method not found or does not belong to this academy",
+                    slug="payment-method-not-found",
+                    code=404,
+                )
+            plans = row.get("plans") or []
+            if plans:
+                lang = getattr(request, "LANG", None) or "en"
+                for plan_id in plans:
+                    plan = Plan.objects.filter(id=plan_id).first()
+                    if not plan:
+                        raise ValidationException("Plan not found", slug="plan-not-found", code=404)
+                    if plan.status == Plan.Status.DRAFT:
+                        raise ValidationException(
+                            translation(
+                                lang,
+                                en="Cannot assign draft plans to students. Publish the plan first.",
+                                es="No se pueden asignar planes en borrador a estudiantes. Publica el plan primero.",
+                            ),
+                            slug="plan-draft-not-assignable",
+                            code=400,
+                        )
+                    if not plan.cohort_set or not plan.cohort_set.cohorts.filter(id=cohort.id).exists():
+                        raise ValidationException(
+                            translation(
+                                lang,
+                                en="Plan does not include this cohort. The plan's cohort_set must contain the cohort.",
+                                es="El plan no incluye este cohort. El cohort_set del plan debe contener el cohort.",
+                            ),
+                            slug="plan-cohort-mismatch",
+                            code=400,
+                        )
+
+        soft = request.GET.get("soft") == "true"
+        if soft:
+            results = []
+            for index, row in enumerate(students):
+                result = validate_bulk_student_row(
+                    academy_id=academy_id,
+                    cohort_id=row.get("cohort_id"),
+                    row_data=row,
+                    payment_method=row.get("payment_method"),
+                    plans=row.get("plans") or [],
+                )
+                result["index"] = index
+                results.append(result)
+            return Response(
+                {"total": len(students), "results": results},
+                status=status.HTTP_200_OK,
+            )
+
+        job_id = str(uuid.uuid4())
+        set_bulk_job_state(
+            job_id=job_id,
+            status="pending",
+            academy_id=academy_id,
+            total=len(students),
+            processed=0,
+            results=[],
+            students=students,
+            author_user_id=request.user.id,
+        )
+        auth_tasks.process_bulk_student_upload.delay(job_id)
+        return Response(
+            {
+                "job_id": job_id,
+                "status": "pending",
+                "total": len(students),
+                "message": f"Bulk upload started. Poll GET /v1/auth/academy/student/invite/bulk/{job_id} for status.",
+            },
+            status=status.HTTP_202_ACCEPTED,
+        )
+
+
 class StudentView(APIView, GenerateLookupsMixin):
     extensions = APIViewExtensions(paginate=True, sort="-created_at")
 
@@ -1482,6 +1771,255 @@ class AcademyCapabilitiesView(APIView):
         return Response(capabilities_list, status=status.HTTP_200_OK)
 
 
+def _get_academy_or_404(academy_id):
+    academy = Academy.objects.filter(id=academy_id).first()
+    if not academy:
+        raise ValidationException(
+            translation(
+                en=f"Academy with id '{academy_id}' not found",
+                es=f"Academia con id '{academy_id}' no encontrada",
+            ),
+            slug="academy-not-found",
+            code=404,
+        )
+    return academy
+
+
+class AcademyCapabilityListView(APIView):
+    """List all capabilities (slug, description) for building academy role forms. Admin and academy admin only."""
+
+    permission_classes = [IsAuthenticated]
+
+    @capable_of("manage_academy_roles")
+    def get(self, request, academy_id=None):
+        _get_academy_or_404(academy_id)
+        capabilities = Capability.objects.all().order_by("slug")
+        data = [{"slug": c.slug, "description": c.description or ""} for c in capabilities]
+        return Response(data, status=status.HTTP_200_OK)
+
+
+class AcademyRoleView(APIView):
+    """List roles for an academy (native + custom) or create a custom role. Admin and academy admin only."""
+
+    permission_classes = [IsAuthenticated]
+
+    @capable_of("manage_academy_roles")
+    def get(self, request, academy_id=None):
+        academy = _get_academy_or_404(academy_id)
+        roles = list(
+            Role.objects.filter(Q(academy__isnull=True) | Q(academy_id=academy_id))
+            .prefetch_related("capabilities")
+        )
+        # Custom roles (academy-owned) first, then native; within each group order by name
+        roles.sort(key=lambda r: (r.academy_id is None, (r.name or r.slug or "").lower()))
+        result = []
+        for role in roles:
+            item = RoleBigSerializer(role).data
+            item["native"] = role.academy_id is None
+            result.append(item)
+        return Response(result, status=status.HTTP_200_OK)
+
+    @capable_of("manage_academy_roles")
+    def post(self, request, academy_id=None):
+        from breathecode.authenticate.role_definitions import get_extended_roles
+
+        lang = get_user_language(request)
+        academy = _get_academy_or_404(academy_id)
+        name = request.data.get("name")
+        slug_base = request.data.get("slug")
+        capabilities_slugs = request.data.get("capabilities") or []
+
+        if not name or not isinstance(name, str) or not name.strip():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="name is required and must be a non-empty string",
+                    es="name es obligatorio y debe ser una cadena no vacía",
+                ),
+                slug="invalid-name",
+                code=400,
+            )
+        if not slug_base or not isinstance(slug_base, str) or not slug_base.strip():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="slug is required and must be a non-empty string",
+                    es="slug es obligatorio y debe ser una cadena no vacía",
+                ),
+                slug="invalid-slug",
+                code=400,
+            )
+        slug_base = slug_base.strip().lower()
+        if not re.match(r"^[a-z0-9_]+$", slug_base):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="slug must contain only lowercase letters, numbers and underscores",
+                    es="slug debe contener solo letras minúsculas, números y guiones bajos",
+                ),
+                slug="invalid-slug-format",
+                code=400,
+            )
+        native_slugs = {r["slug"] for r in get_extended_roles()}
+        if slug_base in native_slugs:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"slug '{slug_base}' is reserved for a native role",
+                    es=f"slug '{slug_base}' está reservado para un rol nativo",
+                ),
+                slug="slug-reserved",
+                code=400,
+            )
+        full_slug = f"{slug_base}_{academy.id}"
+        if Role.objects.filter(slug=full_slug).exists():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"A role with slug '{slug_base}' already exists for this academy",
+                    es=f"Ya existe un rol con slug '{slug_base}' para esta academia",
+                ),
+                slug="role-already-exists",
+                code=400,
+            )
+        valid_caps = set(Capability.objects.values_list("slug", flat=True))
+        invalid = [s for s in capabilities_slugs if s not in valid_caps]
+        if invalid:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Invalid capability slugs: {invalid}",
+                    es=f"Slugs de capacidad no válidos: {invalid}",
+                ),
+                slug="invalid-capabilities",
+                code=400,
+            )
+        role = Role.objects.create(slug=full_slug, name=name.strip(), academy=academy)
+        for cap_slug in capabilities_slugs:
+            role.capabilities.add(cap_slug)
+        data = RoleBigSerializer(role).data
+        data["native"] = False
+        return Response(data, status=status.HTTP_201_CREATED)
+
+
+class AcademyRoleSlugView(APIView):
+    """Get, update or delete an academy role by slug. Only custom roles (academy-owned) can be updated/deleted."""
+
+    permission_classes = [IsAuthenticated]
+
+    def _get_role_for_academy(self, academy_id, role_slug):
+        academy = _get_academy_or_404(academy_id)
+        role = (
+            Role.objects.filter(Q(academy__isnull=True) | Q(academy_id=academy_id))
+            .filter(slug=role_slug)
+            .prefetch_related("capabilities")
+            .first()
+        )
+        if not role:
+            raise ValidationException(
+                translation(
+                    en=f"Role with slug '{role_slug}' not found for this academy",
+                    es=f"Rol con slug '{role_slug}' no encontrado para esta academia",
+                ),
+                slug="role-not-found",
+                code=404,
+            )
+        return academy, role
+
+    @capable_of("manage_academy_roles")
+    def get(self, request, academy_id=None, role_slug=None):
+        academy, role = self._get_role_for_academy(academy_id, role_slug)
+        data = RoleBigSerializer(role).data
+        data["native"] = role.academy_id is None
+        return Response(data, status=status.HTTP_200_OK)
+
+    @capable_of("manage_academy_roles")
+    def put(self, request, academy_id=None, role_slug=None):
+        lang = get_user_language(request)
+        academy, role = self._get_role_for_academy(academy_id, role_slug)
+        if role.academy_id is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Native roles cannot be updated",
+                    es="Los roles nativos no se pueden actualizar",
+                ),
+                slug="native-role-read-only",
+                code=400,
+            )
+        name = request.data.get("name")
+        capabilities_slugs = request.data.get("capabilities")
+        if name is not None:
+            if not isinstance(name, str) or not name.strip():
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="name must be a non-empty string",
+                        es="name debe ser una cadena no vacía",
+                    ),
+                    slug="invalid-name",
+                    code=400,
+                )
+            role.name = name.strip()
+            role.save()
+        if capabilities_slugs is not None:
+            valid_caps = set(Capability.objects.values_list("slug", flat=True))
+            invalid = [s for s in capabilities_slugs if s not in valid_caps]
+            if invalid:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Invalid capability slugs: {invalid}",
+                        es=f"Slugs de capacidad no válidos: {invalid}",
+                    ),
+                    slug="invalid-capabilities",
+                    code=400,
+                )
+            role.capabilities.clear()
+            for cap_slug in capabilities_slugs:
+                role.capabilities.add(cap_slug)
+        data = RoleBigSerializer(role).data
+        data["native"] = False
+        return Response(data, status=status.HTTP_200_OK)
+
+    @capable_of("manage_academy_roles")
+    def delete(self, request, academy_id=None, role_slug=None):
+        lang = get_user_language(request)
+        academy, role = self._get_role_for_academy(academy_id, role_slug)
+        if role.academy_id is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Native roles cannot be deleted",
+                    es="Los roles nativos no se pueden eliminar",
+                ),
+                slug="native-role-read-only",
+                code=400,
+            )
+        if ProfileAcademy.objects.filter(role=role).exists():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Cannot delete role: it is assigned to one or more members",
+                    es="No se puede eliminar el rol: está asignado a uno o más miembros",
+                ),
+                slug="role-in-use",
+                code=400,
+            )
+        if UserInvite.objects.filter(role=role).exists():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Cannot delete role: it is used in one or more invites",
+                    es="No se puede eliminar el rol: se usa en una o más invitaciones",
+                ),
+                slug="role-in-use",
+                code=400,
+            )
+        role.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 class UserSettingsView(APIView):
 
     def get(self, request, format=None):
@@ -1563,15 +2101,17 @@ def get_user_by_id_or_email(request, id_or_email):
 @permission_classes([AllowAny])
 def get_roles(request, role_slug=None):
 
+    hidden_roles = ['academy_token', 'read_only', 'student']
+    
     if role_slug is not None:
-        role = Role.objects.filter(slug=role_slug).first()
+        role = Role.objects.filter(slug=role_slug).exclude(slug__in=hidden_roles).first()
         if role is None:
             raise ValidationException("Role not found", code=404)
 
         serializer = RoleBigSerializer(role)
         return Response(serializer.data)
 
-    queryset = Role.objects.all()
+    queryset = Role.objects.all().exclude(slug__in=hidden_roles + ['admin']).order_by('slug')
     serializer = RoleSmallSerializer(queryset, many=True)
     return Response(serializer.data)
 
@@ -1587,6 +2127,11 @@ def get_github_token(request, token=None):
     if url == None:
         raise ValidationException("No callback URL specified", slug="no-callback-url")
 
+    try:
+        scope_retry = int(request.query_params.get("scope_retry", 0))
+    except (ValueError, TypeError):
+        scope_retry = 0
+
     scopes = request.query_params.get("scope", "user:email")
     if token is not None:
         _tkn = Token.get_valid(token)
@@ -1601,9 +2146,10 @@ def get_github_token(request, token=None):
     except Exception:
         pass
 
+    redirect_base = os.getenv("GITHUB_REDIRECT_URL", "").strip()
     params = {
         "client_id": os.getenv("GITHUB_CLIENT_ID", ""),
-        "redirect_uri": os.getenv("GITHUB_REDIRECT_URL", "") + f"?url={url}",
+        "redirect_uri": redirect_base + f"?url={url}&scope_retry={scope_retry}",
         "scope": scopes,
     }
 
@@ -1627,13 +2173,13 @@ async def save_github_token(request):
 
         return default
 
-    async def redirect_to_get_access_token():
+    async def redirect_to_get_access_token(scope_retry_value=0):
         nonlocal token
 
         if token is None:
             token, _ = await Token.aget_or_create(user=user, token_type="login")
 
-        redirect = f"/v1/auth/github/{token.key}?scope={scopes}&url={url}"
+        redirect = f"/v1/auth/github/{token.key}?scope={scopes}&url={url}&scope_retry={scope_retry_value}"
         if settings.DEBUG:
             return HttpResponse(f"Redirect to: <a href='{redirect}'>{redirect}</a>")
 
@@ -1657,16 +2203,22 @@ async def save_github_token(request):
     except Exception:
         pass
 
+    try:
+        scope_retry = int(request.query_params.get("scope_retry", 0))
+    except (ValueError, TypeError):
+        scope_retry = 0
+
     code = request.query_params.get("code", None)
     if code == None:
         raise ValidationException("No github code specified", slug="no-code")
 
     token = request.query_params.get("user", None)
 
+    redirect_uri = os.getenv("GITHUB_REDIRECT_URL", "").strip()
     payload = {
         "client_id": os.getenv("GITHUB_CLIENT_ID", ""),
         "client_secret": os.getenv("GITHUB_SECRET", ""),
-        "redirect_uri": os.getenv("GITHUB_REDIRECT_URL", ""),
+        "redirect_uri": redirect_uri,
         "code": code,
     }
     headers = {"Accept": "application/json"}
@@ -1810,7 +2362,7 @@ async def save_github_token(request):
             github_credentials.granted = False
             await github_credentials.asave()
 
-        return await redirect_to_get_access_token()
+        return await redirect_to_get_access_token(scope_retry_value=0)
 
     required_scopes = await aget_github_scopes(user, "user:email")
 
@@ -1819,7 +2371,23 @@ async def save_github_token(request):
         github_credentials.granted = False
         await github_credentials.asave()
 
-        return await redirect_to_get_access_token()
+        if scope_retry >= 2:
+            academy = await ProfileAcademy.objects.filter(user=user).select_related("academy").afirst()
+            academy_for_message = academy.academy if academy else None
+            return render_message(
+                request,
+                "GitHub didn't assign the scopes needed to continue. Please authorize the application with "
+                "organization access in your GitHub account or organization settings, or try again later.",
+                btn_label="Back to app",
+                btn_url=url,
+                academy=academy_for_message,
+                status=403,
+            )
+
+        redirect = f"/v1/auth/github/{token.key}?scope={scopes}&url={url}&scope_retry={scope_retry + 1}"
+        if settings.DEBUG:
+            return HttpResponse(f"Redirect to: <a href='{redirect}'>{redirect}</a>")
+        return HttpResponseRedirect(redirect_to=redirect)
 
     elif github_credentials.granted is False:
         github_credentials.granted = True
@@ -2229,7 +2797,7 @@ def get_discord_token(request):
         logger.debug("User does not have an active 4Geeks Plus subscription")
         return Response(status=status.HTTP_403_FORBIDDEN)
 
-    token, created = Token.get_or_create(user=user, token_type="temporal")
+    token, created = Token.get_or_create(user=user, token_type="short")
     if not token:
         raise ValidationError
     query_string = f"token={token}|cohort_slug={cohort_slug}|url={url}".encode("utf-8")
@@ -2526,6 +3094,21 @@ def pick_password(request, token):
                 token_instance.delete()
 
             UserInvite.objects.filter(email=user.email, is_email_validated=False).update(is_email_validated=True)
+
+            # Add user to cohort when invite has a cohort (e.g. subscribe-with-cohort flow)
+            if invite is not None and getattr(invite, "cohort", None) is not None:
+                role = "STUDENT"
+                if invite.role is not None and invite.role.slug != "student":
+                    role = invite.role.slug.upper()
+                cu = CohortUser.objects.filter(user=user, cohort=invite.cohort).first()
+                if cu is None:
+                    CohortUser(
+                        user=user,
+                        cohort=invite.cohort,
+                        role=role,
+                        educational_status="ACTIVE",
+                        finantial_status=UP_TO_DATE,
+                    ).save()
 
             callback = request.POST.get("callback", None)
             if callback is not None and callback != "":
@@ -2950,7 +3533,7 @@ def get_google_token(request, token=None):
     if token is not None:
         # you can only connect to google with temporal short lasting tokens
         token = Token.get_valid(token)
-        if token is None or token.token_type not in ["temporal", "one_time"]:
+        if token is None or token.token_type not in ["temporal", "one_time", "short"]:
             raise ValidationException("Invalid or inactive token", code=403, slug="invalid-token")
 
     # set academy settings automatically
@@ -2990,6 +3573,7 @@ def get_google_token(request, token=None):
                 )
 
             scopes.append("https://www.googleapis.com/auth/pubsub")
+            scopes.append("https://www.googleapis.com/auth/meetings.space.readonly")
 
     # Add academy_settings to state (avoiding duplication)
     state += f"&academysettings={academy_settings}"
@@ -3063,7 +3647,7 @@ async def save_google_token(request):
     token = None
     if "token" in state and state["token"][0] != "":
         token = await Token.aget_valid(state["token"][0])
-        if not token or token.token_type not in ["temporal", "one_time"]:
+        if not token or token.token_type not in ["temporal", "one_time", "short"]:
             logger.debug(f'Token {state["token"][0]} not found or is expired')
             raise ValidationException(
                 "Token was not found or is expired, please use a different token", code=404, slug="token-not-found"
@@ -3797,17 +4381,104 @@ class ProfileMePictureView(APIView):
 
 
 class GithubMeView(APIView):
+    permission_classes = [IsAuthenticated]
 
-    def delete(self, request):
-        instance = CredentialsGithub.objects.filter(user=request.user).first()
+    async def get(self, request):
+        credentials = await CredentialsGithub.objects.filter(user_id=request.user.id).afirst()
+        if not credentials:
+            raise ValidationException(
+                "This user does not have a Github account associated with this account",
+                code=404,
+                slug="not-found",
+            )
+
+        valid = False
+        if credentials.token:
+            try:
+
+                def _check_github_token():
+                    github = Github(token=credentials.token)
+                    github.get("/user")
+                    return True
+
+                valid = await sync_to_async(_check_github_token)()
+            except GithubAuthException:
+                valid = False
+            except Exception:
+                valid = False
+
+        return Response(
+            {
+                "username": credentials.username or "",
+                "avatar_url": credentials.avatar_url or "",
+                "name": credentials.name or "",
+                "scopes": credentials.scopes or "",
+                "valid": valid,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    async def delete(self, request):
+        instance = await CredentialsGithub.objects.filter(user_id=request.user.id).afirst()
         if not instance:
             raise ValidationException(
                 "This user not have Github account associated with with account", code=404, slug="not-found"
             )
 
-        instance.delete()
+        await instance.adelete()
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+class GithubUserByIdView(APIView):
+    """
+    GET /v1/auth/github/<user_id>: academy staff with read_student can check
+    a student's GitHub connection in the given academy. Requires Academy header or academy query param.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    @capable_of("read_student")
+    def get(self, request, user_id, academy_id=None):
+        profile = ProfileAcademy.objects.filter(
+            academy_id=academy_id, user_id=user_id, role__slug="student"
+        ).first()
+        if not profile:
+            raise ValidationException(
+                "Student not found in this academy",
+                code=404,
+                slug="profile-academy-not-found",
+            )
+
+        credentials = CredentialsGithub.objects.filter(user_id=user_id).first()
+        if not credentials:
+            raise ValidationException(
+                "This user does not have a Github account associated with this account",
+                code=404,
+                slug="not-found",
+            )
+
+        valid = False
+        if credentials.token:
+            try:
+                github = Github(token=credentials.token)
+                github.get("/user")
+                valid = True
+            except GithubAuthException:
+                valid = False
+            except Exception:
+                valid = False
+
+        return Response(
+            {
+                "username": credentials.username or "",
+                "avatar_url": credentials.avatar_url or "",
+                "name": credentials.name or "",
+                "scopes": credentials.scopes or "",
+                "valid": valid,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 # app/user/:id

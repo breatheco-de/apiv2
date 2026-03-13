@@ -486,7 +486,7 @@ class ForwardMeetUrl:
 
             if credentials is None:
                 current_path = self.request.get_full_path()
-                token, _ = Token.get_or_create(user=self.request.user, token_type="temporal")
+                token, _ = Token.get_or_create(user=self.request.user, token_type="short")
                 encoded_path = urllib.parse.urlencode({"url": current_path})
 
                 # Use minimal scopes for basic profile and email access only

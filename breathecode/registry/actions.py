@@ -29,6 +29,7 @@ from .utils import (
     AssetErrorLogType,
     AssetException,
     ExerciseValidator,
+    get_base_path_from_readme_url,
     LessonValidator,
     OriginalityWrapper,
     ProjectValidator,
@@ -156,6 +157,9 @@ def pull_from_github(asset_slug, author_id=None, override_meta=False):
         else:
             asset = pull_learnpack_asset(g, asset, override_meta=True)
 
+        if asset.sync_status == "ERROR":
+            return asset
+
         asset.status_text = "Successfully Synched"
         asset.sync_status = "OK"
         asset.last_synch_at = timezone.now()
@@ -223,6 +227,13 @@ def push_to_github(asset_slug, owner=None):
             raise Exception(
                 f"Github credentials for user {owner.first_name} {owner.last_name} (id: {owner.id}) not found when synching asset {asset_slug}"
             )
+
+        # For QUIZ assets, regenerate config from Assessment before pushing
+        # This ensures we always push the latest config, even if async_generate_quiz_config
+        # hasn't run yet after recent Assessment updates
+        if asset.asset_type == "QUIZ" and asset.assessment:
+            asset.config = asset.generate_quiz_json()
+            asset.save()
 
         g = Github(credentials.token)
         asset = push_github_asset(g, asset)
@@ -480,7 +491,7 @@ def pull_github_lesson(github, asset: Asset, override_meta=False):
     except Exception as e:
         error_str = str(e).lower()
         if "404" in error_str or "not found" in error_str:
-            raise Exception(f"Repository {org_name}/{repo_name} not found or not accessible")
+            raise Exception(f"Repository {org_name}/{repo_name} not found or not accessible. Who's the owner of this asset? does it have access? Also check the github url's")
         elif "403" in error_str or "forbidden" in error_str:
             raise Exception(
                 f"Access forbidden to repository {org_name}/{repo_name}. Check GitHub credentials and repository permissions."
@@ -1073,163 +1084,12 @@ class AssetThumbnailGenerator:
         return self.asset
 
 
-def process_asset_config(asset, config):
-
-    if not config:
-        raise Exception("No configuration json found")
-
-    if asset.asset_type in ["QUIZ"]:
-        raise Exception("Can only process exercise and project config objects")
-
-    # only replace title and description of English language
-    if "title" in config:
-        if isinstance(config["title"], str):
-            if asset.lang in ["", "us", "en"] or asset.title == "" or asset.title is None:
-                asset.title = config["title"]
-        elif isinstance(config["title"], dict) and asset.lang:
-            if asset.lang in ["us", "en"]:
-                asset.title = config["title"].get("en") or config["title"].get("us")
-            elif asset.lang in config["title"]:
-                asset.title = config["title"][asset.lang]
-
-    if "description" in config:
-        if isinstance(config["description"], str):
-            # avoid replacing descriptions for other languages
-            if asset.lang in ["", "us", "en"] or asset.description == "" or asset.description is None:
-                asset.description = config["description"]
-        # there are multiple translations, and the translation exists for this lang
-        elif isinstance(config["description"], dict) and asset.lang:
-            if asset.lang in ["us", "en"]:
-                asset.description = config["description"].get("en") or config["description"].get("us")
-            elif asset.lang in config["description"]:
-                asset.description = config["description"][asset.lang]
-
-    if "preview" in config:
-        asset.preview = config["preview"]
-    else:
-        raise Exception("Missing preview URL")
-
-    if "video-id" in config:
-        asset.solution_video_url = get_video_url(str(config["video-id"]))
-        asset.with_video = True
-
-    if "video" in config and isinstance(config["video"], dict):
-        if "intro" in config["video"] and config["video"]["intro"] is not None:
-            if isinstance(config["video"]["intro"], str):
-                asset.intro_video_url = get_video_url(str(config["video"]["intro"]))
-            else:
-                if "en" in config["video"]["intro"]:
-                    config["video"]["intro"]["us"] = config["video"]["intro"]["en"]
-                elif "us" in config["video"]["intro"]:
-                    config["video"]["intro"]["en"] = config["video"]["intro"]["us"]
-
-                if asset.lang in config["video"]["intro"]:
-                    asset.intro_video_url = get_video_url(str(config["video"]["intro"][asset.lang]))
-
-        if "solution" in config["video"] and config["video"]["solution"] is not None:
-            if isinstance(config["video"]["solution"], str):
-                asset.solution_video_url = get_video_url(str(config["video"]["solution"]))
-                asset.with_video = True
-                asset.with_solutions = True
-            else:
-                if "en" in config["video"]["solution"]:
-                    config["video"]["solution"]["us"] = config["video"]["solution"]["en"]
-                elif "us" in config["video"]["solution"]:
-                    config["video"]["solution"]["en"] = config["video"]["solution"]["us"]
-
-                if asset.lang in config["video"]["solution"]:
-                    asset.with_solutions = True
-                    asset.solution_video_url = get_video_url(str(config["video"]["solution"][asset.lang]))
-                    asset.with_video = True
-
-    if "duration" in config:
-        asset.duration = config["duration"]
-
-    if "template_url" in config:
-        if asset.asset_type != "PROJECT":
-            asset.log_error("template-url", "Only asset types projects can have templates")
-        else:
-            asset.template_url = config["template_url"]
-    else:
-        asset.template_url = None
-
-    if "difficulty" in config:
-        asset.difficulty = config["difficulty"].upper()
-    if "videoSolutions" in config:
-        asset.with_solutions = True
-        asset.with_video = True
-
-    if "editor" in config:
-        if "agent" in config["editor"]:
-            asset.agent = config["editor"]["agent"]
-
-    if "solution" in config:
-        asset.with_solutions = True
-        if isinstance(config["solution"], str):
-            asset.solution_url = config["solution"]
-        elif isinstance(config["solution"], dict):
-            if asset.lang in ["us", "en"]:
-                if "us" in config["solution"]:
-                    asset.solution_url = config["solution"]["us"]
-                if "en" in config["solution"]:
-                    asset.solution_url = config["solution"]["en"]
-            elif asset.lang in config["solution"]:
-                asset.solution_url = config["solution"][asset.lang]
-
-    if "grading" not in config and ("projectType" not in config or config["projectType"] != "tutorial"):
-        asset.interactive = False
-    elif "projectType" in config and config["projectType"] == "tutorial":
-        asset.gitpod = "localhostOnly" not in config or not config["localhostOnly"]
-        asset.interactive = True
-    elif "grading" in config and config["grading"] in ["isolated", "incremental"]:
-        asset.gitpod = "localhostOnly" not in config or not config["localhostOnly"]
-        asset.interactive = True
-
-    if "technologies" in config:
-        asset.technologies.clear()
-        for tech_slug in config["technologies"]:
-            technology = AssetTechnology.get_or_create(tech_slug)
-            # if the technology is not multi lang
-            if technology.lang is not None and technology.lang != "":
-                # skip technology because it does not match the asset lang
-                if technology.lang in ["us", "en"] and asset.lang not in ["us", "en"]:
-                    continue
-                elif technology.lang != asset.lang:
-                    continue
-            asset.technologies.add(technology)
-
-    if "delivery" in config:
-        if "instructions" in config["delivery"]:
-            if isinstance(config["delivery"]["instructions"], str):
-                asset.delivery_instructions = config["delivery"]["instructions"]
-            elif (
-                isinstance(config["delivery"]["instructions"], dict)
-                and asset.lang in config["delivery"]["instructions"]
-            ):
-                asset.delivery_instructions = config["delivery"]["instructions"][asset.lang]
-
-        if "formats" in config["delivery"]:
-            if isinstance(config["delivery"]["formats"], list):
-                asset.delivery_formats = ",".join(config["delivery"]["formats"])
-            elif isinstance(config["delivery"]["formats"], str):
-                asset.delivery_formats = config["delivery"]["formats"]
-
-        if "url" in asset.delivery_formats:
-            if "regex" in config["delivery"] and isinstance(config["delivery"]["regex"], str):
-                asset.delivery_regex_url = config["delivery"]["regex"].replace("\\\\", "\\")
-    else:
-        asset.delivery_instructions = ""
-        asset.delivery_formats = "url"
-        asset.delivery_regex_url = ""
-
-    if "gitpod" in config:
-        if config["gitpod"] in ["True", "true", "1", True]:
-            asset.gitpod = True
-        elif config["gitpod"] in ["False", "false", "0", False]:
-            asset.gitpod = False
-
-    asset.save()
-    return asset
+def sync_asset_fields_to_config(asset: Asset, updated_fields: dict) -> dict:
+    """
+    Sync asset fields to asset.config when fields are updated via serializer.
+    Delegates to Asset.sync_fields_to_learn_config for the canonical mapping.
+    """
+    return Asset.sync_fields_to_learn_config(asset, updated_fields)
 
 
 def pull_learnpack_asset(github, asset: Asset, override_meta):
@@ -1286,38 +1146,44 @@ def pull_learnpack_asset(github, asset: Asset, override_meta):
     else:
         lang = "." + lang
 
+    base_path = get_base_path_from_readme_url(asset.readme_url)
+    ref = branch_name or "main"
+
     # Try to get README file with better error handling
     readme_file = None
     readme_filename = f"README{lang}.md"
+    readme_path = f"{base_path}/{readme_filename}" if base_path else readme_filename
     try:
-        readme_file = repo.get_contents(readme_filename)
-        logger.debug(f"Successfully retrieved {readme_filename} from {org_name}/{repo_name}")
+        readme_file = repo.get_contents(readme_path, ref=ref)
+        logger.debug(f"Successfully retrieved {readme_path} from {org_name}/{repo_name}")
     except Exception as e:
         error_str = str(e).lower()
         if "404" in error_str or "not found" in error_str:
-            raise Exception(f"README file '{readme_filename}' not found in repository {org_name}/{repo_name}")
+            raise Exception(f"README file '{readme_path}' not found in repository {org_name}/{repo_name}")
         elif "403" in error_str or "forbidden" in error_str:
             logger.warning(
-                f"Access forbidden for {readme_filename} in repository {org_name}/{repo_name}. "
+                f"Access forbidden for {readme_path} in repository {org_name}/{repo_name}. "
                 f"Repository is accessible but file permissions may be restricted."
             )
-            raise Exception(f"Access forbidden to README file '{readme_filename}' in repository {org_name}/{repo_name}")
+            raise Exception(f"Access forbidden to README file '{readme_path}' in repository {org_name}/{repo_name}")
         elif "401" in error_str or "unauthorized" in error_str:
             raise Exception(
-                f"Authentication failed when accessing README file '{readme_filename}' in repository {org_name}/{repo_name}"
+                f"Authentication failed when accessing README file '{readme_path}' in repository {org_name}/{repo_name}"
             )
         else:
             raise Exception(
-                f"Error retrieving README file '{readme_filename}' from repository {org_name}/{repo_name}: {str(e)}"
+                f"Error retrieving README file '{readme_path}' from repository {org_name}/{repo_name}: {str(e)}"
             )
 
     # Try to get configuration file with better error handling
     learn_file = None
     config_files = ["learn.json", ".learn/learn.json", "bc.json", ".learn/bc.json"]
+    if base_path:
+        config_files = [f"{base_path}/{c}" for c in config_files]
 
     for config_filename in config_files:
         try:
-            learn_file = repo.get_contents(config_filename)
+            learn_file = repo.get_contents(config_filename, ref=ref)
             logger.debug(f"Successfully retrieved config file {config_filename} from {org_name}/{repo_name}")
             break
         except Exception as e:
@@ -1367,21 +1233,24 @@ def pull_learnpack_asset(github, asset: Asset, override_meta):
         except Exception as e:
             raise Exception(f"Error processing configuration file: {str(e)}")
 
-    asset = process_asset_config(asset, config)
+    if config is not None:
+        asset = asset.apply_learn_config(config)
 
     if asset.asset_type == "PROJECT" and asset.solution_url:
         from breathecode.services.github import Github as GithubService
 
         github_service = GithubService()
         solution_url_info = github_service.parse_github_url(asset.solution_url)
-        solution_path = solution_url_info.get("path")
-        solution_branch = solution_url_info.get("branch")
-        solution_owner = solution_url_info.get("owner")
-        solution_repo = solution_url_info.get("repo")
 
-        if solution_path and solution_branch:
+        solution_path = solution_url_info.get("path") if solution_url_info else None
+        solution_branch = solution_url_info.get("branch") if solution_url_info else None
+        solution_owner = solution_url_info.get("owner") if solution_url_info else None
+        solution_repo_name = solution_url_info.get("repo") if solution_url_info else None
+
+        if solution_path and solution_branch and solution_owner and solution_repo_name:
             try:
-                solution_repo = github.get_repo(f"{solution_owner}/{solution_repo}")
+                repo_full_name = f"{solution_owner}/{solution_repo_name}"
+                solution_repo = github.get_repo(repo_full_name)
                 solution_blob = get_blob_content(solution_repo, solution_path, branch=solution_branch)
                 if solution_blob is not None:
                     raw_content = base64.b64decode(solution_blob.content).decode("utf-8")
@@ -1390,23 +1259,40 @@ def pull_learnpack_asset(github, asset: Asset, override_meta):
                         f"Successfully retrieved solution README from {asset.solution_url} for asset {asset.slug}"
                     )
                 else:
-                    error_msg = f"Solution file '{solution_path}' not found in repository on branch '{solution_branch}'"
+                    error_msg = (
+                        f"Expected a solution file at '{solution_path}' in repository '{repo_full_name}' "
+                        f"on branch '{solution_branch}', but GitHub did not return any file content."
+                    )
                     logger.error(f"{error_msg} for asset {asset.slug}")
                     raise Exception(error_msg)
             except Exception as e:
                 error_str = str(e).lower()
                 if "404" in error_str or "not found" in error_str:
-                    error_msg = f"Solution repository {solution_repo} not found or not accessible"
+                    error_msg = (
+                        f"Expected to read the solution from repository '{repo_full_name}' "
+                        f"(URL: {asset.solution_url}), but GitHub returned a 404/Not Found response. "
+                        f"Verify that the repository, branch '{solution_branch}', and file path '{solution_path}' exist."
+                    )
                 elif "403" in error_str or "forbidden" in error_str:
-                    error_msg = f"Access forbidden to solution repository {solution_repo}. Check GitHub credentials and repository permissions."
+                    error_msg = (
+                        f"Expected to read the solution from repository '{repo_full_name}', "
+                        f"but access was forbidden by GitHub. Check credentials and repository permissions."
+                    )
                 elif "401" in error_str or "unauthorized" in error_str:
-                    error_msg = f"GitHub authentication failed for solution repository {solution_repo}. Check GitHub credentials."
+                    error_msg = (
+                        f"Expected to authenticate against GitHub to read the solution from repository '{repo_full_name}', "
+                        f"but authentication failed. Check GitHub credentials."
+                    )
                 else:
-                    error_msg = f"Error accessing solution README file at {asset.solution_url}: {str(e)}"
+                    error_msg = (
+                        f"Expected to retrieve the solution file from GitHub using URL {asset.solution_url}, "
+                        f"but an unexpected error occurred: {str(e)}"
+                    )
 
                 logger.error(f"{error_msg} for asset {asset.slug}")
                 raise Exception(error_msg)
         else:
+            # Fallback: treat solution_url as a direct HTTP endpoint instead of a GitHub file URL.
             try:
                 response = requests.get(asset.solution_url)
                 if response.status_code == 200:
@@ -1417,11 +1303,17 @@ def pull_learnpack_asset(github, asset: Asset, override_meta):
                         f"Successfully retrieved solution README via direct GET from {asset.solution_url} for asset {asset.slug}"
                     )
                 else:
-                    error_msg = f"Failed to retrieve solution README via direct GET from {asset.solution_url}, status code: {response.status_code}"
+                    error_msg = (
+                        f"Expected HTTP 200 when requesting the solution README from {asset.solution_url}, "
+                        f"but received status code {response.status_code} instead."
+                    )
                     logger.error(f"{error_msg} for asset {asset.slug}")
                     raise Exception(error_msg)
             except Exception as e:
-                error_msg = f"Error making direct GET request to {asset.solution_url}: {str(e)}"
+                error_msg = (
+                    f"Expected to retrieve the solution README via direct HTTP GET from {asset.solution_url}, "
+                    f"but the request failed with error: {str(e)}"
+                )
                 logger.error(f"{error_msg} for asset {asset.slug}")
                 raise Exception(error_msg)
 
@@ -1459,7 +1351,7 @@ def pull_repo_dependencies(github, asset):
     except Exception as e:
         error_str = str(e).lower()
         if "404" in error_str or "not found" in error_str:
-            raise Exception(f"Repository {org_name}/{repo_name} not found or not accessible for dependency analysis")
+            raise Exception(f"Repository {org_name}/{repo_name} not found or not accessible for dependency analysis. Make sure this repo is accessible by the owner of the asset")
         elif "403" in error_str or "forbidden" in error_str:
             raise Exception(
                 f"Access forbidden to repository {org_name}/{repo_name} for dependency analysis. Check GitHub credentials and repository permissions."
@@ -1593,7 +1485,7 @@ def pull_quiz_asset(github, asset: Asset):
     except Exception as e:
         error_str = str(e).lower()
         if "404" in error_str or "not found" in error_str:
-            raise Exception(f"Repository {org_name}/{repo_name} not found or not accessible")
+            raise Exception(f"Repository {org_name}/{repo_name} not found or not accessible. Who's the owner of this asset? does it have access? Also check the github url's")
         elif "403" in error_str or "forbidden" in error_str:
             raise Exception(
                 f"Access forbidden to repository {org_name}/{repo_name}. Check GitHub credentials and repository permissions."
@@ -1929,6 +1821,7 @@ def push_project_or_exercise_to_github(asset_slug, create_or_update=False, organ
         has_existing_repo = bool(asset.readme_url and "github.com" in asset.readme_url) or bool(
             asset.url and "github.com" in asset.url
         )
+        branch_name = None
 
         if has_existing_repo:
             # Repository exists, we're in update mode
@@ -2050,6 +1943,9 @@ def push_project_or_exercise_to_github(asset_slug, create_or_update=False, organ
             repo = github.get_repo(f"{org_name}/{repo_name}")
             logger.debug(f"Using existing repository {org_name}/{repo_name}")
 
+        base_path = get_base_path_from_readme_url(asset.readme_url) if operation_mode == "update" else ""
+        branch = branch_name or "main"
+
         # Upload preview image first (if exists)
         if asset.preview and asset.config:
             logger.debug(f"Uploading preview image for asset {asset.slug}")
@@ -2126,21 +2022,23 @@ def push_project_or_exercise_to_github(asset_slug, create_or_update=False, organ
                             extension = ".png"  # Default
 
                     preview_filename = f"preview{extension}"
+                    preview_path = f"{base_path}/{preview_filename}" if base_path else preview_filename
 
                     # Upload image to repository
                     try:
                         result = set_blob_content(
                             repo,
-                            preview_filename,
+                            preview_path,
                             image_content,
                             preview_filename,
+                            branch=branch,
                             create_or_update=True,
                             is_binary=True,
                         )
 
                         if result and "commit" in result:
                             # Update asset.config with new preview URL
-                            new_preview_url = f"{asset.url}/blob/main/{preview_filename}?raw=true"
+                            new_preview_url = f"{asset.url}/blob/{branch}/{preview_path}?raw=true"
                             asset.config["preview"] = new_preview_url
                             asset.preview = new_preview_url
                             asset.save()
@@ -2162,19 +2060,22 @@ def push_project_or_exercise_to_github(asset_slug, create_or_update=False, organ
                 logger.warning(f"Error processing preview image for asset {asset.slug}: {str(e)}")
                 # Don't fail the entire process, just continue
 
-        # Upload learn.json (asset.config)
-        if asset.config:
+        # Upload learn.json (built from asset via canonical mapping)
+        config = asset.to_learn_config() if asset.asset_type in ["PROJECT", "EXERCISE"] else asset.config
+        if config:
             logger.debug(f"Uploading learn.json for asset {asset.slug}")
-            config_content = json.dumps(asset.config, indent=4)
+            config_content = json.dumps(config, indent=4)
 
             # Determine config file location
             config_files = ["learn.json", ".learn/learn.json", "bc.json", ".learn/bc.json"]
-            config_path = "learn.json"  # Default
+            if base_path:
+                config_files = [f"{base_path}/{c}" for c in config_files]
+            config_path = config_files[0]  # Default
 
             # Try to find existing config file location
             for config_file in config_files:
                 try:
-                    existing_file = get_blob_content(repo, config_file)
+                    existing_file = get_blob_content(repo, config_file, branch=branch)
                     if existing_file is not None:
                         config_path = config_file
                         logger.debug(f"Found existing config at {config_file}")
@@ -2185,7 +2086,9 @@ def push_project_or_exercise_to_github(asset_slug, create_or_update=False, organ
             # Upload or update config file
             try:
                 logger.debug(f"Attempting to upload/update {config_path} in {repo.full_name}")
-                result = set_blob_content(repo, config_path, config_content, "learn.json", create_or_update=True)
+                result = set_blob_content(
+                    repo, config_path, config_content, "learn.json", branch=branch, create_or_update=True
+                )
                 if result and "commit" in result:
                     asset.github_commit_hash = result["commit"].sha
                     logger.debug(f"Successfully uploaded/updated {config_path}")
@@ -2217,10 +2120,13 @@ def push_project_or_exercise_to_github(asset_slug, create_or_update=False, organ
             # Decode the readme content
             readme_content = base64.b64decode(translation_asset.readme_raw.encode("utf-8")).decode("utf-8")
 
+            readme_path = f"{base_path}/{readme_filename}" if base_path else readme_filename
             # Upload or update README file
             try:
-                logger.debug(f"Attempting to upload/update {readme_filename} in {repo.full_name}")
-                result = set_blob_content(repo, readme_filename, readme_content, readme_filename, create_or_update=True)
+                logger.debug(f"Attempting to upload/update {readme_path} in {repo.full_name}")
+                result = set_blob_content(
+                    repo, readme_path, readme_content, readme_filename, branch=branch, create_or_update=True
+                )
                 if result and "commit" in result:
                     if translation_asset == asset:
                         asset.github_commit_hash = result["commit"].sha

@@ -64,6 +64,16 @@ from .models import (
 logger = getLogger(__name__)
 
 
+def _raise_if_task_manager_failed(task_handler: Any) -> None:
+    task_manager = getattr(task_handler, "task_manager", None)
+    if task_manager is None:
+        return
+
+    if task_manager.status in ["ERROR", "ABORTED"]:
+        message = task_manager.status_message or "Task execution failed"
+        raise Exception(message)
+
+
 def calculate_relative_delta(unit: float, unit_type: str):
     delta_args = {}
     if unit_type == "DAY":
@@ -1199,6 +1209,455 @@ def get_balance_by_resource(
     return result
 
 
+def check_scheduler_renewal_issues(scheduler, utc_now):
+    """
+    Return a list of issue strings describing why renewal might be blocked for this scheduler.
+    Mirrors diagnose_scheduler check_renewal_conditions; used by get_service_stock_status_for_user.
+    """
+    from breathecode.payments.models import (
+        PlanFinancing,
+        ServiceStockScheduler,
+        Subscription,
+    )
+
+    issues: list[str] = []
+    if not isinstance(scheduler, ServiceStockScheduler):
+        return issues
+
+    if scheduler.plan_handler and scheduler.plan_handler.subscription_id:
+        sub = scheduler.plan_handler.subscription
+        if sub.valid_until and sub.valid_until < utc_now:
+            issues.append(f"Subscription {sub.id} is expired (valid_until: {sub.valid_until})")
+        if sub.next_payment_at < utc_now:
+            issues.append(f"Subscription {sub.id} needs to be paid (next_payment_at: {sub.next_payment_at})")
+        if sub.status in (Subscription.Status.DEPRECATED, Subscription.Status.EXPIRED, Subscription.Status.PAYMENT_ISSUE):
+            issues.append(f"Subscription {sub.id} has invalid status: {sub.status}")
+        if scheduler.plan_handler.handler:
+            si = scheduler.plan_handler.handler.service_item
+            if not si.is_renewable:
+                issues.append(f"Service item {si.id} is not renewable (is_renewable=False)")
+            if si.service.type != "VOID":
+                key = si.service.type.lower()
+                if not getattr(sub, f"selected_{key}", None):
+                    issues.append(f"Subscription has no linked resource for service {si.service.slug} (type: {si.service.type})")
+
+    elif scheduler.plan_handler and scheduler.plan_handler.plan_financing_id:
+        pf = (
+            PlanFinancing.objects.select_related(
+                "selected_mentorship_service_set", "selected_cohort_set", "selected_event_type_set"
+            )
+            .prefetch_related("plans")
+            .filter(id=scheduler.plan_handler.plan_financing_id)
+            .first()
+        )
+        if pf:
+            if pf.plan_expires_at and pf.plan_expires_at < utc_now:
+                issues.append(f"Plan financing {pf.id} is expired (plan_expires_at: {pf.plan_expires_at})")
+            if pf.status == PlanFinancing.Status.ACTIVE and pf.next_payment_at < utc_now:
+                issues.append(f"Plan financing {pf.id} needs to be paid (next_payment_at: {pf.next_payment_at})")
+            if pf.status in (PlanFinancing.Status.CANCELLED, PlanFinancing.Status.DEPRECATED, PlanFinancing.Status.EXPIRED):
+                issues.append(f"Plan financing {pf.id} has invalid status: {pf.status}")
+            if scheduler.plan_handler.handler:
+                si = scheduler.plan_handler.handler.service_item
+                if not si.is_renewable:
+                    issues.append(
+                        f"Service item {si.id} is not renewable; first consumable may still be created."
+                    )
+                if si.service.type != "VOID":
+                    key = si.service.type.lower()
+                    if not getattr(pf, f"selected_{key}", None):
+                        plans_have = [p.id for p in pf.plans.all() if getattr(p, key, None)]
+                        if plans_have:
+                            issues.append(
+                                f"Plan financing {pf.id} has no linked resource for {si.service.slug}, "
+                                f"but plans {plans_have} do; resource should be copied to plan financing."
+                            )
+                        else:
+                            issues.append(
+                                f"Plan financing {pf.id} has no linked resource for service {si.service.slug} "
+                                "(consumable cannot be created without it)."
+                            )
+
+    elif scheduler.subscription_handler_id:
+        sub = scheduler.subscription_handler.subscription
+        if sub.valid_until and sub.valid_until < utc_now:
+            issues.append(f"Subscription {sub.id} is expired (valid_until: {sub.valid_until})")
+        if sub.next_payment_at < utc_now:
+            issues.append(f"Subscription {sub.id} needs to be paid (next_payment_at: {sub.next_payment_at})")
+        if sub.status in (Subscription.Status.DEPRECATED, Subscription.Status.EXPIRED, Subscription.Status.PAYMENT_ISSUE):
+            issues.append(f"Subscription {sub.id} has invalid status: {sub.status}")
+    else:
+        issues.append("Scheduler has no plan_handler or subscription_handler")
+
+    if scheduler.valid_until and scheduler.valid_until > utc_now:
+        issues.append(
+            f"Scheduler does not need renewal yet (valid_until={scheduler.valid_until} > now)"
+        )
+
+    return issues
+
+
+def get_service_stock_status_for_user(
+    user_id: int,
+    academy_id: int,
+    include_balance: bool = False,
+    request: Optional[WSGIRequest] = None,
+) -> Optional[dict]:
+    """
+    Build service stock status payload for a user in an academy: schedulers, issues, optional balance.
+    Returns None if user not found or has no link to the academy.
+    """
+    from breathecode.payments.models import (
+        PlanFinancing,
+        PlanServiceItemHandler,
+        ServiceStockScheduler,
+        Subscription,
+    )
+
+    user = User.objects.filter(id=user_id).first()
+    if not user:
+        return None
+
+    utc_now = timezone.now()
+
+    user_q = (
+        Q(plan_handler__subscription__user_id=user_id)
+        | Q(plan_handler__plan_financing__user_id=user_id)
+        | Q(subscription_handler__subscription__user_id=user_id)
+        | Q(subscription_seat__user_id=user_id)
+        | Q(plan_financing_seat__user_id=user_id)
+        | Q(subscription_billing_team__subscription__user_id=user_id)
+        | Q(plan_financing_team__financing__user_id=user_id)
+    )
+    academy_q = (
+        Q(plan_handler__subscription__academy_id=academy_id)
+        | Q(plan_handler__plan_financing__academy_id=academy_id)
+        | Q(subscription_handler__subscription__academy_id=academy_id)
+        | Q(subscription_seat__billing_team__subscription__academy_id=academy_id)
+        | Q(plan_financing_seat__team__financing__academy_id=academy_id)
+        | Q(plan_financing_team__financing__academy_id=academy_id)
+        | Q(subscription_billing_team__subscription__academy_id=academy_id)
+    )
+
+    schedulers_qs = (
+        ServiceStockScheduler.objects.filter(user_q, academy_q)
+        .select_related(
+            "plan_handler__subscription",
+            "plan_handler__plan_financing",
+            "plan_handler__handler__service_item__service",
+            "subscription_handler__subscription",
+            "subscription_handler__service_item__service",
+            "subscription_seat",
+            "plan_financing_seat",
+        )
+        .prefetch_related("consumables")
+    )
+
+    schedulers_payload: list[dict] = []
+    for s in schedulers_qs:
+        if s.plan_handler_id:
+            service_item = s.plan_handler.handler.service_item if s.plan_handler.handler_id else None
+            subscription = getattr(s.plan_handler, "subscription", None)
+            plan_financing = getattr(s.plan_handler, "plan_financing", None)
+            source_type = "subscription" if subscription else "plan_financing"
+            source_id = subscription.id if subscription else (plan_financing.id if plan_financing else None)
+        else:
+            service_item = s.subscription_handler.service_item if s.subscription_handler_id else None
+            subscription = s.subscription_handler.subscription if s.subscription_handler_id else None
+            plan_financing = None
+            source_type = "subscription"
+            source_id = subscription.id if subscription else None
+
+        resource = None
+        if subscription:
+            resource = subscription
+        elif plan_financing:
+            resource = plan_financing
+
+        resource_linked = True
+        if service_item and resource and service_item.service.type != "VOID":
+            key = service_item.service.type.lower()
+            resource_linked = bool(getattr(resource, f"selected_{key}", None))
+
+        consumables_list = list(s.consumables.all().order_by("-id")[:5])
+        consumables_sample = []
+        for c in consumables_list:
+            v = c.valid_until
+            if v:
+                v = re.sub(r"\+00:00$", "Z", v.replace(tzinfo=UTC).isoformat())
+            consumables_sample.append({
+                "id": c.id,
+                "how_many": c.how_many,
+                "valid_until": v,
+                "user_id": c.user_id,
+            })
+
+        scheduler_valid_until = s.valid_until
+        if scheduler_valid_until:
+            scheduler_valid_until = re.sub(
+                r"\+00:00$", "Z", scheduler_valid_until.replace(tzinfo=UTC).isoformat()
+            )
+
+        seat_id = None
+        if s.subscription_seat_id:
+            seat_id = s.subscription_seat_id
+        elif s.plan_financing_seat_id:
+            seat_id = s.plan_financing_seat_id
+
+        schedulers_payload.append({
+            "id": s.id,
+            "source_type": source_type,
+            "source_id": source_id,
+            "seat_id": seat_id,
+            "service": service_item.service.slug if service_item else None,
+            "service_item_id": service_item.id if service_item else None,
+            "renew_at": getattr(service_item, "renew_at", None) if service_item else None,
+            "renew_at_unit": getattr(service_item, "renew_at_unit", None) if service_item else None,
+            "is_renewable": getattr(service_item, "is_renewable", None) if service_item else None,
+            "scheduler_valid_until": scheduler_valid_until,
+            "resource_linked": resource_linked,
+            "consumables_count": s.consumables.count(),
+            "consumables_sample": consumables_sample,
+            "issues": check_scheduler_renewal_issues(s, utc_now),
+        })
+
+    if not schedulers_payload and not (
+        Subscription.objects.filter(user_id=user_id, academy_id=academy_id).exists()
+        or PlanFinancing.objects.filter(user_id=user_id, academy_id=academy_id).exists()
+    ):
+        from breathecode.payments.models import SubscriptionSeat, PlanFinancingSeat
+
+        has_seat = (
+            SubscriptionSeat.objects.filter(user_id=user_id, billing_team__subscription__academy_id=academy_id)
+            .exists()
+            or PlanFinancingSeat.objects.filter(user_id=user_id, team__financing__academy_id=academy_id).exists()
+        )
+        if not has_seat:
+            return None
+
+    payload = {
+        "user": {"id": user.id, "email": user.email},
+        "academy_id": academy_id,
+        "schedulers": schedulers_payload,
+    }
+
+    if include_balance:
+        items = Consumable.list(user=user, include_zero_balance=True)
+        mentorship_services = items.filter(mentorship_service_set__isnull=False)
+        cohorts = items.filter(cohort_set__isnull=False)
+        event_types = items.filter(event_type_set__isnull=False)
+        balance = {
+            "mentorship_service_sets": get_balance_by_resource(mentorship_services, "mentorship_service_set"),
+            "cohort_sets": get_balance_by_resource(cohorts, "cohort_set"),
+            "event_type_sets": get_balance_by_resource(event_types, "event_type_set"),
+            "voids": filter_void_consumable_balance(request, items) if request else [],
+        }
+        payload["consumables_balance"] = balance
+
+    return payload
+
+
+def _run_service_stock_build_task_sync(target_type: str, target_id: int, seat_id: Optional[int] = None) -> None:
+    if target_type == "plan_financing":
+        task_handler = tasks.build_service_stock_scheduler_from_plan_financing
+    else:
+        task_handler = tasks.build_service_stock_scheduler_from_subscription
+
+    kwargs = {}
+    if seat_id is not None:
+        kwargs["seat_id"] = seat_id
+
+    if hasattr(task_handler, "apply"):
+        task_handler.apply(args=[target_id], kwargs=kwargs, throw=True)
+        _raise_if_task_manager_failed(task_handler)
+        return
+
+    task_handler(target_id, **kwargs)
+
+
+def _run_renew_consumable_task_sync(service_stock_scheduler_id: int) -> None:
+    task_handler = tasks.renew_consumables
+
+    if hasattr(task_handler, "apply"):
+        task_handler.apply(args=[service_stock_scheduler_id], throw=True)
+        _raise_if_task_manager_failed(task_handler)
+        return
+
+    task_handler(service_stock_scheduler_id)
+
+
+def regenerate_consumable_for_service_stock_scheduler(
+    academy_id: int,
+    service_stock_scheduler_id: int,
+) -> dict:
+    from breathecode.payments.models import ServiceStockScheduler
+
+    academy_q = (
+        Q(plan_handler__subscription__academy_id=academy_id)
+        | Q(plan_handler__plan_financing__academy_id=academy_id)
+        | Q(subscription_handler__subscription__academy_id=academy_id)
+        | Q(subscription_seat__billing_team__subscription__academy_id=academy_id)
+        | Q(subscription_billing_team__subscription__academy_id=academy_id)
+        | Q(plan_financing_seat__team__financing__academy_id=academy_id)
+        | Q(plan_financing_team__financing__academy_id=academy_id)
+    )
+
+    scheduler = ServiceStockScheduler.objects.filter(id=service_stock_scheduler_id).filter(academy_q).first()
+    if not scheduler:
+        raise ValidationException(
+            translation(
+                en="Service stock scheduler not found in this academy",
+                es="Service stock scheduler no encontrado en esta academia",
+                slug="service-stock-scheduler-not-found",
+            ),
+            code=404,
+        )
+
+    execution_error = None
+    error_stage = None
+    consumables_count_before = scheduler.consumables.count()
+    try:
+        _run_renew_consumable_task_sync(service_stock_scheduler_id)
+    except (AbortTask, RetryTask, Exception) as error:
+        execution_error = str(error)
+        error_stage = "renew_consumable"
+
+    scheduler.refresh_from_db()
+    consumables_count_after = scheduler.consumables.count()
+
+    if execution_error is None and consumables_count_after <= consumables_count_before:
+        issues = check_scheduler_renewal_issues(scheduler, timezone.now())
+        prioritized_issue = None
+        priority_tokens = [
+            "needs to be paid",
+            "is expired",
+            "has invalid status",
+            "has no linked resource",
+            "does not need renewal yet",
+        ]
+
+        for token in priority_tokens:
+            prioritized_issue = next((x for x in issues if token in x), None)
+            if prioritized_issue:
+                break
+
+        execution_error = prioritized_issue or "No consumable was created during regeneration"
+        error_stage = "post_condition"
+
+    if execution_error:
+        status = "failed"
+    else:
+        status = "success"
+
+    return {
+        "scheduler": {
+            "id": service_stock_scheduler_id,
+            "academy_id": academy_id,
+        },
+        "status": status,
+        "error_stage": error_stage,
+        "execution_error": execution_error,
+        "message": (
+            "Consumable regeneration executed successfully"
+            if status == "success"
+            else f"Failed while renewing consumables for service stock scheduler: {execution_error}"
+        ),
+    }
+
+
+def regenerate_service_stock_for_target(
+    academy_id: int,
+    plan_financing_id: Optional[int] = None,
+    subscription_id: Optional[int] = None,
+    seat_id: Optional[int] = None,
+) -> dict:
+    """
+    Regenerate service stock schedulers and consumables synchronously for one target.
+    Returns an immediate execution payload so the client can re-fetch schedulers in a separate request.
+    """
+    from breathecode.payments.models import PlanFinancing, ServiceStockScheduler, Subscription
+
+    if bool(plan_financing_id) == bool(subscription_id):
+        raise ValidationException(
+            translation(
+                en="Provide exactly one target: plan_financing_id or subscription_id",
+                es="Debes enviar exactamente un objetivo: plan_financing_id o subscription_id",
+                slug="invalid-target",
+            ),
+            code=400,
+        )
+
+    target_type = "plan_financing" if plan_financing_id else "subscription"
+    target_id = plan_financing_id if plan_financing_id else subscription_id
+
+    if target_type == "plan_financing":
+        target = PlanFinancing.objects.filter(id=target_id, academy_id=academy_id).first()
+    else:
+        target = Subscription.objects.filter(id=target_id, academy_id=academy_id).first()
+
+    if not target:
+        raise ValidationException(
+            translation(
+                en=f"{target_type} not found in this academy",
+                es=f"{target_type} no encontrado en esta academia",
+                slug="target-not-found",
+            ),
+            code=404,
+        )
+
+    user_id = target.user_id
+
+    execution_error = None
+    error_stage = None
+    schedulers_count_before = (
+        ServiceStockScheduler.objects.filter(plan_handler__plan_financing_id=target_id).count()
+        if target_type == "plan_financing"
+        else ServiceStockScheduler.objects.filter(
+            Q(subscription_handler__subscription_id=target_id) | Q(plan_handler__subscription_id=target_id)
+        ).count()
+    )
+    try:
+        _run_service_stock_build_task_sync(target_type, target_id, seat_id=seat_id)
+    except (AbortTask, RetryTask, Exception) as error:
+        execution_error = str(error)
+        error_stage = "build_service_stock_scheduler"
+
+    schedulers_count_after = (
+        ServiceStockScheduler.objects.filter(plan_handler__plan_financing_id=target_id).count()
+        if target_type == "plan_financing"
+        else ServiceStockScheduler.objects.filter(
+            Q(subscription_handler__subscription_id=target_id) | Q(plan_handler__subscription_id=target_id)
+        ).count()
+    )
+
+    if execution_error is None and schedulers_count_before == 0 and schedulers_count_after == 0:
+        execution_error = "No service stock scheduler was created during regeneration"
+        error_stage = "post_condition"
+
+    if execution_error:
+        status = "failed"
+    else:
+        status = "success"
+
+    return {
+        "target": {
+            "type": target_type,
+            "id": target_id,
+            "academy_id": academy_id,
+            "user_id": user_id,
+            "seat_id": seat_id,
+        },
+        "status": status,
+        "error_stage": error_stage,
+        "execution_error": execution_error,
+        "message": (
+            "Service stock regeneration executed successfully"
+            if status == "success"
+            else f"Failed while building service stock schedulers: {execution_error}"
+        ),
+    }
+
+
 # Default configuration for coupon statistics
 DEFAULT_COUPON_STATS_CONFIG = {
     "coupons": {
@@ -1463,6 +1922,159 @@ def validate_and_create_proof_of_payment(
     return x
 
 
+def resolve_user_from_data(data: dict, lang: str) -> User:
+    """Resolve user by id or email from data; raise ValidationException if missing or not found."""
+    user_pk = data.get("user")
+    if user_pk is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="user must be provided",
+                es="user debe ser proporcionado",
+                slug="user-must-be-provided",
+            ),
+            code=400,
+        )
+    args = []
+    kwargs = {}
+    if isinstance(user_pk, int):
+        kwargs["id"] = user_pk
+    else:
+        args.append(Q(email=user_pk) | Q(username=user_pk))
+    user = User.objects.filter(*args, **kwargs).first()
+    if user is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"User not found: {user_pk}",
+                es=f"Usuario no encontrado: {user_pk}",
+                slug="user-not-found",
+            ),
+            code=404,
+        )
+    return user
+
+
+def resolve_payment_method_for_staff(
+    data: dict,
+    academy_id: int,
+    lang: str,
+    allow_card_and_crypto: bool = False,
+) -> PaymentMethod:
+    """Resolve payment_method from data; must exist and belong to academy or global. When allow_card_and_crypto=False, raise if card or crypto."""
+    payment_method = data.get("payment_method")
+    if not payment_method or (
+        payment_method := PaymentMethod.objects.filter(
+            Q(academy__id=academy_id) | Q(academy__isnull=True), id=payment_method
+        ).first()
+    ) is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Payment method not provided",
+                es="Método de pago no proporcionado",
+                slug="payment-method-not-provided",
+            ),
+            code=400,
+        )
+    if not allow_card_and_crypto and (payment_method.is_credit_card or payment_method.is_crypto):
+        raise ValidationException(
+            translation(
+                lang,
+                en="Payment method must not be credit card or crypto for this action",
+                es="El método de pago no debe ser tarjeta de crédito ni cripto para esta acción",
+                slug="payment-method-must-not-be-card-or-crypto",
+            ),
+            code=400,
+        )
+    return payment_method
+
+
+def resolve_currency_for_staff_payment(
+    payment_method: PaymentMethod,
+    academy: Academy,
+    lang: str,
+) -> Currency:
+    """Return payment_method.currency or academy.main_currency; raise if neither."""
+    currency = payment_method.currency or academy.main_currency
+    if not currency:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Currency cannot be determined. Please ensure the payment method has a currency assigned or set a main currency for the academy.",
+                es="No se puede determinar la moneda. Por favor, asegúrate de que el método de pago tenga una moneda asignada o establece una moneda principal para la academia.",
+                slug="currency-not-found",
+            ),
+            code=400,
+        )
+    return currency
+
+
+def create_externally_managed_bag_and_invoice(
+    user: User,
+    academy: Academy,
+    currency: Currency,
+    amount: float,
+    payment_method: PaymentMethod,
+    proof_of_payment: ProofOfPayment,
+    lang: str,
+    bag_type: str = Bag.Type.BAG,
+    plans: Optional[QuerySet] = None,
+    service_items: Optional[list] = None,
+    how_many_installments: int = 1,
+    chosen_period: Optional[str] = None,
+    amount_breakdown: Optional[dict] = None,
+    **bag_extra: Any,
+) -> Tuple[Bag, Invoice]:
+    """Create Bag and Invoice (externally_managed, proof, payment_method); attach plans or service_items. Return (bag, invoice)."""
+    utc_now = timezone.now()
+    bag = Bag()
+    bag.type = bag_type
+    bag.user = user
+    bag.currency = currency
+    bag.status = Bag.Status.PAID
+    bag.academy = academy
+    bag.is_recurrent = bool(plans)
+    bag.how_many_installments = how_many_installments
+    if chosen_period is not None:
+        bag.chosen_period = chosen_period
+    for key, value in bag_extra.items():
+        if hasattr(bag, key):
+            setattr(bag, key, value)
+    bag.save()
+    if plans is not None:
+        bag.plans.set(plans)
+    if service_items is not None:
+        bag.service_items.set(service_items)
+    if amount_breakdown is None and (bag.plans.exists() or bag.service_items.exists() or bag.plan_addons.exists()):
+        try:
+            amount_breakdown = calculate_invoice_breakdown(
+                bag=bag,
+                invoice=None,
+                lang=lang,
+                chosen_period=bag.chosen_period,
+                how_many_installments=bag.how_many_installments,
+            )
+        except Exception:
+            amount_breakdown = None
+    invoice = Invoice(
+        amount=amount,
+        paid_at=utc_now,
+        user=user,
+        bag=bag,
+        academy=academy,
+        status=Invoice.Status.FULFILLED,
+        currency=currency,
+        externally_managed=True,
+        proof=proof_of_payment,
+        payment_method=payment_method,
+        amount_breakdown=amount_breakdown,
+    )
+    invoice.amount_breakdown = calculate_invoice_breakdown(bag, invoice, lang)
+    invoice.save()
+    return bag, invoice
+
+
 def validate_and_create_subscriptions(
     request: dict | WSGIRequest | AsyncRequest | HttpRequest | Request,
     staff_user: User,
@@ -1567,54 +2179,14 @@ def validate_and_create_subscriptions(
             code=404,
         )
 
-    user_pk = data.get("user", None)
-    if user_pk is None:
-        raise ValidationException(
-            translation(
-                lang,
-                en="user must be provided",
-                es="user debe ser proporcionado",
-                slug="user-must-be-provided",
-            ),
-            code=400,
-        )
-
-    payment_method = data.get("payment_method")
-    if not payment_method or (payment_method := PaymentMethod.objects.filter(id=payment_method).first()) is None:
-        raise ValidationException(
-            translation(
-                lang,
-                en="Payment method not provided",
-                es="Método de pago no proporcionado",
-                slug="payment-method-not-provided",
-            ),
-            code=400,
-        )
-
-    args = []
-    kwargs = {}
-    if isinstance(user_pk, int):
-        kwargs["id"] = user_pk
-    else:
-        args.append(Q(email=user_pk) | Q(username=user_pk))
-
-    if (user := User.objects.filter(*args, **kwargs).first()) is None:
-        ValidationException(
-            translation(
-                lang,
-                en=f"User not found: {user_pk}",
-                es=f"Usuario no encontrado: {user_pk}",
-                slug="user-not-found",
-            ),
-            code=404,
-        )
+    user = resolve_user_from_data(data, lang)
 
     if PlanFinancing.objects.filter(plans=plan, user=user, valid_until__gt=timezone.now()).exists():
         raise ValidationException(
             translation(
                 lang,
-                en=f"User already has a valid subscription for this plan: {user_pk}",
-                es=f"Usuario ya tiene una suscripción válida para este plan: {user_pk}",
+                en=f"User already has a valid subscription for this plan: {data.get('user')}",
+                es=f"Usuario ya tiene una suscripción válida para este plan: {data.get('user')}",
                 slug="user-already-has-valid-subscription",
             ),
             code=409,
@@ -1623,67 +2195,24 @@ def validate_and_create_subscriptions(
     # Get available coupons for this user (excluding their own coupons if they are a seller)
     coupons = get_available_coupons(plan, data.get("coupons", []), user=user)
 
-    # Determine currency: use payment_method's currency first, fall back to academy's main_currency
-    currency = payment_method.currency or academy.main_currency
-    if not currency:
-        raise ValidationException(
-            translation(
-                lang,
-                en="Currency cannot be determined. Please ensure the payment method has a currency assigned or set a main currency for the academy.",
-                es="No se puede determinar la moneda. Por favor, asegúrate de que el método de pago tenga una moneda asignada o establece una moneda principal para la academia.",
-                slug="currency-not-found",
-            ),
-            code=400,
-        )
+    payment_method = resolve_payment_method_for_staff(data, academy_id, lang, allow_card_and_crypto=True)
+    currency = resolve_currency_for_staff_payment(payment_method, academy, lang)
 
-    bag = Bag()
-    bag.type = Bag.Type.BAG
-    bag.user = user
-    bag.currency = currency
-    bag.status = Bag.Status.PAID
-    bag.academy = academy
-    bag.is_recurrent = True
-
-    bag.how_many_installments = how_many_installments
     original_price = option.monthly_price
     amount = get_discounted_price(original_price, coupons)
 
-    bag.save()
-    bag.plans.set(plans)
-
-    utc_now = timezone.now()
-
-    # Calculate breakdown for externally managed invoices
-    amount_breakdown = None
-    if bag.plans.exists() or bag.service_items.exists() or bag.plan_addons.exists():
-        try:
-            amount_breakdown = calculate_invoice_breakdown(
-                bag=bag,
-                invoice=None,
-                lang=lang,
-                chosen_period=bag.chosen_period,
-                how_many_installments=bag.how_many_installments,
-            )
-        except Exception:
-            # If breakdown calculation fails, continue without it
-            pass
-
-    invoice = Invoice(
-        amount=amount,
-        paid_at=utc_now,
+    bag, invoice = create_externally_managed_bag_and_invoice(
         user=user,
-        bag=bag,
-        academy=bag.academy,
-        status="FULFILLED",
+        academy=academy,
         currency=currency,
-        externally_managed=True,
-        proof=proof_of_payment,
+        amount=amount,
         payment_method=payment_method,
-        amount_breakdown=amount_breakdown,
+        proof_of_payment=proof_of_payment,
+        lang=lang,
+        bag_type=Bag.Type.BAG,
+        plans=plans,
+        how_many_installments=how_many_installments,
     )
-
-    invoice.amount_breakdown = calculate_invoice_breakdown(bag, invoice, lang)
-    invoice.save()
 
     # Create reward coupons for sellers if coupons were used
     if coupons and original_price > 0:
@@ -1692,6 +2221,216 @@ def validate_and_create_subscriptions(
     tasks.build_plan_financing.delay(bag.id, invoice.id, conversion_info=conversion_info, cohorts=cohort)
 
     return invoice, coupons
+
+
+def grant_consumables_for_user(
+    request: dict | WSGIRequest | AsyncRequest | HttpRequest | Request,
+    proof_of_payment: ProofOfPayment,
+    academy_id: int,
+    lang: Optional[str] = None,
+) -> Invoice:
+    """
+    Staff grant consumables to a user (standalone purchase/grant).
+    Requires payment_method (non-card, non-crypto), proof, user, service, how_many.
+    Creates Bag, Invoice (externally_managed), and Consumable(s) with standalone_invoice set.
+    """
+    if isinstance(request, (WSGIRequest, AsyncRequest, HttpRequest, Request)):
+        data = request.data
+    else:
+        data = request
+
+    if lang is None:
+        if isinstance(request, (WSGIRequest, AsyncRequest, HttpRequest, Request)) and getattr(request, "user", None):
+            lang = get_user_settings(request.user.id).lang
+        else:
+            lang = "en"
+
+    academy = Academy.objects.filter(id=academy_id).first()
+    if not academy:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Academy not found",
+                es="Academia no encontrada",
+                slug="academy-not-found",
+            ),
+            code=404,
+        )
+
+    service_spec = data.get("service")
+    if not service_spec:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Service is required",
+                es="El servicio es requerido",
+                slug="service-is-required",
+            ),
+            code=400,
+        )
+    if isinstance(service_spec, int):
+        service = Service.objects.filter(id=service_spec).first()
+    else:
+        service = Service.objects.filter(slug=service_spec).first()
+    if not service:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Service not found",
+                es="El servicio no fue encontrado",
+                slug="service-not-found",
+            ),
+            code=404,
+        )
+
+    if service.type not in (
+        Service.Type.MENTORSHIP_SERVICE_SET,
+        Service.Type.EVENT_TYPE_SET,
+        Service.Type.VOID,
+    ):
+        raise ValidationException(
+            translation(
+                lang,
+                en="This service type is not allowed for staff grant. Use MENTORSHIP_SERVICE_SET, EVENT_TYPE_SET, or VOID.",
+                es="Este tipo de servicio no está permitido para concesión por staff.",
+                slug="service-type-not-allowed-for-grant",
+            ),
+            code=400,
+        )
+
+    how_many = data.get("how_many")
+    if not how_many or (isinstance(how_many, (int, float)) and how_many <= 0):
+        raise ValidationException(
+            translation(
+                lang,
+                en="how_many is required and must be a positive number",
+                es="how_many es requerido y debe ser un número positivo",
+                slug="how-many-required",
+            ),
+            code=400,
+        )
+    how_many = int(how_many)
+
+    mentorship_service_set_id = data.get("mentorship_service_set")
+    event_type_set_id = data.get("event_type_set")
+    if mentorship_service_set_id and event_type_set_id:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Provide only one of mentorship_service_set or event_type_set, not both",
+                es="Proporcione solo uno de mentorship_service_set o event_type_set",
+                slug="only-one-set-allowed",
+            ),
+            code=400,
+        )
+    if service.type == Service.Type.MENTORSHIP_SERVICE_SET and not mentorship_service_set_id:
+        raise ValidationException(
+            translation(
+                lang,
+                en="mentorship_service_set is required for this service type",
+                es="mentorship_service_set es requerido para este tipo de servicio",
+                slug="mentorship-service-set-required",
+            ),
+            code=400,
+        )
+    if service.type == Service.Type.EVENT_TYPE_SET and not event_type_set_id:
+        raise ValidationException(
+            translation(
+                lang,
+                en="event_type_set is required for this service type",
+                es="event_type_set es requerido para este tipo de servicio",
+                slug="event-type-set-required",
+            ),
+            code=400,
+        )
+
+    kwargs_academy = {}
+    if mentorship_service_set_id:
+        mentorship_service_set = MentorshipServiceSet.objects.filter(
+            id=mentorship_service_set_id, academy_id=academy_id
+        ).first()
+        if not mentorship_service_set:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Mentorship service set not found",
+                    es="Conjunto de mentoría no encontrado",
+                    slug="mentorship-service-set-not-found",
+                ),
+                code=404,
+            )
+        kwargs_academy["available_mentorship_service_sets"] = mentorship_service_set_id
+    else:
+        mentorship_service_set = None
+
+    if event_type_set_id:
+        event_type_set = EventTypeSet.objects.filter(id=event_type_set_id, academy_id=academy_id).first()
+        if not event_type_set:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Event type set not found",
+                    es="Conjunto de tipo de evento no encontrado",
+                    slug="event-type-set-not-found",
+                ),
+                code=404,
+            )
+        kwargs_academy["available_event_type_sets"] = event_type_set_id
+    else:
+        event_type_set = None
+
+    academy_service = AcademyService.objects.filter(
+        academy_id=academy_id, service=service, **kwargs_academy
+    ).first()
+    if not academy_service:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Academy service not found",
+                es="Servicio de academia no encontrado",
+                slug="academy-service-not-found",
+            ),
+            code=404,
+        )
+
+    user = resolve_user_from_data(data, lang)
+    payment_method = resolve_payment_method_for_staff(data, academy_id, lang, allow_card_and_crypto=False)
+    currency = resolve_currency_for_staff_payment(payment_method, academy, lang)
+
+    amount = data.get("amount")
+    if amount is None:
+        amount = 0.0
+    else:
+        amount = float(amount)
+
+    service_item, _ = ServiceItem.get_or_create_for_service(
+        service=service, how_many=how_many, is_team_allowed=False
+    )
+
+    bag, invoice = create_externally_managed_bag_and_invoice(
+        user=user,
+        academy=academy,
+        currency=currency,
+        amount=amount,
+        payment_method=payment_method,
+        proof_of_payment=proof_of_payment,
+        lang=lang,
+        bag_type=Bag.Type.CHARGE,
+        service_items=[service_item],
+        how_many_installments=0,
+    )
+
+    consumable = Consumable(
+        service_item=service_item,
+        user=user,
+        how_many=how_many,
+        mentorship_service_set=mentorship_service_set,
+        event_type_set=event_type_set,
+        standalone_invoice=invoice,
+    )
+    consumable.save()
+
+    return invoice
 
 
 class UnitBalance(TypedDict):
@@ -3641,6 +4380,137 @@ def invite_user_to_plan_financing_team(
             email_data,
             academy=financing.academy,
         )
+
+
+def create_invited_plan_financing_for_user(
+    user: User,
+    plan: Plan,
+    academy: Academy,
+    cohort: Cohort,
+    payment_method: PaymentMethod | None = None,
+    author: User | None = None,
+    lang: str = "en",
+) -> None:
+    """
+    Create PlanFinancing for an existing user (staff-assigned / bulk upload).
+    Replicates the invite-acceptance flow: Bag + Invoice + build_plan_financing.
+    """
+    if plan.status == Plan.Status.DRAFT:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Cannot assign draft plans to students. Publish the plan first.",
+                es="No se pueden asignar planes en borrador a estudiantes. Publica el plan primero.",
+            ),
+            slug="plan-draft-not-assignable",
+            code=400,
+        )
+
+    if not plan.cohort_set or not plan.cohort_set.cohorts.filter(id=cohort.id).exists():
+        raise ValidationException(
+            translation(
+                lang,
+                en="Plan does not include this cohort. The plan's cohort_set must contain the cohort.",
+                es="El plan no incluye este cohort. El cohort_set del plan debe contener el cohort.",
+            ),
+            slug="plan-cohort-mismatch",
+            code=400,
+        )
+
+    if not academy.main_currency_id:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Academy must have main_currency set to assign plans",
+                es="La academia debe tener main_currency configurado para asignar planes",
+            ),
+            slug="academy-main-currency-required",
+            code=400,
+        )
+
+    if not (
+        cohort.available_as_saas is True
+        or (cohort.available_as_saas is None and academy.available_as_saas is True)
+    ):
+        raise ValidationException(
+            translation(
+                lang,
+                en="Cohort or academy must have available_as_saas=true for plan assignment",
+                es="El cohort o la academia deben tener available_as_saas=true para asignar planes",
+            ),
+            slug="cohort-not-available-as-saas",
+            code=400,
+        )
+
+    financing_option = plan.financing_options.filter(how_many_months=1).first()
+    if not financing_option:
+        raise ValidationException(
+            translation(
+                lang,
+                en="This plan does not have a one-installment financing option configured. Please contact the academy. In bulk invitation one installment is assumend.",
+                es="Este plan no tiene configurada una opción de financiamiento de un mes. Por favor contacta a la academia.",
+            ),
+            slug="plan-without-one-month-financing-option",
+            code=400,
+        )
+
+    plan_price = financing_option.monthly_price
+    is_free = plan_price == 0
+    externally_managed = payment_method is not None
+
+    if payment_method and not payment_method.is_crypto and not author:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Author is required when payment method is set for staff-assigned plans.",
+                es="El autor es requerido cuando se establece un método de pago para planes asignados por staff.",
+            ),
+            slug="invite-author-required-for-payment-method",
+            code=400,
+        )
+
+    utc_now = timezone.now()
+
+    bag = Bag()
+    bag.chosen_period = "NO_SET"
+    bag.status = "PAID"
+    bag.type = "INVITED"
+    bag.how_many_installments = 1
+    bag.academy = academy
+    bag.user = user
+    bag.is_recurrent = False
+    bag.was_delivered = False
+    bag.token = None
+    bag.currency = academy.main_currency
+    bag.expires_at = None
+    bag.save()
+    bag.plans.add(plan)
+
+    proof = None
+    if payment_method and not payment_method.is_crypto and author:
+        proof = ProofOfPayment(
+            created_by=author,
+            status=ProofOfPayment.Status.DONE,
+            provided_payment_details=f"Staff-assigned plan via {payment_method.title}",
+            reference=f"STAFF-ASSIGNED-{user.id}-{plan.id}",
+        )
+        proof.save()
+
+    invoice = Invoice(
+        amount=plan_price,
+        paid_at=utc_now,
+        user=user,
+        bag=bag,
+        academy=academy,
+        status="FULFILLED",
+        currency=academy.main_currency,
+        payment_method=payment_method,
+        externally_managed=externally_managed,
+        proof=proof,
+    )
+    invoice.save()
+
+    tasks.build_plan_financing.delay(bag.id, invoice.id, is_free=is_free)
 
 
 def create_plan_financing_seat(

@@ -54,6 +54,7 @@ from .serializers import (
     SurveyPUTSerializer,
     SurveyResponseSerializer,
     SurveyStudySerializer,
+    SurveyStudySmallSerializer,
     SurveySerializer,
     SurveySmallSerializer,
     SurveyTemplateSerializer,
@@ -773,6 +774,19 @@ class SurveyConfigurationView(APIView, HeaderLimitOffsetPagination, GenerateLook
         if lookups:
             items = items.filter(**lookups)
 
+        # Filter by study_id or studys (comma-separated)
+        studys = request.GET.get("studys")
+        if studys:
+            try:
+                study_id_list = [int(x.strip()) for x in studys.split(",") if x.strip()]
+                items = items.filter(survey_studies__id__in=study_id_list).distinct()
+            except ValueError:
+                raise ValidationException(
+                    "studys must be comma-separated integers",
+                    code=400,
+                    slug="invalid-studys",
+                )
+
         items = items.order_by("-created_at")
 
         page = self.paginate_queryset(items, request)
@@ -821,6 +835,88 @@ class SurveyConfigurationView(APIView, HeaderLimitOffsetPagination, GenerateLook
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @capable_of("crud_survey")
+    def delete(self, request, academy_id=None, configuration_id=None):
+        """Delete a survey configuration."""
+        lookups = self.generate_lookups(request, many_fields=["id"])
+
+        if lookups and configuration_id:
+            raise ValidationException(
+                "configuration_id was provided in url in bulk mode request, use querystring style instead",
+                code=400,
+                slug="configuration-id-and-lookups-together",
+            )
+
+        if not lookups and not configuration_id:
+            raise ValidationException(
+                "configuration_id was not provided in url", code=400, slug="without-configuration-id-and-lookups"
+            )
+
+        if lookups:
+            # Bulk delete
+            items = SurveyConfiguration.objects.filter(**lookups, academy__id=academy_id)
+            
+            ids = [item.id for item in items]
+            
+            # Check if any configurations have answered responses
+            if answered_responses := SurveyResponse.objects.filter(
+                survey_config__id__in=ids, status=SurveyResponse.Status.ANSWERED
+            ):
+                config_ids_with_answers = set(answered_responses.values_list("survey_config_id", flat=True))
+                raise ValidationException(
+                    f"Survey configurations with IDs {list(config_ids_with_answers)} cannot be deleted because they have answered responses",
+                    code=400,
+                    slug="configuration-cannot-be-deleted",
+                )
+
+            # Check if any configurations are part of any study (regardless of status)
+            studies = SurveyStudy.objects.filter(survey_configurations__id__in=ids).distinct()
+            
+            if studies.exists():
+                study_slugs = list(studies.values_list("slug", flat=True))
+                config_ids_in_studies = set(
+                    SurveyConfiguration.objects.filter(
+                        survey_studies__in=studies, id__in=ids
+                    ).values_list("id", flat=True)
+                )
+                raise ValidationException(
+                    f"Survey configurations with IDs {list(config_ids_in_studies)} cannot be deleted because they are part of studies: {', '.join(study_slugs)}",
+                    code=400,
+                    slug="configuration-in-study",
+                )
+
+            for item in items:
+                item.delete()
+
+            return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+        # Single delete
+        config = SurveyConfiguration.objects.filter(id=configuration_id, academy__id=academy_id).first()
+        if not config:
+            raise NotFound("Survey configuration not found")
+
+        # Check if configuration has answered responses
+        if SurveyResponse.objects.filter(survey_config=config, status=SurveyResponse.Status.ANSWERED).exists():
+            raise ValidationException(
+                "Survey configuration cannot be deleted because it has answered responses",
+                code=400,
+                slug="configuration-cannot-be-deleted",
+            )
+
+        # Check if configuration is part of any study (regardless of status)
+        studies = config.survey_studies.all()
+        
+        if studies.exists():
+            study_slugs = list(studies.values_list("slug", flat=True))
+            raise ValidationException(
+                f"Survey configuration cannot be deleted because it is part of studies: {', '.join(study_slugs)}",
+                code=400,
+                slug="configuration-in-study",
+            )
+
+        config.delete()
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+
 
 class SurveyQuestionTemplateView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     """
@@ -852,6 +948,12 @@ class SurveyQuestionTemplateView(APIView, HeaderLimitOffsetPagination, GenerateL
         lookups = self.generate_lookups(request, many_fields=["id", "slug"])
         if lookups:
             items = items.filter(**lookups)
+
+        like = request.GET.get("like", None)
+        if like is not None:
+            items = items.filter(
+                Q(title__icontains=like) | Q(slug__icontains=like) | Q(description__icontains=like)
+            )
 
         page = self.paginate_queryset(items, request)
         if page is not None:
@@ -913,20 +1015,35 @@ class SurveyStudyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
             if not item:
                 raise NotFound("Survey study not found")
 
-            serializer = SurveyStudySerializer(item)
+            serializer = SurveyStudySmallSerializer(item)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-        items = SurveyStudy.objects.filter(academy__id=academy_id).order_by("-created_at")
+        items = SurveyStudy.objects.filter(academy__id=academy_id)
+        
+        # Filter out deleted studies by default (unless explicitly requested)
+        include_deleted = request.GET.get("include_deleted", "false").lower() == "true"
+        if not include_deleted:
+            items = items.exclude(status=SurveyStudy.Status.DELETED)
+        
+        # Optional: filter by status
+        status_filter = request.GET.get("status")
+        if status_filter:
+            statuses = [s.strip().upper() for s in status_filter.split(",") if s.strip()]
+            valid_statuses = [s[0] for s in SurveyStudy.Status.choices if s[0] in statuses]
+            if valid_statuses:
+                items = items.filter(status__in=valid_statuses)
+        
+        items = items.order_by("-created_at")
         lookups = self.generate_lookups(request, many_fields=["id", "slug"])
         if lookups:
             items = items.filter(**lookups)
 
         page = self.paginate_queryset(items, request)
         if page is not None:
-            serializer = SurveyStudySerializer(page, many=True)
+            serializer = SurveyStudySmallSerializer(page, many=True)
             return self.get_paginated_response(serializer.data)
 
-        serializer = SurveyStudySerializer(items, many=True)
+        serializer = SurveyStudySmallSerializer(items, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @capable_of("crud_survey")
@@ -938,8 +1055,66 @@ class SurveyStudyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
         if not item:
             raise NotFound("Survey study not found")
 
+        # Prevent editing of DELETED or FINISHED studies
+        if item.status in [SurveyStudy.Status.DELETED, SurveyStudy.Status.FINISHED]:
+            raise ValidationException(
+                f"Cannot edit a {item.status.lower()} study. Only DRAFT and ACTIVE studies can be modified.",
+                code=400,
+                slug="cannot-edit-study-status",
+            )
+
         serializer = SurveyStudySerializer(item, data=request.data, partial=True)
         if serializer.is_valid():
+            # Check if status is being changed to ACTIVE
+            new_status = serializer.validated_data.get("status", item.status)
+            if new_status == SurveyStudy.Status.ACTIVE:
+                # Reload study with configurations to check
+                study_with_configs = SurveyStudy.objects.prefetch_related("survey_configurations__template").filter(
+                    id=item.id
+                ).first()
+                
+                # Check if study has configurations
+                configs = list(study_with_configs.survey_configurations.all())
+                if not configs:
+                    raise ValidationException(
+                        "Cannot activate a study without survey configurations. Please add at least one configuration.",
+                        code=400,
+                        slug="study-without-configurations",
+                    )
+                
+                # Check each configuration for questions
+                for config in configs:
+                    has_questions = False
+                    
+                    if config.template:
+                        # Check if template has questions
+                        template_questions = config.template.questions
+                        if (
+                            isinstance(template_questions, dict)
+                            and "questions" in template_questions
+                            and isinstance(template_questions["questions"], list)
+                            and len(template_questions["questions"]) > 0
+                        ):
+                            has_questions = True
+                    else:
+                        # Check if configuration has questions directly
+                        config_questions = config.questions
+                        if (
+                            isinstance(config_questions, dict)
+                            and "questions" in config_questions
+                            and isinstance(config_questions["questions"], list)
+                            and len(config_questions["questions"]) > 0
+                        ):
+                            has_questions = True
+                    
+                    if not has_questions:
+                        raise ValidationException(
+                            f"Configuration {config.id} has no questions. "
+                            "Please ensure all configurations have questions (either from a template or directly).",
+                            code=400,
+                            slug="configuration-without-questions",
+                        )
+            
             item = serializer.save()
             return Response(SurveyStudySerializer(item).data, status=status.HTTP_200_OK)
 
@@ -954,6 +1129,39 @@ class SurveyStudyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
         if not item:
             raise NotFound("Survey study not found")
 
+        # Check if study is active (status=ACTIVE or within time window)
+        utc_now = timezone.now()
+        is_active = (
+            item.status == SurveyStudy.Status.ACTIVE or
+            (
+                (item.starts_at is None or item.starts_at <= utc_now) and
+                (item.ends_at is None or item.ends_at >= utc_now) and
+                item.status == SurveyStudy.Status.DRAFT
+            )
+        )
+
+        if is_active:
+            raise ValidationException(
+                "Cannot delete an active study. Please end the study first by setting ends_at to a past date or changing status to FINISHED.",
+                code=400,
+                slug="cannot-delete-active-study",
+            )
+
+        # Check if study has any responses
+        has_responses = SurveyResponse.objects.filter(survey_study=item).exists()
+
+        if has_responses:
+            # Mark as deleted instead of actually deleting: set status to DELETED and ends_at to now
+            item.status = SurveyStudy.Status.DELETED
+            if item.ends_at is None or item.ends_at > utc_now:
+                item.ends_at = utc_now
+            item.save(update_fields=["status", "ends_at", "updated_at"])
+            return Response(
+                {"message": "Study has responses and cannot be deleted. It has been marked as deleted instead."},
+                status=status.HTTP_200_OK
+            )
+
+        # No responses and not active - safe to delete
         item.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 

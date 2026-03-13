@@ -1247,3 +1247,107 @@ def test_scopes_not_granted(
             "user_id": 2,
         },
     ]
+
+
+def test_github_callback_scope_mismatch_after_two_attempts_returns_error_page(
+    bc: Breathecode,
+    client: APIClient,
+    github_user: dict,
+    github_token: str,
+    http: staging.HTTP,
+):
+    """
+    When scope_retry >= 2 and required scopes don't match what GitHub granted,
+    return 403 and show error message instead of redirecting again.
+    """
+    http.post(
+        "https://github.com/login/oauth/access_token",
+        data={
+            "client_id": "123456",
+            "client_secret": "123456",
+            "redirect_uri": "https://breathecode.herokuapp.com/v1/auth/github/callback",
+            "code": "Konan",
+        },
+        headers={"Accept": "application/json"},
+        timeout=30,
+    ).response(
+        {"access_token": github_token, "scope": "user:email", "token_type": "bearer"},
+        status=200,
+    )
+
+    user_kwargs = {"email": "JDEFREITASPINTO@GMAIL.COM"}
+    role_kwargs = {"slug": "student", "name": "Student"}
+    model = bc.database.create(
+        role=True,
+        user=True,
+        academy=1,
+        profile_academy=True,
+        academy_auth_settings=True,
+        user_kwargs=user_kwargs,
+        role_kwargs=role_kwargs,
+        token=True,
+    )
+
+    original_url_callback = "https://4geeksacademy.com/"
+    code = "Konan"
+    token = model.token
+
+    url = reverse_lazy("authenticate:github_callback")
+    params = {"url": original_url_callback, "code": code, "user": token.key, "scope_retry": "2"}
+    response = client.get(f"{url}?{urllib.parse.urlencode(params)}")
+
+    content = bc.format.from_bytes(response.content)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert "GitHub didn't assign the scopes needed to continue" in content
+
+
+def test_github_callback_scope_mismatch_redirects_with_incremented_scope_retry(
+    bc: Breathecode,
+    client: APIClient,
+    github_user: dict,
+    github_token: str,
+    http: staging.HTTP,
+):
+    """
+    When scope_retry < 2 and required scopes don't match, redirect to get_github_token
+    with scope_retry incremented.
+    """
+    http.post(
+        "https://github.com/login/oauth/access_token",
+        data={
+            "client_id": "123456",
+            "client_secret": "123456",
+            "redirect_uri": "https://breathecode.herokuapp.com/v1/auth/github/callback",
+            "code": "Konan",
+        },
+        headers={"Accept": "application/json"},
+        timeout=30,
+    ).response(
+        {"access_token": github_token, "scope": "user:email", "token_type": "bearer"},
+        status=200,
+    )
+
+    user_kwargs = {"email": "JDEFREITASPINTO@GMAIL.COM"}
+    role_kwargs = {"slug": "student", "name": "Student"}
+    model = bc.database.create(
+        role=True,
+        user=True,
+        academy=1,
+        profile_academy=True,
+        academy_auth_settings=True,
+        user_kwargs=user_kwargs,
+        role_kwargs=role_kwargs,
+        token=True,
+    )
+
+    original_url_callback = "https://4geeksacademy.com/"
+    code = "Konan"
+    token = model.token
+
+    url = reverse_lazy("authenticate:github_callback")
+    params = {"url": original_url_callback, "code": code, "user": token.key, "scope_retry": "0"}
+    response = client.get(f"{url}?{urllib.parse.urlencode(params)}")
+
+    assert response.status_code == status.HTTP_302_FOUND
+    assert "scope_retry=1" in response.url
+    assert "/v1/auth/github/" in response.url

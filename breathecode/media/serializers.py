@@ -22,7 +22,12 @@ class GetCategorySerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
+    is_manageable_by_academy = serpy.Field()
+    academy = serpy.MethodField()
     medias = serpy.MethodField()
+
+    def get_academy(self, obj):
+        return GetAcademySerializer(obj.academy).data if obj.academy else None
 
     def get_medias(self, obj):
         return Media.objects.filter(categories__id=obj.id).count()
@@ -129,14 +134,18 @@ class CategorySerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(required=False)
     slug = serializers.SlugField(required=False)
     name = serializers.CharField()
+    academy = serializers.PrimaryKeyRelatedField(
+        queryset=Academy.objects.all(), required=False, allow_null=True
+    )
     created_at = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = Category
-        fields = ("name", "slug", "created_at", "id")
+        fields = ("name", "slug", "academy", "created_at", "id")
 
     def create(self, validated_data):
-
+        # Academies cannot create system categories; ensure manageable and academy from context
+        validated_data.setdefault("is_manageable_by_academy", False)
         _slug = slugify(validated_data["name"])
         result = super().create({**validated_data, "slug": _slug})
         return result

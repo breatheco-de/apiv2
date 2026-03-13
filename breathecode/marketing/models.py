@@ -1291,7 +1291,7 @@ class CourseResaleSettings(models.Model):
                 {"academy": "Academy must be white labeled to resell courses. Set academy.white_labeled=True"}
             )
 
-        if has_feature_flag(self.academy, "reseller", default=False) is False:
+        if has_feature_flag(self.academy, "commerce.reseller", default=False) is False:
             raise ValidationError(
                 {
                     "academy": "Academy must have the 'reseller' feature enabled in academy_features to resell courses"

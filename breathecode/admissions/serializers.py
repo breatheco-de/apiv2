@@ -3,7 +3,7 @@ from collections import OrderedDict
 
 from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import Permission, User
-from django.db.models import Q
+from django.db.models import ObjectDoesNotExist, Q
 from django.utils import timezone
 
 from breathecode.admissions.actions import ImportCohortTimeSlots
@@ -13,6 +13,8 @@ from breathecode.authenticate.actions import get_user_settings
 from breathecode.authenticate.models import CredentialsDiscord, CredentialsGithub, CredentialsGoogle, ProfileAcademy
 from breathecode.authenticate.serializers import GetPermissionSmallSerializer, SettingsSerializer
 from breathecode.utils import localize_query, serializers, serpy
+
+from breathecode.certificate.models import Specialty
 
 from .actions import haversine, test_syllabus
 from .models import (
@@ -643,6 +645,7 @@ class GetCohortUserSerializer(serpy.Serializer):
         profile = ProfileAcademy.objects.filter(user=obj.user, academy=obj.cohort.academy).first()
         return GetProfileAcademySmallSerializer(profile).data if profile else None
 
+
 class GetCohortUserBigSerializer(serpy.Serializer):
     """The serializer schema definition."""
 
@@ -740,6 +743,7 @@ class GETCohortUserSmallSerializer(serpy.Serializer):
 
     # Use a Field subclass like IntField if you need more validation.
     cohort = GetMeCohortSerializer()
+    id = serpy.Field()
     role = serpy.Field()
     finantial_status = serpy.Field()
     educational_status = serpy.Field()
@@ -893,10 +897,10 @@ class AcademySerializer(serializers.ModelSerializer):
         """Validate that the main_currency is a valid Currency by code or ID."""
         if value is None:
             return None
-            
+
         if not value:
             return None
-            
+
         from breathecode.payments.models import Currency
 
         # If value is a string, try to get currency by code
@@ -909,7 +913,7 @@ class AcademySerializer(serializers.ModelSerializer):
                     code=400,
                 )
             return currency
-        
+
         # If value is an integer, try to get currency by ID
         if isinstance(value, int):
             currency = Currency.objects.filter(id=value).first()
@@ -920,9 +924,9 @@ class AcademySerializer(serializers.ModelSerializer):
                     code=400,
                 )
             return currency
-        
+
         # If it's a Currency object (from nested serializers), validate it exists
-        if hasattr(value, 'id'):
+        if hasattr(value, "id"):
             if not Currency.objects.filter(id=value.id).exists():
                 raise ValidationException(
                     "Invalid currency",
@@ -930,7 +934,7 @@ class AcademySerializer(serializers.ModelSerializer):
                     code=400,
                 )
             return value
-        
+
         raise ValidationException(
             "main_currency must be a currency code (e.g., 'USD') or currency ID",
             slug="invalid-currency-format",
@@ -947,10 +951,10 @@ class AcademySerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         # Extra safety: remove slug if somehow it made it through
         validated_data.pop("slug", None)
-        
+
         # Handle main_currency - it comes as Currency object from validation
         # No need to convert, it's already the right object
-        
+
         return super().update(instance, validated_data)
 
 
@@ -1014,10 +1018,10 @@ class AcademyPOSTSerializer(serializers.ModelSerializer):
         """Validate that the main_currency is a valid Currency by code or ID."""
         if value is None:
             return None
-            
+
         if not value:
             return None
-            
+
         from breathecode.payments.models import Currency
 
         # If value is a string, try to get currency by code
@@ -1030,7 +1034,7 @@ class AcademyPOSTSerializer(serializers.ModelSerializer):
                     code=400,
                 )
             return currency
-        
+
         # If value is an integer, try to get currency by ID
         if isinstance(value, int):
             currency = Currency.objects.filter(id=value).first()
@@ -1041,9 +1045,9 @@ class AcademyPOSTSerializer(serializers.ModelSerializer):
                     code=400,
                 )
             return currency
-        
+
         # If it's a Currency object (from nested serializers), validate it exists
-        if hasattr(value, 'id'):
+        if hasattr(value, "id"):
             if not Currency.objects.filter(id=value.id).exists():
                 raise ValidationException(
                     "Invalid currency",
@@ -1051,7 +1055,7 @@ class AcademyPOSTSerializer(serializers.ModelSerializer):
                     code=400,
                 )
             return value
-        
+
         raise ValidationException(
             "main_currency must be a currency code (e.g., 'USD') or currency ID",
             slug="invalid-currency-format",
@@ -1180,6 +1184,83 @@ class CohortSerializerMixin(serializers.ModelSerializer):
             else:
                 raise ValidationException(f"Language property should be a string not a {type(language)}")
 
+        academy = self.context.get("academy")
+        if academy is not None:
+            if "micro_cohorts" in data and data["micro_cohorts"] is not None:
+                raw_ids = data["micro_cohorts"]
+                if not isinstance(raw_ids, list):
+                    raise ValidationException(
+                        "micro_cohorts must be a list of cohort IDs", slug="micro-cohorts-must-be-list"
+                    )
+                ids = []
+                for id_val in raw_ids:
+                    if isinstance(id_val, int):
+                        ids.append(id_val)
+                    elif isinstance(id_val, str):
+                        for part in id_val.split(","):
+                            part = part.strip()
+                            if part:
+                                try:
+                                    ids.append(int(part))
+                                except ValueError:
+                                    raise ValidationException(
+                                        f"micro_cohorts must contain only integer cohort IDs; "
+                                        f"invalid value {part!r} (type: {type(part).__name__})",
+                                        slug="micro-cohorts-invalid-id",
+                                    )
+                    elif hasattr(id_val, "pk"):
+                        ids.append(id_val.pk)
+                    else:
+                        try:
+                            ids.append(int(id_val))
+                        except (TypeError, ValueError):
+                            raise ValidationException(
+                                f"micro_cohorts must contain only integer cohort IDs; "
+                                f"invalid value {id_val!r} (type: {type(id_val).__name__})",
+                                slug="micro-cohorts-invalid-id",
+                            )
+                data["micro_cohorts"] = ids
+                cohorts = Cohort.objects.filter(id__in=ids, academy=academy).select_related(
+                    "syllabus_version", "syllabus_version__syllabus"
+                )
+                if cohorts.count() != len(ids):
+                    found = set(cohorts.values_list("id", flat=True))
+                    missing = [x for x in ids if x not in found]
+                    raise ValidationException(
+                        f"Micro cohort id(s) not found or not in this academy: {missing}",
+                        slug="micro-cohorts-not-found",
+                    )
+                for cohort in cohorts:
+                    syllabus = cohort.syllabus_version.syllabus if cohort.syllabus_version else None
+                    if not syllabus:
+                        raise ValidationException(
+                            f"Micro cohort '{cohort.name}' (id={cohort.id}) has no syllabus; "
+                            "each micro cohort must have a syllabus linked to a Specialty.",
+                            slug="micro-cohort-syllabus-required",
+                        )
+                    has_specialty = syllabus.specialties_with_many_syllabus.exists()
+                    if not has_specialty:
+                        raise ValidationException(
+                            f"Micro cohort '{cohort.name}' (id={cohort.id}) uses syllabus "
+                            f"'{syllabus.slug}' which is not associated to any Specialty. "
+                            "Each micro cohort's syllabus must be linked to a real Specialty.",
+                            slug="micro-cohort-syllabus-must-have-specialty",
+                        )
+            if "cohorts_order" in data and data["cohorts_order"] is not None:
+                order_str = data["cohorts_order"]
+                if not isinstance(order_str, str):
+                    raise ValidationException(
+                        "cohorts_order must be a comma-separated string of cohort IDs",
+                        slug="cohorts-order-must-be-string",
+                    )
+                for part in order_str.split(","):
+                    part = part.strip()
+                    if part and not part.isdigit():
+                        raise ValidationException(
+                            "cohorts_order must be comma-separated cohort IDs",
+                            slug="cohorts-order-invalid-format",
+                        )
+
         return data
 
 
@@ -1187,6 +1268,10 @@ class CohortSerializer(CohortSerializerMixin):
     academy = AcademySerializer(many=False, required=False, read_only=True)
     ending_date = serializers.DateTimeField(required=False, allow_null=True)
     is_hidden_on_prework = serializers.BooleanField(required=False, allow_null=True)
+    micro_cohorts = serializers.PrimaryKeyRelatedField(
+        queryset=Cohort.objects.all(), many=True, required=False, allow_null=True
+    )
+    cohorts_order = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
     class Meta:
         model = Cohort
@@ -1212,17 +1297,24 @@ class CohortSerializer(CohortSerializerMixin):
             "is_hidden_on_prework",
             "available_as_saas",
             "shortcuts",
+            "micro_cohorts",
+            "cohorts_order",
         )
 
     def create(self, validated_data):
         del self.context["request"]
+        micro_cohorts = validated_data.pop("micro_cohorts", None) or []
+        cohorts_order = validated_data.pop("cohorts_order", None) or ""
         cohort = Cohort.objects.create(**validated_data, **self.context)
-
+        if micro_cohorts:
+            cohort.micro_cohorts.set(micro_cohorts)
+        if cohorts_order is not None:
+            cohort.cohorts_order = cohorts_order
+            cohort.save(update_fields=["cohorts_order", "updated_at"])
         if cohort.schedule:
             x = ImportCohortTimeSlots(cohort.id)
             x.clean()
             x.sync()
-
         return cohort
 
 
@@ -1239,6 +1331,10 @@ class CohortPUTSerializer(CohortSerializerMixin):
     stage = serializers.CharField(required=False)
     language = serializers.CharField(required=False)
     is_hidden_on_prework = serializers.BooleanField(required=False, allow_null=True)
+    micro_cohorts = serializers.PrimaryKeyRelatedField(
+        queryset=Cohort.objects.all(), many=True, required=False, allow_null=True
+    )
+    cohorts_order = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
     class Meta:
         model = Cohort
@@ -1263,19 +1359,27 @@ class CohortPUTSerializer(CohortSerializerMixin):
             "is_hidden_on_prework",
             "available_as_saas",
             "shortcuts",
+            "micro_cohorts",
+            "cohorts_order",
         )
 
     def update(self, instance, validated_data):
         last_schedule = instance.schedule
+        micro_cohorts = validated_data.pop("micro_cohorts", None)
+        cohorts_order = validated_data.pop("cohorts_order", None)
 
         update_timeslots = "schedule" in validated_data and last_schedule != validated_data["schedule"]
         cohort = super().update(instance, validated_data)
 
+        if micro_cohorts is not None:
+            cohort.micro_cohorts.set(micro_cohorts)
+        if cohorts_order is not None:
+            cohort.cohorts_order = cohorts_order
+            cohort.save(update_fields=["cohorts_order", "updated_at"])
         if update_timeslots:
             x = ImportCohortTimeSlots(cohort.id)
             x.clean()
             x.sync()
-
         return cohort
 
 
@@ -1374,7 +1478,9 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
         ):
             raise ValidationException("The user must be staff member to this academy before it can be a teacher")
 
-        if is_post_method and cohort.schedule and self.count_certificates_by_cohort(cohort, user.id) > 0:
+        role = data.get("role") or (instance.role if instance else None) or "STUDENT"
+
+        if is_post_method and role == "STUDENT" and cohort.schedule and self.count_certificates_by_cohort(cohort, user.id) > 0:
             raise ValidationException(
                 "This student is already in another cohort for the same certificate, please mark him/her hi "
                 "educational status on this prior cohort different than ACTIVE before cotinuing"

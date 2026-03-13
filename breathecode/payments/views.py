@@ -113,6 +113,7 @@ from breathecode.payments.serializers import (
 from breathecode.payments.services.coinbase import CoinbaseCommerce
 from breathecode.payments.services.stripe import Stripe
 from breathecode.payments.signals import reimburse_service_units
+from breathecode.payments.utils import parse_date_range_from_request
 from breathecode.utils import APIViewExtensions, getLogger, validate_conversion_info
 from breathecode.utils.decorators.capable_of import capable_of
 from breathecode.utils.decorators.consume import discount_consumption_sessions
@@ -542,17 +543,25 @@ class AcademyCohortSetView(APIView):
 
     @capable_of("crud_plan")
     def post(self, request, academy_id=None):
-        """Create a new CohortSet."""
+        """
+        Create a new CohortSet.
+
+        - slug: Slug for the cohort set
+        Optional parameters:
+        - plan_to_clone: Clone cohort set from a plan and add additional cohorts (requires cohort_ids)
+        - cohort_ids: Cohort IDs to add to the cohort set
+        """
         lang = get_user_language(request)
 
         data = request.data.copy()
         data["academy"] = academy_id
 
-        # Parameters to clone a cohort set of a plan with additional cohorts
-        plan_to_clone = request.data.get("plan_to_clone")
         cohort_ids = request.data.get("cohort_ids")
 
-        if (plan_to_clone and not cohort_ids) or (not plan_to_clone and cohort_ids):
+        # Parameter to clone a cohort set of a plan with additional cohorts
+        plan_to_clone = request.data.get("plan_to_clone")
+
+        if plan_to_clone and not cohort_ids:
             raise ValidationException(
                 translation(
                     lang,
@@ -598,7 +607,7 @@ class AcademyCohortSetView(APIView):
                 cohort_set = serializer.save()
 
                 if plan:
-                    if plan.cohort_set:
+                    if plan.cohort_set and plan_to_clone:
                         cohort_set.cohorts.set(plan.cohort_set.cohorts.all())
                     plan.cohort_set = cohort_set
                     plan.save()
@@ -842,17 +851,25 @@ class AcademyMentorshipServiceSetView(APIView):
 
     @capable_of("crud_plan")
     def post(self, request, academy_id=None):
-        """Create a new MentorshipServiceSet."""
+        """
+        Create a new MentorshipServiceSet.
+
+        slug: Slug for the mentorship service set
+        Optional parameters:
+        - plan_to_clone: Clone mentorship service set from a plan and add additional services (requires mentorship_service_ids)
+        - mentorship_service_ids: Mentorship service IDs to add to the set
+        """
         lang = get_user_language(request)
 
         data = request.data.copy()
         data["academy"] = academy_id
 
-        # Optional parameters to clone a mentorship service set of a plan with additional services
-        plan_to_clone = request.data.get("plan_to_clone")
         mentorship_service_ids = request.data.get("mentorship_service_ids")
 
-        if (plan_to_clone and not mentorship_service_ids) or (not plan_to_clone and mentorship_service_ids):
+        # Parameter to clone a mentorship service set of a plan with additional services
+        plan_to_clone = request.data.get("plan_to_clone")
+
+        if plan_to_clone and not mentorship_service_ids:
             raise ValidationException(
                 translation(
                     lang,
@@ -902,7 +919,7 @@ class AcademyMentorshipServiceSetView(APIView):
                 mentorship_service_set = serializer.save()
 
                 if plan:
-                    if plan.mentorship_service_set:
+                    if plan.mentorship_service_set and plan_to_clone:
                         mentorship_service_set.mentorship_services.set(
                             plan.mentorship_service_set.mentorship_services.all()
                         )
@@ -1037,17 +1054,25 @@ class AcademyEventTypeSetView(APIView):
 
     @capable_of("crud_plan")
     def post(self, request, academy_id=None):
-        """Create a new EventTypeSet."""
+        """
+        Create a new EventTypeSet.
+
+        slug: Slug for the event type set
+        Optional parameters:
+        - plan_to_clone: Clone event type set from a plan and add additional event types (requires event_type_ids)
+        - event_type_ids: Event type IDs to add to the set
+        """
         lang = get_user_language(request)
 
         data = request.data.copy()
         data["academy"] = academy_id
 
-        # Optional parameters to clone an event type set of a plan with additional event types
-        plan_to_clone = request.data.get("plan_to_clone")
         event_type_ids = request.data.get("event_type_ids")
 
-        if (plan_to_clone and not event_type_ids) or (not plan_to_clone and event_type_ids):
+        # Parameter to clone an event type set of a plan with additional event types
+        plan_to_clone = request.data.get("plan_to_clone")
+
+        if plan_to_clone and not event_type_ids:
             raise ValidationException(
                 translation(
                     lang,
@@ -1079,13 +1104,23 @@ class AcademyEventTypeSetView(APIView):
                 if isinstance(event_type_ids, str)
                 else event_type_ids
             )
-            event_types_to_add = EventType.objects.filter(id__in=ids, academy__id=academy_id)
+            # Allow event types the academy owns, or has access to (shared or via visibility)
+            event_type_access_q = (
+                Q(academy__id=academy_id)
+                | Q(allow_shared_creation=True)
+                | Q(visibility_settings__academy_id=academy_id)
+            )
+            event_types_to_add = (
+                EventType.objects.filter(id__in=ids)
+                .filter(event_type_access_q)
+                .distinct()
+            )
             if not event_types_to_add.exists() or event_types_to_add.count() != len(ids):
                 raise ValidationException(
                     translation(
                         lang,
-                        en=f"One or more event types don't exist or don't belong to academy {academy_id}",
-                        es=f"Uno o más tipos de evento no existen o no pertenecen a la academia {academy_id}",
+                        en="One or more event types don't exist or you don't have access to them",
+                        es="Uno o más tipos de evento no existen o no tienes acceso a ellos",
                     ),
                     slug="event-type-not-in-academy",
                     code=400,
@@ -1097,7 +1132,7 @@ class AcademyEventTypeSetView(APIView):
                 event_type_set = serializer.save()
 
                 if plan:
-                    if plan.event_type_set:
+                    if plan.event_type_set and plan_to_clone:
                         event_type_set.event_types.set(plan.event_type_set.event_types.all())
                     plan.event_type_set = event_type_set
                     plan.save()
@@ -1157,8 +1192,13 @@ class AcademyEventTypeSetView(APIView):
         if errors:
             raise ValidationException(errors, code=400)
 
-        # Filter event types by academy
-        items = EventType.objects.filter(query, academy__id=academy_id)
+        # Event types the academy has access to: owns, shared, or visible via visibility_settings
+        event_type_access_q = (
+            Q(academy__id=academy_id)
+            | Q(allow_shared_creation=True)
+            | Q(visibility_settings__academy_id=academy_id)
+        )
+        items = EventType.objects.filter(query).filter(event_type_access_q).distinct()
 
         if not items.exists():
             errors.append(
@@ -1708,10 +1748,12 @@ class AcademyConsumableView(APIView):
         lang = get_user_language(request)
         utc_now = timezone.now()
 
-        # Start with consumables that belong to the academy through subscriptions or plan_financings
+        # Start with consumables that belong to the academy through subscriptions, plan_financings, or staff grant
         items = Consumable.objects.filter(
             Q(valid_until__gte=utc_now) | Q(valid_until=None),
-            Q(subscription__academy_id=academy_id) | Q(plan_financing__academy_id=academy_id),
+            Q(subscription__academy_id=academy_id)
+            | Q(plan_financing__academy_id=academy_id)
+            | Q(standalone_invoice__bag__academy_id=academy_id),
         ).exclude(how_many=0)
 
         # Filter by users if provided (comma-separated list of user IDs)
@@ -1753,6 +1795,154 @@ class AcademyConsumableView(APIView):
         }
 
         return Response(balance)
+
+
+class AcademyServiceStockStatusView(APIView):
+    """
+    Academy GET endpoint to debug service stock (scheduler) status for a user.
+    Returns schedulers that should issue consumables, their health/diagnosis, and optional balance.
+    """
+
+    @capable_of("read_service_stock_status")
+    def get(self, request, user_id, academy_id=None):
+        lang = get_user_language(request)
+        include_balance = request.GET.get("include_balance", "").lower() in ("true", "1", "y")
+        data = actions.get_service_stock_status_for_user(
+            user_id=user_id,
+            academy_id=academy_id,
+            include_balance=include_balance,
+            request=request if include_balance else None,
+        )
+        if data is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="User not found or has no link to this academy",
+                    es="Usuario no encontrado o no tiene vínculo con esta academia",
+                    slug="user-not-found",
+                ),
+                code=404,
+            )
+        return Response(data)
+
+
+class AcademyServiceStockRegenerateView(APIView):
+    """
+    Academy POST endpoint to regenerate service stock schedulers and consumables immediately.
+    It supports one target per request: plan_financing_id or subscription_id.
+    """
+
+    @capable_of("crud_consumable")
+    def post(self, request, academy_id=None):
+        lang = get_user_language(request)
+
+        plan_financing_id = request.data.get("plan_financing_id")
+        subscription_id = request.data.get("subscription_id")
+        seat_id = request.data.get("seat_id")
+
+        def parse_int(value, field_name):
+            if value is None:
+                return None
+
+            if isinstance(value, int):
+                return value
+
+            if isinstance(value, str) and value.isdigit():
+                return int(value)
+
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"{field_name} must be an integer",
+                    es=f"{field_name} debe ser un entero",
+                    slug=f"invalid-{field_name}",
+                ),
+                code=400,
+            )
+
+        plan_financing_id = parse_int(plan_financing_id, "plan_financing_id")
+        subscription_id = parse_int(subscription_id, "subscription_id")
+        seat_id = parse_int(seat_id, "seat_id")
+
+        try:
+            data = actions.regenerate_service_stock_for_target(
+                academy_id=academy_id,
+                plan_financing_id=plan_financing_id,
+                subscription_id=subscription_id,
+                seat_id=seat_id,
+            )
+        except ValidationException:
+            raise
+        except Exception as error:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Could not regenerate service stock schedulers: {error}",
+                    es=f"No se pudieron regenerar los service stock schedulers: {error}",
+                    slug="service-stock-regeneration-failed",
+                ),
+                code=500,
+            )
+
+        return Response(data)
+
+
+class AcademyServiceStockConsumableRegenerateView(APIView):
+    """
+    Academy POST endpoint to regenerate consumables for one service stock scheduler immediately.
+    """
+
+    @capable_of("crud_consumable")
+    def post(self, request, academy_id=None):
+        lang = get_user_language(request)
+        service_stock_scheduler_id = request.data.get("service_stock_scheduler_id")
+
+        if service_stock_scheduler_id is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="service_stock_scheduler_id is required",
+                    es="service_stock_scheduler_id es requerido",
+                    slug="missing-service-stock-scheduler-id",
+                ),
+                code=400,
+            )
+
+        if isinstance(service_stock_scheduler_id, int):
+            scheduler_id = service_stock_scheduler_id
+        elif isinstance(service_stock_scheduler_id, str) and service_stock_scheduler_id.isdigit():
+            scheduler_id = int(service_stock_scheduler_id)
+        else:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="service_stock_scheduler_id must be an integer",
+                    es="service_stock_scheduler_id debe ser un entero",
+                    slug="invalid-service-stock-scheduler-id",
+                ),
+                code=400,
+            )
+
+        try:
+            data = actions.regenerate_consumable_for_service_stock_scheduler(
+                academy_id=academy_id,
+                service_stock_scheduler_id=scheduler_id,
+            )
+        except ValidationException:
+            raise
+        except Exception as error:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Could not regenerate consumables for service stock scheduler: {error}",
+                    es=f"No se pudieron regenerar los consumables para el service stock scheduler: {error}",
+                    slug="service-stock-consumable-regeneration-failed",
+                ),
+                code=500,
+            )
+
+        response_status = status.HTTP_200_OK if data.get("status") == "success" else status.HTTP_409_CONFLICT
+        return Response(data, status=response_status)
 
 
 class MentorshipServiceSetView(APIView):
@@ -2168,12 +2358,15 @@ class AcademySubscriptionView(APIView):
     @capable_of("read_subscription")
     def get(self, request, subscription_id=None, academy_id=None):
         handler = self.extensions(request)
-
-        cache = handler.cache.get()
-        if cache is not None:
-            return cache
-
         lang = get_user_language(request)
+
+        # Bypass cache when date range params are present (ad-hoc range queries)
+        has_date_range = "date_start" in request.GET or "date_end" in request.GET
+        if not has_date_range:
+            cache = handler.cache.get()
+            if cache is not None:
+                return cache
+
         now = timezone.now()
 
         if subscription_id:
@@ -2238,6 +2431,12 @@ class AcademySubscriptionView(APIView):
         if user_id := request.GET.get("users"):
             items = items.filter(user__id=int(user_id))
 
+        date_start, date_end = parse_date_range_from_request(request, lang)
+        if date_start is not None:
+            items = items.filter(paid_at__gte=date_start)
+        if date_end is not None:
+            items = items.filter(paid_at__lte=date_end)
+
         # Optimize query to include billing team for seat information
         items = items.select_related("subscriptionbillingteam").prefetch_related("subscriptionbillingteam__seats")
 
@@ -2291,14 +2490,16 @@ class AcademyPlanFinancingView(APIView):
 
     def get(self, request, financing_id=None, academy_id=None):
         handler = self.extensions(request)
-
-        # Check cache first to avoid expensive database queries
-        cache = handler.cache.get()
-        if cache is not None:
-            logger.info(f"AcademyPlanFinancingView: Returning cached data for user {request.user.id}")
-            return cache
-
         lang = get_user_language(request)
+
+        # Bypass cache when date range params are present (ad-hoc range queries)
+        has_date_range = "date_start" in request.GET or "date_end" in request.GET
+        if not has_date_range:
+            cache = handler.cache.get()
+            if cache is not None:
+                logger.info(f"AcademyPlanFinancingView: Returning cached data for user {request.user.id}")
+                return cache
+
         now = timezone.now()
 
         if financing_id:
@@ -2341,6 +2542,12 @@ class AcademyPlanFinancingView(APIView):
                 items = items.filter(plans__id__in=[int(v) for v in values])
             else:
                 items = items.filter(plans__slug__in=values)
+
+        date_start, date_end = parse_date_range_from_request(request, lang)
+        if date_start is not None:
+            items = items.filter(created_at__gte=date_start)
+        if date_end is not None:
+            items = items.filter(created_at__lte=date_end)
 
         # Apply pagination and sorting
         items = handler.queryset(items)
@@ -2401,7 +2608,11 @@ class MeInvoiceView(APIView):
         lang = get_user_language(request)
 
         if invoice_id:
-            item = Invoice.objects.filter(id=invoice_id, user=request.user).first()
+            item = (
+                Invoice.objects.select_related("proof", "proof__created_by", "payment_method")
+                .filter(id=invoice_id, user=request.user)
+                .first()
+            )
 
             if not item:
                 raise ValidationException(
@@ -2416,6 +2627,7 @@ class MeInvoiceView(APIView):
         if status := request.GET.get("status"):
             items = items.filter(status__in=status.split(","))
 
+        items = items.select_related("payment_method")
         items = handler.queryset(items)
         serializer = GetInvoiceSmallSerializer(items, many=True)
 
@@ -2562,7 +2774,11 @@ class AcademyInvoiceView(APIView):
         lang = get_user_language(request)
 
         if invoice_id:
-            item = Invoice.objects.filter(id=invoice_id, user=request.user, academy__id=academy_id).first()
+            item = (
+                Invoice.objects.select_related("proof", "proof__created_by", "payment_method")
+                .filter(id=invoice_id, academy__id=academy_id)
+                .first()
+            )
 
             if not item:
                 raise ValidationException(
@@ -2572,13 +2788,37 @@ class AcademyInvoiceView(APIView):
             serializer = GetInvoiceSerializer(item, many=False)
             return handler.response(serializer.data)
 
-        items = Invoice.objects.filter(user=request.user, academy__id=academy_id)
+        items = Invoice.objects.filter(academy__id=academy_id)
+
+        if user_param := request.GET.get("user"):
+            if user_param.isdigit():
+                user = User.objects.filter(id=int(user_param)).first()
+            else:
+                user = User.objects.filter(email=user_param).first()
+            if not user:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="User not found",
+                        es="Usuario no encontrado",
+                        slug="user-not-found",
+                    ),
+                    code=404,
+                )
+            items = items.filter(user=user)
 
         if status := request.GET.get("status"):
             items = items.filter(status__in=status.split(","))
 
+        date_start, date_end = parse_date_range_from_request(request, lang)
+        if date_start is not None:
+            items = items.filter(paid_at__gte=date_start)
+        if date_end is not None:
+            items = items.filter(paid_at__lte=date_end)
+
+        items = items.select_related("payment_method")
         items = handler.queryset(items)
-        serializer = GetInvoiceSerializer(items, many=True)
+        serializer = GetInvoiceSmallSerializer(items, many=True)
 
         return handler.response(serializer.data)
 
@@ -4381,6 +4621,7 @@ class ConsumableCheckoutView(APIView):
                     how_many=total_items,
                     mentorship_service_set=mentorship_service_set,
                     event_type_set=event_type_set,
+                    standalone_invoice=invoice,
                 )
 
                 consumable.save()
@@ -5987,6 +6228,25 @@ class AcademyPlanSubscriptionView(APIView):
         data["coupons"] = s2.data
 
         return Response(data)
+
+
+class AcademyGrantConsumableView(APIView):
+    """
+    Academy-only POST to grant consumables to a user.
+    Requires crud_consumable, proof of payment (file or reference), and a non-card/non-crypto payment method.
+    """
+
+    @capable_of("crud_consumable")
+    def post(self, request, academy_id=None):
+        lang = get_user_language(request)
+        proof = actions.validate_and_create_proof_of_payment(request, request.user, academy_id, lang)
+        try:
+            invoice = actions.grant_consumables_for_user(request, proof, academy_id, lang)
+        except Exception as e:
+            proof.delete()
+            raise e
+        serializer = GetInvoiceSerializer(invoice, many=False)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class CurrencyView(APIView):

@@ -534,14 +534,14 @@ class SurveyStudyForm(forms.ModelForm):
 @admin.register(SurveyStudy)
 class SurveyStudyAdmin(admin.ModelAdmin):
     form = SurveyStudyForm
-    list_display = ("id", "slug", "title", "academy", "starts_at", "ends_at", "max_responses", "created_at")
-    list_filter = ("academy", "starts_at", "ends_at", "created_at")
+    list_display = ("id", "slug", "title", "academy", "status", "starts_at", "ends_at", "max_responses", "created_at")
+    list_filter = ("academy", "status", "starts_at", "ends_at", "created_at")
     search_fields = ("slug", "title", "description", "academy__name", "academy__slug")
     raw_id_fields = ("academy",)
     filter_horizontal = ("survey_configurations",)
     readonly_fields = ("created_at", "updated_at")
     fieldsets = (
-        ("Basic Information", {"fields": ("slug", "title", "description", "academy")}),
+        ("Basic Information", {"fields": ("slug", "title", "description", "academy", "status")}),
         ("Window & Limits", {"fields": ("starts_at", "ends_at", "max_responses")}),
         ("Survey Configurations", {"fields": ("survey_configurations",)}),
         ("Stats", {"fields": ("stats",), "classes": ("collapse",)}),

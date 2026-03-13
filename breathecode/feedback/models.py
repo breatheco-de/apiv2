@@ -838,10 +838,29 @@ class SurveyStudy(models.Model):
     with module 0 (start) and the last module (end) in the same study.
     """
 
+    class Status(models.TextChoices):
+        DRAFT = "DRAFT", "Draft"
+        ACTIVE = "ACTIVE", "Active"
+        FINISHED = "FINISHED", "Finished"
+        DELETED = "DELETED", "Deleted"
+
     slug = models.SlugField(max_length=100, unique=True)
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True, null=True, default=None)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    
+    status = models.CharField(
+        max_length=15,
+        choices=Status.choices,
+        default=Status.DRAFT,
+        help_text=(
+            "Status of the study. "
+            "DRAFT: not started, "
+            "ACTIVE: currently running, "
+            "FINISHED: completed (ended), "
+            "DELETED: archived/hidden from frontend."
+        )
+    )
 
     starts_at = models.DateTimeField(null=True, blank=True, default=None)
     ends_at = models.DateTimeField(null=True, blank=True, default=None)

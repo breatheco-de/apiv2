@@ -19,7 +19,7 @@ from breathecode.admissions.models import Academy, SyllabusVersion
 from breathecode.assessment.models import Assessment
 
 from .signals import asset_readme_modified, asset_saved, asset_slug_modified, asset_status_updated, asset_title_modified
-from .utils import AssetErrorLogType
+from .utils import AssetErrorLogType, get_base_path_from_readme_url
 
 __all__ = ["AssetTechnology", "Asset", "AssetAlias", "AssetFlag", "ContentSite"]
 logger = logging.getLogger(__name__)
@@ -783,6 +783,459 @@ class Asset(models.Model):
         repo_name = result.group(2)
 
         return org_name, repo_name, branch_name
+
+    def apply_learn_config(self, config):
+        """
+        Apply a parsed learn.json config to this asset (PROJECT/EXERCISE).
+        Updates title, description, preview, video, duration, template_url, difficulty,
+        solution, delivery, technologies, gitpod, etc. Saves and returns self.
+        """
+        if not config:
+            raise Exception("No configuration json found")
+
+        if self.asset_type in ["QUIZ"]:
+            raise Exception("Can only process exercise and project config objects")
+
+        from breathecode.registry.actions import get_video_url
+
+        if "title" in config:
+            if isinstance(config["title"], str):
+                if self.lang in ["", "us", "en"] or self.title == "" or self.title is None:
+                    self.title = config["title"]
+            elif isinstance(config["title"], dict) and self.lang:
+                if self.lang in ["us", "en"]:
+                    self.title = config["title"].get("en") or config["title"].get("us")
+                elif self.lang in config["title"]:
+                    self.title = config["title"][self.lang]
+
+        if "description" in config:
+            if isinstance(config["description"], str):
+                if self.lang in ["", "us", "en"] or self.description == "" or self.description is None:
+                    self.description = config["description"]
+            elif isinstance(config["description"], dict) and self.lang:
+                if self.lang in ["us", "en"]:
+                    self.description = config["description"].get("en") or config["description"].get("us")
+                elif self.lang in config["description"]:
+                    self.description = config["description"][self.lang]
+
+        if "preview" in config:
+            self.preview = config["preview"]
+        else:
+            message = (
+                "Missing preview URL, you can specify a 'preview' property in the learn.json file "
+                "that points to a remote image url like https://example.com/image.png"
+            )
+            self.log_error(AssetErrorLogType.MISSING_PREVIEW, status_text=message)
+            self.sync_status = "ERROR"
+            self.status_text = message
+
+        if "video-id" in config:
+            self.solution_video_url = get_video_url(str(config["video-id"]))
+            self.with_video = True
+
+        if "video" in config and isinstance(config["video"], dict):
+            if "intro" in config["video"] and config["video"]["intro"] is not None:
+                if isinstance(config["video"]["intro"], str):
+                    self.intro_video_url = get_video_url(str(config["video"]["intro"]))
+                else:
+                    if "en" in config["video"]["intro"]:
+                        config["video"]["intro"]["us"] = config["video"]["intro"]["en"]
+                    elif "us" in config["video"]["intro"]:
+                        config["video"]["intro"]["en"] = config["video"]["intro"]["us"]
+                    if self.lang in config["video"]["intro"]:
+                        self.intro_video_url = get_video_url(str(config["video"]["intro"][self.lang]))
+
+            if "solution" in config["video"] and config["video"]["solution"] is not None:
+                if isinstance(config["video"]["solution"], str):
+                    self.solution_video_url = get_video_url(str(config["video"]["solution"]))
+                    self.with_video = True
+                    self.with_solutions = True
+                else:
+                    if "en" in config["video"]["solution"]:
+                        config["video"]["solution"]["us"] = config["video"]["solution"]["en"]
+                    elif "us" in config["video"]["solution"]:
+                        config["video"]["solution"]["en"] = config["video"]["solution"]["us"]
+                    if self.lang in config["video"]["solution"]:
+                        self.with_solutions = True
+                        self.solution_video_url = get_video_url(str(config["video"]["solution"][self.lang]))
+                        self.with_video = True
+
+        if "duration" in config:
+            self.duration = config["duration"]
+
+        if "template_url" in config:
+            if self.asset_type != "PROJECT":
+                self.log_error("template-url", "Only asset types projects can have templates")
+            else:
+                self.template_url = config["template_url"]
+        else:
+            self.template_url = None
+
+        if "difficulty" in config:
+            self.difficulty = config["difficulty"].upper()
+        if "videoSolutions" in config:
+            self.with_solutions = True
+            self.with_video = True
+
+        if "editor" in config and "agent" in config["editor"]:
+            self.agent = config["editor"]["agent"]
+
+        if "solution" in config:
+            self.with_solutions = True
+            if isinstance(config["solution"], str):
+                self.solution_url = config["solution"]
+            elif isinstance(config["solution"], dict):
+                if self.lang in ["us", "en"]:
+                    if "us" in config["solution"]:
+                        self.solution_url = config["solution"]["us"]
+                    if "en" in config["solution"]:
+                        self.solution_url = config["solution"]["en"]
+                elif self.lang in config["solution"]:
+                    self.solution_url = config["solution"][self.lang]
+
+        if "grading" not in config and ("projectType" not in config or config["projectType"] != "tutorial"):
+            self.interactive = False
+        elif "projectType" in config and config["projectType"] == "tutorial":
+            self.gitpod = "localhostOnly" not in config or not config["localhostOnly"]
+            self.interactive = True
+        elif "grading" in config and config["grading"] in ["isolated", "incremental"]:
+            self.gitpod = "localhostOnly" not in config or not config["localhostOnly"]
+            self.interactive = True
+
+        if "technologies" in config:
+            self.technologies.clear()
+            for tech_slug in config["technologies"]:
+                technology = AssetTechnology.get_or_create(tech_slug)
+                if technology.lang is not None and technology.lang != "":
+                    if technology.lang in ["us", "en"] and self.lang not in ["us", "en"]:
+                        continue
+                    if technology.lang != self.lang:
+                        continue
+                self.technologies.add(technology)
+
+        if "delivery" in config:
+            if "instructions" in config["delivery"]:
+                if isinstance(config["delivery"]["instructions"], str):
+                    self.delivery_instructions = config["delivery"]["instructions"]
+                elif (
+                    isinstance(config["delivery"]["instructions"], dict)
+                    and self.lang in config["delivery"]["instructions"]
+                ):
+                    self.delivery_instructions = config["delivery"]["instructions"][self.lang]
+
+            if "formats" in config["delivery"]:
+                if isinstance(config["delivery"]["formats"], list):
+                    self.delivery_formats = ",".join(config["delivery"]["formats"])
+                elif isinstance(config["delivery"]["formats"], str):
+                    self.delivery_formats = config["delivery"]["formats"]
+
+            if "url" in (self.delivery_formats or ""):
+                if "regex" in config["delivery"] and isinstance(config["delivery"]["regex"], str):
+                    self.delivery_regex_url = config["delivery"]["regex"].replace("\\\\", "\\")
+        else:
+            self.delivery_instructions = ""
+            self.delivery_formats = "url"
+            self.delivery_regex_url = ""
+
+        if "gitpod" in config:
+            if config["gitpod"] in ["True", "true", "1", True]:
+                self.gitpod = True
+            elif config["gitpod"] in ["False", "false", "0", False]:
+                self.gitpod = False
+
+        self.save()
+        return self
+
+    def to_learn_config(self):
+        """
+        Build the full learn.json dict from this asset (and its translations).
+        Used when pushing PROJECT/EXERCISE to GitHub so one mapping drives push and pull.
+        """
+        translations = list(self.all_translations.all())
+        if self not in translations:
+            translations = [self] + translations
+        else:
+            translations = [self] + [t for t in translations if t != self]
+
+        title = {}
+        description = {}
+        solution = {}
+        video_intro = {}
+        video_solution = {}
+        delivery_instructions = {}
+
+        for t in translations:
+            lang = t.lang or "us"
+            if lang in ["", "en"]:
+                lang = "us"
+            if t.title:
+                title[lang] = t.title
+            if t.description:
+                description[lang] = t.description
+            if t.solution_url:
+                solution[lang] = t.solution_url
+            if t.intro_video_url:
+                video_intro[lang] = t.intro_video_url
+            if t.solution_video_url:
+                video_solution[lang] = t.solution_video_url
+            if t.delivery_instructions:
+                delivery_instructions[lang] = t.delivery_instructions
+
+        config = {
+            "slug": self.slug,
+            "title": title if len(title) > 1 else (list(title.values())[0] if title else self.title or ""),
+            "description": description if len(description) > 1 else (list(description.values())[0] if description else self.description or ""),
+            "preview": self.preview or "",
+            "difficulty": (self.difficulty or "").upper() if self.difficulty else None,
+            "duration": self.duration,
+            "template_url": self.template_url,
+            "gitpod": self.gitpod,
+            "technologies": [t.slug for t in self.technologies.all()],
+            "projectType": self.asset_type.lower() if self.asset_type in ["PROJECT", "EXERCISE"] else "exercise",
+        }
+
+        if solution:
+            config["solution"] = solution if len(solution) > 1 else list(solution.values())[0]
+        if video_intro or video_solution:
+            config["video"] = {}
+            if video_intro:
+                config["video"]["intro"] = video_intro if len(video_intro) > 1 else list(video_intro.values())[0]
+            if video_solution:
+                config["video"]["solution"] = video_solution if len(video_solution) > 1 else list(video_solution.values())[0]
+        if self.agent:
+            config["editor"] = {"agent": self.agent}
+        if self.interactive:
+            config["grading"] = "incremental"
+            config["projectType"] = "tutorial"
+            config["localhostOnly"] = not self.gitpod
+        if delivery_instructions or self.delivery_formats or self.delivery_regex_url:
+            config["delivery"] = {
+                "instructions": delivery_instructions if len(delivery_instructions) > 1 else (list(delivery_instructions.values())[0] if delivery_instructions else self.delivery_instructions or ""),
+                "formats": [f.strip() for f in (self.delivery_formats or "url").split(",")],
+                "regex": (self.delivery_regex_url or "").replace("\\", "\\\\"),
+            }
+
+        if self.config:
+            for key in ["slug", "title", "description", "preview", "difficulty", "duration", "template_url", "gitpod", "technologies", "projectType", "solution", "video", "editor", "grading", "localhostOnly", "delivery"]:
+                if key not in config and key in self.config:
+                    config[key] = self.config[key]
+
+        return config
+
+    @classmethod
+    def learn_config_to_metadata(cls, config, lang=None):
+        """
+        Extract flat metadata dict from learn.json for import flow.
+        Returns asset_type, title, description, difficulty, duration, technologies, slug, preview.
+        """
+        metadata = {}
+        if "projectType" in config:
+            pt = config["projectType"]
+            if pt == "project":
+                metadata["asset_type"] = "PROJECT"
+            elif pt == "exercise":
+                metadata["asset_type"] = "EXERCISE"
+        if "title" in config:
+            if isinstance(config["title"], str):
+                metadata["title"] = config["title"]
+            elif isinstance(config["title"], dict):
+                preferred = lang or "us"
+                if preferred in config["title"]:
+                    metadata["title"] = config["title"][preferred]
+                else:
+                    metadata["title"] = config["title"].get("en") or config["title"].get("us")
+        if "description" in config:
+            if isinstance(config["description"], str):
+                metadata["description"] = config["description"]
+            elif isinstance(config["description"], dict):
+                preferred = lang or "us"
+                if preferred in config["description"]:
+                    metadata["description"] = config["description"][preferred]
+                else:
+                    metadata["description"] = config["description"].get("en") or config["description"].get("us")
+        if "difficulty" in config:
+            metadata["difficulty"] = config["difficulty"]
+        if "duration" in config:
+            metadata["duration"] = config["duration"]
+        if "technologies" in config:
+            metadata["technologies"] = config["technologies"]
+        if "slug" in config:
+            metadata["slug"] = config["slug"]
+        if "preview" in config:
+            metadata["preview"] = config["preview"]
+        return metadata
+
+    @classmethod
+    def sync_fields_to_learn_config(cls, asset, updated_fields):
+        """
+        Given an asset and a dict of updated fields (from serializer), return updated learn.json.
+        Patches asset.config with the updated fields using the same mapping as to_learn_config.
+        """
+        if not asset.config:
+            return None
+
+        config = asset.config.copy()
+
+        if "solution_url" in updated_fields:
+            solution_url = updated_fields["solution_url"]
+            if solution_url is None:
+                if "solution" in config:
+                    if isinstance(config["solution"], dict):
+                        if asset.lang in config["solution"]:
+                            del config["solution"][asset.lang]
+                    else:
+                        del config["solution"]
+            else:
+                if "solution" not in config:
+                    config["solution"] = {}
+                if isinstance(config["solution"], str):
+                    config["solution"] = {"en": config["solution"]}
+                if asset.lang in ["us", "en"]:
+                    config["solution"]["us"] = solution_url
+                    config["solution"]["en"] = solution_url
+                else:
+                    config["solution"][asset.lang] = solution_url
+
+        if "preview" in updated_fields:
+            config["preview"] = updated_fields["preview"]
+
+        if "title" in updated_fields:
+            title = updated_fields["title"]
+            if "title" not in config:
+                config["title"] = {}
+            if isinstance(config["title"], str):
+                config["title"] = {"en": config["title"]}
+            if asset.lang in ["us", "en"]:
+                config["title"]["us"] = title
+                config["title"]["en"] = title
+            else:
+                config["title"][asset.lang] = title
+
+        if "description" in updated_fields:
+            description = updated_fields["description"]
+            if "description" not in config:
+                config["description"] = {}
+            if isinstance(config["description"], str):
+                config["description"] = {"en": config["description"]}
+            if asset.lang in ["us", "en"]:
+                config["description"]["us"] = description
+                config["description"]["en"] = description
+            else:
+                config["description"][asset.lang] = description
+
+        if "template_url" in updated_fields:
+            config["template_url"] = updated_fields["template_url"]
+
+        if "difficulty" in updated_fields:
+            difficulty = updated_fields["difficulty"]
+            config["difficulty"] = difficulty.upper() if (difficulty and isinstance(difficulty, str)) else difficulty
+
+        if "duration" in updated_fields:
+            config["duration"] = updated_fields["duration"]
+
+        if "gitpod" in updated_fields:
+            config["gitpod"] = updated_fields["gitpod"]
+
+        if "agent" in updated_fields:
+            if "editor" not in config:
+                config["editor"] = {}
+            config["editor"]["agent"] = updated_fields["agent"]
+
+        if "solution_video_url" in updated_fields:
+            solution_video_url = updated_fields["solution_video_url"]
+            if "video" not in config:
+                config["video"] = {}
+            if solution_video_url is None:
+                if "solution" in config["video"]:
+                    if isinstance(config["video"]["solution"], dict) and asset.lang in config["video"]["solution"]:
+                        del config["video"]["solution"][asset.lang]
+                    else:
+                        del config["video"]["solution"]
+            else:
+                if "solution" not in config["video"]:
+                    config["video"]["solution"] = {}
+                if isinstance(config["video"]["solution"], str):
+                    config["video"]["solution"] = {"en": config["video"]["solution"]}
+                if asset.lang in ["us", "en"]:
+                    config["video"]["solution"]["us"] = solution_video_url
+                    config["video"]["solution"]["en"] = solution_video_url
+                else:
+                    config["video"]["solution"][asset.lang] = solution_video_url
+
+        if "intro_video_url" in updated_fields:
+            intro_video_url = updated_fields["intro_video_url"]
+            if "video" not in config:
+                config["video"] = {}
+            if intro_video_url is None:
+                if "intro" in config["video"]:
+                    if isinstance(config["video"]["intro"], dict) and asset.lang in config["video"]["intro"]:
+                        del config["video"]["intro"][asset.lang]
+                    else:
+                        del config["video"]["intro"]
+            else:
+                if "intro" not in config["video"]:
+                    config["video"]["intro"] = {}
+                if isinstance(config["video"]["intro"], str):
+                    config["video"]["intro"] = {"en": config["video"]["intro"]}
+                if asset.lang in ["us", "en"]:
+                    config["video"]["intro"]["us"] = intro_video_url
+                    config["video"]["intro"]["en"] = intro_video_url
+                else:
+                    config["video"]["intro"][asset.lang] = intro_video_url
+
+        if "delivery_instructions" in updated_fields:
+            if "delivery" not in config:
+                config["delivery"] = {}
+            instructions = updated_fields["delivery_instructions"]
+            if instructions is None:
+                if "instructions" in config["delivery"]:
+                    if isinstance(config["delivery"]["instructions"], dict) and asset.lang in config["delivery"]["instructions"]:
+                        del config["delivery"]["instructions"][asset.lang]
+                    else:
+                        del config["delivery"]["instructions"]
+            else:
+                if "instructions" not in config["delivery"]:
+                    config["delivery"]["instructions"] = {}
+                if isinstance(config["delivery"]["instructions"], str):
+                    config["delivery"]["instructions"] = {"en": config["delivery"]["instructions"]}
+                if asset.lang in ["us", "en"]:
+                    config["delivery"]["instructions"]["us"] = instructions
+                    config["delivery"]["instructions"]["en"] = instructions
+                else:
+                    config["delivery"]["instructions"][asset.lang] = instructions
+
+        if "delivery_formats" in updated_fields:
+            if "delivery" not in config:
+                config["delivery"] = {}
+            formats = updated_fields["delivery_formats"]
+            if formats:
+                config["delivery"]["formats"] = [f.strip() for f in formats.split(",")] if isinstance(formats, str) else formats
+            else:
+                config["delivery"]["formats"] = []
+
+        if "delivery_regex_url" in updated_fields:
+            if "delivery" not in config:
+                config["delivery"] = {}
+            regex = updated_fields["delivery_regex_url"]
+            config["delivery"]["regex"] = regex.replace("\\", "\\\\") if regex else ""
+
+        if "technologies" in updated_fields:
+            technologies = updated_fields["technologies"]
+            if technologies and isinstance(technologies, list) and len(technologies) > 0:
+                config["technologies"] = [t.slug for t in technologies] if hasattr(technologies[0], "slug") else technologies
+            else:
+                config["technologies"] = []
+
+        return config
+
+    @property
+    def is_in_subdirectory(self):
+        """
+        True when this asset's readme_url points to a file inside a repo subdirectory
+        (e.g. .../blob/main/projects/myproject/README.md). When True for a PROJECT,
+        do not use asset.url as "clone and start"; use template_url or treat as read-only.
+        """
+        return bool(get_base_path_from_readme_url(self.readme_url))
 
     def get_readme(self, parse=None, remove_frontmatter=False, silent=True):
 

@@ -7,14 +7,49 @@ __all__ = ["Category", "Media", "MediaResolution"]
 
 
 class Category(models.Model):
-    slug = models.SlugField(max_length=150, unique=True)
+    """
+    Media category. When is_manageable_by_academy=True the category is for API
+    internal use: academies cannot create/update/delete it but can assign media to it.
+    When academy is set, only that academy can manage the category.
+    """
+    slug = models.SlugField(max_length=150)
     name = models.CharField(max_length=150)
+    is_manageable_by_academy = models.BooleanField(
+        default=False,
+        help_text="If True, category is for API internal use; academies cannot manage it but can assign media.",
+    )
+    academy = models.ForeignKey(
+        Academy,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        help_text="Owner academy. Must be null when is_manageable_by_academy is True.",
+    )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["slug", "academy"],
+                name="media_category_slug_academy_unique",
+            ),
+        ]
+
     def __str__(self):
         return f"{self.name} ({self.id})"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.is_manageable_by_academy and self.academy_id is not None:
+            raise ValidationError(
+                {"academy": "academy must be null when is_manageable_by_academy is True."}
+            )
+        if self.academy_id is not None and self.is_manageable_by_academy:
+            raise ValidationError(
+                {"is_manageable_by_academy": "must be False when academy is set."}
+            )
 
 
 class Media(models.Model):

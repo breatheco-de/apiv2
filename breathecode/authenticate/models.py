@@ -47,9 +47,10 @@ __all__ = [
     "Token",
 ]
 
-TOKEN_TYPE = ["login", "one_time", "temporal", "permanent"]
+TOKEN_TYPE = ["login", "one_time", "temporal", "permanent", "short"]
 LOGIN_TOKEN_LIFETIME = timezone.timedelta(days=7)
-TEMPORAL_TOKEN_LIFETIME = timezone.timedelta(minutes=10)
+TEMPORAL_TOKEN_LIFETIME = timezone.timedelta(hours=24)
+SHORT_TOKEN_LIFETIME = timezone.timedelta(minutes=15)
 
 
 class UserProxy(User):
@@ -131,9 +132,24 @@ class Role(models.Model):
     slug = models.SlugField(max_length=25, primary_key=True)
     name = models.CharField(max_length=255, blank=True, null=True, default=None)
     capabilities = models.ManyToManyField(Capability)
+    academy = models.ForeignKey(
+        Academy,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="custom_roles",
+        help_text="Null for native (platform) roles; set for academy-owned custom roles.",
+    )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    @property
+    def display_slug(self):
+        """Slug without academy id suffix, for UI display. Native roles return slug as-is."""
+        if self.academy_id is not None and self.slug.endswith(f"_{self.academy_id}"):
+            return self.slug.removesuffix(f"_{self.academy_id}")
+        return self.slug
 
     def __str__(self):
         return f"{self.name} ({self.slug})"
@@ -311,9 +327,11 @@ class UserInvite(models.Model):
 
 INVITED = "INVITED"
 ACTIVE = "ACTIVE"
+DELETED = "DELETED"
 PROFILE_ACADEMY_STATUS = (
     (INVITED, "Invited"),
     (ACTIVE, "Active"),
+    (DELETED, "Deleted"),
 )
 
 
@@ -755,6 +773,10 @@ class Token(rest_framework.authtoken.models.Token):
         if without_expire_at and self.token_type == "temporal":
             utc_now = timezone.now()
             self.expires_at = utc_now + TEMPORAL_TOKEN_LIFETIME
+
+        if without_expire_at and self.token_type == "short":
+            utc_now = timezone.now()
+            self.expires_at = utc_now + SHORT_TOKEN_LIFETIME
 
         if self.token_type == "one_time" or self.token_type == "permanent":
             self.expires_at = None

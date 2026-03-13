@@ -7,6 +7,7 @@ from capyc.rest_framework.exceptions import ValidationException
 from task_manager.core.exceptions import AbortTask
 
 from breathecode.admissions.models import CohortUser
+from breathecode.admissions.utils.academy_features import has_feature_flag
 from breathecode.registry.models import Asset
 
 from .models import Task
@@ -56,7 +57,11 @@ def deliver_task(github_url, live_url=None, task_id=None, task=None):
     task.github_url = github_url
     task.live_url = live_url
     task.task_status = "DONE"
-    task.revision_status = "PENDING"  # we have to make it pending so the teachers reviews again
+    task.revision_status = "PENDING"
+    if task.cohort and task.task_type == "PROJECT":
+        if has_feature_flag(task.cohort.academy, "certificate.auto_ignore_projects_on_delivery", default=False):
+            task.revision_status = "IGNORED"
+            task.reviewed_at = timezone.now()
     task.save()
 
     return task

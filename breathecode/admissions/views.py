@@ -24,6 +24,7 @@ from breathecode.admissions import tasks
 from breathecode.admissions.caches import CohortCache, CohortUserCache, SyllabusVersionCache, TeacherCache, UserCache
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
+from breathecode.configurable_settings import deep_merge_dict, extract_allowed_tree, is_path_allowed, iter_leaf_paths
 from breathecode.utils import (
     APIViewExtensions,
     DatetimeInteger,
@@ -561,6 +562,8 @@ class AcademyCohortReportCSVView(APIView):
                 slug="cohort-not-found",
             )
 
+        include_micro_cohorts = request.query_params.get("include_micro_cohorts", "false").lower() == "true"
+
         response = HttpResponse(content_type="text/csv")
         response["Content-Disposition"] = f'attachment; filename="cohort_{cohort.slug}_report.csv"'
 
@@ -580,7 +583,9 @@ class AcademyCohortReportCSVView(APIView):
             ]
         )
 
-        for row in academy_student_progress_report_rows(academy, lang=lang, cohort=cohort):
+        for row in academy_student_progress_report_rows(
+            academy, lang=lang, cohort=cohort, include_micro_cohorts=include_micro_cohorts
+        ):
             writer.writerow(row)
 
         return response
@@ -648,6 +653,163 @@ class AcademyView(APIView):
             response_serializer = GetBigAcademySerializer(academy)
             return Response(response_serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AcademyFeatureACLView(APIView):
+    """
+    Configure per-academy allowlist of academy_features that can be edited by specific academy roles.
+
+    This endpoint is intended for System Admins only (capability: manage_academy_flags).
+    Currently only supports configuring the allowlist for the `country_manager` role.
+    """
+
+    @capable_of("manage_academy_flags")
+    def put(self, request, format=None, academy_id=None):
+        academy = Academy.objects.get(id=academy_id)
+
+        editable_paths = request.data.get("editable_paths", None)
+        if not isinstance(editable_paths, list) or not all(isinstance(x, str) for x in editable_paths):
+            raise ValidationException(
+                translation(
+                    en="editable_paths must be a list of strings",
+                    es="editable_paths debe ser una lista de strings",
+                ),
+                slug="invalid-editable-paths",
+                code=400,
+            )
+
+        merged = academy.get_academy_features()
+        merged.setdefault("acl", {}).setdefault("editable_paths_by_role", {})["country_manager"] = editable_paths
+
+        academy.academy_features = merged
+        academy.save(update_fields=["academy_features"])
+
+        return Response({"acl": merged.get("acl")}, status=status.HTTP_200_OK)
+
+
+class AcademyFeaturesView(APIView):
+    """
+    Patch academy_features with per-role allowlist enforcement.
+
+    - System Admins (capability: manage_academy_flags) can patch any academy_features key.
+    - Academy Admins (`country_manager`) can patch only paths enabled by System Admin in:
+      academy_features.acl.editable_paths_by_role.country_manager
+    """
+
+    @capable_of("crud_my_academy")
+    def patch(self, request, format=None, academy_id=None):
+        academy = Academy.objects.get(id=academy_id)
+
+        if not isinstance(request.data, dict):
+            raise ValidationException(
+                translation(
+                    en="Payload must be a JSON object",
+                    es="El payload debe ser un objeto JSON",
+                ),
+                slug="invalid-payload",
+                code=400,
+            )
+
+        patch_data = request.data
+        changed_paths = list(iter_leaf_paths(patch_data))
+
+        # Determine if the user is a System Admin for this academy by capability
+        is_system_admin = ProfileAcademy.objects.filter(
+            user=request.user.id,
+            academy__id=academy_id,
+            role__capabilities__slug="manage_academy_flags",
+        ).exists()
+
+        allowed_paths = []
+        if not is_system_admin:
+            profile = ProfileAcademy.objects.filter(user=request.user.id, academy__id=academy_id).first()
+            role_slug = profile.role.slug if profile and profile.role else None
+
+            if role_slug != "country_manager":
+                raise ValidationException(
+                    translation(
+                        en="You are not allowed to edit academy features",
+                        es="No tienes permisos para editar los academy features",
+                    ),
+                    slug="academy-features-not-allowed",
+                    code=403,
+                )
+
+            cfg = academy.get_academy_features()
+            allowed_paths = (
+                (cfg.get("acl") or {}).get("editable_paths_by_role") or {}
+            ).get("country_manager") or []
+
+            # Always forbid editing ACL itself for non-system admins
+            for path in changed_paths:
+                if path.startswith("acl"):
+                    raise ValidationException(
+                        translation(
+                            en="You cannot edit ACL settings",
+                            es="No puedes editar la configuración de ACL",
+                        ),
+                        slug="acl-not-editable",
+                        code=403,
+                    )
+
+                if not is_path_allowed(path, allowed_paths):
+                    raise ValidationException(
+                        translation(
+                            en=f"You are not allowed to edit '{path}'",
+                            es=f"No tienes permisos para editar '{path}'",
+                        ),
+                        slug="academy-feature-path-not-allowed",
+                        code=403,
+                    )
+
+        merged = deep_merge_dict(academy.get_academy_features(), patch_data)
+        academy.academy_features = merged
+        academy.save(update_fields=["academy_features"])
+
+        result = academy.get_academy_features()
+
+        if not is_system_admin:
+            allowed_paths = [p for p in allowed_paths if isinstance(p, str) and not p.startswith("acl")]
+            result = extract_allowed_tree(result, allowed_paths)
+            result.pop("acl", None)
+
+        return Response({"academy_features": result}, status=status.HTTP_200_OK)
+
+    @capable_of("read_my_academy")
+    def get(self, request, format=None, academy_id=None):
+        academy = Academy.objects.get(id=academy_id)
+        cfg = academy.get_academy_features()
+
+        is_system_admin = ProfileAcademy.objects.filter(
+            user=request.user.id,
+            academy__id=academy_id,
+            role__capabilities__slug="manage_academy_flags",
+        ).exists()
+
+        if is_system_admin:
+            return Response({"academy_features": cfg}, status=status.HTTP_200_OK)
+
+        profile = ProfileAcademy.objects.filter(user=request.user.id, academy__id=academy_id).first()
+        role_slug = profile.role.slug if profile and profile.role else None
+
+        if role_slug != "country_manager":
+            raise ValidationException(
+                translation(
+                    en="You are not allowed to read academy features",
+                    es="No tienes permisos para leer los academy features",
+                ),
+                slug="academy-features-not-allowed",
+                code=403,
+            )
+
+        allowed_paths = ((cfg.get("acl") or {}).get("editable_paths_by_role") or {}).get("country_manager") or []
+        allowed_paths = [p for p in allowed_paths if isinstance(p, str) and not p.startswith("acl")]
+
+        filtered = extract_allowed_tree(cfg, allowed_paths)
+        # Never expose ACL to non-system admins (even if misconfigured)
+        filtered.pop("acl", None)
+
+        return Response({"academy_features": filtered}, status=status.HTTP_200_OK)
 
 
 class UserView(APIView):
@@ -1570,10 +1732,11 @@ class AcademyCohortView(APIView, GenerateLookupsMixin):
 
         specialty = request.GET.get("specialty", None)
         if specialty is not None:
-            # Filter by specialty slug through syllabus relationships
+            # Filter by specialty slug through syllabuses (ManyToMany)
             items = items.filter(
-                Q(syllabus_version__syllabus__specialty_with_one_syllabus__slug__in=specialty.split(",")) |
-                Q(syllabus_version__syllabus__specialties_with_many_syllabus__slug__in=specialty.split(","))
+                syllabus_version__syllabus__specialties_with_many_syllabus__slug__in=specialty.split(
+                    ","
+                )
             )
 
         syllabus = request.GET.get("syllabus", None)
@@ -1646,13 +1809,18 @@ class AcademyCohortView(APIView, GenerateLookupsMixin):
         if kickoff_date is not None:
             items = items.filter(kickoff_date=kickoff_date)
 
-        # Filter by ending_date (supports ending_date=null for never-ending cohorts)
-        ending_date = request.GET.get("ending_date", None)
-        if ending_date is not None:
-            if ending_date.lower() == "null":
-                items = items.filter(ending_date__isnull=True)
-            else:
-                items = items.filter(ending_date=ending_date)
+        # Filter by ending_date_isnull (true/false) or exact ending_date (ending_date=null still supported)
+        ending_date_isnull = request.GET.get("ending_date_isnull", None)
+        if ending_date_isnull is not None:
+            val = ending_date_isnull.lower() in ("true", "1", "yes")
+            items = items.filter(ending_date__isnull=val)
+        else:
+            ending_date = request.GET.get("ending_date", None)
+            if ending_date is not None:
+                if ending_date.lower() == "null":
+                    items = items.filter(ending_date__isnull=True)
+                else:
+                    items = items.filter(ending_date=ending_date)
 
         items = handler.queryset(items)
         serializer = GetCohortSerializer(items, many=True)

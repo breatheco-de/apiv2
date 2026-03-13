@@ -20,6 +20,7 @@ def setup_mocks(monkeypatch):
     mock_aclean_asset_readme = AsyncMock()
     mock_apull_from_github = AsyncMock()
     mock_apush_to_github = AsyncMock()
+    mock_apush_project_or_exercise_to_github = AsyncMock()
     mock_ascan_asset_originality = AsyncMock()
     mock_seo_astart = AsyncMock()
     mock_serializer_instance = MagicMock()
@@ -36,6 +37,7 @@ def setup_mocks(monkeypatch):
     monkeypatch.setattr(registry_views, "aclean_asset_readme", mock_aclean_asset_readme)
     monkeypatch.setattr(registry_views, "apull_from_github", mock_apull_from_github)
     monkeypatch.setattr(registry_views, "apush_to_github", mock_apush_to_github)
+    monkeypatch.setattr(registry_views, "apush_project_or_exercise_to_github", mock_apush_project_or_exercise_to_github)
     monkeypatch.setattr(registry_views, "ascan_asset_originality", mock_ascan_asset_originality)
     monkeypatch.setattr(SEOAnalyzer, "astart", mock_seo_astart)  # Patch the method on the class (Correct target)
 
@@ -66,6 +68,7 @@ def setup_mocks(monkeypatch):
         "aclean_asset_readme": mock_aclean_asset_readme,
         "apull_from_github": mock_apull_from_github,
         "apush_to_github": mock_apush_to_github,
+        "apush_project_or_exercise_to_github": mock_apush_project_or_exercise_to_github,
         "ascan_asset_originality": mock_ascan_asset_originality,
         "seo_astart": mock_seo_astart,
         "AcademyAssetSerializer": mock_serializer_class,  # Return the class mock
@@ -108,6 +111,8 @@ async def test_update_asset_action_invalid_slug(view_instance, mock_asset, mock_
         ("push", "apush_to_github", "ARTICLE"),
         ("push", "apush_to_github", "LESSON"),
         ("push", "apush_to_github", "QUIZ"),
+        ("push", "apush_project_or_exercise_to_github", "PROJECT"),
+        ("push", "apush_project_or_exercise_to_github", "EXERCISE"),
         ("analyze_seo", "seo_astart", "LESSON"),  # Adjusted mock name
         ("originality", "ascan_asset_originality", "LESSON"),
         ("originality", "ascan_asset_originality", "ARTICLE"),
@@ -141,6 +146,8 @@ async def test_update_asset_action_success(
     elif action_slug == "push":
         if asset_type in ["ARTICLE", "LESSON", "QUIZ"]:
             action_mock.assert_called_once_with(mock_asset.slug, owner=mock_user)
+        elif asset_type in ["PROJECT", "EXERCISE"]:
+            action_mock.assert_called_once_with(mock_asset.slug, create_or_update=False)
         else:
             action_mock.assert_not_called()
     elif action_slug == "analyze_seo":
@@ -157,12 +164,13 @@ async def test_update_asset_action_success(
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("asset_type", ["PROJECT", "EXERCISE", "VIDEO"])
+@pytest.mark.parametrize("asset_type", ["VIDEO"])
 async def test_update_asset_action_push_invalid_type(view_instance, mock_asset, mock_user, asset_type):
+    """PROJECT and EXERCISE are now valid for push; only VIDEO (and other non-supported types) raise."""
     mock_asset.asset_type = asset_type
     with pytest.raises(ValidationException) as exc_info:
         await view_instance.update_asset_action(mock_asset, mock_user, {"action_slug": "push"})
-    assert f"Asset type {asset_type} cannot be pushed to GitHub" in str(exc_info.value)
+    assert "cannot be pushed to GitHub" in str(exc_info.value)
 
 
 @pytest.mark.asyncio
@@ -212,6 +220,8 @@ async def test_update_asset_action_exception_in_action(
         ("clean", "aclean_asset_readme", "LESSON"),
         ("pull", "apull_from_github", "LESSON"),
         ("push", "apush_to_github", "ARTICLE"),
+        ("push", "apush_project_or_exercise_to_github", "PROJECT"),
+        ("push", "apush_project_or_exercise_to_github", "EXERCISE"),
         ("analyze_seo", "seo_astart", "LESSON"),  # Adjusted mock name
     ],
 )
@@ -237,7 +247,10 @@ async def test_create_asset_action_success(
     if action_slug == "pull":
         action_mock.assert_called_once_with(mock_asset.slug, override_meta=False)
     elif action_slug == "push":
-        action_mock.assert_called_once_with(mock_asset.slug, owner=mock_user)
+        if asset_type in ["PROJECT", "EXERCISE"]:
+            action_mock.assert_called_once_with(mock_asset.slug, create_or_update=False)
+        else:
+            action_mock.assert_called_once_with(mock_asset.slug, owner=mock_user)
     elif action_slug == "analyze_seo":
         action_mock.assert_called_once()
     else:  # test, clean
@@ -272,9 +285,9 @@ async def test_create_asset_action_failure_exception_in_action(
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("asset_type", ["PROJECT", "EXERCISE", "VIDEO", "QUIZ"])
+@pytest.mark.parametrize("asset_type", ["VIDEO"])
 async def test_create_asset_action_push_invalid_type_returns_false(view_instance, mock_asset, mock_user, asset_type):
+    """Only VIDEO (and other non-supported types) are invalid for push; PROJECT/EXERCISE/ARTICLE/LESSON/QUIZ are valid."""
     mock_asset.asset_type = asset_type
-    # Note: create_asset_action catches the exception and returns False for invalid push types
     result = await view_instance.create_asset_action("push", mock_asset, mock_user, {})
     assert result is False

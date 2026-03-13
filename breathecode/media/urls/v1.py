@@ -5,6 +5,7 @@ from ..views import CategoryView, MaskingUrlView, MediaView, ResolutionView, Upl
 media_view = MediaView.as_view({"get": "get", "put": "put", "delete": "delete"})
 
 media_by_id_view = MediaView.as_view({"get": "get_id", "put": "put_id", "delete": "delete_id"})
+media_claim_view = MediaView.as_view({"post": "claim"})
 
 media_by_slug_view = MediaView.as_view(
     {
@@ -30,6 +31,7 @@ urlpatterns = [
     path("", media_view, name="root"),
     path("info", media_view, name="info"),
     path("info/<int:media_id>", media_by_id_view, name="info_id"),
+    path("claim", media_claim_view, name="claim"),
     path("info/<int:media_id>/resolution", resolution_by_media_id_view, name="info_id_resolution"),
     path("info/<slug:media_slug>", media_by_slug_view, name="info_slug"),
     path("info/<str:media_name>", media_by_name_view, name="info_name"),

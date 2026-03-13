@@ -476,6 +476,65 @@ class FeedbackTagPUTSerializer(serializers.ModelSerializer):
         return data
 
 
+class SurveyConfigurationSmallSerializer(serpy.Serializer):
+    """Serpy serializer for SurveyConfiguration (GET requests)."""
+    id = serpy.Field()
+    trigger_type = serpy.Field()
+    syllabus = serpy.Field()
+    template = serpy.MethodField()
+    questions = serpy.Field()
+    is_active = serpy.Field()
+    academy = serpy.MethodField()
+    cohorts = serpy.MethodField()
+    asset_slugs = serpy.Field()
+    priority = serpy.Field()
+    created_by = serpy.MethodField()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+
+    def get_template(self, obj):
+        """Return template ID or None."""
+        return obj.template.id if obj.template else None
+
+    def get_academy(self, obj):
+        """Return academy ID."""
+        return obj.academy.id if obj.academy else None
+
+    def get_cohorts(self, obj):
+        """Return list of cohort IDs."""
+        return list(obj.cohorts.values_list("id", flat=True))
+
+    def get_created_by(self, obj):
+        """Return created_by user ID."""
+        return obj.created_by.id if obj.created_by else None
+
+
+class SurveyStudySmallSerializer(serpy.Serializer):
+    """Serpy serializer for SurveyStudy (GET requests)."""
+    id = serpy.Field()
+    slug = serpy.Field()
+    title = serpy.Field()
+    description = serpy.Field()
+    academy = serpy.MethodField()
+    status = serpy.Field()
+    starts_at = serpy.Field()
+    ends_at = serpy.Field()
+    max_responses = serpy.Field()
+    survey_configurations = serpy.MethodField()
+    stats = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+
+    def get_academy(self, obj):
+        """Return academy ID."""
+        return obj.academy.id if obj.academy else None
+
+    def get_survey_configurations(self, obj):
+        """Return survey configurations sorted by created_at (oldest to newest)."""
+        configs = obj.survey_configurations.all().order_by("created_at")
+        return SurveyConfigurationSmallSerializer(configs, many=True).data
+
+
 class SurveyResponseHookSerializer(serpy.Serializer):
     """Serializer for webhook payload when a survey response is answered."""
 
@@ -789,20 +848,56 @@ class SurveyStudySerializer(serializers.ModelSerializer):
         """
         All configurations inside a study must share the same trigger_type.
         This prevents mixing realtime triggers in a single campaign.
+        
+        Also prevents configurations from being used in multiple studies.
         """
-
+        # Check trigger_type consistency
         trigger_types = {x.trigger_type for x in value}
-        if len(trigger_types) <= 1:
-            return value
+        if len(trigger_types) > 1:
+            trigger_types_str = ", ".join(sorted([str(x) for x in trigger_types]))
+            raise ValidationException(
+                translation(
+                    en=f"All survey configurations in a study must have the same trigger_type, got: {trigger_types_str}",
+                    es=f"Todas las configuraciones de un estudio deben tener el mismo trigger_type, se encontró: {trigger_types_str}",
+                ),
+                slug="mixed-trigger-types",
+            )
 
-        trigger_types_str = ", ".join(sorted([str(x) for x in trigger_types]))
-        raise ValidationException(
-            translation(
-                en=f"All survey configurations in a study must have the same trigger_type, got: {trigger_types_str}",
-                es=f"Todas las configuraciones de un estudio deben tener el mismo trigger_type, se encontró: {trigger_types_str}",
-            ),
-            slug="mixed-trigger-types",
-        )
+        # Check if any configuration is already part of another study
+        instance = self.instance  # None for create, SurveyStudy instance for update
+        config_ids = [config.id for config in value]
+        
+        # Find configurations that are already in other studies
+        existing_studies = SurveyStudy.objects.filter(
+            survey_configurations__id__in=config_ids
+        ).exclude(id=instance.id if instance else None).distinct()
+        
+        if existing_studies.exists():
+            # Find which configurations are in other studies
+            configs_in_other_studies = []
+            for config in value:
+                other_studies = config.survey_studies.exclude(id=instance.id if instance else None)
+                if other_studies.exists():
+                    study_slugs = list(other_studies.values_list("slug", flat=True))
+                    configs_in_other_studies.append({
+                        "config_id": config.id,
+                        "studies": study_slugs
+                    })
+            
+            if configs_in_other_studies:
+                config_info = ", ".join([
+                    f"config {c['config_id']} (in studies: {', '.join(c['studies'])})"
+                    for c in configs_in_other_studies
+                ])
+                raise ValidationException(
+                    translation(
+                        en=f"Survey configurations cannot be used in multiple studies: {config_info}",
+                        es=f"Las configuraciones de encuesta no pueden usarse en múltiples estudios: {config_info}",
+                    ),
+                    slug="configuration-in-multiple-studies",
+                )
+
+        return value
 
     class Meta:
         model = SurveyStudy
@@ -812,6 +907,7 @@ class SurveyStudySerializer(serializers.ModelSerializer):
             "title",
             "description",
             "academy",
+            "status",
             "starts_at",
             "ends_at",
             "max_responses",

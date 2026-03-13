@@ -175,7 +175,7 @@ class TaskAdmin(admin.ModelAdmin):
     raw_id_fields = ["user", "cohort", "telemetry", "attachments"]
 
     def delivery_url(self, obj):
-        token, created = Token.get_or_create(obj.user, token_type="temporal")
+        token, created = Token.get_or_create(obj.user, token_type="short")
         url = os.getenv("API_URL") + f"/v1/assignment/task/{str(obj.id)}/deliver/{token}"
         return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{url}'>deliver</a>")
 

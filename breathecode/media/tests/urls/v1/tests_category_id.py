@@ -93,6 +93,8 @@ class MediaTestSuite(MediaTestCase):
                 "medias": 0,
                 "name": model["category"].name,
                 "slug": model["category"].slug,
+                "is_manageable_by_academy": False,
+                "academy": None,
             },
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -118,6 +120,8 @@ class MediaTestSuite(MediaTestCase):
                 "medias": 1,
                 "name": model["category"].name,
                 "slug": model["category"].slug,
+                "is_manageable_by_academy": False,
+                "academy": None,
             },
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)

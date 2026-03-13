@@ -762,7 +762,9 @@ def _progress_percent(total_units: int, completed_units: int) -> tuple[int, bool
     return progress, is_completed
 
 
-def academy_student_progress_report_rows(academy, lang: str, cohort: Optional[Cohort] = None) -> Iterator[list]:
+def academy_student_progress_report_rows(
+    academy, lang: str, cohort: Optional[Cohort] = None, include_micro_cohorts: bool = True
+) -> Iterator[list]:
     """
     Build rows for the Academy student progress report (CSV).
 
@@ -777,6 +779,13 @@ def academy_student_progress_report_rows(academy, lang: str, cohort: Optional[Co
     - completion_date
     - certificate_url
     - comments
+    
+    Args:
+        academy: Academy instance
+        lang: Language code
+        cohort: Optional Cohort instance
+        include_micro_cohorts: If False and cohort is a macrocohort, exclude microcohort enrollments from CSV.
+                              Default is True to maintain backward compatibility.
     """
 
     if academy is None:
@@ -791,14 +800,38 @@ def academy_student_progress_report_rows(academy, lang: str, cohort: Optional[Co
         )
 
     enrollments_qs = _get_enrollments(academy, cohort=cohort)
+    
+    is_macro = bool(cohort and hasattr(cohort, "micro_cohorts") and cohort.micro_cohorts.exists())
+    micro_cohort_ids = set()
+    if is_macro:
+        micro_cohort_ids = set(cohort.micro_cohorts.values_list("id", flat=True))
+        if not include_micro_cohorts:
+            enrollments_qs = enrollments_qs.exclude(cohort_id__in=micro_cohort_ids)
+        else:
+            micro_enrollments_qs = CohortUser.objects.filter(
+                cohort_id__in=micro_cohort_ids,
+                cohort__academy=academy,
+                role="STUDENT"
+            ).select_related("user", "cohort", "cohort__syllabus_version", "cohort__syllabus_version__syllabus")
+            enrollments_qs = enrollments_qs | micro_enrollments_qs
+    
     if not enrollments_qs.exists():
         return iter([])
 
-    enrollments = list(enrollments_qs)
+    enrollments = list(enrollments_qs.order_by("cohort_id", "created_at"))
     user_ids = list({cu.user_id for cu in enrollments})
     cohort_ids = list({cu.cohort_id for cu in enrollments})
+    
+    if is_macro:
+        cohort_ids.extend(micro_cohort_ids)
+        cohort_ids = list(set(cohort_ids))  # Eliminar duplicados
 
     cohorts_by_id = {cu.cohort_id: cu.cohort for cu in enrollments if cu.cohort is not None}
+    
+    if is_macro:
+        micro_cohorts = Cohort.objects.filter(id__in=micro_cohort_ids)
+        for micro_cohort in micro_cohorts:
+            cohorts_by_id[micro_cohort.id] = micro_cohort
 
     (
         lesson_slugs_by_cohort,
@@ -807,7 +840,15 @@ def academy_student_progress_report_rows(academy, lang: str, cohort: Optional[Co
     ) = _extract_syllabus_slugs(list(cohorts_by_id.values()))
 
     # Get the flag of start by enrollment
-    started_by_enrollment = _get_started_by_enrollment(enrollments)
+    enrollments_for_calculation = list(enrollments)
+    if is_macro and micro_cohort_ids:
+        micro_enrollments = CohortUser.objects.filter(
+            cohort_id__in=micro_cohort_ids,
+            user_id__in=user_ids,
+            role="STUDENT"
+        ).select_related("user", "cohort")
+        enrollments_for_calculation.extend(micro_enrollments)
+    started_by_enrollment = _get_started_by_enrollment(enrollments_for_calculation)
 
     # Get the lessons that the student has completed
     lesson_done_slugs_by_pair = _get_completed_task_slugs(
@@ -930,6 +971,18 @@ def academy_student_progress_report_rows(academy, lang: str, cohort: Optional[Co
         if cu.user_id not in cohort_ids_by_user:
             cohort_ids_by_user[cu.user_id] = set()
         cohort_ids_by_user[cu.user_id].add(cu.cohort_id)
+    
+    if is_macro and micro_cohort_ids:
+        micro_enrollments_for_user_cohorts = CohortUser.objects.filter(
+            cohort_id__in=micro_cohort_ids,
+            user_id__in=user_ids,
+            role="STUDENT"
+        ).values_list("user_id", "cohort_id")
+        
+        for user_id, micro_cohort_id in micro_enrollments_for_user_cohorts:
+            if user_id not in cohort_ids_by_user:
+                cohort_ids_by_user[user_id] = set()
+            cohort_ids_by_user[user_id].add(micro_cohort_id)
 
     for cu in enrollments:
         user = cu.user
@@ -994,24 +1047,30 @@ def academy_student_progress_report_rows(academy, lang: str, cohort: Optional[Co
             certificate_url = f"https://certificate.4geeks.com/{cert.get('token')}"
 
         comments = ""
-        if total_units == 0 and status_value != "completed":
-            comments = translation(
-                lang,
-                en="No syllabus lessons found and no learnpack telemetry; progress estimated as 0",
-                es="No se encontraron lecciones en el syllabus y no hay telemetry de learnpacks; progreso estimado en 0",
-                slug="no-lessons-or-telemetry",
-            )
+        # No incluir comentarios si es una macrocohorte y no estamos incluyendo microcohortes
+        # (la macrocohorte no tiene syllabus propio, solo las microcohortes)
+        is_macro_enrollment = is_macro and cu.cohort_id == cohort.id if cohort else False
+        should_skip_comments = is_macro_enrollment and not include_micro_cohorts
+        
+        if not should_skip_comments:
+            if total_units == 0 and status_value != "completed":
+                comments = translation(
+                    lang,
+                    en="No syllabus lessons found and no learnpack telemetry; progress estimated as 0",
+                    es="No se encontraron lecciones en el syllabus y no hay telemetry de learnpacks; progreso estimado en 0",
+                    slug="no-lessons-or-telemetry",
+                )
 
-        if not is_certificate_eligible:
-            no_cert_msg = translation(
-                lang,
-                en="This cohort does not include mandatory projects; certificates are not issued for it",
-                es="Esta cohorte no incluye proyectos obligatorios; no se emiten certificados para ella",
-                slug="no-mandatory-projects-no-certificate",
-            )
-            comments = (comments + " | " if comments else "") + no_cert_msg
+            if not is_certificate_eligible:
+                no_cert_msg = translation(
+                    lang,
+                    en="This cohort does not include mandatory projects; certificates are not issued for it",
+                    es="Esta cohorte no incluye proyectos obligatorios; no se emiten certificados para ella",
+                    slug="no-mandatory-projects-no-certificate",
+                )
+                comments = (comments + " | " if comments else "") + no_cert_msg
         else:
-            if progress >= 100 and cert is None:
+            if progress >= 100 and cert is None and not should_skip_comments:
                 pending_mandatory = 0
                 if is_macro:
                     for micro_id in micro_ids:

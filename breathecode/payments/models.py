@@ -276,6 +276,8 @@ class Service(AbstractAsset):
         Group, blank=True, help_text="Groups that can access the customer that bought this service"
     )
 
+    description = models.CharField(max_length=255, default=None, null=True, blank=True, help_text="Description of the service")
+
     session_duration = models.DurationField(
         default=None, null=True, blank=True, help_text="Session duration, used in consumption sessions"
     )
@@ -2937,6 +2939,16 @@ class Consumable(AbstractServiceItem):
         blank=True,
         null=True,
         help_text="Mentorship service set which the consumable belongs to",
+    )
+
+    standalone_invoice = models.ForeignKey(
+        "Invoice",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=None,
+        related_name="standalone_consumables",
+        help_text="Invoice that generated this consumable when it was bought or granted standalone (e.g. user consumable checkout or staff grant). Null for consumables created from subscription or plan renewal.",
     )
 
     valid_until = models.DateTimeField(

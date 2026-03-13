@@ -2,8 +2,12 @@
 Test cases for /user
 """
 
+from unittest.mock import patch
+
 from django.urls.base import reverse_lazy
 from rest_framework import status
+
+from breathecode.services.github import GithubAuthException
 
 from ...mixins.new_auth_test_case import AuthTestCase
 
@@ -22,6 +26,84 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_get__not_auth(self):
+        url = reverse_lazy("authenticate:github_me")
+        response = self.client.get(url)
+
+        json = response.json()
+        expected = {"detail": "Authentication credentials were not provided.", "status_code": 401}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    """
+    🔽🔽🔽 GET not found
+    """
+
+    def test__get__not_found(self):
+        model = self.bc.database.create(user=1)
+
+        self.client.force_authenticate(model.user)
+        url = reverse_lazy("authenticate:github_me")
+        response = self.client.get(url)
+
+        json = response.json()
+        expected = {"detail": "not-found", "status_code": 404}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    """
+    🔽🔽🔽 GET found, returns credentials with scopes and valid
+    """
+
+    @patch("breathecode.authenticate.views.Github")
+    def test__get__found(self, mock_github_class):
+        mock_github_class.return_value.get.return_value = {"login": "octocat"}
+
+        credentials_github = {
+            "username": "octocat",
+            "avatar_url": "https://avatars.githubusercontent.com/u/1",
+            "name": "The Octocat",
+            "scopes": "admin:org delete_repo repo user user:email",
+            "token": "gho_valid_token",
+        }
+        model = self.bc.database.create(user=1, credentials_github=credentials_github)
+
+        self.client.force_authenticate(model.user)
+        url = reverse_lazy("authenticate:github_me")
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(data["username"], "octocat")
+        self.assertEqual(data["avatar_url"], "https://avatars.githubusercontent.com/u/1")
+        self.assertEqual(data["name"], "The Octocat")
+        self.assertEqual(data["scopes"], "admin:org delete_repo repo user user:email")
+        self.assertIs(data["valid"], True)
+        mock_github_class.return_value.get.assert_called_once_with("/user")
+
+    @patch("breathecode.authenticate.views.Github")
+    def test__get__found__token_invalid(self, mock_github_class):
+        mock_github_class.return_value.get.side_effect = GithubAuthException("Invalid credentials")
+
+        credentials_github = {
+            "username": "octocat",
+            "scopes": "user:email",
+            "token": "gho_expired",
+        }
+        model = self.bc.database.create(user=1, credentials_github=credentials_github)
+
+        self.client.force_authenticate(model.user)
+        url = reverse_lazy("authenticate:github_me")
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(data["username"], "octocat")
+        self.assertEqual(data["scopes"], "user:email")
+        self.assertIs(data["valid"], False)
 
     """
     🔽🔽🔽 DELETE not found
