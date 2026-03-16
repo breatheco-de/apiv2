@@ -411,9 +411,22 @@ def certificate_screenshot(certificate_id: int):
             logger.info(
                 f"[CERT_SCREENSHOT] cert_id={certificate_id} bypass={'yes' if bypass_secret else 'no'} url={url.split('?')[0]}"
             )
-            r = generate_screenshot(
-                url, "1024x707", device="desktop", cacheLimit="0", delay=3000
+            logger.info(
+                "[CERT_SCREENSHOT] params: dimension=1024x707 device=desktop cacheLimit=0 delay=3000 "
+                "user-agent=Chrome/120.0"
             )
+            r = generate_screenshot(
+                url,
+                "1024x707",
+                device="desktop",
+                cacheLimit="0",
+                delay=3000,
+                **{
+                    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                    "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                },
+            )
+            logger.info(f"[CERT_SCREENSHOT] response status_code={r.status_code}")
 
             if r.status_code == 200:
                 file.upload(r.content, public=True)
