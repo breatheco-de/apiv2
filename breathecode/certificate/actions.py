@@ -8,7 +8,6 @@ import logging
 import os
 from typing import Optional
 
-import requests
 from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -23,42 +22,6 @@ from .models import ERROR, PERSISTED, LayoutDesign, Specialty, UserSpecialty
 logger = logging.getLogger(__name__)
 ENVIRONMENT = os.getenv("ENV", None)
 BUCKET_NAME = "certificates-breathecode"
-
-
-def generate_preview_from_pdf(token: str, bypass_secret: str) -> Optional[bytes]:
-    """
-    Genera preview desde PDF usando header de bypass (evita checkpoint de Vercel).
-    Retorna bytes PNG o None si falla.
-    """
-    url = f"https://certificate.4geeks.com/pdf/{token}"
-    headers = {"x-vercel-protection-bypass": bypass_secret}
-
-    try:
-        response = requests.get(url, headers=headers, timeout=25)
-        if response.status_code != 200:
-            logger.warning(f"[CERT_SCREENSHOT] PDF fetch failed status={response.status_code}")
-            return None
-
-        pdf_content = response.content
-        if len(pdf_content) < 100:
-            logger.warning("[CERT_SCREENSHOT] PDF content too small, invalid")
-            return None
-
-        import fitz
-
-        doc = fitz.open(stream=pdf_content, filetype="pdf")
-        if len(doc) == 0:
-            doc.close()
-            return None
-        page = doc[0]
-        pix = page.get_pixmap(dpi=150)
-        png_bytes = pix.tobytes("png")
-        doc.close()
-        return png_bytes
-    except Exception as e:
-        logger.warning(f"[CERT_SCREENSHOT] PDF preview failed: {e}")
-        return None
-
 
 strings = {
     "es": {
@@ -441,45 +404,34 @@ def certificate_screenshot(certificate_id: int):
 
         # if the file does not exist
         if file.blob is None:
+            url = f"https://certificate.4geeks.com/preview/{certificate.token}"
             bypass_secret = os.getenv("VERCEL_CERTIFICATE_BYPASS_SECRET", "").strip()
-            image_content = None
-
-            # Alternativa 1: Preview desde PDF (usa header bypass, evita checkpoint Vercel)
             if bypass_secret:
-                logger.info(f"[CERT_SCREENSHOT] Trying PDF preview first for cert_id={certificate_id}")
-                image_content = generate_preview_from_pdf(certificate.token, bypass_secret)
-                if image_content:
-                    logger.info(f"[CERT_SCREENSHOT] PDF preview success for cert_id={certificate_id}")
+                url = f"{url}?x-vercel-protection-bypass={bypass_secret}&x-vercel-set-bypass-cookie=true"
+            logger.info(
+                f"[CERT_SCREENSHOT] cert_id={certificate_id} bypass={'yes' if bypass_secret else 'no'} url={url.split('?')[0]}"
+            )
+            logger.info(
+                "[CERT_SCREENSHOT] params: dimension=1024x707 device=desktop cacheLimit=0 delay=3000 "
+                "user-agent=Chrome/120.0"
+            )
+            r = generate_screenshot(
+                url,
+                "1024x707",
+                device="desktop",
+                cacheLimit="0",
+                delay=3000,
+                **{
+                    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                    "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                },
+            )
+            logger.info(f"[CERT_SCREENSHOT] response status_code={r.status_code}")
 
-            # Alternativa 2: Screenshot Machine (fallback o cuando no hay bypass)
-            if image_content is None:
-                logger.info(f"[CERT_SCREENSHOT] Using Screenshot Machine for cert_id={certificate_id}")
-                url = f"https://certificate.4geeks.com/preview/{certificate.token}"
-                if bypass_secret:
-                    url = f"{url}?x-vercel-protection-bypass={bypass_secret}&x-vercel-set-bypass-cookie=true"
-                logger.info(
-                    f"[CERT_SCREENSHOT] cert_id={certificate_id} bypass={'yes' if bypass_secret else 'no'} "
-                    f"url={url.split('?')[0]}"
-                )
-                r = generate_screenshot(
-                    url,
-                    "1024x707",
-                    device="desktop",
-                    cacheLimit="0",
-                    delay=3000,
-                    **{
-                        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                        "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-                    },
-                )
-                logger.info(f"[CERT_SCREENSHOT] response status_code={r.status_code}")
-                if r.status_code == 200:
-                    image_content = r.content
-                else:
-                    print("Invalid response code: ", r.status_code)
-
-            if image_content:
-                file.upload(image_content, public=True)
+            if r.status_code == 200:
+                file.upload(r.content, public=True)
+            else:
+                print("Invalid response code: ", r.status_code)
 
         # after created, lets save the URL
         if file.blob is not None:
