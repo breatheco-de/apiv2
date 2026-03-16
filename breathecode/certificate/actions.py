@@ -408,6 +408,9 @@ def certificate_screenshot(certificate_id: int):
             bypass_secret = os.getenv("VERCEL_CERTIFICATE_BYPASS_SECRET", "").strip()
             if bypass_secret:
                 url = f"{url}?x-vercel-protection-bypass={bypass_secret}"
+            logger.info(
+                f"[CERT_SCREENSHOT] cert_id={certificate_id} bypass={'yes' if bypass_secret else 'no'} url={url.split('?')[0]}"
+            )
             r = generate_screenshot(
                 url, "1024x707", device="desktop", cacheLimit="0", delay=3000
             )
