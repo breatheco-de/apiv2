@@ -376,9 +376,9 @@ def get_screenshot_machine_params(url: str, dimension: str = "1200x630", **kwarg
         "key": screenshot_key,
         "url": url,
         "dimension": dimension,
-        "device": "desktop",
+        "device": kwargs.get("device", "desktop"),
         "delay": kwargs.get("delay", "1000"),
-        "cacheLimit": "0",
+        "cacheLimit": kwargs.get("cacheLimit", "0"),
         **kwargs,
     }
 
@@ -395,6 +395,12 @@ def get_screenshot_machine_params(url: str, dimension: str = "1200x630", **kwarg
 
 def generate_screenshot(url: str, dimension: str = "1200x630", **kwargs):
     params = get_screenshot_machine_params(url, dimension, **kwargs)
+
+    # Log para certificados: verificar params enviados a Screenshot Machine (sin exponer secret)
+    if "certificate.4geeks.com" in url:
+        safe_params = {k: ("***" if k == "key" else v) for k, v in params.items()}
+        safe_params["url"] = params.get("url", "").split("?")[0] + ("?***" if "?" in params.get("url", "") else "")
+        logger.info(f"[CERT_SCREENSHOT] Screenshot Machine API params: {safe_params}")
 
     # Always use stream=True for screenshot downloads to handle large files properly
     return requests.get(f"https://api.screenshotmachine.com?{urlencode(params)}", timeout=25, stream=True)
