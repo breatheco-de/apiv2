@@ -405,7 +405,12 @@ def certificate_screenshot(certificate_id: int):
         # if the file does not exist
         if file.blob is None:
             url = f"https://certificate.4geeks.com/preview/{certificate.token}"
-            r = generate_screenshot(url, "1024x707", device="desktop", cacheLimit="0")
+            bypass_secret = os.getenv("VERCEL_CERTIFICATE_BYPASS_SECRET", "").strip()
+            if bypass_secret:
+                url = f"{url}?x-vercel-protection-bypass={bypass_secret}"
+            r = generate_screenshot(
+                url, "1024x707", device="desktop", cacheLimit="0", delay=3000
+            )
 
             if r.status_code == 200:
                 file.upload(r.content, public=True)
