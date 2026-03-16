@@ -407,7 +407,7 @@ def certificate_screenshot(certificate_id: int):
             url = f"https://certificate.4geeks.com/preview/{certificate.token}"
             bypass_secret = os.getenv("VERCEL_CERTIFICATE_BYPASS_SECRET", "").strip()
             if bypass_secret:
-                url = f"{url}?x-vercel-protection-bypass={bypass_secret}"
+                url = f"{url}?x-vercel-protection-bypass={bypass_secret}&x-vercel-set-bypass-cookie=true"
             logger.info(
                 f"[CERT_SCREENSHOT] cert_id={certificate_id} bypass={'yes' if bypass_secret else 'no'} url={url.split('?')[0]}"
             )
