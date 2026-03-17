@@ -18,17 +18,21 @@ Use this skill when the user asks to **create or update a provisioning profile**
 
 ## Workflow
 
-1. **List current profiles.** Call `GET /v1/provisioning/academy/provisioningprofile` with `Authorization` and `Academy: <academy_id>`. Response includes each profile's id, vendor, academy, cohort_ids, member_ids. Use the profile id for update or delete.
+1. **List provisioning vendors (optional).** When you need valid `vendor_id` values for creating profiles or academy configs, call `GET /v1/provisioning/academy/vendor` with `Authorization` and `Academy: <academy_id>`. Response is a list of vendors (id, name, workspaces_url). Use the vendor id in POST bodies for profiles and academy configs.
 
-2. **Create a profile.** Call `POST /v1/provisioning/academy/provisioningprofile` with `Authorization` and `Academy: <academy_id>`. Body: `vendor_id` (required), optional `cohort_ids` (list), `member_ids` (list). Cohort and member IDs must belong to that academy. Response is 201 with the new profile.
+2. **List current profiles.** Call `GET /v1/provisioning/academy/provisioningprofile` with `Authorization` and `Academy: <academy_id>`. Response includes each profile's id, vendor, academy, cohort_ids, member_ids. Use the profile id for update or delete.
 
-3. **Update or delete a profile.** Call `PUT /v1/provisioning/academy/provisioningprofile/<profile_id>` to update (body: optional vendor_id, cohort_ids, member_ids) or `DELETE /v1/provisioning/academy/provisioningprofile/<profile_id>` to remove. Academy is from the header.
+3. **Create a profile.** Call `POST /v1/provisioning/academy/provisioningprofile` with `Authorization` and `Academy: <academy_id>`. Body: `vendor_id` (required), optional `cohort_ids` (list), `member_ids` (list). Cohort and member IDs must belong to that academy. Response is 201 with the new profile.
 
-4. **List academy configs (credentials/settings).** Call `GET /v1/provisioning/academy/provisioningacademy` with `Authorization` and `Academy: <academy_id>`. Response includes id, vendor, academy_id, credentials_set (boolean), container_idle_timeout, max_active_containers; credentials are never returned.
+4. **Update or delete a profile.** Call `PUT /v1/provisioning/academy/provisioningprofile/<profile_id>` to update (body: optional vendor_id, cohort_ids, member_ids) or `DELETE /v1/provisioning/academy/provisioningprofile/<profile_id>` to remove. Academy is from the header.
 
-5. **Create academy config.** Call `POST /v1/provisioning/academy/provisioningacademy` with `Authorization` and `Academy: <academy_id>`. Body: `vendor_id` (required), `credentials_token` (required), optional `credentials_key`, `container_idle_timeout` (default 15), `max_active_containers` (default 2), `allowed_machine_type_ids` (list). Only one config per (academy, vendor). Response is 201; credentials are not echoed.
+5. **List academy configs (credentials/settings).** Call `GET /v1/provisioning/academy/provisioningacademy` with `Authorization` and `Academy: <academy_id>`. Response includes id, vendor, academy_id, credentials_set (boolean), container_idle_timeout, max_active_containers; credentials are never returned.
 
-6. **Update academy config.** Call `PUT /v1/provisioning/academy/provisioningacademy/<provisioning_academy_id>` with optional body fields: credentials_token, credentials_key, container_idle_timeout, max_active_containers, allowed_machine_type_ids. Omit credentials to leave them unchanged.
+6. **Create academy config.** Call `POST /v1/provisioning/academy/provisioningacademy` with `Authorization` and `Academy: <academy_id>`. Body: `vendor_id` (required), `credentials_token` (required), optional `credentials_key`, `container_idle_timeout` (default 15), `max_active_containers` (default 2), `allowed_machine_type_ids` (list). Only one config per (academy, vendor). Response is 201; credentials are not echoed.
+
+7. **Update academy config.** Call `PUT /v1/provisioning/academy/provisioningacademy/<provisioning_academy_id>` with optional body fields: credentials_token, credentials_key, container_idle_timeout, max_active_containers, allowed_machine_type_ids. Omit credentials to leave them unchanged.
+
+8. **Delete academy config.** Call `DELETE /v1/provisioning/academy/provisioningacademy/<provisioning_academy_id>` with `Authorization` and `Academy: <academy_id>`. Returns 204 No Content. Deleting the config removes credentials and settings for that (academy, vendor); it does not delete the provisioning profile. To fully stop using a vendor, delete the profile (and optionally delete the config).
 
 **For VPS to work:** The academy must have at least one provisioning profile linking it to a vendor, and a provisioning academy config for that same vendor with `credentials_token` set. Create the profile first, then create the academy config for that vendor.
 
@@ -36,6 +40,7 @@ Use this skill when the user asks to **create or update a provisioning profile**
 
 | Action | Method | Path | Headers | Body | Response |
 |--------|--------|------|---------|------|----------|
+| List vendors | GET | `/v1/provisioning/academy/vendor` | `Authorization`, `Academy: <academy_id>` | — | List of vendors (id, name, workspaces_url). Use vendor id when creating profiles or academy configs. |
 | List profiles | GET | `/v1/provisioning/academy/provisioningprofile` | `Authorization`, `Academy: <academy_id>` | — | List of profiles (id, vendor, academy, cohort_ids, member_ids). |
 | Create profile | POST | `/v1/provisioning/academy/provisioningprofile` | `Authorization`, `Academy: <academy_id>` | See request sample below. | 201, profile object (see response sample). |
 | Get profile | GET | `/v1/provisioning/academy/provisioningprofile/<profile_id>` | `Authorization`, `Academy: <academy_id>` | — | Profile object. |
@@ -45,6 +50,7 @@ Use this skill when the user asks to **create or update a provisioning profile**
 | Create academy config | POST | `/v1/provisioning/academy/provisioningacademy` | `Authorization`, `Academy: <academy_id>` | See request sample below. | 201, config object (credentials not echoed; see response sample). |
 | Get academy config | GET | `/v1/provisioning/academy/provisioningacademy/<provisioning_academy_id>` | `Authorization`, `Academy: <academy_id>` | — | Config object (credentials_set, no raw credentials). |
 | Update academy config | PUT | `/v1/provisioning/academy/provisioningacademy/<provisioning_academy_id>` | `Authorization`, `Academy: <academy_id>` | All optional; omit credentials to leave unchanged. | Config object. |
+| Delete academy config | DELETE | `/v1/provisioning/academy/provisioningacademy/<provisioning_academy_id>` | `Authorization`, `Academy: <academy_id>` | — | 204 No Content. |
 
 **Create profile — request (POST `/v1/provisioning/academy/provisioningprofile`):**
 ```json
@@ -90,6 +96,14 @@ Use this skill when the user asks to **create or update a provisioning profile**
 }
 ```
 
+**List vendors — response (GET `/v1/provisioning/academy/vendor`):**
+```json
+[
+  {"id": 1, "name": "Codespaces", "workspaces_url": "https://github.com/codespaces"},
+  {"id": 2, "name": "Gitpod", "workspaces_url": "https://gitpod.io/workspaces"}
+]
+```
+
 Capabilities: `read_provisioning_activity` for GET; `crud_provisioning_activity` for POST, PUT, DELETE.
 
 ## Edge Cases
@@ -97,13 +111,16 @@ Capabilities: `read_provisioning_activity` for GET; `crud_provisioning_activity`
 - **vendor-not-found (404):** vendor_id does not exist. Tell the user to use a valid vendor id; do not retry the same id.
 - **provisioning-profile-not-found (404):** profile_id or academy does not match. Verify profile_id and that the Academy header matches the profile's academy.
 - **provisioning-academy-already-exists (400):** POST academy config for (academy, vendor) when one already exists. Tell the user to use PUT to update the existing config instead.
-- **provisioning-academy-not-found (404):** provisioning_academy_id does not exist or does not belong to the academy. Verify id and Academy header.
+- **provisioning-academy-not-found (404):** provisioning_academy_id does not exist or does not belong to the academy. Verify id and Academy header. Applies to GET, PUT, and DELETE.
+- **Deleting academy config** does not delete the provisioning profile; to stop using a vendor entirely, delete the profile (and optionally the config).
 - **Invalid cohort_ids or member_ids:** IDs must belong to the academy. If the API returns validation errors, tell the user to use cohort/member ids for that academy only.
 
 ## Checklist
 
-1. To list or create profiles: call `GET` or `POST /v1/provisioning/academy/provisioningprofile` with `Authorization` and `Academy` header.
-2. To update or delete a profile: call `PUT` or `DELETE /v1/provisioning/academy/provisioningprofile/<profile_id>` with `Academy` header.
-3. To list or create academy configs: call `GET` or `POST /v1/provisioning/academy/provisioningacademy` with `Academy` header; for POST send vendor_id and credentials_token.
-4. To update academy config: call `PUT /v1/provisioning/academy/provisioningacademy/<id>` with optional body; omit credentials to leave unchanged.
-5. For VPS to work, ensure the academy has at least one profile and one academy config (same vendor) with credentials_token set.
+1. To get valid vendor ids for profiles/configs: call `GET /v1/provisioning/academy/vendor` with `Authorization` and `Academy` header.
+2. To list or create profiles: call `GET` or `POST /v1/provisioning/academy/provisioningprofile` with `Authorization` and `Academy` header.
+3. To update or delete a profile: call `PUT` or `DELETE /v1/provisioning/academy/provisioningprofile/<profile_id>` with `Academy` header.
+4. To list or create academy configs: call `GET` or `POST /v1/provisioning/academy/provisioningacademy` with `Academy` header; for POST send vendor_id and credentials_token.
+5. To update academy config: call `PUT /v1/provisioning/academy/provisioningacademy/<id>` with optional body; omit credentials to leave unchanged.
+6. To delete academy config: call `DELETE /v1/provisioning/academy/provisioningacademy/<id>` with `Academy` header; returns 204.
+7. For VPS to work, ensure the academy has at least one profile and one academy config (same vendor) with credentials_token set.

@@ -32,6 +32,7 @@ from breathecode.provisioning.serializers import (
     GetProvisioningProfile,
     GetProvisioningUserConsumptionDetailSerializer,
     GetProvisioningUserConsumptionSerializer,
+    GetProvisioningVendorSerializer,
     ProvisioningAcademyCreateSerializer,
     ProvisioningAcademyUpdateSerializer,
     ProvisioningBillHTMLSerializer,
@@ -781,6 +782,16 @@ class AcademyBillConsumptionsView(APIView):
         return handler.response(serializer.data)
 
 
+class ProvisioningVendorView(APIView):
+    """GET: list all provisioning vendors (id, name, workspaces_url). Academy from Academy header."""
+
+    @capable_of("read_provisioning_activity")
+    def get(self, request, academy_id=None):
+        vendors = ProvisioningVendor.objects.all().order_by("name")
+        serializer = GetProvisioningVendorSerializer(vendors, many=True)
+        return Response(serializer.data)
+
+
 class ProvisioningProfileView(APIView):
     """GET: list profiles for academy. POST: create profile (academy from Academy header)."""
 
@@ -985,7 +996,7 @@ class ProvisioningAcademyView(APIView):
 
 
 class ProvisioningAcademyByIdView(APIView):
-    """GET one, PUT update provisioning academy config (credentials never returned)."""
+    """GET one, PUT update, DELETE provisioning academy config (credentials never returned)."""
 
     @capable_of("read_provisioning_activity")
     def get(self, request, academy_id=None, provisioning_academy_id=None):
@@ -1050,6 +1061,25 @@ class ProvisioningAcademyByIdView(APIView):
         pa.save()
         out = GetProvisioningAcademySerializer(pa)
         return Response(out.data)
+
+    @capable_of("crud_provisioning_activity")
+    def delete(self, request, academy_id=None, provisioning_academy_id=None):
+        pa = ProvisioningAcademy.objects.filter(
+            id=provisioning_academy_id,
+            academy_id=academy_id,
+        ).first()
+        if not pa:
+            raise ValidationException(
+                translation(
+                    get_user_language(request),
+                    en="Provisioning academy config not found.",
+                    es="Configuración de aprovisionamiento de academia no encontrada.",
+                    slug="provisioning-academy-not-found",
+                ),
+                code=404,
+            )
+        pa.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class MeVPSView(APIView):

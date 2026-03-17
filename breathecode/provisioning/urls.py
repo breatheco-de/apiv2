@@ -62,6 +62,7 @@ from .views import (
     ProvisioningAcademyView,
     ProvisioningProfileByIdView,
     ProvisioningProfileView,
+    ProvisioningVendorView,
     UploadView,
     redirect_new_container,
     redirect_new_container_public,
@@ -84,6 +85,7 @@ urlpatterns = [
         AcademyBillConsumptionsView.as_view(),
         name="academy_bill_consumptions",
     ),
+    path("academy/vendor", ProvisioningVendorView.as_view(), name="academy_vendor"),
     path("academy/provisioningprofile", ProvisioningProfileView.as_view(), name="academy_provisioning_profile"),
     path(
         "academy/provisioningprofile/<int:profile_id>",
