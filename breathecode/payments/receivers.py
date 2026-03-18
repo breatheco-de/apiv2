@@ -26,12 +26,14 @@ from .models import (
     PlanFinancing,
     PlanFinancingSeat,
     PlanFinancingTeam,
+    Service,
     Subscription,
     SubscriptionBillingTeam,
     SubscriptionSeat,
 )
 from .signals import (
     consume_service,
+    deprovision_service,
     grant_plan_permissions,
     grant_service_permissions,
     lose_service_permissions,
@@ -117,6 +119,8 @@ def lose_service_permissions_receiver(sender: Type[Consumable], instance: Consum
         how_many = consumables.filter(service_item__service__groups__name=group.name).distinct().count()
         if how_many == 0:
             user.groups.remove(group)
+            service = instance.service_item.service
+            deprovision_service.send_robust(sender=Service, instance=service, user_id=user.id, context={})
 
 
 def grant_service_permissions_receiver(sender: Type[Consumable], instance: Consumable, **kwargs):
