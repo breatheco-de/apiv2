@@ -4,7 +4,7 @@ import random
 import re
 from datetime import datetime
 from decimal import ROUND_HALF_UP, Decimal, localcontext
-from typing import Optional, TypedDict
+from typing import Any, Optional, TypedDict
 
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
@@ -26,6 +26,7 @@ from breathecode.payments.signals import consume_service
 from breathecode.registry.models import Asset
 from breathecode.services.github import Github
 from breathecode.utils import getLogger
+from breathecode.utils.decorators import service_deprovisioner
 
 from .models import (
     ProvisioningAcademy,
@@ -132,10 +133,10 @@ def get_eligible_academy_and_vendor_for_vps(user):
         client = get_vps_client(profile.vendor)
         if client is None:
             continue
-        provisioning_academy = ProvisioningAcademy.objects.filter(
-            academy=academy, vendor=profile.vendor
-        ).first()
-        if not provisioning_academy or not (provisioning_academy.credentials_token or provisioning_academy.credentials_key):
+        provisioning_academy = ProvisioningAcademy.objects.filter(academy=academy, vendor=profile.vendor).first()
+        if not provisioning_academy or not (
+            provisioning_academy.credentials_token or provisioning_academy.credentials_key
+        ):
             continue
         return (academy, provisioning_academy)
     raise ValidationException(
@@ -159,9 +160,7 @@ def request_vps(user, plan_slug=None):
         ProvisioningVPS.VPS_STATUS_PROVISIONING,
         ProvisioningVPS.VPS_STATUS_ACTIVE,
     ]
-    if ProvisioningVPS.objects.filter(
-        user=user, academy=academy, status__in=active_statuses
-    ).exists():
+    if ProvisioningVPS.objects.filter(user=user, academy=academy, status__in=active_statuses).exists():
         raise ValidationException(
             translation(
                 getattr(user, "lang", None) or "en",
@@ -194,6 +193,7 @@ def request_vps(user, plan_slug=None):
         requested_at=requested_at,
     )
     from .tasks import provision_vps_task
+
     provision_vps_task.delay(vps.id)
     return vps
 
@@ -927,3 +927,15 @@ def add_rigobot_activity(context: ActivityContext, field: dict, position: int) -
             pa.bills.add(provisioning_bill)
 
     pa.events.add(item)
+
+
+@service_deprovisioner("free_monthly_llm_budget")
+def deprovision_free_monthly_llm_budget(user_id: int, context: dict | None = None, **_: Any):
+    """
+    Deprovision the free monthly LLM budget for the given user and academy.
+    """
+    # The signal receiver calls handlers synchronously; keep this handler lightweight.
+    from breathecode.provisioning.tasks import deprovision_litellm_user_task
+
+    _ = context  # reserved for future context-based routing
+    deprovision_litellm_user_task.delay(user_id=user_id)

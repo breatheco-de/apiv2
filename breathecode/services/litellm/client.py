@@ -3,50 +3,38 @@ from typing import Any, Dict, Optional
 
 import requests
 
-from breathecode.admissions.models import Academy
-from breathecode.provisioning.models import ProvisioningAcademy
+from breathecode.provisioning.llm_client import register_llm_client
 
 logger = logging.getLogger(__name__)
 
 
-class LiteLLMError(Exception):
+from breathecode.provisioning.llm_client import LLMClientError
+
+
+class LiteLLMError(LLMClientError):
     """Raised when the LiteLLM API returns an error or the request fails."""
 
     pass
 
 
+@register_llm_client("litellm")
 class LiteLLMClient:
     def __init__(
         self,
         base_url: Optional[str] = None,
         api_key: Optional[str] = None,
-        *,
-        academy: Optional[Academy] = None,
     ):
         """
-        Initialize the client either with explicit base_url/api_key or by resolving
-        them from ProvisioningAcademy for the given academy.
+        Initialize the client with explicit base_url/api_key.
+
+        Credentials are expected to be resolved by our provisioning layer (see `get_llm_client`),
+        so the client must not query the database internally.
         """
-        if base_url and api_key:
-            self.base_url = base_url.rstrip("/")
-            self.api_key = api_key
-            return
+        if not base_url or not api_key:
+            raise ValueError("LiteLLMClient requires base_url and api_key")
 
-        if not academy:
-            raise ValueError("Either (base_url & api_key) or academy must be provided")
-
-        provisioning_academy = ProvisioningAcademy.objects.select_related("vendor").filter(academy=academy).first()
-        if not provisioning_academy:
-            raise ValueError("ProvisioningAcademy config not found for this academy/vendor")
-
-        if not provisioning_academy.credentials_token:
-            raise ValueError("ProvisioningAcademy missing credentials_token for LLM provider")
-
-        if not provisioning_academy.vendor or not provisioning_academy.vendor.api_url:
-            raise ValueError("ProvisioningVendor missing api_url for LLM provider")
-
-        self.base_url = provisioning_academy.vendor.api_url.rstrip("/")
-        self.api_key = provisioning_academy.credentials_key
+        self.base_url = base_url.rstrip("/")
+        self.api_key = api_key
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",

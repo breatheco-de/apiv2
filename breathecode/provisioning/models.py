@@ -345,6 +345,12 @@ class ProvisioningLLM(models.Model):
 
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING, db_index=True)
 
+    error_message = models.TextField(
+        blank=True,
+        default="",
+        help_text="Last error message encountered while provisioning/deprovisioning with the LLM provider.",
+    )
+
     last_sync_at = models.DateTimeField(
         null=True,
         blank=True,
