@@ -276,7 +276,9 @@ class Service(AbstractAsset):
         Group, blank=True, help_text="Groups that can access the customer that bought this service"
     )
 
-    description = models.CharField(max_length=255, default=None, null=True, blank=True, help_text="Description of the service")
+    description = models.CharField(
+        max_length=255, default=None, null=True, blank=True, help_text="Description of the service"
+    )
 
     session_duration = models.DurationField(
         default=None, null=True, blank=True, help_text="Session duration, used in consumption sessions"
@@ -285,7 +287,7 @@ class Service(AbstractAsset):
     consumer = models.CharField(max_length=15, choices=Consumer, default=Consumer.NO_SET, help_text="Service type")
     is_model_service = models.BooleanField(
         default=False,
-        help_text="If true, this service will be considered a model service and will be suggested to all academies at setup time"
+        help_text="If true, this service will be considered a model service and will be suggested to all academies at setup time",
     )
 
     def __str__(self):
@@ -1032,7 +1034,9 @@ class AcademyService(models.Model):
                 original = type(self).objects.get(pk=self.pk)
                 if original.price_per_unit != self.price_per_unit:
                     raise forms.ValidationError(
-                        _("Cannot change price_per_unit for SEAT services. Seat prices are immutable to maintain payment integrity.")
+                        _(
+                            "Cannot change price_per_unit for SEAT services. Seat prices are immutable to maintain payment integrity."
+                        )
                     )
             except type(self).DoesNotExist:
                 pass
@@ -1427,9 +1431,7 @@ class Coupon(models.Model):
     expires_at = models.DateTimeField(default=None, null=True, blank=True)
 
     # Statistics tracking fields
-    times_used = models.IntegerField(
-        default=0, db_index=True, help_text="Number of times this coupon has been used"
-    )
+    times_used = models.IntegerField(default=0, db_index=True, help_text="Number of times this coupon has been used")
     last_used_at = models.DateTimeField(
         null=True, blank=True, db_index=True, help_text="When this coupon was last used"
     )
@@ -1439,9 +1441,7 @@ class Coupon(models.Model):
         null=True,
         help_text="Detailed statistics (only calculated for recently active coupons)",
     )
-    stats_updated_at = models.DateTimeField(
-        null=True, blank=True, help_text="When stats were last calculated"
-    )
+    stats_updated_at = models.DateTimeField(null=True, blank=True, help_text="When stats were last calculated")
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -2389,8 +2389,24 @@ class PlanFinancing(AbstractIOweYou):
         if old_instance and old_instance.status != self.status:
             if self.status == self.Status.ACTIVE and is_paid:
                 signals.grant_plan_permissions.send_robust(instance=self, sender=self.__class__)
-            elif self.status in revoke_statuses:
+
+            if self.status in revoke_statuses:
                 signals.revoke_plan_permissions.send_robust(instance=self, sender=self.__class__)
+
+            if self.status in [self.Status.EXPIRED, self.Status.DEPRECATED]:
+                # Deprovision external services when the financing is fully expired/deprecated.
+                plans = self.plans.all()
+                for plan in plans:
+                    for plan_service_item in PlanServiceItem.objects.select_related("service_item__service").filter(
+                        plan=plan
+                    ):
+                        service = plan_service_item.service_item.service
+                        signals.deprovision_service.send_robust(
+                            sender=Service,
+                            instance=service,
+                            user_id=self.user.id,
+                            context={},
+                        )
 
 
 class PlanFinancingTeam(models.Model):
@@ -2582,8 +2598,14 @@ class Subscription(AbstractIOweYou):
         if old_instance and old_instance.status != self.status:
             if self.status == self.Status.ACTIVE and is_paid:
                 signals.grant_plan_permissions.send_robust(instance=self, sender=self.__class__)
-            elif self.status in revoke_statuses:
+            if self.status in revoke_statuses:
                 signals.revoke_plan_permissions.send_robust(instance=self, sender=self.__class__)
+            if self.status in [self.Status.EXPIRED, self.Status.DEPRECATED]:
+                for subscription_service_item in self.service_items.select_related("service_item__service").all():
+                    service = subscription_service_item.service_item.service
+                    signals.deprovision_service.send_robust(
+                        sender=Service, instance=service, user_id=self.user.id, context={}
+                    )
 
 
 class SubscriptionServiceItem(models.Model):
@@ -3114,10 +3136,9 @@ class Consumable(AbstractServiceItem):
         if not include_zero_balance:
             queryset = queryset.exclude(how_many=0)
 
-        return (
-            queryset.exclude(Q(subscription__status__in=invalid_statuses) | Q(plan_financing__status__in=invalid_statuses))
-            .order_by("id")
-        )
+        return queryset.exclude(
+            Q(subscription__status__in=invalid_statuses) | Q(plan_financing__status__in=invalid_statuses)
+        ).order_by("id")
 
     @classmethod
     @sync_to_async

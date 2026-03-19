@@ -310,3 +310,72 @@ class ProvisioningVPS(models.Model):
 
     def __str__(self):
         return f"VPS {self.id} ({self.user_id}, {self.academy_id}, {self.status})"
+
+
+class ProvisioningLLM(models.Model):
+    """
+    Generic LLM provisioning record for a user in an academy with a given vendor.
+
+    This tracks the external user identity in the LLM provider and its provisioning state.
+    """
+
+    STATUS_PENDING = "PENDING"
+    STATUS_ACTIVE = "ACTIVE"
+    STATUS_DEPROVISIONED = "DEPROVISIONED"
+    STATUS_ERROR = "ERROR"
+
+    STATUS_CHOICES = (
+        (STATUS_PENDING, "Pending"),
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_DEPROVISIONED, "Deprovisioned"),
+        (STATUS_ERROR, "Error"),
+    )
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    vendor = models.ForeignKey(ProvisioningVendor, on_delete=models.SET_NULL, null=True, default=None)
+
+    external_user_id = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        default=None,
+        help_text="Identifier of the user in the external LLM provider.",
+    )
+
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING, db_index=True)
+
+    error_message = models.TextField(
+        blank=True,
+        default="",
+        help_text="Last error message encountered while provisioning/deprovisioning with the LLM provider.",
+    )
+
+    last_sync_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Last time we attempted to sync the user with the LLM provider.",
+    )
+    deprovisioned_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="When the user was deprovisioned in the LLM provider (if applicable).",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    class Meta:
+        verbose_name = "Provisioning LLM user"
+        verbose_name_plural = "Provisioning LLM users"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "academy", "vendor"],
+                name="uniq_provisioning_llm_per_user_academy_vendor",
+            )
+        ]
+
+    def __str__(self):
+        return f"LLM {self.id} ({self.user_id}, {self.academy_id}, {self.vendor_id}, {self.status})"

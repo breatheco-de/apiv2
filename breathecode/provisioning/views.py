@@ -21,6 +21,7 @@ from rest_framework_csv.renderers import CSVRenderer
 from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
+from breathecode.payments.models import Consumable
 from breathecode.notify.actions import get_template_content
 from breathecode.provisioning import tasks
 from breathecode.provisioning.serializers import (
@@ -49,11 +50,18 @@ from breathecode.utils.decorators import has_permission
 from breathecode.utils.io.file import count_csv_rows
 from breathecode.utils.views import private_view, render_message
 
-from .actions import get_provisioning_vendor, request_vps
+from .actions import (
+    get_provisioning_vendor,
+    request_vps,
+    resolve_llm_client_and_external_id,
+    resolve_provisioning_academy_for_llm,
+)
+from .llm_client import LLMClientError, get_llm_client
 from .models import (
     BILL_STATUS,
     ProvisioningAcademy,
     ProvisioningBill,
+    ProvisioningLLM,
     ProvisioningProfile,
     ProvisioningUserConsumption,
     ProvisioningVPS,
@@ -770,9 +778,7 @@ class AcademyBillConsumptionsView(APIView):
         bill = ProvisioningBill.objects.filter(academy__id=academy_id, id=bill_id).first()
 
         if bill is None:
-            raise ValidationException(
-                "Provisioning Bill not found", code=404, slug="provisioning_bill-not-found"
-            )
+            raise ValidationException("Provisioning Bill not found", code=404, slug="provisioning_bill-not-found")
 
         consumptions = ProvisioningUserConsumption.objects.filter(bills=bill).order_by("username")
 
@@ -831,13 +837,9 @@ class ProvisioningProfileView(APIView):
             vendor=vendor,
         )
         if data.get("cohort_ids"):
-            profile.cohorts.set(
-                Cohort.objects.filter(id__in=data["cohort_ids"], academy_id=academy_id)
-            )
+            profile.cohorts.set(Cohort.objects.filter(id__in=data["cohort_ids"], academy_id=academy_id))
         if data.get("member_ids"):
-            profile.members.set(
-                ProfileAcademy.objects.filter(id__in=data["member_ids"], academy_id=academy_id)
-            )
+            profile.members.set(ProfileAcademy.objects.filter(id__in=data["member_ids"], academy_id=academy_id))
         out = GetProvisioningProfile(profile)
         return Response(out.data, status=status.HTTP_201_CREATED)
 
@@ -898,13 +900,9 @@ class ProvisioningProfileByIdView(APIView):
             profile.vendor = vendor
             profile.save()
         if "cohort_ids" in data:
-            profile.cohorts.set(
-                Cohort.objects.filter(id__in=data["cohort_ids"], academy_id=academy_id)
-            )
+            profile.cohorts.set(Cohort.objects.filter(id__in=data["cohort_ids"], academy_id=academy_id))
         if "member_ids" in data:
-            profile.members.set(
-                ProfileAcademy.objects.filter(id__in=data["member_ids"], academy_id=academy_id)
-            )
+            profile.members.set(ProfileAcademy.objects.filter(id__in=data["member_ids"], academy_id=academy_id))
         out = GetProvisioningProfile(profile)
         return Response(out.data)
 
@@ -1156,7 +1154,9 @@ class AcademyVPSByIdView(APIView):
     @capable_of("crud_provisioning_activity")
     def delete(self, request, academy_id=None, vps_id=None):
         lang = get_user_language(request)
-        vps = ProvisioningVPS.objects.filter(id=vps_id, academy_id=academy_id).select_related("vendor", "academy").first()
+        vps = (
+            ProvisioningVPS.objects.filter(id=vps_id, academy_id=academy_id).select_related("vendor", "academy").first()
+        )
         if not vps:
             raise ValidationException(
                 translation(
@@ -1168,6 +1168,7 @@ class AcademyVPSByIdView(APIView):
                 code=404,
             )
         from breathecode.provisioning.tasks import deprovision_vps_task
+
         deprovision_vps_task.delay(vps.id)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -1244,3 +1245,151 @@ class AcademyVPSByIdView(APIView):
 #         item.save()
 
 #     return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+class MeLLMKeysView(APIView):
+    """GET: list keys from all academies. POST: create a new API key."""
+
+    def get(self, request):
+        lang = get_user_language(request)
+        user = request.user
+        if not Consumable.list(user=user, service="free_monthly_llm_budget").exists():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="You don't have the LLM budget consumable required to manage API keys.",
+                    es="No tienes el consumible de presupuesto de LLM necesario para administrar llaves de API.",
+                    slug="llm-budget-required",
+                ),
+                code=403,
+            )
+
+        academy_ids = (
+            ProvisioningLLM.objects.filter(user=user)
+            .exclude(status=ProvisioningLLM.STATUS_DEPROVISIONED)
+            .values_list("academy_id", flat=True)
+            .distinct()
+        )
+
+        all_keys = []
+        token_ids: set[str] = set()
+        for academy_id in academy_ids:
+            provisioning_academy = resolve_provisioning_academy_for_llm(academy_id)
+            if not provisioning_academy:
+                continue
+
+            client = get_llm_client(provisioning_academy)
+            if client is None:
+                continue
+
+            provisioning_llm = ProvisioningLLM.objects.filter(
+                user=user,
+                academy_id=academy_id,
+                vendor=provisioning_academy.vendor,
+            ).first()
+
+            external_user_id = (provisioning_llm.external_user_id if provisioning_llm else str(user.username)) or str(
+                user.username
+            )
+
+            try:
+                user_info = client.get_user_info(user_id=external_user_id)
+            except LLMClientError:
+                continue
+
+            keys_data = user_info.get("keys") or []
+            if not isinstance(keys_data, list):
+                continue
+
+            for item in keys_data:
+                if not isinstance(item, dict):
+                    continue
+
+                token_id = item.get("token_id")
+                if not token_id:
+                    continue
+                # Avoid duplicated keys if multiple academies point to the same Litellm tenant.
+                if token_id in token_ids:
+                    continue
+                token_ids.add(token_id)
+
+                all_keys.append(
+                    {
+                        "token_id": token_id,
+                        "key_alias": item.get("key_alias"),
+                        "spend": item.get("spend"),
+                        "created_at": item.get("created_at"),
+                        "academy_id": academy_id,
+                    }
+                )
+
+        return Response(all_keys, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        lang = get_user_language(request)
+        alias = (request.data or {}).get("key_alias")
+        if isinstance(alias, str):
+            alias = alias.strip() or None
+        else:
+            alias = request.user.first_name or request.user.username
+
+        try:
+            client, external_user_id, academy_id = resolve_llm_client_and_external_id(
+                request, ensure_llm_user_record=True
+            )
+            created = client.create_api_key(external_user_id=external_user_id, name=alias)
+        except LLMClientError as exc:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Error creating LLM API key: {exc}",
+                    es=f"Error al crear la llave de API de LLM: {exc}",
+                    slug="llm-key-create-error",
+                ),
+                code=502,
+            )
+        return Response(created, status=status.HTTP_201_CREATED)
+
+
+class MeLLMKeyByIdView(APIView):
+    """DELETE: delete a single key by token_id."""
+
+    def delete(self, request, key_id):
+        lang = get_user_language(request)
+        try:
+            client, external_user_id, _ = resolve_llm_client_and_external_id(request)
+            client.delete_api_keys(user_id=external_user_id, token_ids=[key_id])
+        except LLMClientError as exc:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Error deleting LLM API key: {exc}",
+                    es=f"Error al borrar la llave de API de LLM: {exc}",
+                    slug="llm-key-delete-error",
+                ),
+                code=502,
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class MeLLMKeyRegenerateView(APIView):
+    """POST: regenerate an existing key by token_id. Returns the new plaintext key."""
+
+    def post(self, request, key_id):
+        lang = get_user_language(request)
+        try:
+            client, external_user_id, academy_id = resolve_llm_client_and_external_id(
+                request, ensure_llm_user_record=True
+            )
+            result = client.regenerate_api_key(user_id=external_user_id, token_id=key_id)
+        except LLMClientError as exc:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Error regenerating LLM API key: {exc}",
+                    es=f"Error al regenerar la llave de API de LLM: {exc}",
+                    slug="llm-key-regenerate-error",
+                ),
+                code=502,
+            )
+        return Response(result, status=status.HTTP_200_OK)
