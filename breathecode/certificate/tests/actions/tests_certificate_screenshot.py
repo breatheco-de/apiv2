@@ -24,7 +24,7 @@ query_string = urlencode(
         "url": f"https://certificate.4geeks.com/preview/{token}",
         "dimension": "1024x707",
         "device": "desktop",
-        "delay": 1000,
+        "delay": 3000,
         "cacheLimit": "0",
     }
 )
@@ -33,6 +33,7 @@ query_string = urlencode(
 @pytest.fixture(autouse=True)
 def setup(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("SCREENSHOT_MACHINE_KEY", "00000")
+    monkeypatch.delenv("VERCEL_CERTIFICATE_BYPASS_SECRET", raising=False)
 
 
 class ActionCertificateScreenshotTestCase(CertificateTestCase):
