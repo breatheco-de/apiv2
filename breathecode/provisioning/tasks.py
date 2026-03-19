@@ -15,7 +15,6 @@ from django.utils import timezone
 from task_manager.core.exceptions import AbortTask, RetryTask
 from task_manager.django.decorators import task
 
-from breathecode.admissions.models import Academy
 from breathecode.authenticate.models import User
 from breathecode.payments.models import Consumable
 from breathecode.payments.services.stripe import Stripe
@@ -596,64 +595,6 @@ def monthly_vps_renewal_dispatcher(**_: Any):
     for vps_id in active_ids:
         renew_or_deprovision_vps_task.delay(vps_id)
     logger.info("Monthly VPS renewal: enqueued %s tasks", len(active_ids))
-
-
-@task(priority=TaskPriority.STUDENT.value)
-def ensure_llm_user(user_id: int, academy_id: int, **_: Any):
-    """
-    Ensure that the user has a ProvisioningLLM record for the given academy and LLM vendor.
-    """
-    user = User.objects.filter(id=user_id).first()
-    if not user:
-        raise AbortTask(f"User {user_id} not found")
-
-    academy = Academy.objects.filter(id=academy_id).first()
-    if not academy:
-        raise AbortTask(f"Academy {academy_id} not found")
-
-    # Resolve a supported ProvisioningAcademy for this academy.
-    # The vendor is selected based on which LLM clients are registered in the llm registry.
-    provisioning_academy = None
-    for pa in ProvisioningAcademy.objects.select_related("vendor").filter(academy=academy, vendor__isnull=False).all():
-        if pa.vendor and get_llm_client_class(pa.vendor) is not None:
-            provisioning_academy = pa
-            break
-
-    if not provisioning_academy or not provisioning_academy.vendor:
-        raise AbortTask(f"No ProvisioningAcademy configured with a supported LLM vendor for academy {academy_id}")
-
-    vendor = provisioning_academy.vendor
-
-    provisioning_llm, created = ProvisioningLLM.objects.get_or_create(
-        user=user,
-        academy=academy,
-        vendor=vendor,
-        defaults={
-            "external_user_id": str(user.username),
-            "status": ProvisioningLLM.STATUS_PENDING,
-        },
-    )
-
-    if provisioning_llm.status == ProvisioningLLM.STATUS_ACTIVE and provisioning_llm.external_user_id:
-        raise AbortTask()
-
-    # If we were previously deprovisioned but the user now has entitlement again,
-    # we can move back to ACTIVE.
-    if provisioning_llm.status == ProvisioningLLM.STATUS_DEPROVISIONED:
-        has_entitlement = Consumable.list(user=user, service="free_monthly_llm_budget").exists()
-        if has_entitlement:
-            provisioning_llm.status = ProvisioningLLM.STATUS_ACTIVE
-            provisioning_llm.deprovisioned_at = None
-            provisioning_llm.error_message = ""
-
-    external_user_id = provisioning_llm.external_user_id or str(user.username)
-    if provisioning_llm.external_user_id != external_user_id:
-        provisioning_llm.external_user_id = external_user_id
-
-    provisioning_llm.last_sync_at = timezone.now()
-    provisioning_llm.save(
-        update_fields=["external_user_id", "status", "deprovisioned_at", "error_message", "last_sync_at", "updated_at"]
-    )
 
 
 @task(priority=TaskPriority.STUDENT.value)

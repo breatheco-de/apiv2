@@ -57,7 +57,7 @@ def get_llm_client(provisioning_academy: Any) -> Optional[LLMClient]:
     """
     Resolve an LLM client *instance* from a `ProvisioningAcademy` configuration.
 
-    Mirrors the VPS pattern: returns an instantiated client or None.
+    Returns an instantiated client or None.
     """
     if provisioning_academy is None:
         return None
