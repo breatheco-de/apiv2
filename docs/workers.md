@@ -51,13 +51,13 @@ heroku logs --tail --app breathecode --dyno=celeryworker.9
 ### 3. Verificar Conexión al Broker
 ```bash
 # Verificar si los workers pueden conectarse al broker
-heroku run "celery -A breathecode.celery inspect ping" --app breathecode
+heroku run "python -m celery -A breathecode.celery inspect ping" --app breathecode
 
 # Ver tareas activas
-heroku run "celery -A breathecode.celery inspect active" --app breathecode
+heroku run "python -m celery -A breathecode.celery inspect active" --app breathecode
 
 # Ver estadísticas de workers
-heroku run "celery -A breathecode.celery inspect stats" --app breathecode
+heroku run "python -m celery -A breathecode.celery inspect stats" --app breathecode
 ```
 
 ### 4. Verificar Configuración del Broker
@@ -83,7 +83,7 @@ heroku logs --tail --app breathecode --dyno=celeryworker.8
 ### Paso 2: Verificar Conexión al Broker
 ```bash
 # Verificar conexión de todos los workers
-heroku run "celery -A breathecode.celery inspect ping" --app breathecode
+heroku run "python -m celery -A breathecode.celery inspect ping" --app breathecode
 ```
 
 ### Paso 3: Reiniciar Workers Inactivos
@@ -107,14 +107,14 @@ heroku ps:restart celeryworker --app breathecode
 heroku ps --app breathecode
 
 # 3. Verificar conexión al broker
-heroku run "celery -A breathecode.celery inspect ping" --app breathecode
+heroku run "python -m celery -A breathecode.celery inspect ping" --app breathecode
 
 # 4. Ver logs de workers para confirmar que están procesando tareas
 heroku logs --tail --app breathecode --dyno=celeryworker.1
 heroku logs --tail --app breathecode --dyno=celeryworker.2
 
 # 5. Ver tareas activas
-heroku run "celery -A breathecode.celery inspect active" --app breathecode
+heroku run "python -m celery -A breathecode.celery inspect active" --app breathecode
 ```
 
 ## Comandos de Monitoreo Continuo
@@ -169,7 +169,7 @@ poetry run python manage.py clear_task_manager_queue --status ERROR --show-summa
 ### Monitoreo Regular
 ```bash
 # Script de monitoreo diario
-heroku run "celery -A breathecode.celery inspect ping" --app breathecode
+heroku run "python -m celery -A breathecode.celery inspect ping" --app breathecode
 heroku ps --app breathecode
 ```
 

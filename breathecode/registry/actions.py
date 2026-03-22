@@ -1719,6 +1719,9 @@ def upload_image_to_bucket(img: AssetImage, asset=None):
 
 
 def add_syllabus_translations(_json: dict):
+    from breathecode.admissions.actions import resolve_syllabus_json
+
+    _json = resolve_syllabus_json(_json)
     if not isinstance(_json, dict) or "days" not in _json or not isinstance(_json["days"], list):
         return _json
 
