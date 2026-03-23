@@ -425,6 +425,39 @@ def sync_slack_team_users(team_id):
     return True
 
 
+def sync_slack_team_user(team_id, slack_user_id):
+    from breathecode.authenticate.models import CredentialsSlack
+
+    logger.debug(f"Sync slack user {slack_user_id} from team {team_id}")
+
+    team = SlackTeam.objects.filter(id=team_id).first()
+    if team is None:
+        raise Exception("Invalid team id: " + str(team_id))
+
+    credentials = CredentialsSlack.objects.filter(team_id=team.slack_id).first()
+    if credentials is None or credentials.token is None:
+        raise Exception(f"No credentials found for this team {team_id}")
+
+    team.sync_status = "INCOMPLETED"
+    team.synqued_at = timezone.now()
+    team.save()
+
+    api = client.Slack(credentials.token)
+    data = api.get("users.info", {"user": slack_user_id})
+    member = data["user"]
+
+    # ignore bots
+    if member["is_bot"] or member["name"] == "slackbot":
+        return False
+
+    sync_slack_user(member, team)
+
+    team.sync_status = "COMPLETED"
+    team.save()
+
+    return True
+
+
 def sync_slack_user(payload, team=None):
 
     if team is None and "team_id" in payload:
@@ -485,6 +518,69 @@ def sync_slack_user(payload, team=None):
     slack_user.save()
 
     return slack_user
+
+
+def sync_slack_team_cohort(team_id, cohort_id):
+    from breathecode.authenticate.models import CredentialsSlack
+
+    logger.debug(f"Sync slack cohort {cohort_id} from team {team_id}")
+
+    team = SlackTeam.objects.filter(id=team_id).first()
+    if team is None:
+        raise Exception("Invalid team id: " + str(team_id))
+
+    cohort = Cohort.objects.filter(id=cohort_id, academy_id=team.academy_id).first()
+    if cohort is None:
+        raise Exception(f"Cohort {cohort_id} not found in this academy")
+
+    credentials = CredentialsSlack.objects.filter(team_id=team.slack_id).first()
+    if credentials is None or credentials.token is None:
+        raise Exception(f"No credentials found for this team {team_id}")
+
+    team.sync_status = "INCOMPLETED"
+    team.synqued_at = timezone.now()
+    team.save()
+
+    api = client.Slack(credentials.token)
+    data = api.get(
+        "conversations.list",
+        {
+            "types": "public_channel,private_channel",
+            "limit": 300,
+        },
+    )
+
+    channels = data["channels"]
+    while (
+        "response_metadata" in data
+        and "next_cursor" in data["response_metadata"]
+        and data["response_metadata"]["next_cursor"] != ""
+    ):
+        data = api.get(
+            "conversations.list",
+            {
+                "limit": 300,
+                "cursor": data["response_metadata"]["next_cursor"],
+                "types": "public_channel,private_channel",
+            },
+        )
+        channels = channels + data["channels"]
+
+    channel = next((x for x in channels if x["name_normalized"] == cohort.slug), None)
+    if channel is None:
+        logger.warning(f"Cohort slug={cohort.slug} has no matching slack channel for team={team_id}")
+        team.sync_status = "INCOMPLETED"
+        team.sync_message = f"No slack channel found for cohort slug={cohort.slug}"
+        team.save()
+        return False
+
+    sync_slack_channel(channel, team)
+
+    team.sync_status = "COMPLETED"
+    team.sync_message = None
+    team.save()
+
+    return True
 
 
 def sync_slack_channel(payload, team=None):

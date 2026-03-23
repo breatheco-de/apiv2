@@ -55,6 +55,40 @@ class SlackTeamSerializer(serpy.Serializer):
     sync_message = serpy.Field()
 
 
+class SlackSyncItemStatusSerializer(serpy.Serializer):
+    sync_status = serpy.Field()
+    sync_message = serpy.Field()
+    synqued_at = serpy.Field()
+
+
+class SlackTeamSyncStatusSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slack_id = serpy.Field()
+    name = serpy.Field()
+    sync_status = serpy.Field()
+    sync_message = serpy.Field()
+    synqued_at = serpy.Field()
+    users = serpy.Field()
+    channels = serpy.Field()
+
+
+class SlackTeamCredentialsStatusSerializer(serpy.Serializer):
+    configured = serpy.Field()
+    team_id = serpy.Field()
+    team_name = serpy.Field()
+    app_id = serpy.Field()
+    bot_user_id = serpy.Field()
+    authed_user = serpy.Field()
+    updated_at = serpy.Field()
+
+
+class SlackTeamCredentialsUpsertSerializer(serpy.Serializer):
+    configured = serpy.Field()
+    team_id = serpy.Field()
+    team_name = serpy.Field()
+    updated_at = serpy.Field()
+
+
 class NotificationSerializer(serpy.Serializer):
     id = serpy.Field()
     message = serpy.Field()

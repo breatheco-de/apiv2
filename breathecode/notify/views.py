@@ -12,20 +12,31 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from breathecode.admissions.models import Academy
+from breathecode.admissions.models import Academy, Cohort
 from breathecode.utils import APIViewExtensions, GenerateLookupsMixin
 from breathecode.utils.decorators import capable_of
 
 from .actions import get_template_content
-from .models import AcademyNotifySettings, Hook, HookError, Notification, SlackTeam
+from .models import AcademyNotifySettings, Hook, HookError, Notification, SlackChannel, SlackTeam, SlackUser, SlackUserTeam
 from .serializers import (
     AcademyNotifySettingsSerializer,
     HookErrorSerializer,
     HookSerializer,
     NotificationSerializer,
+    SlackTeamCredentialsUpsertSerializer,
+    SlackTeamCredentialsStatusSerializer,
+    SlackSyncItemStatusSerializer,
     SlackTeamSerializer,
+    SlackTeamSyncStatusSerializer,
 )
-from .tasks import async_slack_action, async_slack_command
+from .tasks import (
+    async_slack_action,
+    async_slack_command,
+    async_slack_team_channel,
+    async_slack_team_cohort,
+    async_slack_team_user,
+    async_slack_team_users,
+)
 from .utils.email_manager import EmailManager
 
 logger = logging.getLogger(__name__)
@@ -500,6 +511,326 @@ class SlackTeamsView(APIView, GenerateLookupsMixin):
         serializer = SlackTeamSerializer(items, many=True)
 
         return handler.response(serializer.data)
+
+
+class AcademySlackTeamSyncUsersView(APIView):
+    @capable_of("crud_notification")
+    def post(self, request, team_id, academy_id=None):
+        team = SlackTeam.objects.filter(id=team_id, academy_id=academy_id).first()
+        lang = getattr(request.user, "lang", "en")
+        if team is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Slack team {team_id} was not found for this academy",
+                    es=f"No se encontró el equipo de Slack {team_id} para esta academia",
+                    slug="slack-team-not-found",
+                ),
+                slug="slack-team-not-found",
+            )
+
+        async_slack_team_users.delay(team.id)
+        return Response({"status": "accepted", "sync_type": "users", "team_id": team.id}, status=status.HTTP_202_ACCEPTED)
+
+
+class AcademySlackTeamCredentialsView(APIView):
+    def _get_team(self, team_id, academy_id, lang):
+        team = SlackTeam.objects.filter(id=team_id, academy_id=academy_id).first()
+        if team is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Slack team {team_id} was not found for this academy",
+                    es=f"No se encontró el equipo de Slack {team_id} para esta academia",
+                    slug="slack-team-not-found",
+                ),
+                slug="slack-team-not-found",
+            )
+        return team
+
+    @capable_of("read_notification")
+    def get(self, request, team_id, academy_id=None):
+        from breathecode.authenticate.models import CredentialsSlack
+
+        lang = getattr(request.user, "lang", "en")
+        team = self._get_team(team_id, academy_id, lang)
+        credentials = CredentialsSlack.objects.filter(team_id=team.slack_id).first()
+
+        data = {
+            "configured": credentials is not None and bool(getattr(credentials, "token", "")),
+            "team_id": team.slack_id,
+            "team_name": team.name,
+            "app_id": getattr(credentials, "app_id", None),
+            "bot_user_id": getattr(credentials, "bot_user_id", None),
+            "authed_user": getattr(credentials, "authed_user", None),
+            "updated_at": getattr(credentials, "updated_at", None),
+        }
+
+        serializer = SlackTeamCredentialsStatusSerializer(data)
+        return Response(serializer.data)
+
+    @capable_of("crud_notification")
+    def post(self, request, team_id, academy_id=None):
+        return self._upsert(request, team_id, academy_id)
+
+    @capable_of("crud_notification")
+    def put(self, request, team_id, academy_id=None):
+        return self._upsert(request, team_id, academy_id)
+
+    def _upsert(self, request, team_id, academy_id):
+        from breathecode.authenticate.models import CredentialsSlack
+
+        lang = getattr(request.user, "lang", "en")
+        team = self._get_team(team_id, academy_id, lang)
+
+        token = request.data.get("token")
+        if not token:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="`token` is required to configure Slack credentials",
+                    es="`token` es requerido para configurar credenciales de Slack",
+                    slug="missing-token",
+                ),
+                slug="missing-token",
+            )
+
+        credentials = CredentialsSlack.objects.filter(user=team.owner).first()
+        if credentials is None:
+            credentials = CredentialsSlack(user=team.owner)
+
+        credentials.token = token
+        credentials.team_id = team.slack_id
+        credentials.team_name = request.data.get("team_name") or team.name
+        credentials.app_id = request.data.get("app_id") or getattr(credentials, "app_id", "") or ""
+        credentials.bot_user_id = request.data.get("bot_user_id") or getattr(credentials, "bot_user_id", "") or ""
+        credentials.authed_user = request.data.get("authed_user") or getattr(credentials, "authed_user", "") or ""
+        credentials.save()
+
+        serializer = SlackTeamCredentialsUpsertSerializer(
+            {
+                "configured": True,
+                "team_id": credentials.team_id,
+                "team_name": credentials.team_name,
+                "updated_at": credentials.updated_at,
+            }
+        )
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AcademySlackTeamSyncChannelsView(APIView):
+    @capable_of("crud_notification")
+    def post(self, request, team_id, academy_id=None):
+        team = SlackTeam.objects.filter(id=team_id, academy_id=academy_id).first()
+        lang = getattr(request.user, "lang", "en")
+        if team is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Slack team {team_id} was not found for this academy",
+                    es=f"No se encontró el equipo de Slack {team_id} para esta academia",
+                    slug="slack-team-not-found",
+                ),
+                slug="slack-team-not-found",
+            )
+
+        async_slack_team_channel.delay(team.id)
+        return Response(
+            {"status": "accepted", "sync_type": "channels", "team_id": team.id}, status=status.HTTP_202_ACCEPTED
+        )
+
+
+class AcademySlackTeamSyncStatusView(APIView):
+    @capable_of("read_notification")
+    def get(self, request, team_id, academy_id=None):
+        team = SlackTeam.objects.filter(id=team_id, academy_id=academy_id).first()
+        lang = getattr(request.user, "lang", "en")
+        if team is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Slack team {team_id} was not found for this academy",
+                    es=f"No se encontró el equipo de Slack {team_id} para esta academia",
+                    slug="slack-team-not-found",
+                ),
+                slug="slack-team-not-found",
+            )
+
+        user_syncs = SlackUserTeam.objects.filter(slack_team=team)
+        channel_syncs = SlackChannel.objects.filter(team=team)
+
+        data = {
+            "id": team.id,
+            "slack_id": team.slack_id,
+            "name": team.name,
+            "sync_status": team.sync_status,
+            "sync_message": team.sync_message,
+            "synqued_at": team.synqued_at,
+            "users": {
+                "total": user_syncs.count(),
+                "completed": user_syncs.filter(sync_status="COMPLETED").count(),
+                "incompleted": user_syncs.filter(sync_status="INCOMPLETED").count(),
+                "last_synqued_at": user_syncs.order_by("-synqued_at").values_list("synqued_at", flat=True).first(),
+            },
+            "channels": {
+                "total": channel_syncs.count(),
+                "completed": channel_syncs.filter(sync_status="COMPLETED").count(),
+                "incompleted": channel_syncs.filter(sync_status="INCOMPLETED").count(),
+                "last_synqued_at": channel_syncs.order_by("-synqued_at").values_list("synqued_at", flat=True).first(),
+            },
+        }
+
+        serializer = SlackTeamSyncStatusSerializer(data)
+        return Response(serializer.data)
+
+
+class AcademySlackTeamSyncUserView(APIView):
+    @capable_of("crud_notification")
+    def post(self, request, team_id, slack_user_id, academy_id=None):
+        team = SlackTeam.objects.filter(id=team_id, academy_id=academy_id).first()
+        lang = getattr(request.user, "lang", "en")
+        if team is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Slack team {team_id} was not found for this academy",
+                    es=f"No se encontró el equipo de Slack {team_id} para esta academia",
+                    slug="slack-team-not-found",
+                ),
+                slug="slack-team-not-found",
+            )
+
+        async_slack_team_user.delay(team.id, slack_user_id)
+        return Response(
+            {
+                "status": "accepted",
+                "sync_type": "user",
+                "team_id": team.id,
+                "slack_user_id": slack_user_id,
+            },
+            status=status.HTTP_202_ACCEPTED,
+        )
+
+    @capable_of("read_notification")
+    def get(self, request, team_id, slack_user_id, academy_id=None):
+        team = SlackTeam.objects.filter(id=team_id, academy_id=academy_id).first()
+        lang = getattr(request.user, "lang", "en")
+        if team is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Slack team {team_id} was not found for this academy",
+                    es=f"No se encontró el equipo de Slack {team_id} para esta academia",
+                    slug="slack-team-not-found",
+                ),
+                slug="slack-team-not-found",
+            )
+
+        item = SlackUserTeam.objects.filter(slack_team=team, slack_user__slack_id=slack_user_id).first()
+        if item is None:
+            slack_user = SlackUser.objects.filter(slack_id=slack_user_id).first()
+            if slack_user is None:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Slack user {slack_user_id} was not found",
+                        es=f"No se encontró el usuario de Slack {slack_user_id}",
+                        slug="slack-user-not-found",
+                    ),
+                    slug="slack-user-not-found",
+                )
+
+            return Response(
+                {
+                    "sync_status": "INCOMPLETED",
+                    "sync_message": "Slack user exists but is not linked to this team",
+                    "synqued_at": None,
+                }
+            )
+
+        serializer = SlackSyncItemStatusSerializer(item)
+        return Response(serializer.data)
+
+
+class AcademySlackTeamSyncCohortView(APIView):
+    @capable_of("crud_notification")
+    def post(self, request, team_id, cohort_id, academy_id=None):
+        team = SlackTeam.objects.filter(id=team_id, academy_id=academy_id).first()
+        lang = getattr(request.user, "lang", "en")
+        if team is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Slack team {team_id} was not found for this academy",
+                    es=f"No se encontró el equipo de Slack {team_id} para esta academia",
+                    slug="slack-team-not-found",
+                ),
+                slug="slack-team-not-found",
+            )
+
+        cohort = Cohort.objects.filter(id=cohort_id, academy_id=academy_id).first()
+        if cohort is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Cohort {cohort_id} was not found for this academy",
+                    es=f"No se encontró el cohorte {cohort_id} para esta academia",
+                    slug="cohort-not-found",
+                ),
+                slug="cohort-not-found",
+            )
+
+        async_slack_team_cohort.delay(team.id, cohort.id)
+        return Response(
+            {
+                "status": "accepted",
+                "sync_type": "cohort",
+                "team_id": team.id,
+                "cohort_id": cohort.id,
+                "cohort_slug": cohort.slug,
+            },
+            status=status.HTTP_202_ACCEPTED,
+        )
+
+    @capable_of("read_notification")
+    def get(self, request, team_id, cohort_id, academy_id=None):
+        team = SlackTeam.objects.filter(id=team_id, academy_id=academy_id).first()
+        lang = getattr(request.user, "lang", "en")
+        if team is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Slack team {team_id} was not found for this academy",
+                    es=f"No se encontró el equipo de Slack {team_id} para esta academia",
+                    slug="slack-team-not-found",
+                ),
+                slug="slack-team-not-found",
+            )
+
+        cohort = Cohort.objects.filter(id=cohort_id, academy_id=academy_id).first()
+        if cohort is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Cohort {cohort_id} was not found for this academy",
+                    es=f"No se encontró el cohorte {cohort_id} para esta academia",
+                    slug="cohort-not-found",
+                ),
+                slug="cohort-not-found",
+            )
+
+        item = SlackChannel.objects.filter(team=team, cohort=cohort).first()
+        if item is None:
+            return Response(
+                {
+                    "sync_status": "INCOMPLETED",
+                    "sync_message": f"No Slack channel linked to cohort slug={cohort.slug}",
+                    "synqued_at": None,
+                }
+            )
+
+        serializer = SlackSyncItemStatusSerializer(item)
+        return Response(serializer.data)
 
 
 class NotificationsView(APIView, GenerateLookupsMixin):

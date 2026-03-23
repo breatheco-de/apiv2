@@ -17,7 +17,7 @@ from breathecode.notify import actions
 from breathecode.services.slack.client import Slack
 from breathecode.utils.decorators import TaskPriority
 
-from .actions import sync_slack_team_channel, sync_slack_team_users
+from .actions import sync_slack_team_channel, sync_slack_team_cohort, sync_slack_team_user, sync_slack_team_users
 from .utils.obfuscation import obfuscate_sensitive_data
 
 
@@ -64,6 +64,18 @@ def send_mentorship_starting_notification(session_id):
 def async_slack_team_users(team_id):
     logger.debug("Starting async_slack_team_users")
     return sync_slack_team_users(team_id)
+
+
+@shared_task(priority=TaskPriority.REALTIME.value)
+def async_slack_team_user(team_id, slack_user_id):
+    logger.debug("Starting async_slack_team_user")
+    return sync_slack_team_user(team_id, slack_user_id)
+
+
+@shared_task(priority=TaskPriority.REALTIME.value)
+def async_slack_team_cohort(team_id, cohort_id):
+    logger.debug("Starting async_slack_team_cohort")
+    return sync_slack_team_cohort(team_id, cohort_id)
 
 
 @shared_task(priority=TaskPriority.REALTIME.value)
