@@ -351,12 +351,6 @@ class ProvisioningLLM(models.Model):
         help_text="Last error message encountered while provisioning/deprovisioning with the LLM provider.",
     )
 
-    last_sync_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        default=None,
-        help_text="Last time we attempted to sync the user with the LLM provider.",
-    )
     deprovisioned_at = models.DateTimeField(
         null=True,
         blank=True,
@@ -368,8 +362,8 @@ class ProvisioningLLM(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     class Meta:
-        verbose_name = "Provisioning LLM user"
-        verbose_name_plural = "Provisioning LLM users"
+        verbose_name = "Provisioning LLM"
+        verbose_name_plural = "Provisioning LLM"
         constraints = [
             models.UniqueConstraint(
                 fields=["user", "academy", "vendor"],

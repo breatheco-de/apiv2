@@ -12,6 +12,7 @@ class RegistryConfig(AppConfig):
         logger.debug("Loading provisioning.receivers")
         from . import actions  # noqa: F401
         from . import receivers  # noqa: F401
+        from . import supervisors  # noqa: F401
 
         try:
             import breathecode.services.hostinger.client  # noqa: F401 - register Hostinger VPS client

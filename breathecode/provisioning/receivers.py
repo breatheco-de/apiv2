@@ -48,7 +48,7 @@ def deprovision_service_receiver(sender: Type[Service], instance: Service, user_
 
     service_slug = instance.slug
 
-    consumables = Consumable.list(user=user, service=service_slug)
+    consumables = Consumable.list(user=user, service=instance)
     if consumables.exists():
         logger.info(f"User {user_id} still has consumables for service {service_slug}, skipping deprovisioning.")
         return

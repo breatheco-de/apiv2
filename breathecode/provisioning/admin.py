@@ -15,6 +15,7 @@ from .models import (
     ProvisioningContainer,
     ProvisioningProfile,
     ProvisioningVPS,
+    ProvisioningLLM,
 )
 
 logger = logging.getLogger(__name__)
@@ -25,6 +26,13 @@ class ProvisioningVendorAdmin(admin.ModelAdmin):
     # form = CustomForm
     search_fields = ["name"]
     list_display = ("id", "name")
+
+
+@admin.register(ProvisioningLLM)
+class ProvisioningLLMAdmin(admin.ModelAdmin):
+    list_display = ["user", "academy", "vendor", "external_user_id", "status"]
+    search_fields = ["user__email", "academy__name", "vendor__name", "external_user_id"]
+    list_filter = ["status", "vendor"]
 
 
 @admin.register(ProvisioningMachineTypes)

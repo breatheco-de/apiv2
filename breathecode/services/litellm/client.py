@@ -87,7 +87,6 @@ class LiteLLMClient:
             "duration": "30d",
             "key_alias": name,
         }
-
         try:
             resp = requests.post(url, headers=self.headers, json=payload, timeout=timeout)
         except requests.RequestException as exc:
@@ -96,48 +95,6 @@ class LiteLLMClient:
         if resp.status_code >= 400:
             message = self._extract_error_message(resp)
             raise LiteLLMError(f"Failed to create LiteLLM API key ({resp.status_code}): {message}")
-
-        data: Dict[str, Any] = resp.json()
-
-        return {
-            "id": data.get("token_id"),
-            "key": data.get("key"),
-            "name": data.get("key_alias"),
-            "created_at": data.get("created_at"),
-        }
-
-    def regenerate_api_key(
-        self,
-        user_id: str,
-        token_id: str,
-        timeout: float = 10.0,
-    ) -> Dict[str, Any]:
-        """
-        Regenerate an existing API key for the given user.
-
-        Returns a normalized dict with the new key:
-        {
-            "id": "<token_id>",
-            "key": "<plaintext_key>",
-            "name": "<alias>",
-            "created_at": "...",
-        }
-        """
-        url = f"{self.base_url.rstrip('/')}/key/regenerate"
-
-        payload: Dict[str, Any] = {
-            "user_id": user_id,
-            "token_id": token_id,
-        }
-
-        try:
-            resp = requests.post(url, headers=self.headers, json=payload, timeout=timeout)
-        except requests.RequestException as exc:
-            raise LiteLLMError(f"Error calling LiteLLM to regenerate API key: {exc}") from exc
-
-        if resp.status_code >= 400:
-            message = self._extract_error_message(resp)
-            raise LiteLLMError(f"Failed to regenerate LiteLLM API key ({resp.status_code}): {message}")
 
         data: Dict[str, Any] = resp.json()
 
@@ -203,6 +160,38 @@ class LiteLLMClient:
             raise LiteLLMError(f"Failed to get LiteLLM user info ({resp.status_code}): {message}")
 
         return resp.json()
+
+    def create_user(
+        self,
+        user_id: str,
+        user_email: str,
+        user_alias: Optional[str] = None,
+        timeout: float = 10.0,
+    ) -> Dict[str, Any]:
+        """
+        Create an internal user in LiteLLM.
+
+        This is used when the user is not found in LiteLLM but we need to generate API keys.
+        """
+        url = f"{self.base_url.rstrip('/')}/user/new"
+
+        payload: Dict[str, Any] = {"user_id": user_id, "user_email": user_email, "auto_create_key": False}
+        if user_alias:
+            payload["user_alias"] = user_alias
+
+        try:
+            resp = requests.post(url, headers=self.headers, json=payload, timeout=timeout)
+        except requests.RequestException as exc:
+            raise LiteLLMError(f"Error calling LiteLLM to create user: {exc}") from exc
+
+        if resp.status_code >= 400:
+            message = self._extract_error_message(resp)
+            raise LiteLLMError(f"Failed to create LiteLLM user ({resp.status_code}): {message}")
+
+        try:
+            return resp.json()
+        except ValueError:
+            return {"user_id": user_id}
 
     def delete_user(
         self,

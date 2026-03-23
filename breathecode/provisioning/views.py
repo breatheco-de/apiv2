@@ -28,7 +28,6 @@ from breathecode.provisioning.serializers import (
     AcademyVPSListSerializer,
     GetProvisioningAcademySerializer,
     GetProvisioningBillDetailSerializer,
-    GetProvisioningBillSerializer,
     GetProvisioningBillSmallSerializer,
     GetProvisioningProfile,
     GetProvisioningUserConsumptionDetailSerializer,
@@ -1253,7 +1252,7 @@ class MeLLMKeysView(APIView):
     def get(self, request):
         lang = get_user_language(request)
         user = request.user
-        if not Consumable.list(user=user, service="free_monthly_llm_budget").exists():
+        if not Consumable.list(user=user, service=3).exists():
             raise ValidationException(
                 translation(
                     lang,
@@ -1270,7 +1269,6 @@ class MeLLMKeysView(APIView):
             .values_list("academy_id", flat=True)
             .distinct()
         )
-
         all_keys = []
         token_ids: set[str] = set()
         for academy_id in academy_ids:
@@ -1291,28 +1289,24 @@ class MeLLMKeysView(APIView):
             external_user_id = (provisioning_llm.external_user_id if provisioning_llm else str(user.username)) or str(
                 user.username
             )
-
             try:
                 user_info = client.get_user_info(user_id=external_user_id)
             except LLMClientError:
                 continue
-
             keys_data = user_info.get("keys") or []
             if not isinstance(keys_data, list):
                 continue
-
             for item in keys_data:
                 if not isinstance(item, dict):
                     continue
 
-                token_id = item.get("token_id")
+                token_id = item.get("token_id") or item.get("token")
                 if not token_id:
                     continue
                 # Avoid duplicated keys if multiple academies point to the same Litellm tenant.
                 if token_id in token_ids:
                     continue
                 token_ids.add(token_id)
-
                 all_keys.append(
                     {
                         "token_id": token_id,
@@ -1370,26 +1364,3 @@ class MeLLMKeyByIdView(APIView):
                 code=502,
             )
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-class MeLLMKeyRegenerateView(APIView):
-    """POST: regenerate an existing key by token_id. Returns the new plaintext key."""
-
-    def post(self, request, key_id):
-        lang = get_user_language(request)
-        try:
-            client, external_user_id, academy_id = resolve_llm_client_and_external_id(
-                request, ensure_llm_user_record=True
-            )
-            result = client.regenerate_api_key(user_id=external_user_id, token_id=key_id)
-        except LLMClientError as exc:
-            raise ValidationException(
-                translation(
-                    lang,
-                    en=f"Error regenerating LLM API key: {exc}",
-                    es=f"Error al regenerar la llave de API de LLM: {exc}",
-                    slug="llm-key-regenerate-error",
-                ),
-                code=502,
-            )
-        return Response(result, status=status.HTTP_200_OK)

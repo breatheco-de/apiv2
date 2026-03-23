@@ -2395,12 +2395,15 @@ class PlanFinancing(AbstractIOweYou):
 
             if self.status in [self.Status.EXPIRED, self.Status.DEPRECATED]:
                 # Deprovision external services when the financing is fully expired/deprecated.
-                plans = self.plans.all()
-                for plan in plans:
+                service_ids: set[int] = set()
+                for plan in self.plans.all():
                     for plan_service_item in PlanServiceItem.objects.select_related("service_item__service").filter(
                         plan=plan
                     ):
                         service = plan_service_item.service_item.service
+                        if service.id in service_ids:
+                            continue
+                        service_ids.add(service.id)
                         signals.deprovision_service.send_robust(
                             sender=Service,
                             instance=service,
@@ -2594,18 +2597,32 @@ class Subscription(AbstractIOweYou):
         # in breathecode.notify.receivers to ensure plans and invoices are present
         if on_create and is_paid:
             signals.grant_plan_permissions.send_robust(instance=self, sender=self.__class__)
-
         if old_instance and old_instance.status != self.status:
             if self.status == self.Status.ACTIVE and is_paid:
                 signals.grant_plan_permissions.send_robust(instance=self, sender=self.__class__)
             if self.status in revoke_statuses:
                 signals.revoke_plan_permissions.send_robust(instance=self, sender=self.__class__)
             if self.status in [self.Status.EXPIRED, self.Status.DEPRECATED]:
-                for subscription_service_item in self.service_items.select_related("service_item__service").all():
-                    service = subscription_service_item.service_item.service
+                service_ids: set[int] = set()
+                for service_item in self.service_items.select_related("service").all():
+                    service = service_item.service
+                    if service.id in service_ids:
+                        continue
+                    service_ids.add(service.id)
                     signals.deprovision_service.send_robust(
                         sender=Service, instance=service, user_id=self.user.id, context={}
                     )
+                for plan in self.plans.all():
+                    for plan_service_item in PlanServiceItem.objects.select_related("service_item__service").filter(
+                        plan=plan
+                    ):
+                        service = plan_service_item.service_item.service
+                        if service.id in service_ids:
+                            continue
+                        service_ids.add(service.id)
+                        signals.deprovision_service.send_robust(
+                            sender=Service, instance=service, user_id=self.user.id, context={}
+                        )
 
 
 class SubscriptionServiceItem(models.Model):
