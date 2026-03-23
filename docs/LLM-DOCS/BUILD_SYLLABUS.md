@@ -212,6 +212,8 @@ All endpoints are prefixed with `/v1/admissions` for syllabus operations and `/v
 
 **Response:** Single syllabus version object
 
+**Macro cohort overrides (optional):** Append **`macro-cohort=<macro_cohort_slug>`** to merge the macro cohort’s `SyllabusVersion` JSON into this syllabus’s `json` (per-micro keys like `front-end.v1`). The macro cohort must belong to the same academy and have a syllabus version. See [SYLLABUS.md — Macro cohort syllabus overrides](./SYLLABUS.md#macro-cohort-syllabus-overrides).
+
 ---
 
 **Endpoint:** `GET /v1/admissions/syllabus/version`

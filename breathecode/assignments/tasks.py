@@ -2,6 +2,7 @@ import logging
 import os
 import re
 from typing import Any
+
 from django.db.models import Q
 
 from capyc.core.i18n import translation
@@ -281,7 +282,9 @@ def sync_cohort_user_tasks(cohort_user_id: int, **_: Any):
         return
 
     cohort = cohort_user.cohort
-    syllabus_json = cohort.syllabus_version.json
+    from breathecode.admissions.actions import resolve_syllabus_json
+
+    syllabus_json = resolve_syllabus_json(cohort.syllabus_version.json)
 
     all_cohort_tasks = []
 

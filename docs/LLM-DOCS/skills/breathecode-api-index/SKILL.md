@@ -57,6 +57,7 @@ Some user requests touch multiple domains. Load ALL listed skills before proceed
 |---|---|
 | Create a cohort | `bc-admissions-create-cohort` + `bc-certificate-*` (syllabus must have an associated specialty) |
 | Create a macro cohort | `bc-admissions-create-macro-cohort` + `bc-certificate-*` + `bc-admissions-create-cohort` |
+| Configure or fetch micro syllabus with macro-specific overrides | `bc-admissions-create-macro-cohort` + [SYLLABUS.md — Macro cohort syllabus overrides](../../SYLLABUS.md#macro-cohort-syllabus-overrides) |
 | Enroll a student in a cohort | `bc-admissions-enroll-student` + `bc-payments-*` (student must have a valid plan) |
 | Issue a certificate to a student | `bc-certificate-*` + `bc-admissions-*` (verify cohort completion status) |
 | Schedule a mentorship session | `bc-mentorship-*` + `bc-notify-*` (session confirmation messaging) |

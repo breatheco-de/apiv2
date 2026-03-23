@@ -37,7 +37,7 @@ from breathecode.utils.decorators import has_permission
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from breathecode.utils.views import render_message
 
-from .actions import find_asset_on_json, test_syllabus, update_asset_on_json
+from .actions import find_asset_on_json, resolve_syllabus_json, test_syllabus, update_asset_on_json
 from .actions import academy_student_progress_report_rows
 from .models import (
     DELETED,
@@ -315,7 +315,13 @@ class AcademyTeacherView(APIView, GenerateLookupsMixin):
 def handle_test_syllabus(request):
     try:
         ignore = request.GET.get("ignore", "")
-        syllabus_log = test_syllabus(request.data, validate_assets=True, ignore=ignore.lower().split(","))
+        academy_id = request.GET.get("academy_id")
+        syllabus_log = test_syllabus(
+            request.data,
+            validate_assets=True,
+            ignore=ignore.lower().split(","),
+            academy_id=int(academy_id) if academy_id and academy_id.isnumeric() else None,
+        )
         return Response(syllabus_log.serialize(), status=syllabus_log.http_status())
     except Exception as e:
         return Response({"details": str(e)}, status=400)
@@ -2322,7 +2328,36 @@ class SyllabusVersionView(APIView):
                 )
 
             serializer = GetSyllabusVersionSerializer(syllabus_version, many=False)
-            return handler.response(serializer.data)
+            data = serializer.data
+
+            macro_cohort_slug = request.GET.get("macro-cohort")
+            if macro_cohort_slug:
+                macro_cohort = Cohort.objects.filter(
+                    academy__id=academy_id, slug=macro_cohort_slug
+                ).select_related("syllabus_version").first()
+
+                if macro_cohort is None:
+                    raise ValidationException(
+                        f'Macro cohort "{macro_cohort_slug}" not found',
+                        code=404,
+                        slug="macro-cohort-not-found",
+                    )
+
+                if macro_cohort.syllabus_version is None:
+                    raise ValidationException(
+                        f'Macro cohort "{macro_cohort_slug}" has no syllabus version assigned',
+                        code=400,
+                        slug="macro-cohort-missing-syllabus-version",
+                    )
+
+                data["json"] = resolve_syllabus_json(
+                    syllabus_version.json,
+                    macro_syllabus_json=macro_cohort.syllabus_version.json,
+                    syllabus_slug=syllabus_version.syllabus.slug,
+                    syllabus_version=syllabus_version.version,
+                )
+
+            return handler.response(data)
 
         items = SyllabusVersion.objects.filter(
             Q(syllabus__id=syllabus_id) | Q(syllabus__slug=syllabus_slug),
@@ -2412,7 +2447,10 @@ class SyllabusVersionView(APIView):
             )
 
         serializer = SyllabusVersionPutSerializer(
-            syllabus_version, data=request.data, many=False, context={"request": request}
+            syllabus_version,
+            data=request.data,
+            many=False,
+            context={"request": request, "academy": syllabus_version.syllabus.academy_owner},
         )
         if serializer.is_valid():
             serializer.save()
@@ -2562,7 +2600,8 @@ class SyllabusVersionCSVView(APIView):
         cumulative_days = 1
 
         # Write the data rows for each day
-        for day in sorted(syllabus_version.json["days"], key=lambda x: x["position"]):
+        effective_json = resolve_syllabus_json(syllabus_version.json)
+        for day in sorted(effective_json["days"], key=lambda x: x.get("position", 0)):
             week_number = math.ceil(cumulative_days / class_days_per_week)
             if "technologies" not in day:
                 day["technologies"] = []
