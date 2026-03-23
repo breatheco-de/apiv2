@@ -65,6 +65,7 @@ Some user requests touch multiple domains. Load ALL listed skills before proceed
 | Onboard a new student | `bc-admissions-*` + `bc-payments-*` + `bc-authenticate-*` |
 | Provision a resource for a student | `bc-provisioning-*` + `bc-admissions-*` (verify enrollment status first) |
 | Configure academy VPS provisioning (profiles, credentials, settings) | `bc-provisioning-settings-and-credentials` |
+| Configure academy Slack integration and manage sync health | `bc-notify-manage-academy-slackintegration` + `bc-admissions-*` (students/cohorts drive Slack mappings) + `bc-authenticate-*` (Slack OAuth endpoints live in auth) |
 
 ---
 
