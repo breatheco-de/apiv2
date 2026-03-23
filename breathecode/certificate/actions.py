@@ -60,6 +60,9 @@ def syllabus_weeks_to_days(json):
 def get_assets_from_syllabus(
     syllabus_version: SyllabusVersion | int, task_types: Optional[list[str]] = None, only_mandatory=False
 ):
+    # Lazy import avoids circular import at module load time.
+    from breathecode.admissions.actions import resolve_syllabus_json
+
     if not isinstance(syllabus_version, SyllabusVersion):
         syllabus = SyllabusVersion.objects.filter(id=syllabus_version).first()
 
@@ -81,7 +84,7 @@ def get_assets_from_syllabus(
     if isinstance(syllabus.json, str):
         syllabus.json = json.loads(syllabus.json)
 
-    syllabus.json = syllabus_weeks_to_days(syllabus.json)
+    syllabus.json = resolve_syllabus_json(syllabus.json)
 
     for day in syllabus.json["days"]:
         for atype in key_map:

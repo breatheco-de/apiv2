@@ -108,6 +108,22 @@ You can send only `micro_cohorts` and/or `cohorts_order`; other fields are optio
 
 ---
 
+## Macro syllabus overrides (micro syllabi in context of a macro)
+
+A **macro cohort** should have a **`syllabus_version`**. Besides the usual root **`days`** array, that JSON may contain **reference keys** for each micro syllabus you want to customize for this program:
+
+- **Key format:** `<micro-syllabus-slug>.v<version>` (e.g. `front-end.v1`, `python.v2`).
+- **Value:** An object, typically with a **`days`** array whose items merge **by index** with the corresponding micro syllabus’s `days`. Asset lists `lessons`, `quizzes`, `replits`, and `assignments` also merge by index; use **`"status": "DELETED"`** to remove an asset or a day from the effective syllabus.
+
+**Reading the effective micro syllabus for UI / students in that macro:**
+
+- `GET /v1/admissions/academy/{academy_id}/syllabus/{syllabus_slug}/version/{version}?macro-cohort=<macro_cohort_slug>`
+- The macro cohort `slug` must exist in the same academy and must have **`syllabus_version`** set.
+
+Full specification: [SYLLABUS.md — Macro cohort syllabus overrides](../SYLLABUS.md#macro-cohort-syllabus-overrides).
+
+---
+
 ## User Sync
 
 - **On join**: When a user is added to the **macro** cohort, the signal `cohort_user_created` runs and `join_to_micro_cohorts` adds that user to **every** linked micro cohort with the same role and `finantial_status="FULLY_PAID"` (see `breathecode.admissions.receivers.join_to_micro_cohorts`).
@@ -183,5 +199,6 @@ When creating a macro cohort with multiple micro cohorts (all via API):
 - **Views:** `breathecode.admissions.views.AcademyCohortView`, `UserMicroCohortsSyncView`
 - **Management command:** `breathecode.admissions.management.commands.add_user_to_micro_cohorts`
 - **Cohort creation:** [COHORTS_CREATE.md](../../LLM-DOCS/COHORTS_CREATE.md)
+- **Macro syllabus overrides (JSON + API):** [SYLLABUS.md — Macro cohort syllabus overrides](../SYLLABUS.md#macro-cohort-syllabus-overrides)
 - **Macro cohort reporting:** [COHORT_REPORT_CALCULATION.md](../../LLM-DOCS/COHORT_REPORT_CALCULATION.md) (macro case: progress and dates aggregated across micro cohorts)
 - **Certificate specialty (API):** `GET /v1/certificate/academy/specialty?syllabus_slug=...` — use syllabus slug from the cohort’s `syllabus_version`.

@@ -1,6 +1,6 @@
 ---
 name: bc-admissions-create-macro-cohort
-description: Use when creating a macro cohort (main cohort) that contains multiple micro cohorts via the API; do NOT use for a single cohort, for only listing/reading cohorts, or for retrieving a cohort's certificate specialty.
+description: Use when creating a macro cohort (main cohort) that contains multiple micro cohorts via the API, or when configuring or reading per-macro syllabus overrides for micro syllabi; do NOT use for a single cohort, for only listing/reading cohorts, or for retrieving a cohort's certificate specialty.
 requires: []
 ---
 
@@ -15,6 +15,7 @@ Use this skill when the user asks to create a **macro cohort**, a **cohort with 
 - **Macro cohort**: A cohort that acts as a container with a list of linked **micro cohorts**. A cohort is a macro if it has at least one micro cohort linked.
 - **Micro cohort**: A normal cohort linked to a macro. Each micro cohort has its own name, slug, syllabus, and kickoff/ending dates.
 - **Display order**: The macro can store the order of micro cohorts as a comma-separated list of cohort IDs (e.g. `"10,11"`).
+- **Macro syllabus overrides**: The macro cohort’s **`syllabus_version.json`** may include optional keys **`{micro-syllabus-slug}.v{version}`** (e.g. `front-end.v1`). Each value is merged **by position** into that micro syllabus when the client requests the micro version with **`?macro-cohort=<macro_slug>`**. Root **`days`** on the macro JSON is still supported. See **[SYLLABUS.md — Macro cohort syllabus overrides](../../SYLLABUS.md#macro-cohort-syllabus-overrides)** for structure, merge rules, and `DELETED` markers.
 
 ## Workflow
 
@@ -28,6 +29,8 @@ Use this skill when the user asks to create a **macro cohort**, a **cohort with 
 
 **Prerequisite:** Academy, syllabus, and syllabus version must exist. If cohort creation fails with a missing academy or syllabus, tell the user to create or fix those first.
 
+5. **Optional: per-macro overrides for micro syllabi.** Edit the macro cohort’s **`SyllabusVersion`** JSON (via the same syllabus-version APIs you use for any cohort) and add blocks keyed by **`{micro_slug}.v{version}`** as documented in [SYLLABUS.md](../../SYLLABUS.md#macro-cohort-syllabus-overrides). Clients that need the **effective** micro syllabus for students in that macro should call **`GET /v1/admissions/academy/{academy_id}/syllabus/{syllabus_slug}/version/{version}?macro-cohort={macro_cohort_slug}`** (requires `read_syllabus` and `Academy` header). The macro cohort must have a **`syllabus_version`** assigned.
+
 ## Endpoints
 
 | Action | Method | Path | Headers | Body | Response |
@@ -35,6 +38,7 @@ Use this skill when the user asks to create a **macro cohort**, a **cohort with 
 | Create cohort (micro or macro) | POST | `/v1/admissions/academy/cohort` | `Authorization`, `Academy: <academy_id>` | See request samples below. | Cohort object; store `id` for linking. |
 | Update cohort (link/change micro cohorts) | PUT | `/v1/admissions/academy/cohort/{cohort_id}` | `Authorization`, `Academy: <academy_id>` | At least one of: `micro_cohorts`, `cohorts_order`. See request sample. | Updated cohort object. |
 | Sync current user into macro's micro cohorts | POST | `/v1/admissions/me/micro-cohorts/sync/<macro_cohort_slug>` | `Authorization` | None | Sync result. |
+| Get micro syllabus version with macro merge | GET | `/v1/admissions/academy/{academy_id}/syllabus/{syllabus_slug}/version/{version}` | `Authorization`, `Academy: <academy_id>` | Query: `macro-cohort=<macro_slug>` (optional) | Syllabus version; `json` is merged when `macro-cohort` is set. |
 
 **Create micro cohort — request (POST `/v1/admissions/academy/cohort`):**
 ```json
@@ -107,3 +111,4 @@ To verify a cohort is a macro or to read its micro cohorts and order, use `GET /
 2. Create the macro cohort with `POST /v1/admissions/academy/cohort` including `micro_cohorts` (list of those IDs) and optionally `cohorts_order`, or create the macro then call `PUT /v1/admissions/academy/cohort/{id}` with `micro_cohorts` and/or `cohorts_order`.
 3. If the macro already had users before linking micro cohorts, inform the user to sync those users (sync endpoint or bulk sync).
 4. Confirm the macro cohort and its micro cohorts appear as intended (e.g. via `GET /v1/admissions/academy/cohort/{id_or_slug}`).
+5. If using **macro syllabus overrides**, ensure the macro’s `SyllabusVersion` JSON includes the needed `{micro_slug}.v{version}` blocks and verify `GET .../syllabus/.../version/...?macro-cohort=...` returns the merged `json` (see [SYLLABUS.md](../../SYLLABUS.md#macro-cohort-syllabus-overrides)).
