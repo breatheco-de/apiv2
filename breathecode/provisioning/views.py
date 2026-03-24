@@ -9,6 +9,7 @@ from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from circuitbreaker import CircuitBreakerError
 from dateutil.relativedelta import relativedelta
+from django.contrib.auth import get_user_model
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from rest_framework import status
@@ -18,12 +19,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_csv.renderers import CSVRenderer
 
-from breathecode.admissions.models import Cohort, CohortUser
+from breathecode.admissions.models import Academy, Cohort, CohortUser
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.notify.actions import get_template_content
 from breathecode.provisioning import tasks
 from breathecode.provisioning.serializers import (
+    AcademyVPSCreateSerializer,
     AcademyVPSListSerializer,
     GetProvisioningAcademySerializer,
     GetProvisioningBillDetailSerializer,
@@ -49,7 +51,7 @@ from breathecode.utils.decorators import has_permission
 from breathecode.utils.io.file import count_csv_rows
 from breathecode.utils.views import private_view, render_message
 
-from .actions import get_provisioning_vendor, request_vps
+from .actions import get_provisioning_vendor, request_vps, request_vps_for_student
 from .models import (
     BILL_STATUS,
     ProvisioningAcademy,
@@ -1148,6 +1150,40 @@ class AcademyVPSView(APIView):
         items = handler.queryset(qs)
         serializer = AcademyVPSListSerializer(items, many=True)
         return handler.response(serializer.data)
+
+    @capable_of("crud_provisioning_activity")
+    def post(self, request, academy_id=None):
+        """Request a new VPS for a student; consumes the student's vps_server consumable."""
+        lang = get_user_language(request)
+        data = (request.data or {}).copy()
+        serializer = AcademyVPSCreateSerializer(data=data, context={"request": request, "lang": lang})
+        if not serializer.is_valid():
+            raise ValidationException(serializer.errors, code=400)
+        user_id = serializer.validated_data["user_id"]
+        plan_slug = (serializer.validated_data.get("plan_slug") or "").strip() or None
+        student = get_user_model().objects.filter(id=user_id).first()
+        if not student:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="User not found.",
+                    es="Usuario no encontrado.",
+                    slug="user-not-found",
+                ),
+                code=404,
+            )
+        academy = Academy.objects.filter(id=academy_id).first()
+        if not academy:
+            raise ValidationException(
+                translation(lang, en="Academy not found.", es="Academia no encontrada.", slug="academy-not-found"),
+                code=404,
+            )
+        try:
+            vps = request_vps_for_student(student, academy, plan_slug=plan_slug, lang=lang)
+        except ValidationException:
+            raise
+        out_serializer = VPSListSerializer(vps)
+        return Response(out_serializer.data, status=status.HTTP_202_ACCEPTED)
 
 
 class AcademyVPSByIdView(APIView):

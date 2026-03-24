@@ -18,7 +18,7 @@ from breathecode.utils.api_view_extensions.extensions.lookup_extension import Q
 from breathecode.utils.decorators import has_permission
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 
-from .actions import generate_certificate
+from .actions import generate_certificate, get_syllabus_specialty_bucket_conflict
 from .models import Badge, LayoutDesign, Specialty, UserSpecialty
 from .serializers import BadgeSerializer, LayoutDesignSerializer, SpecialtySerializer, UserSpecialtySerializer
 from .tasks import async_generate_certificate
@@ -232,6 +232,17 @@ class AcademySpecialtySyllabusView(APIView):
             # Idempotent: already linked
             serializer = SpecialtySerializer(specialty, many=False)
             return Response(serializer.data, status=status.HTTP_200_OK)
+        conflict = get_syllabus_specialty_bucket_conflict(specialty, syllabus)
+        if conflict:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Another specialty already uses this syllabus for this scope (specialty id={conflict.slug}).",
+                    es="Otra especialidad ya usa este syllabus en este ámbito.",
+                ),
+                code=400,
+                slug="syllabus-specialty-already-linked",
+            )
         specialty.syllabuses.add(syllabus)
         serializer = SpecialtySerializer(specialty, many=False)
         return Response(serializer.data, status=status.HTTP_201_CREATED)

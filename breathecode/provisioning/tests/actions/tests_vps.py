@@ -5,7 +5,13 @@ from unittest.mock import MagicMock, patch
 import pytest
 from capyc.rest_framework.exceptions import ValidationException
 
-from breathecode.provisioning.actions import get_eligible_academy_and_vendor_for_vps, request_vps
+from breathecode.authenticate.models import ACTIVE as PROFILE_ACADEMY_ACTIVE
+
+from breathecode.provisioning.actions import (
+    get_eligible_academy_and_vendor_for_vps,
+    request_vps,
+    request_vps_for_student,
+)
 from breathecode.provisioning.models import ProvisioningVPS
 
 from ..mixins import ProvisioningTestCase
@@ -67,3 +73,55 @@ class TestRequestVps(ProvisioningTestCase):
             assert "insufficient-vps-server-credits" in str(exc_info.value).lower() or "credits" in str(
                 exc_info.value
             ).lower()
+
+
+@pytest.mark.django_db
+class TestRequestVpsForStudent(ProvisioningTestCase):
+    def test_rejects_when_student_not_in_academy(self):
+        m_staff_academy = self.bc.database.create(user=1, academy=1)
+        m_student = self.bc.database.create(user=1)
+        student = m_student.user
+        academy = m_staff_academy.academy
+        with pytest.raises(ValidationException) as exc_info:
+            request_vps_for_student(student, academy, lang="en")
+        assert "student-not-in-academy" in str(exc_info.value).lower()
+
+    @patch("breathecode.provisioning.actions._request_vps_core")
+    @patch("breathecode.provisioning.actions.get_vps_client")
+    def test_delegates_to_core_when_student_is_member(self, mock_get_client, mock_core):
+        mock_get_client.return_value = MagicMock()
+        model = self.bc.database.create(
+            user=1,
+            profile_academy=1,
+            academy=1,
+            role=1,
+        )
+        student = model.user
+        academy = model.academy
+        pa = model.profile_academy
+        pa.user = student
+        pa.academy = academy
+        pa.status = PROFILE_ACADEMY_ACTIVE
+        pa.save()
+        other = self.bc.database.create(
+            academy=academy,
+            provisioning_vendor={"name": "hostinger"},
+            provisioning_profile={},
+            provisioning_academy={"credentials_token": "tok"},
+        )
+        other.provisioning_profile.academy = academy
+        other.provisioning_profile.vendor = other.provisioning_vendor
+        other.provisioning_profile.save()
+        other.provisioning_academy.academy = academy
+        other.provisioning_academy.vendor = other.provisioning_vendor
+        other.provisioning_academy.save()
+
+        mock_vps = MagicMock()
+        mock_vps.id = 42
+        mock_core.return_value = mock_vps
+        out = request_vps_for_student(student, academy, plan_slug="default", lang="en")
+        assert out.id == 42
+        mock_core.assert_called_once()
+        _, call_kwargs = mock_core.call_args
+        assert call_kwargs["lang"] == "en"
+        assert call_kwargs["for_staff"] is True

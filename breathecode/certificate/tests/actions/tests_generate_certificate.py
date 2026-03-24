@@ -13,6 +13,7 @@ from breathecode.tests.mixins.legacy import LegacyAPITestCase
 from capyc.rest_framework.exceptions import ValidationException
 
 from ...actions import generate_certificate, strings
+from ...models import Specialty
 from ..mocks import (
     GOOGLE_CLOUD_PATH,
     apply_google_cloud_blob_mock,
@@ -1366,3 +1367,147 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
                 call(instance=user_specialty, sender=user_specialty.__class__),
             ],
         )
+
+    """
+    🔽🔽🔽 Specialty resolution: cohort academy first, then global
+    """
+
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock())
+    @patch(GOOGLE_CLOUD_PATH["client"], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH["bucket"], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH["blob"], apply_google_cloud_blob_mock())
+    @patch("breathecode.certificate.signals.user_specialty_saved.send_robust", MagicMock())
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
+    def test_generate_certificate__prefers_academy_specialty_over_global(self):
+        cohort_kwargs = {"stage": "ENDED", "current_day": 9545799}
+        cohort_user_kwargs = {"finantial_status": "UP_TO_DATE", "educational_status": "GRADUATED"}
+        syllabus_kwargs = {"duration_in_days": 9545799}
+        model = self.generate_models(
+            user=True,
+            academy=True,
+            cohort=True,
+            cohort_user=True,
+            syllabus_version=True,
+            syllabus=True,
+            syllabus_schedule=True,
+            layout_design=True,
+            cohort_kwargs=cohort_kwargs,
+            cohort_user_kwargs=cohort_user_kwargs,
+            syllabus_kwargs=syllabus_kwargs,
+        )
+        syllabus = model["syllabus"]
+        academy = model["academy"]
+
+        global_spec = Specialty.objects.create(slug="global-cert-spec", name="Global Cert", academy_id=None)
+        global_spec.syllabuses.add(syllabus)
+
+        academy_spec = Specialty.objects.create(
+            slug="academy-cert-spec", name="Academy Cert", academy_id=academy.id
+        )
+        academy_spec.syllabuses.add(syllabus)
+
+        base = model.copy()
+        del base["user"]
+        del base["cohort_user"]
+        self.generate_models(
+            user=True, cohort_user=True, cohort_user_kwargs={"role": "TEACHER"}, models=base
+        )
+
+        result = generate_certificate(model["user"], model["cohort"])
+        self.assertEqual(result.specialty_id, academy_spec.id)
+
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock())
+    @patch(GOOGLE_CLOUD_PATH["client"], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH["bucket"], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH["blob"], apply_google_cloud_blob_mock())
+    @patch("breathecode.certificate.signals.user_specialty_saved.send_robust", MagicMock())
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
+    def test_generate_certificate__falls_back_to_global_specialty(self):
+        cohort_kwargs = {"stage": "ENDED", "current_day": 9545799}
+        cohort_user_kwargs = {"finantial_status": "UP_TO_DATE", "educational_status": "GRADUATED"}
+        syllabus_kwargs = {"duration_in_days": 9545799}
+        model = self.generate_models(
+            user=True,
+            academy=True,
+            cohort=True,
+            cohort_user=True,
+            syllabus_version=True,
+            syllabus=True,
+            syllabus_schedule=True,
+            layout_design=True,
+            cohort_kwargs=cohort_kwargs,
+            cohort_user_kwargs=cohort_user_kwargs,
+            syllabus_kwargs=syllabus_kwargs,
+        )
+        syllabus = model["syllabus"]
+
+        global_spec = Specialty.objects.create(slug="only-global-cert", name="Only Global", academy_id=None)
+        global_spec.syllabuses.add(syllabus)
+
+        base = model.copy()
+        del base["user"]
+        del base["cohort_user"]
+        self.generate_models(
+            user=True, cohort_user=True, cohort_user_kwargs={"role": "TEACHER"}, models=base
+        )
+
+        result = generate_certificate(model["user"], model["cohort"])
+        self.assertEqual(result.specialty_id, global_spec.id)
+
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock())
+    @patch(GOOGLE_CLOUD_PATH["client"], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH["bucket"], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH["blob"], apply_google_cloud_blob_mock())
+    @patch("breathecode.certificate.signals.user_specialty_saved.send_robust", MagicMock())
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
+    def test_generate_certificate__missing_specialty_when_only_other_academy(self):
+        from breathecode.admissions.models import Academy
+
+        cohort_kwargs = {"stage": "ENDED", "current_day": 9545799}
+        cohort_user_kwargs = {"finantial_status": "UP_TO_DATE", "educational_status": "GRADUATED"}
+        syllabus_kwargs = {"duration_in_days": 9545799}
+        model = self.generate_models(
+            user=True,
+            academy=True,
+            cohort=True,
+            cohort_user=True,
+            syllabus_version=True,
+            syllabus=True,
+            syllabus_schedule=True,
+            layout_design=True,
+            cohort_kwargs=cohort_kwargs,
+            cohort_user_kwargs=cohort_user_kwargs,
+            syllabus_kwargs=syllabus_kwargs,
+        )
+        syllabus = model["syllabus"]
+
+        a1 = model["academy"]
+        other_academy = Academy.objects.create(
+            slug="other-academy-cert-test",
+            name="Other Academy",
+            logo_url="https://example.com/l.png",
+            icon_url="/static/icons/picture.png",
+            street_address="123",
+            city_id=a1.city_id,
+            country_id=a1.country_id,
+        )
+        other_spec = Specialty.objects.create(
+            slug="other-academy-spec", name="Other Academy Spec", academy_id=other_academy.id
+        )
+        other_spec.syllabuses.add(syllabus)
+
+        base = model.copy()
+        del base["user"]
+        del base["cohort_user"]
+        self.generate_models(
+            user=True, cohort_user=True, cohort_user_kwargs={"role": "TEACHER"}, models=base
+        )
+
+        try:
+            generate_certificate(model["user"], model["cohort"])
+            assert False
+        except Exception as e:
+            self.assertEqual(str(e), "missing-specialty")

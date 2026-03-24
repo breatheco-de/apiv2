@@ -388,6 +388,13 @@ class VPSRequestSerializer(serializers.Serializer):
     plan_slug = serializers.CharField(required=False, allow_blank=True, max_length=100)
 
 
+class AcademyVPSCreateSerializer(serializers.Serializer):
+    """Request body for POST academy/vps (staff provisions VPS for a student)."""
+
+    user_id = serializers.IntegerField(required=True, min_value=1)
+    plan_slug = serializers.CharField(required=False, allow_blank=True, max_length=100)
+
+
 class AcademyVPSListSerializer(serpy.Serializer):
     """Academy VPS report row (user info, no root_password)."""
 

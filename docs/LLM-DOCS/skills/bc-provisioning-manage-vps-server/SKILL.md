@@ -1,6 +1,6 @@
 ---
 name: bc-provisioning-manage-vps-server
-description: Use when a user, student or academy staff needs to request, list, view, or deprovision a VPS via the API; do NOT use for granting VPS credits via plans or payments.
+description: Use when a user, student or academy staff needs to request, list, view, or deprovision a VPS via the API (including staff requesting a VPS on behalf of a student); do NOT use for granting VPS credits via plans or payments.
 requires: []
 ---
 
@@ -8,7 +8,7 @@ requires: []
 
 ## When to Use
 
-Use this skill when the user asks to **request a VPS**, **list my VPSs**, **get VPS connection details** (including root password), **list academy VPSs**, or **deprovision a student's VPS** — all via the API. Do **not** use when the user only asks how to configure vendor credentials or create/update provisioning profiles — use bc-provisioning-settings-and-credentials for that. Do **not** use for granting VPS credits through plans or subscriptions.
+Use this skill when the user asks to **request a VPS**, **list my VPSs**, **get VPS connection details** (including root password), **list academy VPSs**, **request a VPS for a student (staff)**, or **deprovision a student's VPS** — all via the API. Do **not** use when the user only asks how to configure vendor credentials or create/update provisioning profiles — use bc-provisioning-settings-and-credentials for that. Do **not** use for granting VPS credits through plans or subscriptions.
 
 ## Concepts
 
@@ -26,7 +26,9 @@ Use this skill when the user asks to **request a VPS**, **list my VPSs**, **get 
 
 4. **Academy: list all VPSs.** Call `GET /v1/provisioning/academy/vps` with headers `Authorization` and `Academy: <academy_id>`. The requesting user must have the capability `crud_provisioning_activity`. Optional query: `user_id=<user_id>` to filter by student. Response does not include root password.
 
-5. **Academy: deprovision a VPS.** Call `DELETE /v1/provisioning/academy/vps/<vps_id>` with headers `Authorization` and `Academy: <academy_id>`. The VPS must belong to that academy. Response is 204 No Content; the VPS is destroyed at the vendor and marked DELETED.
+5. **Academy: request a VPS for a student (staff).** Call `POST /v1/provisioning/academy/vps` with headers `Authorization` and `Academy: <academy_id>`. Capability `crud_provisioning_activity` required. Body: `{ "user_id": <student_user_id>, "plan_slug": "optional" }`. The **student** must be an active member of that academy (active `ProfileAcademy` or active `CohortUser` in a cohort of the academy). The **student’s** `vps_server` consumable is consumed (one unit), not the staff user’s. Same duplicate, credits, and academy-config rules as the student self-service flow. Response **202 Accepted** with the VPS object (no `root_password`); the student receives connection details via email when provisioning completes, like self-service.
+
+6. **Academy: deprovision a VPS.** Call `DELETE /v1/provisioning/academy/vps/<vps_id>` with headers `Authorization` and `Academy: <academy_id>`. The VPS must belong to that academy. Response is 204 No Content; the VPS is destroyed at the vendor and marked DELETED.
 
 **Prerequisite:** Vendor, academy profile, and credentials must already be configured. If the user has no academy or the academy has no VPS configuration, the API returns errors; tell the user setup must be completed first. VPS credits are managed via plans/subscriptions or other APIs, not this one.
 
@@ -38,6 +40,7 @@ Use this skill when the user asks to **request a VPS**, **list my VPSs**, **get 
 | Request a VPS | POST | `/v1/provisioning/me/vps` | `Authorization` | Optional; see request sample. | 202 Accepted, VPS object; see response sample. |
 | Get one VPS (with password) | GET | `/v1/provisioning/me/vps/<vps_id>` | `Authorization` | — | VPS detail including `root_password` for owner; see response sample. |
 | List academy VPSs | GET | `/v1/provisioning/academy/vps` | `Authorization`, `Academy: <academy_id>` | Optional: `?user_id=<user_id>` | List of VPSs for academy (no root_password). |
+| Request VPS for student | POST | `/v1/provisioning/academy/vps` | `Authorization`, `Academy: <academy_id>` | `{ "user_id": <id>, "plan_slug": "optional" }` | 202 Accepted, VPS object (no root_password). |
 | Deprovision VPS | DELETE | `/v1/provisioning/academy/vps/<vps_id>` | `Authorization`, `Academy: <academy_id>` | — | 204 No Content. |
 | List provisioning profiles | GET | `/v1/provisioning/academy/provisioningprofile` | `Authorization`, `Academy: <academy_id>` | — | List of profiles (vendor, academy, cohort_ids, member_ids). |
 
@@ -87,6 +90,8 @@ Base path for all: `/v1/provisioning/`. Academy endpoints require capability `cr
 - **academy-vps-not-configured:** No provisioning profile with credentials exists for the user's academy. Tell the user the academy must configure a vendor and credentials first.
 - **duplicate-vps:** User already has an active or pending VPS for that academy. Tell the user they can have only one active or pending VPS per academy; they must deprovision or wait before requesting another.
 - **insufficient-vps-server-credits:** User has no `vps_server` consumable with balance > 0. Tell the user they need VPS credits (via plan/subscription or other API); this API does not grant credits.
+- **student-not-in-academy:** Staff POST: the target user is not an active member of the academy in the `Academy` header. Tell the staff user the student must have an active profile or cohort membership in that academy.
+- **user-not-found (404):** Staff POST: `user_id` does not match any user.
 - **vps-not-found (404):** GET or DELETE by id returns 404. Tell the user the VPS does not exist or does not belong to them (student) or to the academy (staff); verify the id and academy.
 
 ## Checklist
@@ -94,5 +99,6 @@ Base path for all: `/v1/provisioning/`. Academy endpoints require capability `cr
 1. For listing or requesting a VPS as a student: call `GET /v1/provisioning/me/vps` or `POST /v1/provisioning/me/vps` with `Authorization`.
 2. For VPS connection details (including root password): call `GET /v1/provisioning/me/vps/<vps_id>` as the owning user.
 3. For academy list: call `GET /v1/provisioning/academy/vps` with `Authorization` and `Academy: <academy_id>` (user must have `crud_provisioning_activity`).
-4. For deprovisioning: call `DELETE /v1/provisioning/academy/vps/<vps_id>` with `Authorization` and `Academy: <academy_id>`.
-5. If the API returns no-academy, not-configured, duplicate-vps, or insufficient-credits: explain the cause and what the user must do (complete setup or obtain credits via the appropriate API), and do not retry the same request.
+4. For staff requesting a VPS for a student: call `POST /v1/provisioning/academy/vps` with `Authorization`, `Academy: <academy_id>`, and body `user_id` (and optional `plan_slug`); consumes the **student’s** `vps_server` credit.
+5. For deprovisioning: call `DELETE /v1/provisioning/academy/vps/<vps_id>` with `Authorization` and `Academy: <academy_id>`.
+6. If the API returns no-academy, not-configured, duplicate-vps, insufficient-credits, or student-not-in-academy: explain the cause and what the user must do (complete setup or obtain credits via the appropriate API), and do not retry the same request.
