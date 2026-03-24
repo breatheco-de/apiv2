@@ -1685,6 +1685,17 @@ class SyllabusSerializer(serializers.ModelSerializer):
         exclude = ()
 
 
+def _raise_if_syllabus_test_failed(syllabus_log):
+    """Raise ValidationException with the same messages collected by test_syllabus."""
+    if syllabus_log.http_status() == 200:
+        return
+    lines = [
+        f"There are {len(syllabus_log.errors)} errors in your syllabus, please validate before submitting.",
+        *syllabus_log.errors,
+    ]
+    raise ValidationException("\n".join(lines), slug="syllabus-with-errors")
+
+
 class SyllabusVersionSerializer(serializers.ModelSerializer):
     json = serializers.JSONField()
 
@@ -1710,11 +1721,9 @@ class SyllabusVersionSerializer(serializers.ModelSerializer):
                     ignore=ignore.lower().split(","),
                     academy_id=academy.id if academy else None,
                 )
-                if _log.http_status() != 200:
-                    raise ValidationException(
-                        f"There are {len(_log.errors)} errors in your syllabus, please validate before submitting",
-                        slug="syllabus-with-errors",
-                    )
+                _raise_if_syllabus_test_failed(_log)
+            except ValidationException:
+                raise
             except Exception as e:
                 raise ValidationException(f"Error when testing the syllabus: {str(e)}", slug="syllabus-with-errors")
 
@@ -1770,11 +1779,9 @@ class SyllabusVersionPutSerializer(serializers.ModelSerializer):
                     ignore=ignore.lower().split(","),
                     academy_id=academy.id if academy else None,
                 )
-                if _log.http_status() != 200:
-                    raise ValidationException(
-                        f"There are {len(_log.errors)} errors in your syllabus, please validate before submitting",
-                        slug="syllabus-with-errors",
-                    )
+                _raise_if_syllabus_test_failed(_log)
+            except ValidationException:
+                raise
             except Exception as e:
                 raise ValidationException(f"Error when testing the syllabus: {str(e)}", slug="syllabus-with-errors")
 

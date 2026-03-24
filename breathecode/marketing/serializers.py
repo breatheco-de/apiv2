@@ -584,6 +584,35 @@ class GetCourseSerializer(GetCourseSmallSerializer):
         return list(obj.suggested_plan_addon.all().values_list("slug", flat=True))
 
 
+class CoursePOSTSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Course
+        fields = (
+            "slug",
+            "syllabus",
+            "cohort",
+            "is_listed",
+            "plan_slug",
+            "status",
+            "color",
+            "status_message",
+            "visibility",
+            "icon_url",
+            "banner_image",
+            "technologies",
+            "has_waiting_list",
+        )
+        read_only_fields = ()
+
+    def create(self, validated_data):
+        academy_id = self.context.get("academy_id")
+        academy = Academy.objects.filter(id=academy_id).first()
+        if academy is None:
+            raise ValidationException(f"Academy {academy_id} not found", slug="academy-not-found")
+
+        return Course.objects.create(academy=academy, **validated_data)
+
+
 class CoursePUTSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
