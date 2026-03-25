@@ -425,6 +425,7 @@ BASE_ROLES = [
             "read_subscription",
             "read_academyservice",
             "upload_assignment_telemetry",
+            "read_provisioning_activity",
             "validate_assignment_flag",
         ],
     },
