@@ -135,6 +135,7 @@ urlpatterns = [
     path("course/<slug:course_slug>", CourseView.as_view(), name="course_slug"),
     path("course/<slug:course_slug>/resalesettings", CourseResaleSettingsView.as_view(), name="course_resale_settings"),
     path("course/<slug:course_slug>/translations", CourseTranslationsView.as_view(), name="course_translations"),
+    path("academy/course", AcademyCourseView.as_view(), name="academy_course"),
     path("academy/course/<slug:course_identifier>", AcademyCourseView.as_view(), name="academy_course_id"),
     path(
         "academy/course/<slug:course_slug>/resalesettings",
