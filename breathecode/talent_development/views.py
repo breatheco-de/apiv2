@@ -1,8 +1,10 @@
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
+from django.db import IntegrityError
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from slugify import slugify
 
 from breathecode.authenticate.actions import get_user_language
 from breathecode.utils import GenerateLookupsMixin, capable_of
@@ -11,6 +13,7 @@ from breathecode.utils.decorators.has_permission import validate_permission
 
 from .models import (
     CareerPath,
+    CareerStage,
     Competency,
     CompetencySkill,
     JobFamily,
@@ -20,9 +23,13 @@ from .models import (
     SkillDomain,
     SkillKnowledgeItem,
     StageCompetency,
+    StageSkill,
 )
 from .serializers import (
+    CareerPathSerializer,
     CareerPathWithStagesSerializer,
+    CareerStageCreateSerializer,
+    CareerStageSmallSerializer,
     CompetencyDetailSerializer,
     CompetencySerializer,
     GetJobFamilySerializer,
@@ -33,8 +40,11 @@ from .serializers import (
     SkillAttitudeTagSerializer,
     SkillDetailSerializer,
     SkillDomainSerializer,
+    SkillDomainWriteSerializer,
     SkillKnowledgeItemSerializer,
     SkillSerializer,
+    StageAssignmentSerializer,
+    StageSkillCreateSerializer,
 )
 
 
@@ -74,6 +84,51 @@ def apply_academy_filter(queryset, request, academy_id, academy_field="academy")
         return queryset
 
 
+def assert_mutable_career_path(request, lang, career_path, academy_id):
+    """Enforce global vs academy-owned rules for mutating a CareerPath (and nested stages)."""
+    if career_path.academy is None:
+        if not validate_permission(request.user, "crud_career_path"):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Only users with crud_career_path permission can modify global career paths",
+                    es="Solo usuarios con permiso crud_career_path pueden modificar trayectorias globales",
+                    slug="no-permission-for-global",
+                ),
+                code=403,
+            )
+    elif academy_id and career_path.academy and career_path.academy.id != int(academy_id):
+        raise ValidationException(
+            translation(
+                lang,
+                en="Career path belongs to a different academy",
+                es="La trayectoria pertenece a otra academia",
+                slug="academy-mismatch",
+            ),
+            code=403,
+        )
+
+
+def get_career_path_or_404(lang, career_path_id):
+    try:
+        return CareerPath.objects.select_related("academy", "job_role", "job_role__job_family").get(id=career_path_id)
+    except CareerPath.DoesNotExist:
+        raise ValidationException(
+            translation(lang, en="Career path not found", es="Trayectoria no encontrada", slug="not-found"),
+            code=404,
+        )
+
+
+def assert_job_role_visible_for_academy(request, lang, job_role, academy_id):
+    """Job role must be visible under apply_academy_filter for this academy."""
+    visible = apply_academy_filter(JobRole.objects.filter(id=job_role.id), request, academy_id)
+    if not visible.exists():
+        raise ValidationException(
+            translation(lang, en="Job role not found", es="Rol de trabajo no encontrado", slug="not-found"),
+            code=404,
+        )
+
+
 class JobFamilyView(APIView, GenerateLookupsMixin):
     """
     List all job families or create a new job family.
@@ -107,8 +162,7 @@ class JobFamilyView(APIView, GenerateLookupsMixin):
         serializer = JobFamilySerializer(data=data, many=False)
         if serializer.is_valid():
             serializer.save()
-            # Return full data with GET serializer
-            job_family = JobFamily.objects.get(id=serializer.data["id"])
+            job_family = serializer.instance
             response_serializer = GetJobFamilySerializer(job_family, many=False)
             return Response(response_serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -163,7 +217,7 @@ class JobFamilyByIdView(APIView):
                 )
 
         # If academy is set, ensure it matches the academy_id from URL
-        elif academy_id and item.academy and item.academy.id != academy_id:
+        elif academy_id and item.academy and item.academy.id != int(academy_id):
             raise ValidationException(
                 translation(
                     lang,
@@ -209,7 +263,7 @@ class JobFamilyByIdView(APIView):
                 )
 
         # If academy is set, ensure it matches the academy_id from URL
-        elif academy_id and item.academy and item.academy.id != academy_id:
+        elif academy_id and item.academy and item.academy.id != int(academy_id):
             raise ValidationException(
                 translation(
                     lang,
@@ -286,7 +340,7 @@ class JobFamilyBySlugView(APIView):
                 )
 
         # If academy is set, ensure it matches the academy_id from URL
-        elif academy_id and item.academy and item.academy.id != academy_id:
+        elif academy_id and item.academy and item.academy.id != int(academy_id):
             raise ValidationException(
                 translation(
                     lang,
@@ -332,7 +386,7 @@ class JobFamilyBySlugView(APIView):
                 )
 
         # If academy is set, ensure it matches the academy_id from URL
-        elif academy_id and item.academy and item.academy.id != academy_id:
+        elif academy_id and item.academy and item.academy.id != int(academy_id):
             raise ValidationException(
                 translation(
                     lang,
@@ -397,8 +451,7 @@ class JobRoleView(APIView, GenerateLookupsMixin):
         serializer = JobRoleSerializer(data=data, many=False)
         if serializer.is_valid():
             serializer.save()
-            # Return full data with GET serializer
-            job_role = JobRole.objects.get(id=serializer.data["id"])
+            job_role = serializer.instance
             response_serializer = GetJobRoleSerializer(job_role, many=False)
             return Response(response_serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -453,7 +506,7 @@ class JobRoleByIdView(APIView):
                 )
 
         # If academy is set, ensure it matches the academy_id from URL
-        elif academy_id and item.academy and item.academy.id != academy_id:
+        elif academy_id and item.academy and item.academy.id != int(academy_id):
             raise ValidationException(
                 translation(
                     lang,
@@ -499,7 +552,7 @@ class JobRoleByIdView(APIView):
                 )
 
         # If academy is set, ensure it matches the academy_id from URL
-        elif academy_id and item.academy and item.academy.id != academy_id:
+        elif academy_id and item.academy and item.academy.id != int(academy_id):
             raise ValidationException(
                 translation(
                     lang,
@@ -578,7 +631,7 @@ class JobRoleBySlugView(APIView):
                 )
 
         # If academy is set, ensure it matches the academy_id from URL
-        elif academy_id and item.academy and item.academy.id != academy_id:
+        elif academy_id and item.academy and item.academy.id != int(academy_id):
             raise ValidationException(
                 translation(
                     lang,
@@ -624,7 +677,7 @@ class JobRoleBySlugView(APIView):
                 )
 
         # If academy is set, ensure it matches the academy_id from URL
-        elif academy_id and item.academy and item.academy.id != academy_id:
+        elif academy_id and item.academy and item.academy.id != int(academy_id):
             raise ValidationException(
                 translation(
                     lang,
@@ -817,6 +870,218 @@ class CareerPathsView(APIView, GenerateLookupsMixin):
 
         return handler.response(serializer.data)
 
+    @capable_of("crud_career_path")
+    def post(self, request, academy_id=None):
+        lang = get_user_language(request)
+
+        data = {**request.data}
+        if academy_id and "academy" not in data:
+            data["academy"] = academy_id
+
+        serializer = CareerPathSerializer(data=data, many=False)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            job_role = JobRole.objects.get(id=serializer.validated_data["job_role"])
+        except JobRole.DoesNotExist:
+            raise ValidationException(
+                translation(lang, en="Job role not found", es="Rol de trabajo no encontrado", slug="not-found"),
+                code=404,
+            )
+        assert_job_role_visible_for_academy(request, lang, job_role, academy_id)
+
+        serializer.save()
+        career_path = serializer.instance
+        response_serializer = CareerPathWithStagesSerializer(career_path, many=False)
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+
+
+class CareerPathByIdView(APIView):
+    """
+    Delete a career path by id (blocked while stages exist).
+    """
+
+    @capable_of("crud_career_path")
+    def delete(self, request, career_path_id=None, academy_id=None):
+        lang = get_user_language(request)
+
+        item = get_career_path_or_404(lang, career_path_id)
+        assert_mutable_career_path(request, lang, item, academy_id)
+
+        if CareerStage.objects.filter(career_path=item).exists():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Cannot delete career path with associated stages",
+                    es="No se puede eliminar la trayectoria con etapas asociadas",
+                    slug="has-career-stages",
+                ),
+                code=403,
+            )
+
+        item.delete()
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+class CareerStagesByPathView(APIView):
+    """
+    Create a career stage under a career path.
+    """
+
+    @capable_of("crud_career_path")
+    def post(self, request, career_path_id=None, academy_id=None):
+        lang = get_user_language(request)
+
+        path = get_career_path_or_404(lang, career_path_id)
+        assert_mutable_career_path(request, lang, path, academy_id)
+
+        serializer = CareerStageCreateSerializer(
+            data=request.data,
+            many=False,
+            context={"career_path": path},
+        )
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            stage = serializer.save()
+        except IntegrityError:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="A stage with this sequence already exists for this career path",
+                    es="Ya existe una etapa con esta secuencia en esta trayectoria",
+                    slug="career-stage-sequence-conflict",
+                ),
+                code=400,
+            )
+
+        return Response(CareerStageSmallSerializer(stage, many=False).data, status=status.HTTP_201_CREATED)
+
+
+class CareerStageByPathView(APIView):
+    """
+    Delete a career stage under a career path (blocked if stage skills or stage competencies exist).
+    """
+
+    @capable_of("crud_career_path")
+    def delete(self, request, career_path_id=None, career_stage_id=None, academy_id=None):
+        lang = get_user_language(request)
+
+        path = get_career_path_or_404(lang, career_path_id)
+        assert_mutable_career_path(request, lang, path, academy_id)
+
+        try:
+            stage = CareerStage.objects.get(id=career_stage_id, career_path_id=path.id)
+        except CareerStage.DoesNotExist:
+            raise ValidationException(
+                translation(lang, en="Career stage not found", es="Etapa no encontrada", slug="not-found"),
+                code=404,
+            )
+
+        if StageSkill.objects.filter(stage=stage).exists() or StageCompetency.objects.filter(stage=stage).exists():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Cannot delete career stage with associated stage skills or competencies",
+                    es="No se puede eliminar la etapa con habilidades o competencias asociadas",
+                    slug="has-stage-links",
+                ),
+                code=403,
+            )
+
+        stage.delete()
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+class StageSkillCreateView(APIView):
+    """
+    Create a global Skill (if missing) and anchor it to a CareerStage via StageSkill.
+    """
+
+    @capable_of("crud_career_path")
+    def post(self, request, academy_id=None):
+        lang = get_user_language(request)
+
+        serializer = StageSkillCreateSerializer(data=request.data, many=False)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        data = serializer.validated_data
+
+        stage = (
+            CareerStage.objects.filter(id=data["stage_id"])
+            .select_related("career_path", "career_path__academy")
+            .first()
+        )
+        if not stage:
+            raise ValidationException(
+                translation(lang, en="Career stage not found", es="Etapa no encontrada", slug="not-found"),
+                code=404,
+            )
+
+        assert_mutable_career_path(request, lang, stage.career_path, academy_id)
+
+        if data.get("domain_id") is not None:
+            domain = SkillDomain.objects.filter(id=data["domain_id"]).first()
+        else:
+            domain = SkillDomain.objects.filter(slug=data["domain_slug"]).first()
+
+        if not domain:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Skill domain not found",
+                    es="Dominio de habilidad no encontrado",
+                    slug="skill-domain-not-found",
+                ),
+                code=404,
+            )
+
+        name = data["name"]
+        skill_slug = (data.get("slug") or "").strip() or slugify(name)
+
+        existing_skill = Skill.objects.filter(slug=skill_slug).first()
+        if existing_skill:
+            if existing_skill.domain_id != domain.id:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="A skill with this slug already exists under a different domain",
+                        es="Ya existe una habilidad con este slug en otro dominio",
+                        slug="skill-slug-domain-mismatch",
+                    ),
+                    code=400,
+                )
+            skill = existing_skill
+        else:
+            skill = Skill.objects.create(
+                slug=skill_slug,
+                name=name,
+                domain=domain,
+                description=data.get("description") or "",
+                technologies=data.get("technologies") or "",
+            )
+
+        stage_skill, ss_created = StageSkill.objects.update_or_create(
+            stage=stage,
+            skill=skill,
+            defaults={
+                "required_level": data["required_level"],
+                "is_core": data["is_core"],
+            },
+        )
+
+        response_status = status.HTTP_201_CREATED if ss_created else status.HTTP_200_OK
+        return Response(
+            {
+                "skill": SkillSerializer(skill, many=False).data,
+                "stage_skill": StageAssignmentSerializer(stage_skill, many=False).data,
+            },
+            status=response_status,
+        )
+
 
 class SkillDomainsView(APIView, GenerateLookupsMixin):
     """
@@ -836,6 +1101,92 @@ class SkillDomainsView(APIView, GenerateLookupsMixin):
         serializer = SkillDomainSerializer(items, many=True)
 
         return handler.response(serializer.data)
+
+    @capable_of("crud_career_path")
+    def post(self, request, academy_id=None):
+        lang = get_user_language(request)
+
+        serializer = SkillDomainWriteSerializer(data=request.data, many=False)
+        if serializer.is_valid():
+            serializer.save()
+            domain = serializer.instance
+            response_serializer = SkillDomainSerializer(domain, many=False)
+            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class SkillDomainByIdView(APIView):
+    """
+    Delete a skill domain by id (blocked while skills reference it).
+    """
+
+    @capable_of("crud_career_path")
+    def delete(self, request, skill_domain_id=None, academy_id=None):
+        lang = get_user_language(request)
+
+        try:
+            item = SkillDomain.objects.get(id=skill_domain_id)
+        except SkillDomain.DoesNotExist:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Skill domain not found",
+                    es="Dominio de habilidad no encontrado",
+                    slug="not-found",
+                ),
+                code=404,
+            )
+
+        if Skill.objects.filter(domain=item).exists():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Cannot delete skill domain with associated skills",
+                    es="No se puede eliminar el dominio con habilidades asociadas",
+                    slug="has-skills",
+                ),
+                code=403,
+            )
+
+        item.delete()
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+class SkillDomainBySlugView(APIView):
+    """
+    Delete a skill domain by slug (blocked while skills reference it).
+    """
+
+    @capable_of("crud_career_path")
+    def delete(self, request, skill_domain_slug=None, academy_id=None):
+        lang = get_user_language(request)
+
+        try:
+            item = SkillDomain.objects.get(slug=skill_domain_slug)
+        except SkillDomain.DoesNotExist:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Skill domain not found",
+                    es="Dominio de habilidad no encontrado",
+                    slug="not-found",
+                ),
+                code=404,
+            )
+
+        if Skill.objects.filter(domain=item).exists():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Cannot delete skill domain with associated skills",
+                    es="No se puede eliminar el dominio con habilidades asociadas",
+                    slug="has-skills",
+                ),
+                code=403,
+            )
+
+        item.delete()
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
 class SkillKnowledgeItemsView(APIView, GenerateLookupsMixin):

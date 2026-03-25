@@ -15,6 +15,7 @@ from .models import (
     SkillAttitudeTag,
     SkillDomain,
     SkillKnowledgeItem,
+    StageCompetency,
 )
 
 
@@ -200,6 +201,181 @@ class JobRoleSerializer(serializers.ModelSerializer):
                 validated_data["academy"] = None
 
         return super().update(instance, validated_data)
+
+
+class CareerPathSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(required=False)
+    job_role = serializers.IntegerField()
+    academy = serializers.IntegerField(required=False, allow_null=True)
+
+    class Meta:
+        model = CareerPath
+        fields = (
+            "id",
+            "name",
+            "job_role",
+            "description",
+            "academy",
+            "is_active",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = ("created_at", "updated_at")
+
+    def validate(self, attrs):
+        job_role = attrs.get("job_role")
+        name = attrs.get("name")
+        if job_role is not None and name:
+            jr_id = job_role if isinstance(job_role, int) else getattr(job_role, "pk", None)
+            if jr_id is not None:
+                queryset = CareerPath.objects.filter(job_role_id=jr_id, name=name)
+                if self.instance:
+                    queryset = queryset.exclude(pk=self.instance.pk)
+                if queryset.exists():
+                    raise ValidationException(
+                        translation(
+                            en=f"A career path named '{name}' already exists for this job role",
+                            es=f"Ya existe una trayectoria llamada '{name}' para este rol",
+                            slug="career-path-name-exists",
+                        ),
+                        code=400,
+                    )
+        return super().validate(attrs)
+
+    def create(self, validated_data):
+        if "job_role" in validated_data and isinstance(validated_data["job_role"], int):
+            job_role_id = validated_data.pop("job_role")
+            validated_data["job_role"] = JobRole.objects.get(id=job_role_id)
+
+        if "academy" in validated_data and isinstance(validated_data["academy"], int):
+            from breathecode.admissions.models import Academy
+
+            academy_id = validated_data.pop("academy")
+            if academy_id:
+                validated_data["academy"] = Academy.objects.get(id=academy_id)
+            else:
+                validated_data["academy"] = None
+
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        if "job_role" in validated_data and isinstance(validated_data["job_role"], int):
+            job_role_id = validated_data.pop("job_role")
+            validated_data["job_role"] = JobRole.objects.get(id=job_role_id)
+
+        if "academy" in validated_data and isinstance(validated_data["academy"], int):
+            from breathecode.admissions.models import Academy
+
+            academy_id = validated_data.pop("academy")
+            if academy_id:
+                validated_data["academy"] = Academy.objects.get(id=academy_id)
+            else:
+                validated_data["academy"] = None
+
+        return super().update(instance, validated_data)
+
+
+class CareerStageCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CareerStage
+        fields = (
+            "sequence",
+            "title",
+            "goal",
+            "description",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = ("created_at", "updated_at")
+
+    def create(self, validated_data):
+        career_path = self.context["career_path"]
+        return CareerStage.objects.create(career_path=career_path, **validated_data)
+
+
+class SkillDomainWriteSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(required=False)
+    slug = serializers.SlugField(required=False)
+
+    class Meta:
+        model = SkillDomain
+        fields = (
+            "id",
+            "slug",
+            "name",
+            "description",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = ("created_at", "updated_at")
+
+    def validate(self, attrs):
+        slug = attrs.get("slug")
+        if not self.instance and not slug and attrs.get("name"):
+            slug = slugify(attrs["name"])
+            attrs["slug"] = slug
+        if slug:
+            queryset = SkillDomain.objects.all()
+            if self.instance:
+                queryset = queryset.exclude(pk=self.instance.pk)
+            if queryset.filter(slug=slug).exists():
+                raise ValidationException(
+                    translation(
+                        en=f"A skill domain with slug '{slug}' already exists",
+                        es=f"Ya existe un dominio de habilidad con el slug '{slug}'",
+                        slug="skill-domain-slug-exists",
+                    ),
+                    code=400,
+                )
+        return super().validate(attrs)
+
+
+class StageSkillCreateSerializer(serializers.Serializer):
+    stage_id = serializers.IntegerField()
+    name = serializers.CharField(max_length=150)
+    slug = serializers.SlugField(required=False, allow_blank=True)
+    domain_id = serializers.IntegerField(required=False, allow_null=True)
+    domain_slug = serializers.SlugField(required=False, allow_blank=True)
+    description = serializers.CharField(required=False, default="", allow_blank=True)
+    technologies = serializers.CharField(required=False, default="", allow_blank=True, max_length=500)
+    required_level = serializers.ChoiceField(
+        choices=StageCompetency.RequiredLevel.choices,
+        required=False,
+        default=StageCompetency.RequiredLevel.CORE,
+    )
+    is_core = serializers.BooleanField(required=False, default=True)
+
+    def validate(self, attrs):
+        domain_id = attrs.get("domain_id")
+        domain_slug = (attrs.get("domain_slug") or "").strip()
+
+        has_id = domain_id is not None
+        has_slug = bool(domain_slug)
+
+        if has_id and has_slug:
+            raise ValidationException(
+                translation(
+                    en="Provide only one of domain_id or domain_slug",
+                    es="Indique solo domain_id o domain_slug, no ambos",
+                    slug="skill-domain-param-conflict",
+                ),
+                code=400,
+            )
+        if not has_id and not has_slug:
+            raise ValidationException(
+                translation(
+                    en="Either domain_id or domain_slug is required",
+                    es="Se requiere domain_id o domain_slug",
+                    slug="skill-domain-required",
+                ),
+                code=400,
+            )
+
+        slug = attrs.get("slug")
+        if isinstance(slug, str) and not slug.strip():
+            attrs["slug"] = None
+
+        return attrs
 
 
 # Additional GET Serializers for new endpoints
@@ -392,6 +568,7 @@ class SkillDetailSerializer(serpy.Serializer):
     attitude_tags = serpy.MethodField()
     behavioral_indicators = serpy.MethodField()
     competencies = serpy.MethodField()
+    stage_assignments = serpy.MethodField()
     created_at = serpy.Field()
     updated_at = serpy.Field()
 
@@ -421,6 +598,17 @@ class SkillDetailSerializer(serpy.Serializer):
             }
             for cs in competency_skills
         ]
+
+    def get_stage_assignments(self, obj):
+        from .models import StageSkill
+
+        stage_skills = (
+            StageSkill.objects.filter(skill=obj)
+            .select_related("stage", "stage__career_path", "stage__career_path__job_role")
+            .order_by("stage__career_path__job_role__name", "stage__sequence")
+        )
+
+        return StageAssignmentSerializer(stage_skills, many=True).data
 
 
 class CompetencyDetailSerializer(serpy.Serializer):

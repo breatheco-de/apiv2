@@ -313,6 +313,49 @@ class StageCompetency(TimeStampedModel):
     def __str__(self) -> str:
         return f"{self.stage} • {self.competency}"
 
+class StageSkill(TimeStampedModel):
+    """
+    Explicit association between a `CareerStage` and a `Skill`.
+
+    This allows "stage-anchored" skills to exist even if they are not yet mapped
+    through `Competency` via `CompetencySkill` (i.e., skills can be temporarily
+    orphan relative to competencies).
+    """
+
+    stage = models.ForeignKey(
+        CareerStage,
+        on_delete=models.CASCADE,
+        related_name="stage_skills",
+        help_text="Stage that anchors this skill.",
+    )
+    skill = models.ForeignKey(
+        Skill,
+        on_delete=models.CASCADE,
+        related_name="stage_skills",
+        help_text="Skill anchored to the stage.",
+    )
+    required_level = models.CharField(
+        max_length=15,
+        choices=StageCompetency.RequiredLevel.choices,
+        default=StageCompetency.RequiredLevel.CORE,
+        help_text="Required proficiency level at this stage.",
+    )
+    is_core = models.BooleanField(
+        default=True,
+        help_text="Mark as False for optional stage-anchored skills.",
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["stage", "skill"], name="uq_stage_skill"),
+        ]
+        indexes = [
+            models.Index(fields=["stage", "skill"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.stage} • {self.skill}"
+
 class CompetencySkill(TimeStampedModel):
     competency = models.ForeignKey(
         Competency, on_delete=models.CASCADE, related_name="competency_skills", help_text="Parent competency."
