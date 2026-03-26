@@ -71,6 +71,11 @@ class ProvisioningAcademy(models.Model):
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     credentials_key = models.CharField(max_length=200, blank=True)
     credentials_token = models.CharField(max_length=200, blank=True)
+    vendor_settings = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Vendor-specific allowlists/settings (for example: item_ids, template_ids, data_center_ids).",
+    )
 
     container_idle_timeout = models.IntegerField(
         default=15, help_text="If the container is idle for X amount of minutes, it will be shut down"

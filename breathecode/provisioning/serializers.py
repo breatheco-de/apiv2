@@ -1,4 +1,5 @@
 import re
+from typing import Any, Dict
 
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
@@ -23,6 +24,15 @@ class AcademySerializer(serpy.Serializer):
     id = serpy.Field()
     name = serpy.Field()
     slug = serpy.Field()
+
+
+class UserTinySerializer(serpy.Serializer):
+    """Minimal user payload for nested provisioning responses."""
+
+    id = serpy.Field()
+    email = serpy.Field()
+    first_name = serpy.Field()
+    last_name = serpy.Field()
 
 
 class AcademyBillDetailSerializer(serpy.Serializer):
@@ -69,6 +79,10 @@ class GetProvisioningVendorSerializer(serpy.Serializer):
     id = serpy.Field()
     name = serpy.Field()
     workspaces_url = serpy.Field()
+    settings_schema = serpy.MethodField()
+
+    def get_settings_schema(self, obj):
+        return get_vendor_settings_schema(getattr(obj, "name", ""))
 
 
 class GetProvisioningBillSmallSerializer(serpy.Serializer):
@@ -385,14 +399,26 @@ class VPSDetailSerializer(serpy.Serializer):
 class VPSRequestSerializer(serializers.Serializer):
     """Request body for POST me/vps (optional plan_slug)."""
 
+    class VendorSelectionSerializer(serializers.Serializer):
+        item_id = serializers.CharField(required=False, allow_blank=False, max_length=100)
+        template_id = serializers.IntegerField(required=False, min_value=1)
+        data_center_id = serializers.IntegerField(required=False, min_value=1)
+
     plan_slug = serializers.CharField(required=False, allow_blank=True, max_length=100)
+    vendor_selection = VendorSelectionSerializer(required=False)
 
 
 class AcademyVPSCreateSerializer(serializers.Serializer):
     """Request body for POST academy/vps (staff provisions VPS for a student)."""
 
+    class VendorSelectionSerializer(serializers.Serializer):
+        item_id = serializers.CharField(required=False, allow_blank=False, max_length=100)
+        template_id = serializers.IntegerField(required=False, min_value=1)
+        data_center_id = serializers.IntegerField(required=False, min_value=1)
+
     user_id = serializers.IntegerField(required=True, min_value=1)
     plan_slug = serializers.CharField(required=False, allow_blank=True, max_length=100)
+    vendor_selection = VendorSelectionSerializer(required=False)
 
 
 class AcademyVPSListSerializer(serpy.Serializer):
@@ -410,14 +436,7 @@ class AcademyVPSListSerializer(serpy.Serializer):
     provisioned_at = serpy.Field()
     deleted_at = serpy.Field()
     created_at = serpy.Field()
-    user_id = serpy.MethodField()
-    user_email = serpy.MethodField()
-
-    def get_user_id(self, obj):
-        return obj.user_id
-
-    def get_user_email(self, obj):
-        return getattr(obj.user, "email", None) if obj.user else None
+    user = UserTinySerializer(required=False)
 
 
 # --- Provisioning academy (credentials and settings) ---
@@ -430,6 +449,7 @@ class GetProvisioningAcademySerializer(serpy.Serializer):
     vendor = GetProvisioningVendorSerializer(required=False)
     academy_id = serpy.Field()
     credentials_set = serpy.MethodField()
+    vendor_settings = serpy.Field()
     container_idle_timeout = serpy.Field()
     max_active_containers = serpy.Field()
     created_at = serpy.Field()
@@ -445,6 +465,7 @@ class ProvisioningAcademyCreateSerializer(serializers.Serializer):
     vendor_id = serializers.IntegerField(required=True)
     credentials_token = serializers.CharField(required=True, max_length=200, allow_blank=False)
     credentials_key = serializers.CharField(required=False, max_length=200, allow_blank=True, default="")
+    vendor_settings = serializers.JSONField(required=False, default=dict)
     container_idle_timeout = serializers.IntegerField(required=False, default=15, min_value=1)
     max_active_containers = serializers.IntegerField(required=False, default=2, min_value=1)
     allowed_machine_type_ids = serializers.ListField(
@@ -460,6 +481,7 @@ class ProvisioningAcademyUpdateSerializer(serializers.Serializer):
 
     credentials_token = serializers.CharField(required=False, max_length=200, allow_blank=True)
     credentials_key = serializers.CharField(required=False, max_length=200, allow_blank=True)
+    vendor_settings = serializers.JSONField(required=False)
     container_idle_timeout = serializers.IntegerField(required=False, min_value=1)
     max_active_containers = serializers.IntegerField(required=False, min_value=1)
     allowed_machine_type_ids = serializers.ListField(
@@ -467,3 +489,111 @@ class ProvisioningAcademyUpdateSerializer(serializers.Serializer):
         required=False,
         allow_empty=True,
     )
+
+
+def get_vendor_settings_schema(vendor_name: str) -> Dict[str, Any]:
+    slug = (vendor_name or "").lower().strip()
+    if slug != "hostinger":
+        return {"fields": []}
+
+    return {
+        "fields": [
+            {
+                "key": "item_ids",
+                "label": "Allowed catalog item IDs",
+                "type": "list[string]",
+                "required": True,
+                "help_text": "Allowed Hostinger VPS catalog items for this academy.",
+            },
+            {
+                "key": "template_ids",
+                "label": "Allowed template IDs",
+                "type": "list[integer]",
+                "required": True,
+                "help_text": "Allowed Hostinger OS template IDs for this academy.",
+            },
+            {
+                "key": "data_center_ids",
+                "label": "Allowed data center IDs",
+                "type": "list[integer]",
+                "required": True,
+                "help_text": "Allowed Hostinger data center IDs for this academy.",
+            },
+        ]
+    }
+
+
+def validate_vendor_settings(vendor_name: str, vendor_settings: Dict[str, Any], *, lang: str = "en") -> Dict[str, Any]:
+    slug = (vendor_name or "").lower().strip()
+    settings = vendor_settings or {}
+    if not isinstance(settings, dict):
+        raise ValidationException(
+            translation(
+                lang,
+                en="vendor_settings must be a JSON object.",
+                es="vendor_settings debe ser un objeto JSON.",
+                slug="invalid-vendor-settings",
+            ),
+            code=400,
+        )
+
+    if slug != "hostinger":
+        return settings
+
+    allowed_keys = {"item_ids", "template_ids", "data_center_ids"}
+    unknown = sorted(set(settings.keys()) - allowed_keys)
+    if unknown:
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Unknown vendor_settings keys: {', '.join(unknown)}.",
+                es=f"Claves desconocidas en vendor_settings: {', '.join(unknown)}.",
+                slug="invalid-vendor-settings-keys",
+            ),
+            code=400,
+        )
+
+    def _require_list(key: str, cast):
+        values = settings.get(key)
+        if values is None or not isinstance(values, list) or len(values) == 0:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"{key} must be a non-empty list.",
+                    es=f"{key} debe ser una lista no vacia.",
+                    slug="invalid-vendor-settings-value",
+                ),
+                code=400,
+            )
+        normalized = []
+        for value in values:
+            try:
+                casted = cast(value)
+            except (TypeError, ValueError):
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"{key} contains an invalid value: {value}.",
+                        es=f"{key} contiene un valor invalido: {value}.",
+                        slug="invalid-vendor-settings-value",
+                    ),
+                    code=400,
+                )
+            normalized.append(casted)
+        settings[key] = sorted(set(normalized))
+
+    _require_list("item_ids", lambda v: str(v).strip())
+    if any(not x for x in settings["item_ids"]):
+        raise ValidationException(
+            translation(
+                lang,
+                en="item_ids cannot contain blank values.",
+                es="item_ids no puede contener valores vacios.",
+                slug="invalid-vendor-settings-value",
+            ),
+            code=400,
+        )
+
+    _require_list("template_ids", int)
+    _require_list("data_center_ids", int)
+    return settings

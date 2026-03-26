@@ -54,6 +54,7 @@ class HostingerVPSClient:
             item_id = credentials.get("item_id")
             template_id = credentials.get("template_id")
             data_center_id = credentials.get("data_center_id")
+            defaults_lookup_error = None
 
             if not all([item_id, template_id, data_center_id]):
                 try:
@@ -75,10 +76,23 @@ class HostingerVPSClient:
                             item_id = str(getattr(first, "id", None) or getattr(first, "item_id", "") or "")
                 except ApiException as e:
                     logger.warning("Hostinger defaults lookup failed: %s", e)
+                    defaults_lookup_error = str(e)
 
             if not item_id or not template_id or not data_center_id:
+                missing = [
+                    key for key, value in (
+                        ("item_id", item_id),
+                        ("template_id", template_id),
+                        ("data_center_id", data_center_id),
+                    ) if not value
+                ]
+                details = f" Missing: {', '.join(missing)}."
+                if defaults_lookup_error:
+                    details += f" Hostinger defaults lookup failed: {defaults_lookup_error}"
                 raise VPSProvisioningError(
-                    "Missing item_id, template_id or data_center_id. Set in ProvisioningAcademy credentials or use Hostinger API defaults."
+                    "Missing item_id, template_id or data_center_id. "
+                    "Set allowed options in ProvisioningAcademy vendor_settings and send selected values when requesting VPS."
+                    + details
                 )
 
             try:

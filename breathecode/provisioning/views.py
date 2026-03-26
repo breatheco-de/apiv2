@@ -44,6 +44,7 @@ from breathecode.provisioning.serializers import (
     VPSDetailSerializer,
     VPSListSerializer,
     VPSRequestSerializer,
+    validate_vendor_settings,
 )
 from breathecode.utils import capable_of, cut_csv
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
@@ -51,7 +52,13 @@ from breathecode.utils.decorators import has_permission
 from breathecode.utils.io.file import count_csv_rows
 from breathecode.utils.views import private_view, render_message
 
-from .actions import get_provisioning_vendor, request_vps, request_vps_for_student
+from .actions import (
+    get_eligible_academy_and_vendor_for_vps,
+    get_provisioning_vendor,
+    get_vps_provisioning_academy_for_academy,
+    request_vps,
+    request_vps_for_student,
+)
 from .models import (
     BILL_STATUS,
     ProvisioningAcademy,
@@ -61,6 +68,122 @@ from .models import (
     ProvisioningVPS,
     ProvisioningVendor,
 )
+
+
+def _normalize_allowed_values(settings, key, cast):
+    values = settings.get(key) or []
+    normalized = []
+    for value in values:
+        try:
+            normalized.append(cast(value))
+        except (TypeError, ValueError):
+            continue
+    return set(normalized)
+
+
+def _build_vendor_selection(vendor_name, vendor_settings, request_data, lang):
+    slug = (vendor_name or "").lower().strip()
+    if slug != "hostinger":
+        return {}
+
+    vendor_selection = request_data.get("vendor_selection") or {}
+    selected_item = (vendor_selection.get("item_id") or "").strip() or None
+    selected_template = vendor_selection.get("template_id")
+    selected_data_center = vendor_selection.get("data_center_id")
+    allowed_items = _normalize_allowed_values(vendor_settings, "item_ids", lambda value: str(value).strip())
+    allowed_templates = _normalize_allowed_values(vendor_settings, "template_ids", int)
+    allowed_data_centers = _normalize_allowed_values(vendor_settings, "data_center_ids", int)
+
+    if not selected_item and len(allowed_items) == 1:
+        selected_item = next(iter(allowed_items))
+    if selected_template is None and len(allowed_templates) == 1:
+        selected_template = next(iter(allowed_templates))
+    if selected_data_center is None and len(allowed_data_centers) == 1:
+        selected_data_center = next(iter(allowed_data_centers))
+
+    if selected_item and selected_item not in allowed_items:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Selected item_id is not allowed for this academy.",
+                es="El item_id seleccionado no esta permitido para esta academia.",
+                slug="invalid-vps-item-id",
+            ),
+            code=400,
+        )
+    if selected_template is not None and int(selected_template) not in allowed_templates:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Selected template_id is not allowed for this academy.",
+                es="El template_id seleccionado no esta permitido para esta academia.",
+                slug="invalid-vps-template-id",
+            ),
+            code=400,
+        )
+    if selected_data_center is not None and int(selected_data_center) not in allowed_data_centers:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Selected data_center_id is not allowed for this academy.",
+                es="El data_center_id seleccionado no esta permitido para esta academia.",
+                slug="invalid-vps-data-center-id",
+            ),
+            code=400,
+        )
+
+    payload = {}
+    if selected_item:
+        payload["item_id"] = selected_item
+    if selected_template is not None:
+        payload["template_id"] = int(selected_template)
+    if selected_data_center is not None:
+        payload["data_center_id"] = int(selected_data_center)
+    return payload
+
+
+def _get_hostinger_vendor_options(token: str, lang: str):
+    import hostinger_api
+    from hostinger_api.rest import ApiException
+
+    configuration = hostinger_api.Configuration(access_token=token)
+    with hostinger_api.ApiClient(configuration) as api_client:
+        try:
+            dc_api = hostinger_api.VPSDataCentersApi(api_client)
+            template_api = hostinger_api.VPSOSTemplatesApi(api_client)
+            catalog_api = hostinger_api.BillingCatalogApi(api_client)
+            dc_response = dc_api.get_data_center_list_v1()
+            template_response = template_api.get_templates_v1()
+            catalog_response = catalog_api.get_catalog_item_list_v1(category="VPS")
+        except ApiException as e:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Cannot fetch Hostinger options: {e}",
+                    es=f"No se pudieron obtener las opciones de Hostinger: {e}",
+                    slug="hostinger-options-fetch-failed",
+                ),
+                code=400,
+            )
+
+    return {
+        "data_centers": [
+            {"id": getattr(x, "id", None), "name": getattr(x, "name", "")}
+            for x in (getattr(dc_response, "data", None) or [])
+        ],
+        "templates": [
+            {
+                "id": getattr(x, "id", None),
+                "name": getattr(x, "name", ""),
+                "operating_system": getattr(x, "operating_system", None),
+            }
+            for x in (getattr(template_response, "data", None) or [])
+        ],
+        "catalog_items": [
+            {"id": str(getattr(x, "id", None) or getattr(x, "item_id", "") or ""), "name": getattr(x, "name", "")}
+            for x in (getattr(catalog_response, "data", None) or [])
+        ],
+    }
 
 
 @private_view()
@@ -984,6 +1107,7 @@ class ProvisioningAcademyView(APIView):
             vendor=vendor,
             credentials_token=data["credentials_token"],
             credentials_key=data.get("credentials_key") or "",
+            vendor_settings=validate_vendor_settings(vendor.name, data.get("vendor_settings") or {}, lang=lang),
             container_idle_timeout=data.get("container_idle_timeout", 15),
             max_active_containers=data.get("max_active_containers", 2),
         )
@@ -1048,6 +1172,8 @@ class ProvisioningAcademyByIdView(APIView):
             pa.credentials_token = data["credentials_token"]
         if "credentials_key" in data:
             pa.credentials_key = data["credentials_key"]
+        if "vendor_settings" in data:
+            pa.vendor_settings = validate_vendor_settings(pa.vendor.name, data["vendor_settings"] or {}, lang=lang)
         if "container_idle_timeout" in data:
             pa.container_idle_timeout = data["container_idle_timeout"]
         if "max_active_containers" in data:
@@ -1084,6 +1210,49 @@ class ProvisioningAcademyByIdView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class ProvisioningAcademyVendorOptionsView(APIView):
+    """GET vendor options for one provisioning academy filtered by academy allowlists."""
+
+    @capable_of("crud_provisioning_activity")
+    def get(self, request, academy_id=None, provisioning_academy_id=None):
+        lang = get_user_language(request)
+        pa = ProvisioningAcademy.objects.filter(id=provisioning_academy_id, academy_id=academy_id).select_related("vendor").first()
+        if not pa:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Provisioning academy config not found.",
+                    es="Configuración de aprovisionamiento de academia no encontrada.",
+                    slug="provisioning-academy-not-found",
+                ),
+                code=404,
+            )
+
+        vendor_slug = (getattr(pa.vendor, "name", "") or "").lower().strip()
+        if vendor_slug != "hostinger":
+            return Response({"catalog_items": [], "templates": [], "data_centers": []})
+        if not pa.credentials_token:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Missing vendor token for this provisioning academy.",
+                    es="Falta el token del vendor para esta configuración de aprovisionamiento.",
+                    slug="missing-vendor-token",
+                ),
+                code=400,
+            )
+
+        options = _get_hostinger_vendor_options(pa.credentials_token, lang)
+        allowed_items = _normalize_allowed_values(pa.vendor_settings or {}, "item_ids", lambda value: str(value).strip())
+        allowed_templates = _normalize_allowed_values(pa.vendor_settings or {}, "template_ids", int)
+        allowed_data_centers = _normalize_allowed_values(pa.vendor_settings or {}, "data_center_ids", int)
+        options["catalog_items"] = [x for x in options["catalog_items"] if x.get("id") in allowed_items]
+        options["templates"] = [x for x in options["templates"] if x.get("id") in allowed_templates]
+        options["data_centers"] = [x for x in options["data_centers"] if x.get("id") in allowed_data_centers]
+
+        return Response(options)
+
+
 class MeVPSView(APIView):
     """GET: list current user's VPS. POST: request a new VPS (consumes vps_server consumable)."""
 
@@ -1103,8 +1272,15 @@ class MeVPSView(APIView):
         if not serializer.is_valid():
             raise ValidationException(serializer.errors, code=400)
         plan_slug = (serializer.validated_data.get("plan_slug") or "").strip() or None
+        _, provisioning_academy = get_eligible_academy_and_vendor_for_vps(request.user)
+        vendor_selection = _build_vendor_selection(
+            provisioning_academy.vendor.name,
+            provisioning_academy.vendor_settings or {},
+            serializer.validated_data,
+            lang,
+        )
         try:
-            vps = request_vps(request.user, plan_slug=plan_slug)
+            vps = request_vps(request.user, plan_slug=plan_slug, vendor_selection=vendor_selection)
         except ValidationException:
             raise
         out_serializer = VPSListSerializer(vps)
@@ -1179,7 +1355,16 @@ class AcademyVPSView(APIView):
                 code=404,
             )
         try:
-            vps = request_vps_for_student(student, academy, plan_slug=plan_slug, lang=lang)
+            _, provisioning_academy = get_vps_provisioning_academy_for_academy(academy, lang=lang)
+            vendor_selection = _build_vendor_selection(
+                provisioning_academy.vendor.name,
+                provisioning_academy.vendor_settings or {},
+                serializer.validated_data,
+                lang,
+            )
+            vps = request_vps_for_student(
+                student, academy, plan_slug=plan_slug, vendor_selection=vendor_selection, lang=lang
+            )
         except ValidationException:
             raise
         out_serializer = VPSListSerializer(vps)

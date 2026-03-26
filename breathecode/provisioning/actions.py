@@ -176,6 +176,7 @@ def _request_vps_core(
     academy: Academy,
     provisioning_academy: ProvisioningAcademy,
     plan_slug=None,
+    vendor_selection=None,
     *,
     lang: Optional[str] = None,
     for_staff: bool = False,
@@ -236,20 +237,20 @@ def _request_vps_core(
     )
     from .tasks import provision_vps_task
 
-    provision_vps_task.delay(vps.id)
+    provision_vps_task.delay(vps.id, vendor_selection=vendor_selection or {})
     return vps
 
 
-def request_vps(user, plan_slug=None):
+def request_vps(user, plan_slug=None, vendor_selection=None):
     """
     Request a new VPS for the user. Consumes one vps_server consumable, creates ProvisioningVPS, enqueues task.
     Returns the ProvisioningVPS instance. Raises ValidationException if ineligible, duplicate, or no credits.
     """
     academy, provisioning_academy = get_eligible_academy_and_vendor_for_vps(user)
-    return _request_vps_core(user, academy, provisioning_academy, plan_slug)
+    return _request_vps_core(user, academy, provisioning_academy, plan_slug, vendor_selection=vendor_selection)
 
 
-def request_vps_for_student(student_user, academy: Academy, plan_slug=None, lang: str = "en"):
+def request_vps_for_student(student_user, academy: Academy, plan_slug=None, vendor_selection=None, lang: str = "en"):
     """
     Staff flow: request a VPS for a student in a fixed academy. Consumes the student's vps_server consumable.
     """
@@ -268,6 +269,7 @@ def request_vps_for_student(student_user, academy: Academy, plan_slug=None, lang
         academy,
         provisioning_academy,
         plan_slug,
+        vendor_selection=vendor_selection,
         lang=lang,
         for_staff=True,
     )

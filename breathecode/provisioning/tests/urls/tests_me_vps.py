@@ -36,10 +36,19 @@ class MeVPSViewTestSuite(ProvisioningTestCase):
         self.assertEqual(data[0]["id"], vps.id)
         self.assertEqual(data[0]["status"], ProvisioningVPS.VPS_STATUS_ACTIVE)
 
-    def test_me_vps_post_202_accepts_and_enqueues(self):
+    @patch("breathecode.provisioning.views.get_eligible_academy_and_vendor_for_vps")
+    def test_me_vps_post_202_accepts_and_enqueues(self, eligibility_mock):
         model = self.bc.database.create(user=1, academy=1, provisioning_vendor=1, provisioning_academy=1)
         model.provisioning_vendor.name = "hostinger"
         model.provisioning_vendor.save()
+        model.provisioning_academy.vendor = model.provisioning_vendor
+        model.provisioning_academy.vendor_settings = {
+            "item_ids": ["100"],
+            "template_ids": [10],
+            "data_center_ids": [5],
+        }
+        model.provisioning_academy.save()
+        eligibility_mock.return_value = (model.academy, model.provisioning_academy)
         with patch("breathecode.provisioning.views.request_vps") as mock_request:
             mock_vps = ProvisioningVPS(
                 id=1,
@@ -55,6 +64,11 @@ class MeVPSViewTestSuite(ProvisioningTestCase):
             self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
             self.assertEqual(response.json()["id"], 1)
             self.assertEqual(response.json()["status"], ProvisioningVPS.VPS_STATUS_PENDING)
+            mock_request.assert_called_once_with(
+                model.user,
+                plan_slug=None,
+                vendor_selection={"item_id": "100", "template_id": 10, "data_center_id": 5},
+            )
 
 
 class MeVPSByIdViewTestSuite(ProvisioningTestCase):
