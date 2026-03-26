@@ -14,11 +14,12 @@ Use this skill when the user asks to **create or update a provisioning profile**
 
 - **Provisioning profile**: Links an academy to a vendor. Optional: restrict which cohorts or members use that vendor. At least one profile and a matching academy config with credentials are required for students to request a VPS.
 - **Provisioning academy config**: Per (academy, vendor): stores credentials (token, optional key) and settings (container_idle_timeout, max_active_containers, allowed_machine_types). Credentials are never returned by the API; the response only indicates whether they are set.
+- **Vendor settings allowlists**: Some vendors (e.g. Hostinger) require extra allowlist values stored in `vendor_settings`. The vendor list endpoint (`GET /v1/provisioning/academy/vendor`) returns a `settings_schema` per vendor that tells you which keys/types must be provided inside `vendor_settings`.
 - **Academy scope:** All endpoints use the **Academy** header to identify the academy; there is no academy_id in the URL path.
 
 ## Workflow
 
-1. **List provisioning vendors (optional).** When you need valid `vendor_id` values for creating profiles or academy configs, call `GET /v1/provisioning/academy/vendor` with `Authorization` and `Academy: <academy_id>`. Response is a list of vendors (id, name, workspaces_url). Use the vendor id in POST bodies for profiles and academy configs.
+1. **List provisioning vendors (optional).** When you need valid `vendor_id` values for creating profiles or academy configs, call `GET /v1/provisioning/academy/vendor` with `Authorization` and `Academy: <academy_id>`. Response is a list of vendors; each vendor includes `settings_schema` that describes which keys/types to send inside `vendor_settings` for that vendor.
 
 2. **List current profiles.** Call `GET /v1/provisioning/academy/provisioningprofile` with `Authorization` and `Academy: <academy_id>`. Response includes each profile's id, vendor, academy, cohort_ids, member_ids. Use the profile id for update or delete.
 
@@ -34,13 +35,22 @@ Use this skill when the user asks to **create or update a provisioning profile**
 
 8. **Delete academy config.** Call `DELETE /v1/provisioning/academy/provisioningacademy/<provisioning_academy_id>` with `Authorization` and `Academy: <academy_id>`. Returns 204 No Content. Deleting the config removes credentials and settings for that (academy, vendor); it does not delete the provisioning profile. To fully stop using a vendor, delete the profile (and optionally delete the config).
 
-**For VPS to work:** The academy must have at least one provisioning profile linking it to a vendor, and a provisioning academy config for that same vendor with `credentials_token` set. Create the profile first, then create the academy config for that vendor.
+**For VPS to work:** The academy must have at least one provisioning profile linking it to a vendor, and a provisioning academy config for that same vendor with `credentials_token` set. Additionally, for Hostinger, you must configure non-empty `vendor_settings` allowlists (`item_ids`, `template_ids`, `data_center_ids`). Create the profile first, then create the academy config for that vendor, then fill `vendor_settings`.
+
+After credentials/settings are in place, when the user actually requests a VPS you should switch to `bc-provisioning-manage-vps-server`.
+
+To configure Hostinger allowlists, staff should first fetch the full set of vendor options by calling:
+`GET /v1/provisioning/academy/provisioningacademy/<provisioning_academy_id>/vendor-options`.
+
+For Hostinger, this `vendor-options` response returns the full (unfiltered) universe of options from the vendor account (catalog items, templates, and data centers).
+
+Then select which IDs are allowed and store them in the provisioning academy config (`vendor_settings`: `item_ids`, `template_ids`, `data_center_ids`). VPS provisioning will fail until these allowlists are non-empty.
 
 ## Endpoints
 
 | Action | Method | Path | Headers | Body | Response |
 |--------|--------|------|---------|------|----------|
-| List vendors | GET | `/v1/provisioning/academy/vendor` | `Authorization`, `Academy: <academy_id>` | — | List of vendors (id, name, workspaces_url). Use vendor id when creating profiles or academy configs. |
+| List vendors | GET | `/v1/provisioning/academy/vendor` | `Authorization`, `Academy: <academy_id>` | — | List of vendors (id, name, workspaces_url, settings_schema). Use vendor id when creating profiles or academy configs; use settings_schema to build `vendor_settings` for that vendor. |
 | List profiles | GET | `/v1/provisioning/academy/provisioningprofile` | `Authorization`, `Academy: <academy_id>` | — | List of profiles (id, vendor, academy, cohort_ids, member_ids). |
 | Create profile | POST | `/v1/provisioning/academy/provisioningprofile` | `Authorization`, `Academy: <academy_id>` | See request sample below. | 201, profile object (see response sample). |
 | Get profile | GET | `/v1/provisioning/academy/provisioningprofile/<profile_id>` | `Authorization`, `Academy: <academy_id>` | — | Profile object. |
@@ -99,8 +109,8 @@ Use this skill when the user asks to **create or update a provisioning profile**
 **List vendors — response (GET `/v1/provisioning/academy/vendor`):**
 ```json
 [
-  {"id": 1, "name": "Codespaces", "workspaces_url": "https://github.com/codespaces"},
-  {"id": 2, "name": "Gitpod", "workspaces_url": "https://gitpod.io/workspaces"}
+  {"id": 1, "name": "Codespaces", "workspaces_url": "https://github.com/codespaces", "settings_schema": {"fields": []}},
+  {"id": 2, "name": "Gitpod", "workspaces_url": "https://gitpod.io/workspaces", "settings_schema": {"fields": []}}
 ]
 ```
 

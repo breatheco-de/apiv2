@@ -185,6 +185,27 @@ class AcademyProvisioningAcademyTestSuite(ProvisioningTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.json()["vendor_settings"]["item_ids"], ["100", "101"])
 
+    def test_post_create_hostinger_vendor_settings_optional_empty(self):
+        model = self.bc.database.create(
+            user=1,
+            profile_academy=1,
+            role=1,
+            capability="crud_provisioning_activity",
+            provisioning_vendor=1,
+        )
+        model.provisioning_vendor.name = "hostinger"
+        model.provisioning_vendor.save()
+        self.client.force_authenticate(model.user)
+        self.headers(academy=1)
+        url = reverse_lazy("provisioning:academy_provisioning_academy")
+        payload = {
+            "vendor_id": model.provisioning_vendor.id,
+            "credentials_token": "token123",
+        }
+        response = self.client.post(url, data=payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.json()["vendor_settings"], {})
+
     def test_post_create_invalid_vendor_settings_key(self):
         model = self.bc.database.create(
             user=1,
@@ -212,7 +233,7 @@ class AcademyProvisioningAcademyTestSuite(ProvisioningTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     @patch("breathecode.provisioning.views._get_hostinger_vendor_options")
-    def test_get_vendor_options_filters_by_allowlist(self, options_mock):
+    def test_get_vendor_options_returns_all_hostinger_options(self, options_mock):
         options_mock.return_value = {
             "catalog_items": [{"id": "100", "name": "A"}, {"id": "200", "name": "B"}],
             "templates": [{"id": 11, "name": "Ubuntu"}, {"id": 12, "name": "Debian"}],
@@ -246,6 +267,6 @@ class AcademyProvisioningAcademyTestSuite(ProvisioningTestCase):
         )
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.json()["catalog_items"], [{"id": "100", "name": "A"}])
-        self.assertEqual(response.json()["templates"], [{"id": 11, "name": "Ubuntu"}])
-        self.assertEqual(response.json()["data_centers"], [{"id": 2, "name": "EU"}])
+        self.assertEqual(response.json()["catalog_items"], [{"id": "100", "name": "A"}, {"id": "200", "name": "B"}])
+        self.assertEqual(response.json()["templates"], [{"id": 11, "name": "Ubuntu"}, {"id": 12, "name": "Debian"}])
+        self.assertEqual(response.json()["data_centers"], [{"id": 1, "name": "US"}, {"id": 2, "name": "EU"}])

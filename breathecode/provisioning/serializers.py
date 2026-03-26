@@ -540,6 +540,11 @@ def validate_vendor_settings(vendor_name: str, vendor_settings: Dict[str, Any], 
     if slug != "hostinger":
         return settings
 
+    # Allow creating/updating a Hostinger academy config before the allowlists are filled.
+    # The VPS request flow will enforce that allowlists exist and are non-empty at request-time.
+    if not settings:
+        return settings
+
     allowed_keys = {"item_ids", "template_ids", "data_center_ids"}
     unknown = sorted(set(settings.keys()) - allowed_keys)
     if unknown:

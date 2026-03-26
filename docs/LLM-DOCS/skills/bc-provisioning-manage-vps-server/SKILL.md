@@ -20,7 +20,7 @@ Use this skill when the user asks to **request a VPS**, **list my VPSs**, **get 
 
 1. **Student: list my VPSs.** Call `GET /v1/provisioning/me/vps`. Use returned `id` values for details.
 
-2. **Academy staff: fetch allowed vendor options first (when vendor requires selection).** Call `GET /v1/provisioning/academy/provisioningacademy/<provisioning_academy_id>/vendor-options` with `Authorization` and `Academy: <academy_id>`. Use returned `catalog_items`, `templates`, and `data_centers` to build selectable options in UI. Do not offer options outside this response.
+2. **Academy staff: fetch Hostinger vendor options (unfiltered universe) first (when vendor requires selection).** Call `GET /v1/provisioning/academy/provisioningacademy/<provisioning_academy_id>/vendor-options` with `Authorization` and `Academy: <academy_id>`. Use returned `catalog_items`, `templates`, and `data_centers` to present choices and save only the allowed ones into the academy config (`vendor_settings`). VPS requests must use `vendor_selection` values that match the configured allowlists.
 
 3. **Student: request a new VPS.** Call `POST /v1/provisioning/me/vps` with optional `plan_slug` and optional nested `vendor_selection`. For Hostinger, `vendor_selection` supports `item_id`, `template_id`, `data_center_id`. Values must be from the allowlists configured in academy `vendor_settings`.
 
@@ -44,7 +44,7 @@ Use this skill when the user asks to **request a VPS**, **list my VPSs**, **get 
 | List academy VPSs | GET | `/v1/provisioning/academy/vps` | `Authorization`, `Academy: <academy_id>` | Optional: `?user_id=<user_id>` | List of VPSs for academy (no root_password). |
 | Request VPS for student | POST | `/v1/provisioning/academy/vps` | `Authorization`, `Academy: <academy_id>` | `user_id` required; optional `plan_slug` and nested `vendor_selection`. | 202 Accepted, VPS object (no root_password). |
 | Deprovision VPS | DELETE | `/v1/provisioning/academy/vps/<vps_id>` | `Authorization`, `Academy: <academy_id>` | — | 204 No Content. |
-| Get academy vendor options | GET | `/v1/provisioning/academy/provisioningacademy/<provisioning_academy_id>/vendor-options` | `Authorization`, `Academy: <academy_id>` | — | Allowed `catalog_items`, `templates`, `data_centers` for that academy vendor config. |
+| Get academy vendor options | GET | `/v1/provisioning/academy/provisioningacademy/<provisioning_academy_id>/vendor-options` | `Authorization`, `Academy: <academy_id>` | — | Unfiltered `catalog_items`, `templates`, `data_centers` from the vendor account for that academy config. |
 
 **Request a VPS — request (POST `/v1/provisioning/me/vps`):**
 ```json
@@ -96,13 +96,16 @@ Later the VPS may move to `ACTIVE` or `ERROR`; use GET to fetch updated details 
 ```json
 {
   "catalog_items": [
-    {"id": "12345", "name": "KVM 2"}
+    {"id": "12345", "name": "KVM 2"},
+    {"id": "67890", "name": "KVM 4"}
   ],
   "templates": [
-    {"id": 101, "name": "Ubuntu 24.04", "operating_system": "linux"}
+    {"id": 101, "name": "Ubuntu 24.04", "operating_system": "linux"},
+    {"id": 102, "name": "Debian 12", "operating_system": "linux"}
   ],
   "data_centers": [
-    {"id": 7, "name": "US East"}
+    {"id": 7, "name": "US East"},
+    {"id": 8, "name": "US West"}
   ]
 }
 ```

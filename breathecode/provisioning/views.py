@@ -94,12 +94,56 @@ def _build_vendor_selection(vendor_name, vendor_settings, request_data, lang):
     allowed_templates = _normalize_allowed_values(vendor_settings, "template_ids", int)
     allowed_data_centers = _normalize_allowed_values(vendor_settings, "data_center_ids", int)
 
+    # Do not allow the vendor client to "guess" defaults. We require explicit
+    # allowlists to be configured before provisioning starts.
+    if not allowed_items or not allowed_templates or not allowed_data_centers:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Hostinger vendor allowlists are not configured for this academy. Please set item_ids, template_ids, and data_center_ids first.",
+                es="Las allowlists de Hostinger no estan configuradas para esta academia. Primero configura item_ids, template_ids y data_center_ids.",
+                slug="hostinger-vendor-allowlists-missing",
+            ),
+            code=400,
+        )
+
     if not selected_item and len(allowed_items) == 1:
         selected_item = next(iter(allowed_items))
     if selected_template is None and len(allowed_templates) == 1:
         selected_template = next(iter(allowed_templates))
     if selected_data_center is None and len(allowed_data_centers) == 1:
         selected_data_center = next(iter(allowed_data_centers))
+
+    if not selected_item:
+        raise ValidationException(
+            translation(
+                lang,
+                en="item_id is required (must be one of the configured item_ids).",
+                es="Se requiere item_id (debe estar dentro de los item_ids configurados).",
+                slug="invalid-vps-item-id-required",
+            ),
+            code=400,
+        )
+    if selected_template is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="template_id is required (must be one of the configured template_ids).",
+                es="Se requiere template_id (debe estar dentro de los template_ids configurados).",
+                slug="invalid-vps-template-id-required",
+            ),
+            code=400,
+        )
+    if selected_data_center is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="data_center_id is required (must be one of the configured data_center_ids).",
+                es="Se requiere data_center_id (debe estar dentro de los data_center_ids configurados).",
+                slug="invalid-vps-data-center-id-required",
+            ),
+            code=400,
+        )
 
     if selected_item and selected_item not in allowed_items:
         raise ValidationException(
@@ -133,12 +177,9 @@ def _build_vendor_selection(vendor_name, vendor_settings, request_data, lang):
         )
 
     payload = {}
-    if selected_item:
-        payload["item_id"] = selected_item
-    if selected_template is not None:
-        payload["template_id"] = int(selected_template)
-    if selected_data_center is not None:
-        payload["data_center_id"] = int(selected_data_center)
+    payload["item_id"] = selected_item
+    payload["template_id"] = int(selected_template)
+    payload["data_center_id"] = int(selected_data_center)
     return payload
 
 
@@ -1211,7 +1252,7 @@ class ProvisioningAcademyByIdView(APIView):
 
 
 class ProvisioningAcademyVendorOptionsView(APIView):
-    """GET vendor options for one provisioning academy filtered by academy allowlists."""
+    """GET vendor options for one provisioning academy (unfiltered universe)."""
 
     @capable_of("crud_provisioning_activity")
     def get(self, request, academy_id=None, provisioning_academy_id=None):
@@ -1243,13 +1284,6 @@ class ProvisioningAcademyVendorOptionsView(APIView):
             )
 
         options = _get_hostinger_vendor_options(pa.credentials_token, lang)
-        allowed_items = _normalize_allowed_values(pa.vendor_settings or {}, "item_ids", lambda value: str(value).strip())
-        allowed_templates = _normalize_allowed_values(pa.vendor_settings or {}, "template_ids", int)
-        allowed_data_centers = _normalize_allowed_values(pa.vendor_settings or {}, "data_center_ids", int)
-        options["catalog_items"] = [x for x in options["catalog_items"] if x.get("id") in allowed_items]
-        options["templates"] = [x for x in options["templates"] if x.get("id") in allowed_templates]
-        options["data_centers"] = [x for x in options["data_centers"] if x.get("id") in allowed_data_centers]
-
         return Response(options)
 
 
