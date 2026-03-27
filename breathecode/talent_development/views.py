@@ -85,6 +85,17 @@ def apply_academy_filter(queryset, request, academy_id, academy_field="academy")
         return queryset
 
 
+def get_visible_career_paths(request, academy_id):
+    """Career paths visible under academy/shared rules for current request."""
+    return apply_academy_filter(CareerPath.objects.all(), request, academy_id)
+
+
+def get_visible_career_stages(request, academy_id):
+    """Career stages visible through their career_path academy ownership."""
+    visible_paths = get_visible_career_paths(request, academy_id)
+    return CareerStage.objects.filter(career_path_id__in=visible_paths.values_list("id", flat=True))
+
+
 def assert_mutable_career_path(request, lang, career_path, academy_id):
     """Enforce global vs academy-owned rules for mutating a CareerPath (and nested stages)."""
     if career_path.academy is None:
@@ -721,7 +732,11 @@ class SkillsView(APIView, GenerateLookupsMixin):
         handler = self.extensions(request)
         lang = get_user_language(request)
 
-        items = Skill.objects.all()
+        visible_paths = get_visible_career_paths(request, academy_id)
+        visible_stages = get_visible_career_stages(request, academy_id)
+        visible_stage_ids = visible_stages.values_list("id", flat=True)
+
+        items = Skill.objects.filter(stage_skills__stage_id__in=visible_stage_ids).distinct()
 
         # Filter by skill domains (comma-separated slugs)
         skill_domains = request.GET.get("skill_domains")
@@ -763,6 +778,7 @@ class SkillsView(APIView, GenerateLookupsMixin):
             if parsed_stage_ids:
                 stage_skill_ids = (
                     StageSkill.objects.filter(stage_id__in=parsed_stage_ids)
+                    .filter(stage_id__in=visible_stage_ids)
                     .values_list("skill_id", flat=True)
                     .distinct()
                 )
@@ -786,7 +802,7 @@ class SkillsView(APIView, GenerateLookupsMixin):
                 else:
                     parsed_names.append(raw)
 
-            path_qs = CareerPath.objects.all()
+            path_qs = visible_paths
             if parsed_ids:
                 path_qs = path_qs.filter(id__in=parsed_ids)
             if parsed_names:
@@ -812,7 +828,8 @@ class SkillsView(APIView, GenerateLookupsMixin):
                 # Get competencies through: JobRole -> CareerPath -> CareerStage -> StageCompetency -> Competency
                 # Then get skills through: Competency -> CompetencySkill -> Skill
                 stage_competencies = StageCompetency.objects.filter(
-                    stage__career_path__job_role__slug__in=role_slugs
+                    stage__career_path__job_role__slug__in=role_slugs,
+                    stage_id__in=visible_stage_ids,
                 )
                 competency_ids = stage_competencies.values_list("competency_id", flat=True).distinct()
                 competency_skills = CompetencySkill.objects.filter(competency_id__in=competency_ids)
@@ -838,7 +855,10 @@ class CompetenciesView(APIView, GenerateLookupsMixin):
         handler = self.extensions(request)
         lang = get_user_language(request)
 
-        items = Competency.objects.all()
+        visible_stages = get_visible_career_stages(request, academy_id)
+        visible_stage_ids = visible_stages.values_list("id", flat=True)
+
+        items = Competency.objects.filter(stage_assignments__stage_id__in=visible_stage_ids).distinct()
 
         # Filter by technologies (comma-separated, matches if any technology is in the field)
         technologies = request.GET.get("technologies")
@@ -859,7 +879,8 @@ class CompetenciesView(APIView, GenerateLookupsMixin):
             if role_slugs:
                 # Get competencies through: JobRole -> CareerPath -> CareerStage -> StageCompetency -> Competency
                 stage_competencies = StageCompetency.objects.filter(
-                    stage__career_path__job_role__slug__in=role_slugs
+                    stage__career_path__job_role__slug__in=role_slugs,
+                    stage_id__in=visible_stage_ids,
                 )
                 competency_ids = stage_competencies.values_list("competency_id", flat=True).distinct()
                 items = items.filter(id__in=competency_ids)
@@ -1211,7 +1232,10 @@ class SkillDomainsView(APIView, GenerateLookupsMixin):
         handler = self.extensions(request)
         lang = get_user_language(request)
 
-        items = SkillDomain.objects.all()
+        visible_stages = get_visible_career_stages(request, academy_id)
+        visible_stage_ids = visible_stages.values_list("id", flat=True)
+
+        items = SkillDomain.objects.filter(skills__stage_skills__stage_id__in=visible_stage_ids).distinct()
 
         items = handler.queryset(items)
         serializer = SkillDomainSerializer(items, many=True)
@@ -1317,7 +1341,10 @@ class SkillKnowledgeItemsView(APIView, GenerateLookupsMixin):
         handler = self.extensions(request)
         lang = get_user_language(request)
 
-        items = SkillKnowledgeItem.objects.all()
+        visible_stages = get_visible_career_stages(request, academy_id)
+        visible_stage_ids = visible_stages.values_list("id", flat=True)
+
+        items = SkillKnowledgeItem.objects.filter(skill__stage_skills__stage_id__in=visible_stage_ids).distinct()
 
         # Filter by skill (comma-separated slugs)
         skill_slugs = request.GET.get("skill")
@@ -1344,7 +1371,10 @@ class SkillAttitudeTagsView(APIView, GenerateLookupsMixin):
         handler = self.extensions(request)
         lang = get_user_language(request)
 
-        items = SkillAttitudeTag.objects.all()
+        visible_stages = get_visible_career_stages(request, academy_id)
+        visible_stage_ids = visible_stages.values_list("id", flat=True)
+
+        items = SkillAttitudeTag.objects.filter(skill__stage_skills__stage_id__in=visible_stage_ids).distinct()
 
         # Filter by skill (comma-separated slugs)
         skill_slugs = request.GET.get("skill")
