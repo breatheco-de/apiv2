@@ -4,6 +4,7 @@ from .views import (
     CareerPathByIdView,
     CareerPathsView,
     CareerStageByPathView,
+    CareerStagesView,
     CareerStagesByPathView,
     CompetenciesView,
     CompetencyByIdView,
@@ -62,6 +63,7 @@ urlpatterns = [
         CareerStagesByPathView.as_view(),
         name="academy_career_path_id_career_stage",
     ),
+    path("academy/career_stage", CareerStagesView.as_view(), name="academy_career_stage"),
     path("academy/career_path/<int:career_path_id>", CareerPathByIdView.as_view(), name="academy_career_path_id"),
     path("academy/career_path", CareerPathsView.as_view(), name="academy_career_path"),
 ]

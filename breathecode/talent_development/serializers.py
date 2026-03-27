@@ -408,6 +408,25 @@ class CareerStageSmallSerializer(serpy.Serializer):
     goal = serpy.Field()
     description = serpy.Field()
 
+class CareerStageListSerializer(serpy.Serializer):
+    id = serpy.Field()
+    sequence = serpy.Field()
+    title = serpy.Field()
+    goal = serpy.Field()
+    description = serpy.Field()
+    career_path = serpy.MethodField()
+
+    def get_career_path(self, obj):
+        return {
+            "id": obj.career_path.id,
+            "name": obj.career_path.name,
+            "job_role": {
+                "id": obj.career_path.job_role.id,
+                "slug": obj.career_path.job_role.slug,
+                "name": obj.career_path.job_role.name,
+            },
+        }
+
 
 class SkillSerializer(serpy.Serializer):
     id = serpy.Field()

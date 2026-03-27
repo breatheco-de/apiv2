@@ -29,6 +29,7 @@ from .serializers import (
     CareerPathSerializer,
     CareerPathWithStagesSerializer,
     CareerStageCreateSerializer,
+    CareerStageListSerializer,
     CareerStageSmallSerializer,
     CompetencyDetailSerializer,
     CompetencySerializer,
@@ -752,6 +753,57 @@ class SkillsView(APIView, GenerateLookupsMixin):
                 skill_ids = competency_skills.values_list("skill_id", flat=True).distinct()
                 items = items.filter(id__in=skill_ids)
 
+        # Filter by stages (comma-separated stage ids)
+        stage_ids = request.GET.get("stage_ids")
+        if stage_ids:
+            parsed_stage_ids = []
+            for raw in [x.strip() for x in stage_ids.split(",") if x.strip()]:
+                if raw.isdigit():
+                    parsed_stage_ids.append(int(raw))
+            if parsed_stage_ids:
+                stage_skill_ids = (
+                    StageSkill.objects.filter(stage_id__in=parsed_stage_ids)
+                    .values_list("skill_id", flat=True)
+                    .distinct()
+                )
+                items = items.filter(id__in=stage_skill_ids)
+
+        # Filter by career paths (ids and/or names)
+        career_path_ids_param = request.GET.get("career_path_ids")
+        career_paths_param = request.GET.get("career_paths")
+        if career_path_ids_param or career_paths_param:
+            candidate_values = []
+            if career_path_ids_param:
+                candidate_values.extend([x.strip() for x in career_path_ids_param.split(",") if x.strip()])
+            if career_paths_param:
+                candidate_values.extend([x.strip() for x in career_paths_param.split(",") if x.strip()])
+
+            parsed_ids = []
+            parsed_names = []
+            for raw in candidate_values:
+                if raw.isdigit():
+                    parsed_ids.append(int(raw))
+                else:
+                    parsed_names.append(raw)
+
+            path_qs = CareerPath.objects.all()
+            if parsed_ids:
+                path_qs = path_qs.filter(id__in=parsed_ids)
+            if parsed_names:
+                path_qs = path_qs.filter(name__in=parsed_names)
+
+            career_path_ids = list(path_qs.values_list("id", flat=True).distinct())
+            if career_path_ids:
+                stage_ids_for_paths = CareerStage.objects.filter(career_path_id__in=career_path_ids).values_list(
+                    "id", flat=True
+                )
+                path_skill_ids = (
+                    StageSkill.objects.filter(stage_id__in=stage_ids_for_paths)
+                    .values_list("skill_id", flat=True)
+                    .distinct()
+                )
+                items = items.filter(id__in=path_skill_ids)
+
         # Filter by job roles (comma-separated slugs)
         job_roles = request.GET.get("job_roles")
         if job_roles:
@@ -865,6 +917,25 @@ class CareerPathsView(APIView, GenerateLookupsMixin):
         items = CareerPath.objects.filter()
         items = apply_academy_filter(items, request, academy_id)
 
+        # Filter by job roles (supports ids and slugs, comma-separated)
+        job_role_ids = request.GET.get("job_role_ids")
+        job_roles = request.GET.get("job_roles")
+        if job_role_ids or job_roles:
+            parsed_role_ids = []
+            if job_role_ids:
+                for raw in [x.strip() for x in job_role_ids.split(",") if x.strip()]:
+                    if raw.isdigit():
+                        parsed_role_ids.append(int(raw))
+
+            role_slugs = []
+            if job_roles:
+                role_slugs = [x.strip() for x in job_roles.split(",") if x.strip()]
+
+            if parsed_role_ids:
+                items = items.filter(job_role_id__in=parsed_role_ids)
+            if role_slugs:
+                items = items.filter(job_role__slug__in=role_slugs)
+
         items = handler.queryset(items)
         serializer = CareerPathWithStagesSerializer(items, many=True)
 
@@ -958,6 +1029,51 @@ class CareerStagesByPathView(APIView):
             )
 
         return Response(CareerStageSmallSerializer(stage, many=False).data, status=status.HTTP_201_CREATED)
+
+
+class CareerStagesView(APIView, GenerateLookupsMixin):
+    """
+    List career stages with optional filters by career path and job role.
+    """
+
+    extensions = APIViewExtensions(sort="sequence", paginate=True)
+
+    @capable_of("read_career_path")
+    def get(self, request, academy_id=None):
+        handler = self.extensions(request)
+
+        items = CareerStage.objects.select_related("career_path", "career_path__job_role").filter()
+        items = apply_academy_filter(items, request, academy_id, academy_field="career_path__academy")
+
+        # Filter by career paths (ids, comma-separated)
+        career_path_ids = request.GET.get("career_path_ids")
+        if career_path_ids:
+            parsed_path_ids = []
+            for raw in [x.strip() for x in career_path_ids.split(",") if x.strip()]:
+                if raw.isdigit():
+                    parsed_path_ids.append(int(raw))
+            if parsed_path_ids:
+                items = items.filter(career_path_id__in=parsed_path_ids)
+
+        # Filter by job roles (supports ids and slugs, comma-separated)
+        job_role_ids = request.GET.get("job_role_ids")
+        job_roles = request.GET.get("job_roles")
+        if job_role_ids:
+            parsed_role_ids = []
+            for raw in [x.strip() for x in job_role_ids.split(",") if x.strip()]:
+                if raw.isdigit():
+                    parsed_role_ids.append(int(raw))
+            if parsed_role_ids:
+                items = items.filter(career_path__job_role_id__in=parsed_role_ids)
+
+        if job_roles:
+            role_slugs = [x.strip() for x in job_roles.split(",") if x.strip()]
+            if role_slugs:
+                items = items.filter(career_path__job_role__slug__in=role_slugs)
+
+        items = handler.queryset(items)
+        serializer = CareerStageListSerializer(items, many=True)
+        return handler.response(serializer.data)
 
 
 class CareerStageByPathView(APIView):
