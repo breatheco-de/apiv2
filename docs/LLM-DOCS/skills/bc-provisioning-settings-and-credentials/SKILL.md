@@ -45,7 +45,7 @@ After credentials/settings are in place, when the user actually requests a VPS y
 To configure Hostinger allowlists, staff should first fetch the full set of vendor options by calling:
 `GET /v1/provisioning/academy/provisioningacademy/<provisioning_academy_id>/vendor-options`.
 
-For Hostinger, this `vendor-options` response returns the full (unfiltered) universe of options from the vendor account (catalog items, templates, and data centers).
+For Hostinger, this `vendor-options` response returns the full (unfiltered) universe of options from the vendor account (catalog items, templates, and data centers) as raw vendor payload objects (not reduced to only `id`/`name`).
 
 Then select which IDs are allowed and store them in the provisioning academy config (`vendor_settings`: `item_ids`, `template_ids`, `data_center_ids`). VPS provisioning will fail until these allowlists are non-empty.
 

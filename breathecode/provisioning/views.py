@@ -211,23 +211,26 @@ def _get_hostinger_vendor_options(token: str, lang: str):
                 code=400,
             )
 
+    # Hostinger SDK returns plain lists for these endpoints.
+    data_centers = dc_response if isinstance(dc_response, list) else []
+    templates = template_response if isinstance(template_response, list) else []
+    catalog_items = catalog_response if isinstance(catalog_response, list) else []
+
+    def _serialize_hostinger_item(item):
+        if hasattr(item, "model_dump"):
+            return item.model_dump()
+        if hasattr(item, "to_dict"):
+            return item.to_dict()
+        if isinstance(item, dict):
+            return item
+        if hasattr(item, "__dict__"):
+            return {k: v for k, v in item.__dict__.items() if not k.startswith("_")}
+        return item
+
     return {
-        "data_centers": [
-            {"id": getattr(x, "id", None), "name": getattr(x, "name", "")}
-            for x in (getattr(dc_response, "data", None) or [])
-        ],
-        "templates": [
-            {
-                "id": getattr(x, "id", None),
-                "name": getattr(x, "name", ""),
-                "operating_system": getattr(x, "operating_system", None),
-            }
-            for x in (getattr(template_response, "data", None) or [])
-        ],
-        "catalog_items": [
-            {"id": str(getattr(x, "id", None) or getattr(x, "item_id", "") or ""), "name": getattr(x, "name", "")}
-            for x in (getattr(catalog_response, "data", None) or [])
-        ],
+        "data_centers": [_serialize_hostinger_item(x) for x in data_centers],
+        "templates": [_serialize_hostinger_item(x) for x in templates],
+        "catalog_items": [_serialize_hostinger_item(x) for x in catalog_items],
     }
 
 

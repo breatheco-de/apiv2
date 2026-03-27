@@ -44,7 +44,7 @@ Use this skill when the user asks to **request a VPS**, **list my VPSs**, **get 
 | List academy VPSs | GET | `/v1/provisioning/academy/vps` | `Authorization`, `Academy: <academy_id>` | Optional: `?user_id=<user_id>` | List of VPSs for academy (no root_password). |
 | Request VPS for student | POST | `/v1/provisioning/academy/vps` | `Authorization`, `Academy: <academy_id>` | `user_id` required; optional `plan_slug` and nested `vendor_selection`. | 202 Accepted, VPS object (no root_password). |
 | Deprovision VPS | DELETE | `/v1/provisioning/academy/vps/<vps_id>` | `Authorization`, `Academy: <academy_id>` | — | 204 No Content. |
-| Get academy vendor options | GET | `/v1/provisioning/academy/provisioningacademy/<provisioning_academy_id>/vendor-options` | `Authorization`, `Academy: <academy_id>` | — | Unfiltered `catalog_items`, `templates`, `data_centers` from the vendor account for that academy config. |
+| Get academy vendor options | GET | `/v1/provisioning/academy/provisioningacademy/<provisioning_academy_id>/vendor-options` | `Authorization`, `Academy: <academy_id>` | — | Unfiltered `catalog_items`, `templates`, `data_centers` from the vendor account for that academy config, returned as raw vendor payload objects. |
 
 **Request a VPS — request (POST `/v1/provisioning/me/vps`):**
 ```json
@@ -96,16 +96,32 @@ Later the VPS may move to `ACTIVE` or `ERROR`; use GET to fetch updated details 
 ```json
 {
   "catalog_items": [
-    {"id": "12345", "name": "KVM 2"},
-    {"id": "67890", "name": "KVM 4"}
+    {
+      "id": "hostingercom-vps-kvm1",
+      "name": "KVM 1",
+      "category": "VPS",
+      "metadata": {"cpus": "1", "memory": "4096", "bandwidth": "4096000", "disk_space": "51200", "network": "300"},
+      "prices": [
+        {"id": "hostingercom-vps-kvm1-usd-1m", "name": "KVM 1 (billed every month)", "currency": "USD", "price": 1949, "first_period_price": 999, "period": 1, "period_unit": "month"}
+      ]
+    }
   ],
   "templates": [
-    {"id": 101, "name": "Ubuntu 24.04", "operating_system": "linux"},
-    {"id": 102, "name": "Debian 12", "operating_system": "linux"}
+    {
+      "id": 1007,
+      "name": "Ubuntu 22.04 LTS",
+      "description": "Ubuntu is a complete Linux operating system...",
+      "documentation": null
+    }
   ],
   "data_centers": [
-    {"id": 7, "name": "US East"},
-    {"id": 8, "name": "US West"}
+    {
+      "id": 11,
+      "name": "bnk",
+      "location": "lt",
+      "city": "Vilnius",
+      "continent": "Europe"
+    }
   ]
 }
 ```
