@@ -10,7 +10,7 @@ import secrets
 import string
 from typing import Any, Dict, Optional
 
-from breathecode.provisioning.vps_client import VPSProvisioningError, register_vps_client
+from breathecode.provisioning.utils.vps_client import VPSProvisioningError, register_vps_client
 
 logger = logging.getLogger(__name__)
 
@@ -157,3 +157,27 @@ class HostingerVPSClient:
                 subs_api.cancel_subscription_v1(subscription_id)
             except ApiException as e:
                 raise VPSProvisioningError(f"Hostinger destroy VPS failed: {e}") from e
+
+    def test_connection(self, credentials: Dict[str, Any]) -> None:
+        """Validate Hostinger credentials by reading basic catalog endpoints."""
+        token = credentials.get("token") or credentials.get("access_token")
+        if not token:
+            raise VPSProvisioningError("Hostinger credentials missing token")
+
+        try:
+            import hostinger_api
+            from hostinger_api.rest import ApiException
+        except ImportError as e:
+            raise VPSProvisioningError("Hostinger API SDK not installed") from e
+
+        configuration = hostinger_api.Configuration(access_token=token)
+        with hostinger_api.ApiClient(configuration) as api_client:
+            try:
+                dc_api = hostinger_api.VPSDataCentersApi(api_client)
+                template_api = hostinger_api.VPSOSTemplatesApi(api_client)
+                catalog_api = hostinger_api.BillingCatalogApi(api_client)
+                dc_api.get_data_center_list_v1()
+                template_api.get_templates_v1()
+                catalog_api.get_catalog_item_list_v1(category="VPS")
+            except ApiException as e:
+                raise VPSProvisioningError(f"Hostinger connection failed: {e}") from e

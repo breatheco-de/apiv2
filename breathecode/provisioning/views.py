@@ -12,6 +12,7 @@ from dateutil.relativedelta import relativedelta
 from django.contrib.auth import get_user_model
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.parsers import FileUploadParser, MultiPartParser
 from rest_framework.renderers import JSONRenderer
@@ -68,6 +69,9 @@ from .models import (
     ProvisioningVPS,
     ProvisioningVendor,
 )
+from .utils.coding_editor_client import CodingEditorConnectionError, get_coding_editor_client
+from .utils.llm_client import LLMConnectionError, get_llm_client
+from .utils.vps_client import VPSProvisioningError, get_vps_client
 
 
 def _normalize_allowed_values(settings, key, cast):
@@ -1285,6 +1289,91 @@ class ProvisioningAcademyVendorOptionsView(APIView):
 
         options = _get_hostinger_vendor_options(pa.credentials_token, lang)
         return Response(options)
+
+
+class ProvisioningAcademyTestConnectionView(APIView):
+    """POST test vendor API connection and persist status fields."""
+
+    @capable_of("crud_provisioning_activity")
+    def post(self, request, academy_id=None, provisioning_academy_id=None):
+        lang = get_user_language(request)
+        pa = ProvisioningAcademy.objects.filter(id=provisioning_academy_id, academy_id=academy_id).select_related("vendor").first()
+        if not pa:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Provisioning academy config not found.",
+                    es="Configuración de aprovisionamiento de academia no encontrada.",
+                    slug="provisioning-academy-not-found",
+                ),
+                code=404,
+            )
+
+        vendor = pa.vendor
+        vendor_name = getattr(vendor, "name", "") if vendor else ""
+        credentials = {"token": pa.credentials_token or ""}
+        if pa.credentials_key:
+            credentials["key"] = pa.credentials_key
+        if pa.vendor_settings:
+            credentials.update(pa.vendor_settings)
+
+        try:
+            if not vendor:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Provisioning vendor not found for this academy config.",
+                        es="No se encontró el vendor de aprovisionamiento para esta configuración de academia.",
+                        slug="provisioning-vendor-not-found",
+                    ),
+                    code=400,
+                )
+
+            vendor_type = getattr(vendor, "vendor_type", None)
+            if vendor_type == ProvisioningVendor.VendorType.VPS_SERVER:
+                client = get_vps_client(vendor)
+                if not client:
+                    raise VPSProvisioningError(f"No VPS client registered for vendor '{vendor_name}'")
+                client.test_connection(credentials)
+            elif vendor_type == ProvisioningVendor.VendorType.CODING_EDITOR:
+                client = get_coding_editor_client(vendor)
+                if not client:
+                    raise CodingEditorConnectionError(f"No coding editor client registered for vendor '{vendor_name}'")
+                client.test_connection(credentials, vendor=vendor)
+            elif vendor_type == ProvisioningVendor.VendorType.LLM:
+                client = get_llm_client(vendor)
+                if not client:
+                    raise LLMConnectionError(f"No LLM client registered for vendor '{vendor_name}'")
+                client.test_connection(credentials, vendor=vendor)
+            else:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Unsupported vendor type '{vendor_type}'.",
+                        es=f"Tipo de vendor no soportado '{vendor_type}'.",
+                        slug="unsupported-vendor-type",
+                    ),
+                    code=400,
+                )
+
+            pa.connection_status = ProvisioningAcademy.ConnectionStatus.OK
+            pa.connection_status_text = translation(
+                lang,
+                en="Vendor connection check succeeded.",
+                es="La verificación de conexión del vendor fue exitosa.",
+                slug="vendor-connection-check-succeeded",
+            )
+        except (VPSProvisioningError, CodingEditorConnectionError, LLMConnectionError, ValidationException, Exception) as e:
+            pa.connection_status = ProvisioningAcademy.ConnectionStatus.ERROR
+            if isinstance(e, ValidationException):
+                pa.connection_status_text = str(e.detail)
+            else:
+                pa.connection_status_text = str(e)
+
+        pa.connection_test_at = timezone.now()
+        pa.save()
+        serializer = GetProvisioningAcademySerializer(pa)
+        return Response(serializer.data)
 
 
 class MeVPSView(APIView):

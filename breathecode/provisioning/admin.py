@@ -36,9 +36,9 @@ class ProvisioningMachineTypesAdmin(admin.ModelAdmin):
 
 @admin.register(ProvisioningAcademy)
 class ProvisioningAcademyAdmin(admin.ModelAdmin):
-    list_display = ["academy", "vendor", "created_at"]
+    list_display = ["academy", "vendor", "connection_status", "connection_test_at", "created_at"]
     search_fields = ("academy__name", "academy__slug")
-    list_filter = ["vendor"]
+    list_filter = ["vendor", "connection_status"]
 
 
 @admin.register(ProvisioningConsumptionKind)

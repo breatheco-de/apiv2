@@ -26,7 +26,7 @@ from breathecode.provisioning.models import (
     ProvisioningUserConsumption,
     ProvisioningVPS,
 )
-from breathecode.provisioning.vps_client import VPSProvisioningError, get_vps_client
+from breathecode.provisioning.utils.vps_client import VPSProvisioningError, get_vps_client
 from breathecode.services.google_cloud.storage import Storage
 from breathecode.utils.decorators import TaskPriority
 from breathecode.utils.encryption import encrypt

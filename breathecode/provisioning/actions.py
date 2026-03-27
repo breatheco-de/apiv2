@@ -40,7 +40,7 @@ from .models import (
     ProvisioningVendor,
     ProvisioningVPS,
 )
-from .vps_client import get_vps_client
+from .utils.vps_client import get_vps_client
 
 logger = getLogger(__name__)
 

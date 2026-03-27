@@ -78,6 +78,7 @@ class ContainerMeBigSerializer(serpy.Serializer):
 class GetProvisioningVendorSerializer(serpy.Serializer):
     id = serpy.Field()
     name = serpy.Field()
+    vendor_type = serpy.Field()
     workspaces_url = serpy.Field()
     settings_schema = serpy.MethodField()
 
@@ -450,6 +451,9 @@ class GetProvisioningAcademySerializer(serpy.Serializer):
     academy_id = serpy.Field()
     credentials_set = serpy.MethodField()
     vendor_settings = serpy.Field()
+    connection_status = serpy.Field()
+    connection_status_text = serpy.Field()
+    connection_test_at = serpy.Field()
     container_idle_timeout = serpy.Field()
     max_active_containers = serpy.Field()
     created_at = serpy.Field()
