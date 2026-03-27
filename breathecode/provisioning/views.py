@@ -38,6 +38,7 @@ from breathecode.provisioning.serializers import (
     GetProvisioningVendorSerializer,
     ProvisioningAcademyCreateSerializer,
     ProvisioningAcademyUpdateSerializer,
+    resolve_allowed_machine_types_for_vendor,
     ProvisioningBillHTMLSerializer,
     ProvisioningBillSerializer,
     ProvisioningProfileCreateUpdateSerializer,
@@ -87,6 +88,8 @@ def _normalize_allowed_values(settings, key, cast):
 
 def _build_vendor_selection(vendor_name, vendor_settings, request_data, lang):
     slug = (vendor_name or "").lower().strip()
+    if slug == "digitalocean":
+        return _build_digitalocean_vendor_selection(vendor_settings, request_data, lang)
     if slug != "hostinger":
         return {}
 
@@ -187,6 +190,102 @@ def _build_vendor_selection(vendor_name, vendor_settings, request_data, lang):
     return payload
 
 
+def _build_digitalocean_vendor_selection(vendor_settings, request_data, lang):
+    vendor_selection = request_data.get("vendor_selection") or {}
+    selected_region = (vendor_selection.get("region_slug") or "").strip() or None
+    selected_size = (vendor_selection.get("size_slug") or "").strip() or None
+    selected_image = (vendor_selection.get("image_slug") or "").strip() or None
+    allowed_regions = _normalize_allowed_values(vendor_settings, "region_slugs", lambda value: str(value).strip())
+    allowed_sizes = _normalize_allowed_values(vendor_settings, "size_slugs", lambda value: str(value).strip())
+    allowed_images = _normalize_allowed_values(vendor_settings, "image_slugs", lambda value: str(value).strip())
+
+    if not allowed_regions or not allowed_sizes or not allowed_images:
+        raise ValidationException(
+            translation(
+                lang,
+                en="DigitalOcean vendor allowlists are not configured for this academy. Please set region_slugs, size_slugs, and image_slugs first.",
+                es="Las allowlists de DigitalOcean no estan configuradas para esta academia. Primero configura region_slugs, size_slugs y image_slugs.",
+                slug="digitalocean-vendor-allowlists-missing",
+            ),
+            code=400,
+        )
+
+    if not selected_region and len(allowed_regions) == 1:
+        selected_region = next(iter(allowed_regions))
+    if not selected_size and len(allowed_sizes) == 1:
+        selected_size = next(iter(allowed_sizes))
+    if not selected_image and len(allowed_images) == 1:
+        selected_image = next(iter(allowed_images))
+
+    if not selected_region:
+        raise ValidationException(
+            translation(
+                lang,
+                en="region_slug is required (must be one of the configured region_slugs).",
+                es="Se requiere region_slug (debe estar dentro de los region_slugs configurados).",
+                slug="invalid-vps-region-slug-required",
+            ),
+            code=400,
+        )
+    if not selected_size:
+        raise ValidationException(
+            translation(
+                lang,
+                en="size_slug is required (must be one of the configured size_slugs).",
+                es="Se requiere size_slug (debe estar dentro de los size_slugs configurados).",
+                slug="invalid-vps-size-slug-required",
+            ),
+            code=400,
+        )
+    if not selected_image:
+        raise ValidationException(
+            translation(
+                lang,
+                en="image_slug is required (must be one of the configured image_slugs).",
+                es="Se requiere image_slug (debe estar dentro de los image_slugs configurados).",
+                slug="invalid-vps-image-slug-required",
+            ),
+            code=400,
+        )
+
+    if selected_region not in allowed_regions:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Selected region_slug is not allowed for this academy.",
+                es="El region_slug seleccionado no esta permitido para esta academia.",
+                slug="invalid-vps-region-slug",
+            ),
+            code=400,
+        )
+    if selected_size not in allowed_sizes:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Selected size_slug is not allowed for this academy.",
+                es="El size_slug seleccionado no esta permitido para esta academia.",
+                slug="invalid-vps-size-slug",
+            ),
+            code=400,
+        )
+    if selected_image not in allowed_images:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Selected image_slug is not allowed for this academy.",
+                es="El image_slug seleccionado no esta permitido para esta academia.",
+                slug="invalid-vps-image-slug",
+            ),
+            code=400,
+        )
+
+    return {
+        "region_slug": selected_region,
+        "size_slug": selected_size,
+        "image_slug": selected_image,
+    }
+
+
 def _get_hostinger_vendor_options(token: str, lang: str):
     import hostinger_api
     from hostinger_api.rest import ApiException
@@ -232,6 +331,24 @@ def _get_hostinger_vendor_options(token: str, lang: str):
         "templates": [_serialize_hostinger_item(x) for x in templates],
         "catalog_items": [_serialize_hostinger_item(x) for x in catalog_items],
     }
+
+
+def _get_digitalocean_vendor_options(token: str, lang: str):
+    from breathecode.provisioning.utils.vps_client import VPSProvisioningError
+    from breathecode.services.digitalocean.client import fetch_vendor_options
+
+    try:
+        return fetch_vendor_options(token)
+    except VPSProvisioningError as e:
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Cannot fetch DigitalOcean options: {e}",
+                es=f"No se pudieron obtener las opciones de DigitalOcean: {e}",
+                slug="digitalocean-options-fetch-failed",
+            ),
+            code=400,
+        )
 
 
 @private_view()
@@ -1148,7 +1265,6 @@ class ProvisioningAcademyView(APIView):
                 ),
                 code=400,
             )
-        from .models import ProvisioningMachineTypes
 
         pa = ProvisioningAcademy.objects.create(
             academy_id=academy_id,
@@ -1160,9 +1276,8 @@ class ProvisioningAcademyView(APIView):
             max_active_containers=data.get("max_active_containers", 2),
         )
         if data.get("allowed_machine_type_ids"):
-            machine_types = ProvisioningMachineTypes.objects.filter(
-                id__in=data["allowed_machine_type_ids"],
-                vendor=vendor,
+            machine_types = resolve_allowed_machine_types_for_vendor(
+                vendor, data["allowed_machine_type_ids"], lang=lang
             )
             pa.allowed_machine_types.set(machine_types)
         out = GetProvisioningAcademySerializer(pa)
@@ -1227,11 +1342,8 @@ class ProvisioningAcademyByIdView(APIView):
         if "max_active_containers" in data:
             pa.max_active_containers = data["max_active_containers"]
         if "allowed_machine_type_ids" in data:
-            from .models import ProvisioningMachineTypes
-
-            machine_types = ProvisioningMachineTypes.objects.filter(
-                id__in=data["allowed_machine_type_ids"],
-                vendor=pa.vendor,
+            machine_types = resolve_allowed_machine_types_for_vendor(
+                pa.vendor, data["allowed_machine_type_ids"], lang=lang
             )
             pa.allowed_machine_types.set(machine_types)
         pa.save()
@@ -1277,8 +1389,17 @@ class ProvisioningAcademyVendorOptionsView(APIView):
             )
 
         vendor_slug = (getattr(pa.vendor, "name", "") or "").lower().strip()
-        if vendor_slug != "hostinger":
-            return Response({"catalog_items": [], "templates": [], "data_centers": []})
+        if vendor_slug not in ("hostinger", "digitalocean"):
+            return Response(
+                {
+                    "catalog_items": [],
+                    "templates": [],
+                    "data_centers": [],
+                    "regions": [],
+                    "sizes": [],
+                    "images": [],
+                }
+            )
         if not pa.credentials_token:
             raise ValidationException(
                 translation(
@@ -1290,7 +1411,10 @@ class ProvisioningAcademyVendorOptionsView(APIView):
                 code=400,
             )
 
-        options = _get_hostinger_vendor_options(pa.credentials_token, lang)
+        if vendor_slug == "hostinger":
+            options = _get_hostinger_vendor_options(pa.credentials_token, lang)
+            return Response(options)
+        options = _get_digitalocean_vendor_options(pa.credentials_token, lang)
         return Response(options)
 
 

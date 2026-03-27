@@ -71,6 +71,66 @@ class AcademyVPSViewTestSuite(ProvisioningTestCase):
                 lang="en",
             )
 
+    @patch("breathecode.provisioning.views.get_vps_provisioning_academy_for_academy")
+    def test_academy_vps_post_digitalocean_vendor_selection(self, provisioning_academy_mock):
+        staff_model = self.bc.database.create(
+            user=1,
+            profile_academy=1,
+            role=1,
+            capability="crud_provisioning_activity",
+            academy=1,
+            provisioning_vendor=1,
+        )
+        provisioning_academy = self.bc.database.create(provisioning_academy=1).provisioning_academy
+        provisioning_academy.vendor = staff_model.provisioning_vendor
+        provisioning_academy.vendor.name = "digitalocean"
+        provisioning_academy.vendor.save()
+        provisioning_academy.vendor_settings = {
+            "region_slugs": ["nyc1"],
+            "size_slugs": ["s-1vcpu-1gb"],
+            "image_slugs": ["ubuntu-22-04-x64"],
+        }
+        provisioning_academy.save()
+        provisioning_academy_mock.return_value = (staff_model.academy, provisioning_academy)
+        student_model = self.bc.database.create(user=1)
+        student = student_model.user
+        with patch("breathecode.provisioning.views.request_vps_for_student") as mock_request:
+            mock_vps = ProvisioningVPS(
+                id=2,
+                user=student,
+                academy=staff_model.academy,
+                vendor=staff_model.provisioning_vendor,
+                status=ProvisioningVPS.VPS_STATUS_PENDING,
+            )
+            mock_request.return_value = mock_vps
+            self.client.force_authenticate(staff_model.user)
+            self.headers(academy=staff_model.academy.id)
+            url = reverse_lazy("provisioning:academy_vps")
+            response = self.client.post(
+                url,
+                {
+                    "user_id": student.id,
+                    "vendor_selection": {
+                        "region_slug": "nyc1",
+                        "size_slug": "s-1vcpu-1gb",
+                        "image_slug": "ubuntu-22-04-x64",
+                    },
+                },
+                format="json",
+            )
+            self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+            mock_request.assert_called_once_with(
+                student,
+                staff_model.academy,
+                plan_slug=None,
+                vendor_selection={
+                    "region_slug": "nyc1",
+                    "size_slug": "s-1vcpu-1gb",
+                    "image_slug": "ubuntu-22-04-x64",
+                },
+                lang="en",
+            )
+
     def test_academy_vps_post_user_not_found(self):
         model = self.bc.database.create(
             user=1,

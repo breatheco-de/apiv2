@@ -11,6 +11,7 @@ from .models import (
     ProvisioningAcademy,
     ProvisioningBill,
     ProvisioningContainer,
+    ProvisioningMachineTypes,
     ProvisioningProfile,
     ProvisioningVPS,
     ProvisioningVendor,
@@ -397,13 +398,19 @@ class VPSDetailSerializer(serpy.Serializer):
             return None
 
 
+class VendorSelectionSerializer(serializers.Serializer):
+    """Hostinger: item_id, template_id, data_center_id. DigitalOcean: region_slug, size_slug, image_slug."""
+
+    item_id = serializers.CharField(required=False, allow_blank=False, max_length=100)
+    template_id = serializers.IntegerField(required=False, min_value=1)
+    data_center_id = serializers.IntegerField(required=False, min_value=1)
+    region_slug = serializers.CharField(required=False, allow_blank=False, max_length=255)
+    size_slug = serializers.CharField(required=False, allow_blank=False, max_length=255)
+    image_slug = serializers.CharField(required=False, allow_blank=False, max_length=255)
+
+
 class VPSRequestSerializer(serializers.Serializer):
     """Request body for POST me/vps (optional plan_slug)."""
-
-    class VendorSelectionSerializer(serializers.Serializer):
-        item_id = serializers.CharField(required=False, allow_blank=False, max_length=100)
-        template_id = serializers.IntegerField(required=False, min_value=1)
-        data_center_id = serializers.IntegerField(required=False, min_value=1)
 
     plan_slug = serializers.CharField(required=False, allow_blank=True, max_length=100)
     vendor_selection = VendorSelectionSerializer(required=False)
@@ -411,11 +418,6 @@ class VPSRequestSerializer(serializers.Serializer):
 
 class AcademyVPSCreateSerializer(serializers.Serializer):
     """Request body for POST academy/vps (staff provisions VPS for a student)."""
-
-    class VendorSelectionSerializer(serializers.Serializer):
-        item_id = serializers.CharField(required=False, allow_blank=False, max_length=100)
-        template_id = serializers.IntegerField(required=False, min_value=1)
-        data_center_id = serializers.IntegerField(required=False, min_value=1)
 
     user_id = serializers.IntegerField(required=True, min_value=1)
     plan_slug = serializers.CharField(required=False, allow_blank=True, max_length=100)
@@ -441,6 +443,61 @@ class AcademyVPSListSerializer(serpy.Serializer):
 
 
 # --- Provisioning academy (credentials and settings) ---
+
+
+class MachineTypeIdentifierField(serializers.Field):
+    """Integer PK or string slug for ``ProvisioningMachineTypes`` (JSON may send either)."""
+
+    def to_internal_value(self, data):
+        if isinstance(data, bool):
+            raise serializers.ValidationError("Invalid value.")
+        if isinstance(data, int):
+            if data < 1:
+                raise serializers.ValidationError("A valid positive integer is required.")
+            return data
+        if isinstance(data, str):
+            s = data.strip()
+            if not s:
+                raise serializers.ValidationError("This field may not be blank.")
+            if s.isdigit():
+                return int(s)
+            return s
+        raise serializers.ValidationError("Must be a positive integer or a non-empty string slug.")
+
+
+def resolve_allowed_machine_types_for_vendor(vendor, identifiers, *, lang: str):
+    """
+    Map ``allowed_machine_type_ids`` values (ints or slugs) to instances for ``vendor``.
+
+    Raises ``ValidationException`` if any identifier is unknown for that vendor.
+    """
+    if not identifiers:
+        return []
+    found: list[ProvisioningMachineTypes] = []
+    seen: set[int] = set()
+    missing: list = []
+    for ident in identifiers:
+        if isinstance(ident, int):
+            mt = ProvisioningMachineTypes.objects.filter(id=ident, vendor=vendor).first()
+        else:
+            mt = ProvisioningMachineTypes.objects.filter(slug=ident, vendor=vendor).first()
+        if not mt:
+            missing.append(ident)
+            continue
+        if mt.id not in seen:
+            seen.add(mt.id)
+            found.append(mt)
+    if missing:
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Unknown machine type(s) for this vendor: {missing!r}. Use numeric id or slug.",
+                es=f"Tipo(s) de máquina desconocido(s) para este vendor: {missing!r}. Use id numérico o slug.",
+                slug="unknown-provisioning-machine-type",
+            ),
+            code=400,
+        )
+    return found
 
 
 class GetProvisioningAcademySerializer(serpy.Serializer):
@@ -473,7 +530,7 @@ class ProvisioningAcademyCreateSerializer(serializers.Serializer):
     container_idle_timeout = serializers.IntegerField(required=False, default=15, min_value=1)
     max_active_containers = serializers.IntegerField(required=False, default=2, min_value=1)
     allowed_machine_type_ids = serializers.ListField(
-        child=serializers.IntegerField(),
+        child=MachineTypeIdentifierField(),
         required=False,
         allow_empty=True,
         default=list,
@@ -489,7 +546,7 @@ class ProvisioningAcademyUpdateSerializer(serializers.Serializer):
     container_idle_timeout = serializers.IntegerField(required=False, min_value=1)
     max_active_containers = serializers.IntegerField(required=False, min_value=1)
     allowed_machine_type_ids = serializers.ListField(
-        child=serializers.IntegerField(),
+        child=MachineTypeIdentifierField(),
         required=False,
         allow_empty=True,
     )
@@ -497,34 +554,59 @@ class ProvisioningAcademyUpdateSerializer(serializers.Serializer):
 
 def get_vendor_settings_schema(vendor_name: str) -> Dict[str, Any]:
     slug = (vendor_name or "").lower().strip()
-    if slug != "hostinger":
-        return {"fields": []}
-
-    return {
-        "fields": [
-            {
-                "key": "item_ids",
-                "label": "Allowed catalog item IDs",
-                "type": "list[string]",
-                "required": True,
-                "help_text": "Allowed Hostinger VPS catalog items for this academy.",
-            },
-            {
-                "key": "template_ids",
-                "label": "Allowed template IDs",
-                "type": "list[integer]",
-                "required": True,
-                "help_text": "Allowed Hostinger OS template IDs for this academy.",
-            },
-            {
-                "key": "data_center_ids",
-                "label": "Allowed data center IDs",
-                "type": "list[integer]",
-                "required": True,
-                "help_text": "Allowed Hostinger data center IDs for this academy.",
-            },
-        ]
-    }
+    if slug == "hostinger":
+        return {
+            "fields": [
+                {
+                    "key": "item_ids",
+                    "label": "Allowed catalog item IDs",
+                    "type": "list[string]",
+                    "required": True,
+                    "help_text": "Allowed Hostinger VPS catalog items for this academy.",
+                },
+                {
+                    "key": "template_ids",
+                    "label": "Allowed template IDs",
+                    "type": "list[integer]",
+                    "required": True,
+                    "help_text": "Allowed Hostinger OS template IDs for this academy.",
+                },
+                {
+                    "key": "data_center_ids",
+                    "label": "Allowed data center IDs",
+                    "type": "list[integer]",
+                    "required": True,
+                    "help_text": "Allowed Hostinger data center IDs for this academy.",
+                },
+            ]
+        }
+    if slug == "digitalocean":
+        return {
+            "fields": [
+                {
+                    "key": "region_slugs",
+                    "label": "Allowed region slugs",
+                    "type": "list[string]",
+                    "required": True,
+                    "help_text": "Allowed DigitalOcean region slugs for this academy.",
+                },
+                {
+                    "key": "size_slugs",
+                    "label": "Allowed size slugs",
+                    "type": "list[string]",
+                    "required": True,
+                    "help_text": "Allowed DigitalOcean droplet size slugs for this academy.",
+                },
+                {
+                    "key": "image_slugs",
+                    "label": "Allowed image slugs",
+                    "type": "list[string]",
+                    "required": True,
+                    "help_text": "Allowed DigitalOcean distribution image slugs for this academy.",
+                },
+            ]
+        }
+    return {"fields": []}
 
 
 def validate_vendor_settings(vendor_name: str, vendor_settings: Dict[str, Any], *, lang: str = "en") -> Dict[str, Any]:
@@ -541,15 +623,75 @@ def validate_vendor_settings(vendor_name: str, vendor_settings: Dict[str, Any], 
             code=400,
         )
 
-    if slug != "hostinger":
+    if slug not in ("hostinger", "digitalocean"):
         return settings
 
-    # Allow creating/updating a Hostinger academy config before the allowlists are filled.
+    # Allow creating/updating an academy config before the allowlists are filled.
     # The VPS request flow will enforce that allowlists exist and are non-empty at request-time.
     if not settings:
         return settings
 
-    allowed_keys = {"item_ids", "template_ids", "data_center_ids"}
+    if slug == "hostinger":
+        allowed_keys = {"item_ids", "template_ids", "data_center_ids"}
+        unknown = sorted(set(settings.keys()) - allowed_keys)
+        if unknown:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Unknown vendor_settings keys: {', '.join(unknown)}.",
+                    es=f"Claves desconocidas en vendor_settings: {', '.join(unknown)}.",
+                    slug="invalid-vendor-settings-keys",
+                ),
+                code=400,
+            )
+
+        def _require_list(key: str, cast):
+            values = settings.get(key)
+            if values is None or not isinstance(values, list) or len(values) == 0:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"{key} must be a non-empty list.",
+                        es=f"{key} debe ser una lista no vacia.",
+                        slug="invalid-vendor-settings-value",
+                    ),
+                    code=400,
+                )
+            normalized = []
+            for value in values:
+                try:
+                    casted = cast(value)
+                except (TypeError, ValueError):
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en=f"{key} contains an invalid value: {value}.",
+                            es=f"{key} contiene un valor invalido: {value}.",
+                            slug="invalid-vendor-settings-value",
+                        ),
+                        code=400,
+                    )
+                normalized.append(casted)
+            settings[key] = sorted(set(normalized))
+
+        _require_list("item_ids", lambda v: str(v).strip())
+        if any(not x for x in settings["item_ids"]):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="item_ids cannot contain blank values.",
+                    es="item_ids no puede contener valores vacios.",
+                    slug="invalid-vendor-settings-value",
+                ),
+                code=400,
+            )
+
+        _require_list("template_ids", int)
+        _require_list("data_center_ids", int)
+        return settings
+
+    # digitalocean
+    allowed_keys = {"region_slugs", "size_slugs", "image_slugs"}
     unknown = sorted(set(settings.keys()) - allowed_keys)
     if unknown:
         raise ValidationException(
@@ -562,7 +704,7 @@ def validate_vendor_settings(vendor_name: str, vendor_settings: Dict[str, Any], 
             code=400,
         )
 
-    def _require_list(key: str, cast):
+    def _require_str_list(key: str):
         values = settings.get(key)
         if values is None or not isinstance(values, list) or len(values) == 0:
             raise ValidationException(
@@ -577,7 +719,7 @@ def validate_vendor_settings(vendor_name: str, vendor_settings: Dict[str, Any], 
         normalized = []
         for value in values:
             try:
-                casted = cast(value)
+                casted = str(value).strip()
             except (TypeError, ValueError):
                 raise ValidationException(
                     translation(
@@ -591,18 +733,37 @@ def validate_vendor_settings(vendor_name: str, vendor_settings: Dict[str, Any], 
             normalized.append(casted)
         settings[key] = sorted(set(normalized))
 
-    _require_list("item_ids", lambda v: str(v).strip())
-    if any(not x for x in settings["item_ids"]):
+    _require_str_list("region_slugs")
+    if any(not x for x in settings["region_slugs"]):
         raise ValidationException(
             translation(
                 lang,
-                en="item_ids cannot contain blank values.",
-                es="item_ids no puede contener valores vacios.",
+                en="region_slugs cannot contain blank values.",
+                es="region_slugs no puede contener valores vacios.",
                 slug="invalid-vendor-settings-value",
             ),
             code=400,
         )
-
-    _require_list("template_ids", int)
-    _require_list("data_center_ids", int)
+    _require_str_list("size_slugs")
+    if any(not x for x in settings["size_slugs"]):
+        raise ValidationException(
+            translation(
+                lang,
+                en="size_slugs cannot contain blank values.",
+                es="size_slugs no puede contener valores vacios.",
+                slug="invalid-vendor-settings-value",
+            ),
+            code=400,
+        )
+    _require_str_list("image_slugs")
+    if any(not x for x in settings["image_slugs"]):
+        raise ValidationException(
+            translation(
+                lang,
+                en="image_slugs cannot contain blank values.",
+                es="image_slugs no puede contener valores vacios.",
+                slug="invalid-vendor-settings-value",
+            ),
+            code=400,
+        )
     return settings

@@ -282,6 +282,58 @@ class AcademyProvisioningAcademyTestSuite(ProvisioningTestCase):
         response = self.client.post(url, data=payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_post_create_digitalocean_vendor_settings(self):
+        model = self.bc.database.create(
+            user=1,
+            profile_academy=1,
+            role=1,
+            capability="crud_provisioning_activity",
+            provisioning_vendor=1,
+        )
+        model.provisioning_vendor.name = "digitalocean"
+        model.provisioning_vendor.save()
+        self.client.force_authenticate(model.user)
+        self.headers(academy=1)
+        url = reverse_lazy("provisioning:academy_provisioning_academy")
+        payload = {
+            "vendor_id": model.provisioning_vendor.id,
+            "credentials_token": "token123",
+            "vendor_settings": {
+                "region_slugs": ["nyc1", "sfo3"],
+                "size_slugs": ["s-1vcpu-1gb"],
+                "image_slugs": ["ubuntu-22-04-x64"],
+            },
+        }
+        response = self.client.post(url, data=payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.json()["vendor_settings"]["region_slugs"], ["nyc1", "sfo3"])
+
+    def test_post_create_invalid_digitalocean_vendor_settings_key(self):
+        model = self.bc.database.create(
+            user=1,
+            profile_academy=1,
+            role=1,
+            capability="crud_provisioning_activity",
+            provisioning_vendor=1,
+        )
+        model.provisioning_vendor.name = "digitalocean"
+        model.provisioning_vendor.save()
+        self.client.force_authenticate(model.user)
+        self.headers(academy=1)
+        url = reverse_lazy("provisioning:academy_provisioning_academy")
+        payload = {
+            "vendor_id": model.provisioning_vendor.id,
+            "credentials_token": "token123",
+            "vendor_settings": {
+                "unknown": ["x"],
+                "region_slugs": ["nyc1"],
+                "size_slugs": ["s-1vcpu-1gb"],
+                "image_slugs": ["ubuntu-22-04-x64"],
+            },
+        }
+        response = self.client.post(url, data=payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
     @patch("breathecode.provisioning.views._get_hostinger_vendor_options")
     def test_get_vendor_options_returns_all_hostinger_options(self, options_mock):
         options_mock.return_value = {
@@ -320,6 +372,45 @@ class AcademyProvisioningAcademyTestSuite(ProvisioningTestCase):
         self.assertEqual(response.json()["catalog_items"], [{"id": "100", "name": "A"}, {"id": "200", "name": "B"}])
         self.assertEqual(response.json()["templates"], [{"id": 11, "name": "Ubuntu"}, {"id": 12, "name": "Debian"}])
         self.assertEqual(response.json()["data_centers"], [{"id": 1, "name": "US"}, {"id": 2, "name": "EU"}])
+
+    @patch("breathecode.provisioning.views._get_digitalocean_vendor_options")
+    def test_get_vendor_options_returns_all_digitalocean_options(self, options_mock):
+        options_mock.return_value = {
+            "regions": [{"slug": "nyc1", "name": "NYC 1"}],
+            "sizes": [{"slug": "s-1vcpu-1gb"}],
+            "images": [{"slug": "ubuntu-22-04-x64", "distribution": "Ubuntu"}],
+        }
+        model = self.bc.database.create(
+            user=1,
+            profile_academy=1,
+            role=1,
+            capability="crud_provisioning_activity",
+            provisioning_vendor=1,
+            provisioning_academy=1,
+        )
+        model.provisioning_vendor.name = "digitalocean"
+        model.provisioning_vendor.save()
+        model.provisioning_academy.academy_id = model.profile_academy.academy_id
+        model.provisioning_academy.vendor = model.provisioning_vendor
+        model.provisioning_academy.credentials_token = "tok"
+        model.provisioning_academy.vendor_settings = {
+            "region_slugs": ["nyc1"],
+            "size_slugs": ["s-1vcpu-1gb"],
+            "image_slugs": ["ubuntu-22-04-x64"],
+        }
+        model.provisioning_academy.save()
+
+        self.client.force_authenticate(model.user)
+        self.headers(academy=model.profile_academy.academy_id)
+        url = reverse_lazy(
+            "provisioning:academy_provisioning_academy_vendor_options",
+            kwargs={"provisioning_academy_id": model.provisioning_academy.id},
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["regions"], [{"slug": "nyc1", "name": "NYC 1"}])
+        self.assertEqual(response.json()["sizes"], [{"slug": "s-1vcpu-1gb"}])
+        self.assertEqual(response.json()["images"], [{"slug": "ubuntu-22-04-x64", "distribution": "Ubuntu"}])
 
     @patch("breathecode.provisioning.views.get_coding_editor_client")
     def test_post_test_connection_codespaces_success(self, get_coding_editor_client_mock):
@@ -448,3 +539,61 @@ class AcademyProvisioningAcademyTestSuite(ProvisioningTestCase):
         self.assertEqual(response.json()["connection_status"], ProvisioningAcademy.ConnectionStatus.ERROR)
         self.assertIn("Hostinger credentials missing token", response.json()["connection_status_text"])
         self.assertIsNotNone(response.json()["connection_test_at"])
+
+    @patch("breathecode.provisioning.views.get_vps_client")
+    def test_post_test_connection_digitalocean_success(self, get_vps_client_mock):
+        vps_client = type("VPSClientMock", (), {"test_connection": lambda *args, **kwargs: None})()
+        get_vps_client_mock.return_value = vps_client
+        model = self.bc.database.create(
+            user=1,
+            profile_academy=1,
+            role=1,
+            capability="crud_provisioning_activity",
+            provisioning_vendor=1,
+            provisioning_academy=1,
+        )
+        model.provisioning_vendor.name = "digitalocean"
+        model.provisioning_vendor.vendor_type = "VPS_SERVER"
+        model.provisioning_vendor.save()
+        model.provisioning_academy.academy_id = model.profile_academy.academy_id
+        model.provisioning_academy.vendor = model.provisioning_vendor
+        model.provisioning_academy.credentials_token = "do-token"
+        model.provisioning_academy.save()
+
+        self.client.force_authenticate(model.user)
+        self.headers(academy=model.profile_academy.academy_id)
+        url = reverse_lazy(
+            "provisioning:academy_provisioning_academy_test_connection",
+            kwargs={"provisioning_academy_id": model.provisioning_academy.id},
+        )
+        response = self.client.post(url, data={}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["connection_status"], ProvisioningAcademy.ConnectionStatus.OK)
+
+    def test_post_test_connection_digitalocean_error_when_missing_token(self):
+        model = self.bc.database.create(
+            user=1,
+            profile_academy=1,
+            role=1,
+            capability="crud_provisioning_activity",
+            provisioning_vendor=1,
+            provisioning_academy=1,
+        )
+        model.provisioning_vendor.name = "digitalocean"
+        model.provisioning_vendor.vendor_type = "VPS_SERVER"
+        model.provisioning_vendor.save()
+        model.provisioning_academy.academy_id = model.profile_academy.academy_id
+        model.provisioning_academy.vendor = model.provisioning_vendor
+        model.provisioning_academy.credentials_token = ""
+        model.provisioning_academy.save()
+
+        self.client.force_authenticate(model.user)
+        self.headers(academy=model.profile_academy.academy_id)
+        url = reverse_lazy(
+            "provisioning:academy_provisioning_academy_test_connection",
+            kwargs={"provisioning_academy_id": model.provisioning_academy.id},
+        )
+        response = self.client.post(url, data={}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["connection_status"], ProvisioningAcademy.ConnectionStatus.ERROR)
+        self.assertIn("DigitalOcean credentials missing token", response.json()["connection_status_text"])

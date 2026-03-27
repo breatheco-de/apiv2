@@ -443,6 +443,7 @@ def provision_vps_task(provisioning_vps_id: int, vendor_selection: dict | None =
         credentials.update(provisioning_academy.vendor_settings)
     if vendor_selection:
         credentials.update(vendor_selection)
+    credentials["provisioning_vps_id"] = provisioning_vps_id
     client = get_vps_client(vps.vendor)
     if not client:
         _vps_fail(vps, "No VPS client registered for vendor %s", vps.vendor.name if vps.vendor else "?")
