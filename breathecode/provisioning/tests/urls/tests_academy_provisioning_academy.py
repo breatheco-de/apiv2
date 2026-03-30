@@ -9,7 +9,7 @@ from django.urls import reverse_lazy
 from django.utils import timezone
 from rest_framework import status
 
-from breathecode.provisioning.models import ProvisioningAcademy
+from breathecode.provisioning.models import ProvisioningAcademy, ProvisioningVendor
 
 from ..mixins import ProvisioningTestCase
 
@@ -56,6 +56,68 @@ class AcademyProvisioningAcademyTestSuite(ProvisioningTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json(), [])
+
+    def test_get_list_filter_by_vendor_type(self):
+        model = self.bc.database.create(
+            user=1,
+            profile_academy=1,
+            role=1,
+            capability="read_provisioning_activity",
+            provisioning_vendor=1,
+            provisioning_academy=1,
+        )
+        academy_id = model.profile_academy.academy_id
+        v_vps = model.provisioning_vendor
+        v_vps.vendor_type = ProvisioningVendor.VendorType.VPS_SERVER
+        v_vps.save()
+        pa_vps = model.provisioning_academy
+        pa_vps.academy_id = academy_id
+        pa_vps.vendor = v_vps
+        pa_vps.save()
+
+        v_editor = ProvisioningVendor.objects.create(
+            name="GitpodFilterTest",
+            vendor_type=ProvisioningVendor.VendorType.CODING_EDITOR,
+            workspaces_url="https://gitpod.example.com",
+        )
+        pa_editor = ProvisioningAcademy.objects.create(
+            academy_id=academy_id,
+            vendor=v_editor,
+            credentials_token="t",
+            credentials_key="",
+        )
+
+        self.client.force_authenticate(model.user)
+        self.headers(academy=1)
+        url = reverse_lazy("provisioning:academy_provisioning_academy")
+
+        r_all = self.client.get(url)
+        self.assertEqual(r_all.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(r_all.json()), 2)
+
+        r_vps = self.client.get(url, {"vendor_type": "vps_server"})
+        self.assertEqual(r_vps.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(r_vps.json()), 1)
+        self.assertEqual(r_vps.json()[0]["id"], pa_vps.id)
+        self.assertEqual(r_vps.json()[0]["vendor"]["vendor_type"], ProvisioningVendor.VendorType.VPS_SERVER)
+
+        r_editor = self.client.get(url, {"vendor_type": "CODING_EDITOR"})
+        self.assertEqual(r_editor.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(r_editor.json()), 1)
+        self.assertEqual(r_editor.json()[0]["id"], pa_editor.id)
+
+    def test_get_list_invalid_vendor_type_query(self):
+        model = self.bc.database.create(
+            user=1,
+            profile_academy=1,
+            role=1,
+            capability="read_provisioning_activity",
+        )
+        self.client.force_authenticate(model.user)
+        self.headers(academy=1)
+        url = reverse_lazy("provisioning:academy_provisioning_academy")
+        response = self.client.get(url, {"vendor_type": "not-a-real-type"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_post_create_success(self):
         model = self.bc.database.create(
