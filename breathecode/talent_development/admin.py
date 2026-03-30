@@ -13,7 +13,7 @@ class CareerPathInline(admin.TabularInline):
 class JobRoleInline(admin.TabularInline):
     model = models.JobRole
     extra = 0
-    fields = ("name", "is_active")
+    fields = ("slug", "name", "description", "is_active")
     show_change_link = True
 
 
@@ -40,7 +40,7 @@ class JobRoleAdmin(admin.ModelAdmin):
     ordering = ("name",)
     readonly_fields = ("created_at", "updated_at")
     fieldsets = (
-        (None, {"fields": ("name", "job_family", "description", "is_active")}),
+        (None, {"fields": ("slug", "name", "job_family", "description", "is_active")}),
         ("Timestamps", {"fields": ("created_at", "updated_at")}),
     )
 
