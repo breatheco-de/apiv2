@@ -29,7 +29,7 @@ from breathecode.provisioning.models import (
     ProvisioningUserConsumption,
     ProvisioningVPS,
 )
-from breathecode.provisioning.vps_client import VPSProvisioningError, get_vps_client
+from breathecode.provisioning.utils.vps_client import VPSProvisioningError, get_vps_client
 from breathecode.services.google_cloud.storage import Storage
 from breathecode.utils.decorators import TaskPriority
 from breathecode.utils.encryption import encrypt
@@ -416,7 +416,7 @@ def archive_provisioning_bill(bill_id: int, **_: Any):
 
 
 @task(priority=TaskPriority.STUDENT.value)
-def provision_vps_task(provisioning_vps_id: int, **_: Any):
+def provision_vps_task(provisioning_vps_id: int, vendor_selection: dict | None = None, **_: Any):
     """
     Provision a VPS via the vendor API. On success: update model, encrypt password, send email.
     On failure: reimburse consumable and set status ERROR.
@@ -440,6 +440,11 @@ def provision_vps_task(provisioning_vps_id: int, **_: Any):
     credentials = {"token": provisioning_academy.credentials_token or ""}
     if provisioning_academy.credentials_key:
         credentials["key"] = provisioning_academy.credentials_key
+    if provisioning_academy.vendor_settings:
+        credentials.update(provisioning_academy.vendor_settings)
+    if vendor_selection:
+        credentials.update(vendor_selection)
+    credentials["provisioning_vps_id"] = provisioning_vps_id
     client = get_vps_client(vps.vendor)
     if not client:
         _vps_fail(vps, "No VPS client registered for vendor %s", vps.vendor.name if vps.vendor else "?")

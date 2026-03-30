@@ -270,6 +270,8 @@ class Service(AbstractAsset):
         JOIN_MENTORSHIP = ("JOIN_MENTORSHIP", "Join mentorship")
         READ_LESSON = ("READ_LESSON", "Read lesson")
         AI_INTERACTION = ("AI_INTERACTION", "AI Interaction")
+        VPS_SERVER = ("VPS_SERVER", "VPS server")
+        MONTHLY_LLM_BUDGET = ("MONTHLY_LLM_BUDGET", "Monthly LLM budget")
         NO_SET = ("NO_SET", "No set")
 
     groups = models.ManyToManyField(
@@ -284,7 +286,13 @@ class Service(AbstractAsset):
         default=None, null=True, blank=True, help_text="Session duration, used in consumption sessions"
     )
     type = models.CharField(max_length=22, choices=Type, default=Type.COHORT_SET, help_text="Service type")
-    consumer = models.CharField(max_length=15, choices=Consumer, default=Consumer.NO_SET, help_text="Service type")
+    consumer = models.CharField(
+        max_length=22,
+        choices=Consumer,
+        default=Consumer.NO_SET,
+        help_text="Several services can consume the same way; choosing a consumer is considered a good practice "
+        "to avoid service mismatch behaviors.",
+    )
     is_model_service = models.BooleanField(
         default=False,
         help_text="If true, this service will be considered a model service and will be suggested to all academies at setup time",

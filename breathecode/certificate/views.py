@@ -18,12 +18,17 @@ from breathecode.utils.api_view_extensions.extensions.lookup_extension import Q
 from breathecode.utils.decorators import has_permission
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 
-from .actions import generate_certificate
+from .actions import generate_certificate, get_syllabus_specialty_bucket_conflict
 from .models import Badge, LayoutDesign, Specialty, UserSpecialty
 from .serializers import BadgeSerializer, LayoutDesignSerializer, SpecialtySerializer, UserSpecialtySerializer
 from .tasks import async_generate_certificate
 
 logger = logging.getLogger(__name__)
+
+
+def _specialty_visible_to_academy_q(academy_id):
+    """Global specialties (no academy) or owned by this academy; never another academy's."""
+    return Q(academy__isnull=True) | Q(academy_id=academy_id)
 
 
 class AcademySpecialtiesView(APIView, GenerateLookupsMixin):
@@ -36,11 +41,13 @@ class AcademySpecialtiesView(APIView, GenerateLookupsMixin):
     def get(self, request, academy_id=None):
         handler = self.extensions(request)
 
-        # Include specialties linked via syllabi owned by academy OR owned by the academy
+        # Include specialties linked via syllabi owned by academy OR owned by the academy,
+        # but never specialties whose academy FK is another academy.
         # Exclude deleted specialties
         items = (
             Specialty.objects.filter(
-                Q(syllabuses__academy_owner=academy_id) | Q(academy_id=academy_id)
+                (Q(syllabuses__academy_owner=academy_id) | Q(academy_id=academy_id))
+                & _specialty_visible_to_academy_q(academy_id)
             )
             .exclude(status=Specialty.DELETED)
             .distinct()
@@ -129,7 +136,8 @@ class AcademySpecialtyByIdView(APIView):
         specialty = (
             Specialty.objects.filter(
                 Q(id=specialty_id),
-                Q(academy_id=academy_id) | Q(syllabuses__academy_owner=academy_id),
+                (Q(academy_id=academy_id) | Q(syllabuses__academy_owner=academy_id))
+                & _specialty_visible_to_academy_q(academy_id),
             )
             .exclude(status=Specialty.DELETED)
             .distinct()
@@ -191,7 +199,8 @@ class AcademySpecialtySyllabusView(APIView):
         specialty = (
             Specialty.objects.filter(
                 Q(id=specialty_id),
-                Q(academy_id=academy_id) | Q(syllabuses__academy_owner=academy_id),
+                (Q(academy_id=academy_id) | Q(syllabuses__academy_owner=academy_id))
+                & _specialty_visible_to_academy_q(academy_id),
             )
             .exclude(status=Specialty.DELETED)
             .distinct()
@@ -232,6 +241,17 @@ class AcademySpecialtySyllabusView(APIView):
             # Idempotent: already linked
             serializer = SpecialtySerializer(specialty, many=False)
             return Response(serializer.data, status=status.HTTP_200_OK)
+        conflict = get_syllabus_specialty_bucket_conflict(specialty, syllabus)
+        if conflict:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Another specialty already uses this syllabus for this scope (specialty id={conflict.slug}).",
+                    es="Otra especialidad ya usa este syllabus en este ámbito.",
+                ),
+                code=400,
+                slug="syllabus-specialty-already-linked",
+            )
         specialty.syllabuses.add(syllabus)
         serializer = SpecialtySerializer(specialty, many=False)
         return Response(serializer.data, status=status.HTTP_201_CREATED)

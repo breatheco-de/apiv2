@@ -508,11 +508,24 @@ def test_syllabus(syl, validate_assets=False, ignore=None, academy_id: int | Non
         syllabus_log.error("Syllabus must have a 'days' or 'modules' property")
         return syllabus_log
 
-    def validate(_type, _log, day, index):
+    root_slug = syl.get("slug")
+    root_version = syl.get("version")
+
+    def validate_assets_for_type(_type, _log, day, index, *, require_key: bool, partial_override: bool) -> None:
+        """Validate lessons/quizzes/replits/assignments on one module."""
         if _type not in day:
-            _log.error(f"Missing {_type} property on module {index}")
-            return False
-        for a in day[_type]:
+            if require_key:
+                _log.error(f"Missing {_type} property on module {index}")
+            return
+        assets = day[_type]
+        if not isinstance(assets, list):
+            _log.error(f"`{_type}` on module {index} must be a list")
+            return
+        for a in assets:
+            # In overrides, placeholders are allowed to keep position without changing base assets.
+            if partial_override and (a is None or a == {}):
+                continue
+
             if is_deleted_marker(a):
                 continue
 
@@ -521,6 +534,9 @@ def test_syllabus(syl, validate_assets=False, ignore=None, academy_id: int | Non
                 continue
 
             if "slug" not in a:
+                if partial_override and len(a.keys()) == 0:
+                    # `{}` is an explicit no-op placeholder.
+                    continue
                 _log.error(f"Missing slug on {_type} property on module {index}")
                 continue
             if not isinstance(a["slug"], str):
@@ -530,9 +546,14 @@ def test_syllabus(syl, validate_assets=False, ignore=None, academy_id: int | Non
                 exists = AssetAlias.objects.filter(slug=a["slug"]).first()
                 if exists is None and not ("target" in a and a["target"] == "blank"):
                     _log.error(f'Missing {_type} with slug {a["slug"]} on module {index}')
-        return True
 
-    def validate_days(days, source_label):
+    def validate_days(days, source_label, *, partial_override: bool = False):
+        """
+        Validate `days` arrays.
+
+        - Root syllabus: every module must define lessons, quizzes, replits, assignments (require_key=True).
+        - Reference overrides (`slug.vN`): sparse patches; only keys present on each module are validated.
+        """
         if not isinstance(days, list):
             syllabus_log.error(f"`days` must be a list on {source_label}")
             return
@@ -540,6 +561,7 @@ def test_syllabus(syl, validate_assets=False, ignore=None, academy_id: int | Non
         count = 0
         types_to_validate = ["lessons", "quizzes", "replits", "assignments"]
         types_to_validate = [a for a in types_to_validate if a not in ignore]
+        require_key = not partial_override
 
         for day in days:
             count += 1
@@ -548,20 +570,41 @@ def test_syllabus(syl, validate_assets=False, ignore=None, academy_id: int | Non
                 continue
 
             for _name in types_to_validate:
-                validate(_name, syllabus_log, day, count)
-            if "teacher_instructions" not in day or day["teacher_instructions"] == "":
-                syllabus_log.warn(f"Empty teacher instructions on module {count}")
+                validate_assets_for_type(
+                    _name,
+                    syllabus_log,
+                    day,
+                    count,
+                    require_key=require_key,
+                    partial_override=partial_override,
+                )
+
+            if partial_override:
+                if "teacher_instructions" in day and day["teacher_instructions"] == "":
+                    syllabus_log.warn(f"Empty teacher instructions on module {count} ({source_label})")
+            else:
+                if "teacher_instructions" not in day or day["teacher_instructions"] == "":
+                    syllabus_log.warn(f"Empty teacher instructions on module {count}")
             if len(syllabus_log.errors) > 11:
                 return
 
     if has_days:
-        validate_days(syl["days"], "root")
+        validate_days(syl["days"], "root", partial_override=False)
 
     for key in reference_keys:
         payload = syl.get(key)
         if not isinstance(payload, dict):
             syllabus_log.error(f"Reference `{key}` must be an object")
             continue
+
+        # Prevent self-references like `<slug>.v<version>` living inside the same syllabus json.
+        if isinstance(root_slug, str) and root_slug and root_version is not None:
+            try:
+                self_key = build_reference_key(root_slug, root_version)
+                if key == self_key:
+                    syllabus_log.error(f"Syllabus cannot override itself with reference `{key}`")
+            except Exception:
+                pass
 
         if _get_reference_syllabus_version(key, academy_id=academy_id) is None:
             syllabus_log.error(f"Missing referenced syllabus version `{key}`")
@@ -570,7 +613,7 @@ def test_syllabus(syl, validate_assets=False, ignore=None, academy_id: int | Non
             syllabus_log.error(f"Reference `{key}` must contain a `days` property")
             continue
 
-        validate_days(payload.get("days"), f"reference `{key}`")
+        validate_days(payload.get("days"), f"reference `{key}`", partial_override=True)
 
     return syllabus_log
 

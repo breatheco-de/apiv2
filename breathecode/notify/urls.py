@@ -50,6 +50,12 @@ Examples:
 from django.urls import path
 
 from .views import (
+    AcademySlackTeamCredentialsView,
+    AcademySlackTeamSyncChannelsView,
+    AcademySlackTeamSyncCohortView,
+    AcademySlackTeamSyncStatusView,
+    AcademySlackTeamSyncUserView,
+    AcademySlackTeamSyncUsersView,
     AcademyHookErrorsView,
     AcademyHooksView,
     AcademyNotifySettingsView,
@@ -91,6 +97,32 @@ urlpatterns = [
     path("slack/interaction", process_interaction),
     path("slack/command", slack_command, name="slack_command"),
     path("slack/team", SlackTeamsView.as_view(), name="slack_team"),
+    path(
+        "academy/slack/team/<int:team_id>/credentials",
+        AcademySlackTeamCredentialsView.as_view(),
+        name="academy_slack_team_id_credentials",
+    ),
+    path("academy/slack/team/<int:team_id>/sync/users", AcademySlackTeamSyncUsersView.as_view(), name="academy_slack_team_id_sync_users"),
+    path(
+        "academy/slack/team/<int:team_id>/sync/channels",
+        AcademySlackTeamSyncChannelsView.as_view(),
+        name="academy_slack_team_id_sync_channels",
+    ),
+    path(
+        "academy/slack/team/<int:team_id>/sync/status",
+        AcademySlackTeamSyncStatusView.as_view(),
+        name="academy_slack_team_id_sync_status",
+    ),
+    path(
+        "academy/slack/team/<int:team_id>/sync/user/<str:slack_user_id>",
+        AcademySlackTeamSyncUserView.as_view(),
+        name="academy_slack_team_id_sync_user_id",
+    ),
+    path(
+        "academy/slack/team/<int:team_id>/sync/cohort/<int:cohort_id>",
+        AcademySlackTeamSyncCohortView.as_view(),
+        name="academy_slack_team_id_sync_cohort_id",
+    ),
     # Webhook endpoints
     path("hook/event", get_hook_events, name="hook_event"),
     # Legacy endpoints (backward compatibility)

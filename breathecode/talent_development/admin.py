@@ -86,6 +86,14 @@ class CompetencySkillInline(admin.TabularInline):
     autocomplete_fields = ("skill",)
     fields = ("skill", "weight")
 
+class StageSkillInline(admin.TabularInline):
+    model = models.StageSkill
+    extra = 0
+    min_num = 1
+    validate_min = True
+    autocomplete_fields = ("stage",)
+    fields = ("stage", "required_level", "is_core")
+
 
 @admin.register(models.Competency)
 class CompetencyAdmin(admin.ModelAdmin):
@@ -109,6 +117,7 @@ class SkillAdmin(admin.ModelAdmin):
     list_filter = ("domain",)
     search_fields = ("name", "description")
     autocomplete_fields = ("domain",)
+    inlines = (StageSkillInline,)
     readonly_fields = ("created_at", "updated_at")
 
 

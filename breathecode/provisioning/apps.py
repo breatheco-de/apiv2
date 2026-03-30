@@ -23,3 +23,8 @@ class RegistryConfig(AppConfig):
             import breathecode.services.litellm.client  # noqa: F401
         except ImportError:
             pass
+
+        try:
+            import breathecode.services.digitalocean.client  # noqa: F401 - register DigitalOcean VPS client
+        except ImportError:
+            pass

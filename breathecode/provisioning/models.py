@@ -13,7 +13,18 @@ logger = logging.getLogger(__name__)
 
 
 class ProvisioningVendor(models.Model):
+    class VendorType(models.TextChoices):
+        CODING_EDITOR = "CODING_EDITOR", "Coding Editor"
+        VPS_SERVER = "VPS_SERVER", "VPS Server"
+        LLM = "LLM", "LLM"
+
     name = models.CharField(max_length=200)
+    vendor_type = models.CharField(
+        max_length=20,
+        choices=VendorType.choices,
+        default=VendorType.CODING_EDITOR,
+        db_index=True,
+    )
     api_url = models.URLField(blank=True)
 
     workspaces_url = models.URLField(help_text="Points to the place were you can see all your containers")
@@ -67,10 +78,39 @@ class ProvisioningMachineTypes(models.Model):
 
 
 class ProvisioningAcademy(models.Model):
+    class ConnectionStatus(models.TextChoices):
+        UNTESTED = "UNTESTED", "Untested"
+        OK = "OK", "OK"
+        DEGRADED = "DEGRADED", "Degraded"
+        ERROR = "ERROR", "Error"
+
     vendor = models.ForeignKey(ProvisioningVendor, on_delete=models.SET_NULL, null=True, default=None)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     credentials_key = models.CharField(max_length=200, blank=True)
     credentials_token = models.CharField(max_length=200, blank=True)
+    vendor_settings = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Vendor-specific allowlists/settings (for example: item_ids, template_ids, data_center_ids).",
+    )
+
+    connection_status = models.CharField(
+        max_length=20,
+        choices=ConnectionStatus.choices,
+        default=ConnectionStatus.UNTESTED,
+        db_index=True,
+        help_text="Last known vendor API connection health (updated by connection checks).",
+    )
+    connection_status_text = models.CharField(
+        max_length=512,
+        blank=True,
+        help_text="Vendor or error detail for the last connection test.",
+    )
+    connection_test_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the last connection test was run.",
+    )
 
     container_idle_timeout = models.IntegerField(
         default=15, help_text="If the container is idle for X amount of minutes, it will be shut down"

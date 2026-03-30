@@ -46,6 +46,7 @@ This skill is the entry point for all BreatheCode API interactions. Its only job
 | **payments** | Billing plans, invoices, subscriptions, shop items, payment history | `bc-payments-*` |
 | **provisioning** | Student VPS servers, Codespaces containers, provisioning requests | `bc-provisioning-*` |
 | **registry** | Learning assets — lessons, exercises, projects, asset versioning | `bc-registry-*` |
+| **talent development** | Job families, job roles, career paths and stages, skill domains, global skills, competencies, stage-anchored skills (`/v1/talent/`) | `bc-talentdevelopment-*` |
 
 ---
 
@@ -65,6 +66,8 @@ Some user requests touch multiple domains. Load ALL listed skills before proceed
 | Onboard a new student | `bc-admissions-*` + `bc-payments-*` + `bc-authenticate-*` |
 | Provision a resource for a student | `bc-provisioning-*` + `bc-admissions-*` (verify enrollment status first) |
 | Configure academy VPS provisioning (profiles, credentials, settings) | `bc-provisioning-settings-and-credentials` |
+| Configure academy Slack integration and manage sync health | `bc-notify-manage-academy-slackintegration` + `bc-admissions-*` (students/cohorts drive Slack mappings) + `bc-authenticate-*` (Slack OAuth endpoints live in auth) |
+| Align or extend syllabus design with the school skills framework (job role stages, skills on the go) | `bc-admissions-*` (syllabus, cohorts) + `bc-talentdevelopment-manage-skills` (career path, stages, `stage_skill`, domains) |
 
 ---
 

@@ -553,6 +553,90 @@
         }
     },
     {
+        "model": "talent_development.stageskill",
+        "pk": 1,
+        "fields": {
+            "stage": 1,
+            "skill": 6,
+            "required_level": "foundation",
+            "is_core": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.stageskill",
+        "pk": 2,
+        "fields": {
+            "stage": 2,
+            "skill": 1,
+            "required_level": "core",
+            "is_core": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.stageskill",
+        "pk": 3,
+        "fields": {
+            "stage": 2,
+            "skill": 5,
+            "required_level": "core",
+            "is_core": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.stageskill",
+        "pk": 4,
+        "fields": {
+            "stage": 3,
+            "skill": 3,
+            "required_level": "applied",
+            "is_core": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.stageskill",
+        "pk": 5,
+        "fields": {
+            "stage": 4,
+            "skill": 6,
+            "required_level": "foundation",
+            "is_core": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.stageskill",
+        "pk": 6,
+        "fields": {
+            "stage": 5,
+            "skill": 4,
+            "required_level": "core",
+            "is_core": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.stageskill",
+        "pk": 7,
+        "fields": {
+            "stage": 5,
+            "skill": 2,
+            "required_level": "core",
+            "is_core": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
         "model": "talent_development.skillbehaviorindicator",
         "pk": 1,
         "fields": {

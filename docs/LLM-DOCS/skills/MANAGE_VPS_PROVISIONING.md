@@ -109,7 +109,7 @@ Returns the VPS detail; for the **owner**, the response includes **`root_passwor
 
 ---
 
-## 4. Academy: list and deprovision VPSs
+## 4. Academy: list, request for student, and deprovision VPSs
 
 Academy endpoints require the **Academy** header (academy ID) and a user with the capability **`crud_provisioning_activity`**.
 
@@ -120,6 +120,18 @@ Academy endpoints require the **Academy** header (academy ID) and a user with th
 **Query (optional):** `user_id=<user_id>` – filter by student.
 
 Returns all `ProvisioningVPS` for that academy (with optional filter by user). Each item includes user info (`user_id`, `user_email`) and VPS fields; **no root password**.
+
+### Request a VPS for a student (staff)
+
+**Endpoint:** `POST /v1/provisioning/academy/vps`  
+**Headers:** `Authorization`, `Academy: <academy_id>`  
+**Body:** `{ "user_id": <student_user_id>, "plan_slug": "optional-plan-slug" }` (`plan_slug` optional).
+
+- Provisioning uses the **academy from the header** (vendor/credentials for that academy).
+- The target user must be an **active member** of that academy: active `ProfileAcademy` for the academy, or an active `CohortUser` in a cohort belonging to that academy.
+- **One unit** of the **student’s** `vps_server` consumable is consumed (not the staff member’s).
+- Same rules as student self-service for duplicates (at most one active/pending/provisioning VPS per student per academy), insufficient credits, and academy VPS configuration.
+- Response: **202 Accepted** with the VPS object (same shape as `POST /me/vps` list serializer; **no** `root_password`). The student is emailed connection details when provisioning completes.
 
 ### Deprovision a student’s VPS
 
@@ -144,7 +156,8 @@ Returns the list of **ProvisioningProfile** for that academy (vendor, academy, o
 
 ## 6. VPS lifecycle and renewal
 
-- **Request:** Student calls `POST /v1/provisioning/me/vps`. One `vps_server` consumable is consumed; a **ProvisioningVPS** is created and a **provision_vps_task** is enqueued.
+- **Request (student):** Student calls `POST /v1/provisioning/me/vps`. One `vps_server` consumable is consumed; a **ProvisioningVPS** is created and a **provision_vps_task** is enqueued.
+- **Request (staff):** Staff with `crud_provisioning_activity` calls `POST /v1/provisioning/academy/vps` with `Academy` header and `user_id` of the student. The **student’s** consumable is consumed; otherwise the same flow as self-service.
 - **Provisioning:** The task uses the academy’s **ProvisioningAcademy** credentials and the vendor’s VPS client (e.g. Hostinger). On success, the VPS is set to **ACTIVE** and connection details (hostname, IP, SSH user/port, root password) are stored; the student is emailed (e.g. template **vps_connection_details**). On failure, status is set to **ERROR**, the consumable is reimbursed, and `error_message` is set.
 - **Renewal:** A **monthly** task (**monthly_vps_renewal_dispatcher**) runs (e.g. via Celery beat). For each **ACTIVE** VPS it runs **renew_or_deprovision_vps_task**: if the user has at least one `vps_server` consumable with balance > 0, it consumes 1 and keeps the VPS; otherwise it **deprovisions** the VPS (vendor destroy + set status to **DELETED**) and can send a **vps_deprovisioned** email.
 - **Manual deprovision:** Academy staff call `DELETE /v1/provisioning/academy/vps/<vps_id>` to deprovision a student’s VPS.
@@ -158,6 +171,6 @@ Returns the list of **ProvisioningProfile** for that academy (vendor, academy, o
 3. **Credentials:** Create a **ProvisioningAcademy** for that academy + vendor and set **Credentials token** to the Hostinger API access token (for Hostinger).
 4. **Credits:** Ensure students receive **vps_server** consumables (via plans/subscriptions or admin).
 5. **Students:** Use **GET/POST /v1/provisioning/me/vps** and **GET /v1/provisioning/me/vps/<id>** to list, request, and view (with password) their VPS.
-6. **Staff:** Use **GET /v1/provisioning/academy/vps** (with `Academy` header and `crud_provisioning_activity`) to list VPSs, and **DELETE /v1/provisioning/academy/vps/<id>** to deprovision.
+6. **Staff:** Use **GET /v1/provisioning/academy/vps** to list VPSs, **POST /v1/provisioning/academy/vps** to request a VPS for a student (consumes the student’s credit), and **DELETE /v1/provisioning/academy/vps/<id>** to deprovision (all with `Academy` header and `crud_provisioning_activity`).
 
-All credential and profile creation/updates are done in **Django Admin**; the API is used to list profiles, request/list/view VPSs, and (academy) list/deprovision VPSs.
+All credential and profile creation/updates are done in **Django Admin**; the API is used to list profiles, request/list/view VPSs, and (academy) list/request-for-student/deprovision VPSs.
