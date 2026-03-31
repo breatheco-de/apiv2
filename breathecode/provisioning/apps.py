@@ -14,3 +14,7 @@ class RegistryConfig(AppConfig):
             import breathecode.services.hostinger.client  # noqa: F401 - register Hostinger VPS client
         except ImportError:
             pass
+        try:
+            import breathecode.services.digitalocean.client  # noqa: F401 - register DigitalOcean VPS client
+        except ImportError:
+            pass

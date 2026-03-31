@@ -151,6 +151,10 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
             if "academy" in models:
                 kargs["academy"] = just_one(models["academy"])
 
+            # Mixer may assign learnpack_owner; model clean() requires FirstPartyCredentials for that user.
+            if "learnpack_owner" not in academy_auth_settings_kwargs:
+                kargs["learnpack_owner"] = None
+
             models["academy_auth_settings"] = create_models(
                 academy_auth_settings, "authenticate.AcademyAuthSettings", **{**kargs, **academy_auth_settings_kwargs}
             )

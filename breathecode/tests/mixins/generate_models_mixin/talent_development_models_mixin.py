@@ -20,6 +20,7 @@ class TalentDevelopmentModelsMixin(ModelsMixin):
         career_path=False,
         career_stage=False,
         stage_competency=False,
+        stage_skill=False,
         skill_behavior_indicator=False,
         skill_knowledge_item=False,
         skill_attitude_tag=False,
@@ -32,6 +33,7 @@ class TalentDevelopmentModelsMixin(ModelsMixin):
         career_path_kwargs={},
         career_stage_kwargs={},
         stage_competency_kwargs={},
+        stage_skill_kwargs={},
         skill_behavior_indicator_kwargs={},
         skill_knowledge_item_kwargs={},
         skill_attitude_tag_kwargs={},
@@ -138,6 +140,18 @@ class TalentDevelopmentModelsMixin(ModelsMixin):
             models["stage_competency"] = create_models(
                 stage_competency, "talent_development.StageCompetency", **{**kargs, **stage_competency_kwargs}
             )
+
+        # StageSkill - depends on CareerStage and Skill
+        if not "stage_skill" in models and is_valid(stage_skill):
+            kargs = {}
+
+            if "career_stage" in models:
+                kargs["stage"] = just_one(models["career_stage"])
+
+            if "skill" in models:
+                kargs["skill"] = just_one(models["skill"])
+
+            models["stage_skill"] = create_models(stage_skill, "talent_development.StageSkill", **{**kargs, **stage_skill_kwargs})
 
         # SkillBehaviorIndicator - depends on Skill
         if not "skill_behavior_indicator" in models and is_valid(skill_behavior_indicator):

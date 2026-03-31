@@ -1,5 +1,7 @@
 import json
 import logging
+import re
+from copy import deepcopy
 from math import asin, cos, radians, sin, sqrt
 from typing import Any, Iterator, Optional
 
@@ -20,6 +22,165 @@ from .signals import syllabus_asset_slug_updated
 
 BUCKET_NAME = "admissions-breathecode"
 logger = logging.getLogger(__name__)
+ASSET_LIST_KEYS = ("lessons", "quizzes", "replits", "assignments")
+REFERENCE_KEY_PATTERN = re.compile(r"^.+\.v\d+$")
+
+
+def _normalize_syllabus_json(data: dict | str | None) -> dict:
+    """Normalize syllabus JSON to a dictionary with at least an empty `days` list."""
+    if data is None:
+        return {"days": []}
+
+    if isinstance(data, str):
+        data = json.loads(data)
+
+    if not isinstance(data, dict):
+        return {"days": []}
+
+    normalized = deepcopy(data)
+
+    # Backward compatibility: some legacy syllabi still use weeks.
+    if "weeks" in normalized and "days" not in normalized:
+        days = []
+        for week in normalized.pop("weeks", []):
+            if isinstance(week, dict):
+                days += week.get("days", [])
+        normalized["days"] = days
+
+    if "days" not in normalized or not isinstance(normalized["days"], list):
+        normalized["days"] = []
+
+    return normalized
+
+
+def is_deleted_marker(item: Any) -> bool:
+    if not isinstance(item, dict):
+        return False
+    status = item.get("status")
+    return isinstance(status, str) and status.upper() == "DELETED"
+
+
+def _merge_dict_fields(base: dict, override: dict) -> dict:
+    merged = deepcopy(base)
+    for key, value in override.items():
+        if key in ASSET_LIST_KEYS:
+            continue
+
+        if value is None:
+            merged.pop(key, None)
+            continue
+
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = {**merged[key], **deepcopy(value)}
+            continue
+
+        merged[key] = deepcopy(value)
+
+    return merged
+
+
+def merge_assets_by_position(base_assets: list, override_assets: list) -> list:
+    merged = deepcopy(base_assets if isinstance(base_assets, list) else [])
+
+    if not isinstance(override_assets, list):
+        return merged
+
+    for idx, override_asset in enumerate(override_assets):
+        if override_asset is None:
+            continue
+
+        if is_deleted_marker(override_asset):
+            if idx < len(merged):
+                merged[idx] = None
+            continue
+
+        if idx < len(merged):
+            base_asset = merged[idx]
+            if isinstance(base_asset, dict) and isinstance(override_asset, dict):
+                merged[idx] = {**base_asset, **deepcopy(override_asset)}
+            else:
+                merged[idx] = deepcopy(override_asset)
+            continue
+
+        merged.append(deepcopy(override_asset))
+
+    return [asset for asset in merged if asset is not None]
+
+
+def _merge_day(base_day: dict, override_day: dict) -> dict | None:
+    if is_deleted_marker(override_day):
+        return None
+
+    merged_day = _merge_dict_fields(base_day if isinstance(base_day, dict) else {}, override_day)
+
+    for key in ASSET_LIST_KEYS:
+        if key in override_day:
+            merged_day[key] = merge_assets_by_position(merged_day.get(key, []), override_day.get(key, []))
+
+    return merged_day
+
+
+def merge_days_by_position(base_days: list, override_days: list) -> list:
+    merged = deepcopy(base_days if isinstance(base_days, list) else [])
+    if not isinstance(override_days, list):
+        return merged
+
+    for idx, override_day in enumerate(override_days):
+        if override_day is None:
+            continue
+
+        if idx < len(merged):
+            merged[idx] = _merge_day(merged[idx] if isinstance(merged[idx], dict) else {}, override_day)
+            continue
+
+        new_day = _merge_day({}, override_day)
+        if new_day is not None:
+            merged.append(new_day)
+
+    return [day for day in merged if day is not None]
+
+
+def build_reference_key(syllabus_slug: str, version: int | str) -> str:
+    return f"{syllabus_slug}.v{version}"
+
+
+def get_reference_payload(syllabus_json: dict | str, reference_key: str) -> dict | None:
+    normalized = _normalize_syllabus_json(syllabus_json)
+    payload = normalized.get(reference_key)
+    return payload if isinstance(payload, dict) else None
+
+
+def apply_reference_override(base_json: dict | str, reference_payload: dict | None) -> dict:
+    resolved = _normalize_syllabus_json(base_json)
+    if not isinstance(reference_payload, dict):
+        return resolved
+
+    merged = _merge_dict_fields(resolved, reference_payload)
+    merged["days"] = merge_days_by_position(resolved.get("days", []), reference_payload.get("days", []))
+    return merged
+
+
+def resolve_syllabus_json(
+    syllabus_json: dict | str,
+    *,
+    macro_syllabus_json: dict | str | None = None,
+    syllabus_slug: str | None = None,
+    syllabus_version: int | str | None = None,
+) -> dict:
+    """
+    Return the effective syllabus JSON.
+
+    - Without macro context: returns normalized syllabus JSON.
+    - With macro context: applies `<syllabus-slug>.v<version>` overrides by position.
+    """
+    resolved = _normalize_syllabus_json(syllabus_json)
+
+    if not macro_syllabus_json or not syllabus_slug or syllabus_version is None:
+        return resolved
+
+    reference_key = build_reference_key(syllabus_slug, syllabus_version)
+    reference_payload = get_reference_payload(macro_syllabus_json, reference_key)
+    return apply_reference_override(resolved, reference_payload)
 
 
 def haversine(lon1, lat1, lon2, lat2):
@@ -143,7 +304,6 @@ class ImportCohortTimeSlots:
 
 
 def find_asset_on_json(asset_slug, asset_type=None, user=None):
-    from breathecode.certificate.actions import syllabus_weeks_to_days
     from breathecode.authenticate.models import ProfileAcademy
     from django.contrib.auth.models import AnonymousUser
 
@@ -184,8 +344,8 @@ def find_asset_on_json(asset_slug, asset_type=None, user=None):
         if isinstance(s.json, str):
             s.json = json.loads(s.json)
 
-        # in case the json contains "weeks" instead of "days"
-        s.json = syllabus_weeks_to_days(s.json)
+        # normalize syllabus json and legacy weeks format
+        s.json = resolve_syllabus_json(s.json)
 
         for day in s.json["days"]:
             module_index += 1
@@ -223,8 +383,6 @@ def find_asset_on_json(asset_slug, asset_type=None, user=None):
 
 
 def update_asset_on_json(from_slug, to_slug, asset_type, simulate=True):
-    from breathecode.certificate.actions import syllabus_weeks_to_days
-
     asset_type = asset_type.upper()
     logger.debug(f"Replacing {asset_type} slug {from_slug} with {to_slug} in all the syllabus and versions")
     syllabus_list = SyllabusVersion.objects.all()
@@ -242,8 +400,8 @@ def update_asset_on_json(from_slug, to_slug, asset_type, simulate=True):
         if isinstance(s.json, str):
             s.json = json.loads(s.json)
 
-        # in case the json contains "weeks" instead of "days"
-        s.json = syllabus_weeks_to_days(s.json)
+        # normalize syllabus json and legacy weeks format
+        s.json = resolve_syllabus_json(s.json)
 
         for day in s.json["days"]:
             module_index += 1
@@ -305,7 +463,31 @@ class SyllabusLog(object):
         return 400
 
 
-def test_syllabus(syl, validate_assets=False, ignore=None):
+def _parse_reference_key(value: str) -> tuple[str, int] | None:
+    if not isinstance(value, str) or not REFERENCE_KEY_PATTERN.match(value):
+        return None
+
+    try:
+        slug, version = value.rsplit(".v", 1)
+        return slug, int(version)
+    except Exception:
+        return None
+
+
+def _get_reference_syllabus_version(value: str, academy_id: int | None = None):
+    parsed = _parse_reference_key(value)
+    if parsed is None:
+        return None
+
+    slug, version = parsed
+    query = SyllabusVersion.objects.filter(syllabus__slug=slug, version=version)
+    if academy_id is not None:
+        query = query.filter(Q(syllabus__private=False) | Q(syllabus__academy_owner__id=academy_id))
+
+    return query.first()
+
+
+def test_syllabus(syl, validate_assets=False, ignore=None, academy_id: int | None = None):
     from breathecode.registry.models import AssetAlias
 
     if ignore is None:
@@ -315,17 +497,48 @@ def test_syllabus(syl, validate_assets=False, ignore=None):
         syl = json.loads(syl)
 
     syllabus_log = SyllabusLog()
-    if "days" not in syl:
+    if not isinstance(syl, dict):
+        syllabus_log.error("Syllabus json must be an object")
+        return syllabus_log
+
+    has_days = "days" in syl and isinstance(syl.get("days"), list)
+    reference_keys = [key for key in syl.keys() if key != "days" and _parse_reference_key(key) is not None]
+
+    if not has_days and not reference_keys:
         syllabus_log.error("Syllabus must have a 'days' or 'modules' property")
         return syllabus_log
 
-    def validate(_type, _log, day, index):
+    root_slug = syl.get("slug")
+    root_version = syl.get("version")
+
+    def validate_assets_for_type(_type, _log, day, index, *, require_key: bool, partial_override: bool) -> None:
+        """Validate lessons/quizzes/replits/assignments on one module."""
         if _type not in day:
-            _log.error(f"Missing {_type} property on module {index}")
-            return False
-        for a in day[_type]:
+            if require_key:
+                _log.error(f"Missing {_type} property on module {index}")
+            return
+        assets = day[_type]
+        if not isinstance(assets, list):
+            _log.error(f"`{_type}` on module {index} must be a list")
+            return
+        for a in assets:
+            # In overrides, placeholders are allowed to keep position without changing base assets.
+            if partial_override and (a is None or a == {}):
+                continue
+
+            if is_deleted_marker(a):
+                continue
+
+            if not isinstance(a, dict):
+                _log.error(f"Asset on {_type} property on module {index} must be an object")
+                continue
+
             if "slug" not in a:
+                if partial_override and len(a.keys()) == 0:
+                    # `{}` is an explicit no-op placeholder.
+                    continue
                 _log.error(f"Missing slug on {_type} property on module {index}")
+                continue
             if not isinstance(a["slug"], str):
                 _log.error(f"Slug property must be a string for {_type} on module {index}")
 
@@ -333,24 +546,80 @@ def test_syllabus(syl, validate_assets=False, ignore=None):
                 exists = AssetAlias.objects.filter(slug=a["slug"]).first()
                 if exists is None and not ("target" in a and a["target"] == "blank"):
                     _log.error(f'Missing {_type} with slug {a["slug"]} on module {index}')
-        return True
 
-    count = 0
+    def validate_days(days, source_label, *, partial_override: bool = False):
+        """
+        Validate `days` arrays.
 
-    types_to_validate = ["lessons", "quizzes", "replits", "assignments"]
+        - Root syllabus: every module must define lessons, quizzes, replits, assignments (require_key=True).
+        - Reference overrides (`slug.vN`): sparse patches; only keys present on each module are validated.
+        """
+        if not isinstance(days, list):
+            syllabus_log.error(f"`days` must be a list on {source_label}")
+            return
 
-    # ignore: an array with types to ignore, for example: ['lessons']
-    types_to_validate = [a for a in types_to_validate if a not in ignore]
-    for day in syl["days"]:
-        count += 1
-        for _name in types_to_validate:
-            validate(_name, syllabus_log, day, count)
-        if "teacher_instructions" not in day or day["teacher_instructions"] == "":
-            syllabus_log.warn(f"Empty teacher instructions on module {count}")
-        if len(syllabus_log.errors) > 11:
-            return syllabus_log
+        count = 0
+        types_to_validate = ["lessons", "quizzes", "replits", "assignments"]
+        types_to_validate = [a for a in types_to_validate if a not in ignore]
+        require_key = not partial_override
+
+        for day in days:
+            count += 1
+            if not isinstance(day, dict):
+                syllabus_log.error(f"Day/module {count} on {source_label} must be an object")
+                continue
+
+            for _name in types_to_validate:
+                validate_assets_for_type(
+                    _name,
+                    syllabus_log,
+                    day,
+                    count,
+                    require_key=require_key,
+                    partial_override=partial_override,
+                )
+
+            if partial_override:
+                if "teacher_instructions" in day and day["teacher_instructions"] == "":
+                    syllabus_log.warn(f"Empty teacher instructions on module {count} ({source_label})")
+            else:
+                if "teacher_instructions" not in day or day["teacher_instructions"] == "":
+                    syllabus_log.warn(f"Empty teacher instructions on module {count}")
+            if len(syllabus_log.errors) > 11:
+                return
+
+    if has_days:
+        validate_days(syl["days"], "root", partial_override=False)
+
+    for key in reference_keys:
+        payload = syl.get(key)
+        if not isinstance(payload, dict):
+            syllabus_log.error(f"Reference `{key}` must be an object")
+            continue
+
+        # Prevent self-references like `<slug>.v<version>` living inside the same syllabus json.
+        if isinstance(root_slug, str) and root_slug and root_version is not None:
+            try:
+                self_key = build_reference_key(root_slug, root_version)
+                if key == self_key:
+                    syllabus_log.error(f"Syllabus cannot override itself with reference `{key}`")
+            except Exception:
+                pass
+
+        if _get_reference_syllabus_version(key, academy_id=academy_id) is None:
+            syllabus_log.error(f"Missing referenced syllabus version `{key}`")
+
+        if "days" not in payload:
+            syllabus_log.error(f"Reference `{key}` must contain a `days` property")
+            continue
+
+        validate_days(payload.get("days"), f"reference `{key}`", partial_override=True)
 
     return syllabus_log
+
+
+# Prevent pytest from collecting this helper as a test function.
+test_syllabus.__test__ = False
 
 
 def _get_enrollments(academy, cohort: Optional[Cohort] = None):
@@ -409,7 +678,9 @@ def _extract_syllabus_slugs(
             continue
 
         if include_lessons:
-            lesson_slugs = get_assets_from_syllabus(cohort.syllabus_version, task_types=["LESSON"], only_mandatory=False) or []
+            lesson_slugs = (
+                get_assets_from_syllabus(cohort.syllabus_version, task_types=["LESSON"], only_mandatory=False) or []
+            )
             lesson_slugs_by_cohort[cohort.id] = set(lesson_slugs)
         
         if include_exercises:

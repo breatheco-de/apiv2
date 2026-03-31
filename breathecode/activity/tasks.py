@@ -62,8 +62,10 @@ def get_attendancy_log(self, cohort_id: int):
         return
 
     try:
-        # json has days?
-        syllabus = cohort.syllabus_version.json["days"]
+        from breathecode.admissions.actions import resolve_syllabus_json
+
+        effective_json = resolve_syllabus_json(cohort.syllabus_version.json)
+        syllabus = effective_json["days"]
 
         # days is list?
         assert isinstance(syllabus, list)

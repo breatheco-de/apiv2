@@ -12,6 +12,7 @@ This guide covers the entire flow to create a syllabus, including all dependenci
 6. [Validation and Testing](#validation-and-testing)
 7. [Troubleshooting](#troubleshooting)
 
+
 ---
 
 ## 🎯 Prerequisites
@@ -396,6 +397,65 @@ After merge, that day ends up with only the new lesson (the old one is gone and 
 
 ---
 
+## Macro cohort syllabus overrides
+
+Macro cohorts can carry a **`SyllabusVersion`** whose JSON is not only the usual root **`days`** list. It may also include **reference keys** so that, when someone reads a **micro** syllabus in the context of that macro, the API merges overrides from the macro into the micro.
+
+#### Reference keys
+
+- Pattern: **`<micro-syllabus-slug>.v<version>`** (examples: `front-end.v1`, `data-science.v3`).
+- Each key maps to an **object** (typically with a **`days`** array) that is merged into the **micro** syllabus JSON for that slug/version.
+- The backend resolves which block to apply using the **micro** syllabus’s `slug` and `version` being requested.
+
+#### Merge rules (high level)
+
+- **`days`**: merged **by index** (day 0 with day 0, etc.). Changing the order of days in the micro syllabus is not supported via overrides alone; publish a **new micro syllabus version** if the base order must change.
+- **Asset lists** `lessons`, `quizzes`, `replits`, `assignments`: merged **by index** within each day.
+- **Logical deletion**: an asset (or a whole day) can be marked with **`"status": "DELETED"`** so it does not appear after merge.
+- Other day-level fields are merged with the base day where applicable.
+
+#### API: read a micro syllabus version with macro overrides
+
+When fetching an **academy-scoped** syllabus version, pass the macro cohort **slug** as a query parameter. The response’s **`json`** field is the **effective** syllabus (micro + merge).
+
+- **Query parameter:** `macro-cohort=<macro_cohort_slug>`
+- **Example:**  
+  `GET /v1/admissions/academy/{academy_id}/syllabus/{syllabus_slug}/version/{version}?macro-cohort=ai-engineering-1`
+- **Requirements:**
+  - A **Cohort** with that `slug` must exist for the same **academy** (`academy_id`).
+  - That cohort must have a **`syllabus_version`** (the macro syllabus JSON used as the override source).
+
+**Errors (examples):** `macro-cohort-not-found`, `macro-cohort-missing-syllabus-version`.
+
+#### Example: macro `SyllabusVersion.json` (fragment)
+
+```json
+{
+  "days": [],
+
+  "front-end.v1": {
+    "days": [
+      {},
+      {},
+      {},
+      {
+        "label": "Day 4 — custom for this macro only",
+        "assignments": [
+          {},
+          { "slug": "custom-project", "title": "Macro-only project" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+The fourth element of `days` (index `3`) merges into **day 4** of `front-end` **v1**; the second assignment (index `1`) overrides the second assignment slot for that day.
+
+For implementation details, see `resolve_syllabus_json` and related helpers in `breathecode.admissions.actions`.
+
+---
+
 ## 📚 API Endpoints Reference
 
 ### Syllabus Management
@@ -425,6 +485,12 @@ After merge, that day ends up with only the new lesson (the old one is gone and 
 | `POST` | `/v1/admissions/syllabus/{id}/version` | Create syllabus version | `Authorization` |
 | `GET` | `/v1/admissions/syllabus/{id}/version/{version}` | Get specific version | None |
 | `PUT` | `/v1/admissions/syllabus/{id}/version/{version}` | Update version | `Authorization` |
+
+### Academy syllabus version (optional macro overrides)
+
+| Method | Endpoint | Description | Query / notes |
+|--------|----------|-------------|----------------|
+| `GET` | `/v1/admissions/academy/{academy_id}/syllabus/{syllabus_slug}/version/{version}` | Get one published syllabus version for an academy | Optional **`macro-cohort={macro_cohort_slug}`**: response `json` is merged with the macro cohort’s `SyllabusVersion` (see [Macro cohort syllabus overrides](#macro-cohort-syllabus-overrides)). Same `Academy` header as other academy-scoped routes. |
 
 ### Syllabus Testing
 

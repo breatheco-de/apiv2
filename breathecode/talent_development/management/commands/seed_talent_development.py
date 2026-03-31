@@ -32,6 +32,7 @@ from breathecode.talent_development.models import (
     SkillDomain,
     SkillKnowledgeItem,
     StageCompetency,
+    StageSkill,
 )
 
 
@@ -125,6 +126,13 @@ class Command(BaseCommand):
             if verbosity >= 1:
                 self.stdout.write(self.style.SUCCESS(f"✓ Created {len(stage_competencies)} stage-competency links"))
 
+            # Link Skills to Stages (derived from StageCompetency -> CompetencySkill)
+            if verbosity >= 1:
+                self.stdout.write("Linking skills to career stages...")
+            stage_skills = self._create_stage_skills(stage_competencies)
+            if verbosity >= 1:
+                self.stdout.write(self.style.SUCCESS(f"✓ Created {len(stage_skills)} stage-skill links"))
+
             # Create Skill Behavior Indicators
             if verbosity >= 1:
                 self.stdout.write("Creating skill behavior indicators...")
@@ -153,6 +161,7 @@ class Command(BaseCommand):
 
     def _clear_data(self):
         """Clear all talent development data"""
+        StageSkill.objects.all().delete()
         StageCompetency.objects.all().delete()
         CompetencySkill.objects.all().delete()
         SkillAttitudeTag.objects.all().delete()
@@ -448,6 +457,65 @@ class Command(BaseCommand):
             )
             stage_competencies.append(sc)
         return stage_competencies
+
+    def _create_stage_skills(self, stage_competencies):
+        """
+        Derive StageSkill rows from:
+        - StageCompetency (stage + required_level + is_core)
+        - CompetencySkill (competency + skill)
+
+        If multiple stage-competency mappings imply the same (stage, skill), we:
+        - pick the highest required_level
+        - set is_core=True if any contributing stage-competency row is core
+        """
+
+        if not stage_competencies:
+            return []
+
+        level_rank = {
+            StageCompetency.RequiredLevel.FOUNDATION: 1,
+            StageCompetency.RequiredLevel.CORE: 2,
+            StageCompetency.RequiredLevel.APPLIED: 3,
+        }
+
+        stage_skill_data = {}
+
+        for stage_competency in stage_competencies:
+            competency_skills = CompetencySkill.objects.filter(
+                competency_id=stage_competency.competency_id
+            )
+
+            for competency_skill in competency_skills:
+                key = (stage_competency.stage_id, competency_skill.skill_id)
+
+                if key not in stage_skill_data:
+                    stage_skill_data[key] = {
+                        "required_level": stage_competency.required_level,
+                        "is_core": stage_competency.is_core,
+                    }
+                else:
+                    # Any core contribution makes the whole (stage, skill) core.
+                    stage_skill_data[key]["is_core"] = stage_skill_data[key]["is_core"] or stage_competency.is_core
+
+                    # Pick the highest required level across contributions.
+                    current_level = stage_skill_data[key]["required_level"]
+                    new_level = stage_competency.required_level
+                    if level_rank[new_level] > level_rank[current_level]:
+                        stage_skill_data[key]["required_level"] = new_level
+
+        stage_skills = []
+        for (stage_id, skill_id), data in stage_skill_data.items():
+            stage_skill, _ = StageSkill.objects.update_or_create(
+                stage_id=stage_id,
+                skill_id=skill_id,
+                defaults={
+                    "required_level": data["required_level"],
+                    "is_core": data["is_core"],
+                },
+            )
+            stage_skills.append(stage_skill)
+
+        return stage_skills
 
     def _create_skill_behavior_indicators(self, skills):
         """Create skill behavior indicators"""

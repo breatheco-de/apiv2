@@ -9,8 +9,10 @@ from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from circuitbreaker import CircuitBreakerError
 from dateutil.relativedelta import relativedelta
+from django.contrib.auth import get_user_model
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.parsers import FileUploadParser, MultiPartParser
 from rest_framework.renderers import JSONRenderer
@@ -18,12 +20,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_csv.renderers import CSVRenderer
 
-from breathecode.admissions.models import Cohort, CohortUser
+from breathecode.admissions.models import Academy, Cohort, CohortUser
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.notify.actions import get_template_content
 from breathecode.provisioning import tasks
 from breathecode.provisioning.serializers import (
+    AcademyVPSCreateSerializer,
     AcademyVPSListSerializer,
     GetProvisioningAcademySerializer,
     GetProvisioningBillDetailSerializer,
@@ -35,6 +38,7 @@ from breathecode.provisioning.serializers import (
     GetProvisioningVendorSerializer,
     ProvisioningAcademyCreateSerializer,
     ProvisioningAcademyUpdateSerializer,
+    resolve_allowed_machine_types_for_vendor,
     ProvisioningBillHTMLSerializer,
     ProvisioningBillSerializer,
     ProvisioningProfileCreateUpdateSerializer,
@@ -42,6 +46,7 @@ from breathecode.provisioning.serializers import (
     VPSDetailSerializer,
     VPSListSerializer,
     VPSRequestSerializer,
+    validate_vendor_settings,
 )
 from breathecode.utils import capable_of, cut_csv
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
@@ -49,7 +54,13 @@ from breathecode.utils.decorators import has_permission
 from breathecode.utils.io.file import count_csv_rows
 from breathecode.utils.views import private_view, render_message
 
-from .actions import get_provisioning_vendor, request_vps
+from .actions import (
+    get_eligible_academy_and_vendor_for_vps,
+    get_provisioning_vendor,
+    get_vps_provisioning_academy_for_academy,
+    request_vps,
+    request_vps_for_student,
+)
 from .models import (
     BILL_STATUS,
     ProvisioningAcademy,
@@ -59,6 +70,285 @@ from .models import (
     ProvisioningVPS,
     ProvisioningVendor,
 )
+from .utils.coding_editor_client import CodingEditorConnectionError, get_coding_editor_client
+from .utils.llm_client import LLMConnectionError, get_llm_client
+from .utils.vps_client import VPSProvisioningError, get_vps_client
+
+
+def _normalize_allowed_values(settings, key, cast):
+    values = settings.get(key) or []
+    normalized = []
+    for value in values:
+        try:
+            normalized.append(cast(value))
+        except (TypeError, ValueError):
+            continue
+    return set(normalized)
+
+
+def _build_vendor_selection(vendor_name, vendor_settings, request_data, lang):
+    slug = (vendor_name or "").lower().strip()
+    if slug == "digitalocean":
+        return _build_digitalocean_vendor_selection(vendor_settings, request_data, lang)
+    if slug != "hostinger":
+        return {}
+
+    vendor_selection = request_data.get("vendor_selection") or {}
+    selected_item = (vendor_selection.get("item_id") or "").strip() or None
+    selected_template = vendor_selection.get("template_id")
+    selected_data_center = vendor_selection.get("data_center_id")
+    allowed_items = _normalize_allowed_values(vendor_settings, "item_ids", lambda value: str(value).strip())
+    allowed_templates = _normalize_allowed_values(vendor_settings, "template_ids", int)
+    allowed_data_centers = _normalize_allowed_values(vendor_settings, "data_center_ids", int)
+
+    # Do not allow the vendor client to "guess" defaults. We require explicit
+    # allowlists to be configured before provisioning starts.
+    if not allowed_items or not allowed_templates or not allowed_data_centers:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Hostinger vendor allowlists are not configured for this academy. Please set item_ids, template_ids, and data_center_ids first.",
+                es="Las allowlists de Hostinger no estan configuradas para esta academia. Primero configura item_ids, template_ids y data_center_ids.",
+                slug="hostinger-vendor-allowlists-missing",
+            ),
+            code=400,
+        )
+
+    if not selected_item and len(allowed_items) == 1:
+        selected_item = next(iter(allowed_items))
+    if selected_template is None and len(allowed_templates) == 1:
+        selected_template = next(iter(allowed_templates))
+    if selected_data_center is None and len(allowed_data_centers) == 1:
+        selected_data_center = next(iter(allowed_data_centers))
+
+    if not selected_item:
+        raise ValidationException(
+            translation(
+                lang,
+                en="item_id is required (must be one of the configured item_ids).",
+                es="Se requiere item_id (debe estar dentro de los item_ids configurados).",
+                slug="invalid-vps-item-id-required",
+            ),
+            code=400,
+        )
+    if selected_template is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="template_id is required (must be one of the configured template_ids).",
+                es="Se requiere template_id (debe estar dentro de los template_ids configurados).",
+                slug="invalid-vps-template-id-required",
+            ),
+            code=400,
+        )
+    if selected_data_center is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="data_center_id is required (must be one of the configured data_center_ids).",
+                es="Se requiere data_center_id (debe estar dentro de los data_center_ids configurados).",
+                slug="invalid-vps-data-center-id-required",
+            ),
+            code=400,
+        )
+
+    if selected_item and selected_item not in allowed_items:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Selected item_id is not allowed for this academy.",
+                es="El item_id seleccionado no esta permitido para esta academia.",
+                slug="invalid-vps-item-id",
+            ),
+            code=400,
+        )
+    if selected_template is not None and int(selected_template) not in allowed_templates:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Selected template_id is not allowed for this academy.",
+                es="El template_id seleccionado no esta permitido para esta academia.",
+                slug="invalid-vps-template-id",
+            ),
+            code=400,
+        )
+    if selected_data_center is not None and int(selected_data_center) not in allowed_data_centers:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Selected data_center_id is not allowed for this academy.",
+                es="El data_center_id seleccionado no esta permitido para esta academia.",
+                slug="invalid-vps-data-center-id",
+            ),
+            code=400,
+        )
+
+    payload = {}
+    payload["item_id"] = selected_item
+    payload["template_id"] = int(selected_template)
+    payload["data_center_id"] = int(selected_data_center)
+    return payload
+
+
+def _build_digitalocean_vendor_selection(vendor_settings, request_data, lang):
+    vendor_selection = request_data.get("vendor_selection") or {}
+    selected_region = (vendor_selection.get("region_slug") or "").strip() or None
+    selected_size = (vendor_selection.get("size_slug") or "").strip() or None
+    selected_image = (vendor_selection.get("image_slug") or "").strip() or None
+    allowed_regions = _normalize_allowed_values(vendor_settings, "region_slugs", lambda value: str(value).strip())
+    allowed_sizes = _normalize_allowed_values(vendor_settings, "size_slugs", lambda value: str(value).strip())
+    allowed_images = _normalize_allowed_values(vendor_settings, "image_slugs", lambda value: str(value).strip())
+
+    if not allowed_regions or not allowed_sizes or not allowed_images:
+        raise ValidationException(
+            translation(
+                lang,
+                en="DigitalOcean vendor allowlists are not configured for this academy. Please set region_slugs, size_slugs, and image_slugs first.",
+                es="Las allowlists de DigitalOcean no estan configuradas para esta academia. Primero configura region_slugs, size_slugs y image_slugs.",
+                slug="digitalocean-vendor-allowlists-missing",
+            ),
+            code=400,
+        )
+
+    if not selected_region and len(allowed_regions) == 1:
+        selected_region = next(iter(allowed_regions))
+    if not selected_size and len(allowed_sizes) == 1:
+        selected_size = next(iter(allowed_sizes))
+    if not selected_image and len(allowed_images) == 1:
+        selected_image = next(iter(allowed_images))
+
+    if not selected_region:
+        raise ValidationException(
+            translation(
+                lang,
+                en="region_slug is required (must be one of the configured region_slugs).",
+                es="Se requiere region_slug (debe estar dentro de los region_slugs configurados).",
+                slug="invalid-vps-region-slug-required",
+            ),
+            code=400,
+        )
+    if not selected_size:
+        raise ValidationException(
+            translation(
+                lang,
+                en="size_slug is required (must be one of the configured size_slugs).",
+                es="Se requiere size_slug (debe estar dentro de los size_slugs configurados).",
+                slug="invalid-vps-size-slug-required",
+            ),
+            code=400,
+        )
+    if not selected_image:
+        raise ValidationException(
+            translation(
+                lang,
+                en="image_slug is required (must be one of the configured image_slugs).",
+                es="Se requiere image_slug (debe estar dentro de los image_slugs configurados).",
+                slug="invalid-vps-image-slug-required",
+            ),
+            code=400,
+        )
+
+    if selected_region not in allowed_regions:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Selected region_slug is not allowed for this academy.",
+                es="El region_slug seleccionado no esta permitido para esta academia.",
+                slug="invalid-vps-region-slug",
+            ),
+            code=400,
+        )
+    if selected_size not in allowed_sizes:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Selected size_slug is not allowed for this academy.",
+                es="El size_slug seleccionado no esta permitido para esta academia.",
+                slug="invalid-vps-size-slug",
+            ),
+            code=400,
+        )
+    if selected_image not in allowed_images:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Selected image_slug is not allowed for this academy.",
+                es="El image_slug seleccionado no esta permitido para esta academia.",
+                slug="invalid-vps-image-slug",
+            ),
+            code=400,
+        )
+
+    return {
+        "region_slug": selected_region,
+        "size_slug": selected_size,
+        "image_slug": selected_image,
+    }
+
+
+def _get_hostinger_vendor_options(token: str, lang: str):
+    import hostinger_api
+    from hostinger_api.rest import ApiException
+
+    configuration = hostinger_api.Configuration(access_token=token)
+    with hostinger_api.ApiClient(configuration) as api_client:
+        try:
+            dc_api = hostinger_api.VPSDataCentersApi(api_client)
+            template_api = hostinger_api.VPSOSTemplatesApi(api_client)
+            catalog_api = hostinger_api.BillingCatalogApi(api_client)
+            dc_response = dc_api.get_data_center_list_v1()
+            template_response = template_api.get_templates_v1()
+            catalog_response = catalog_api.get_catalog_item_list_v1(category="VPS")
+        except ApiException as e:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Cannot fetch Hostinger options: {e}",
+                    es=f"No se pudieron obtener las opciones de Hostinger: {e}",
+                    slug="hostinger-options-fetch-failed",
+                ),
+                code=400,
+            )
+
+    # Hostinger SDK returns plain lists for these endpoints.
+    data_centers = dc_response if isinstance(dc_response, list) else []
+    templates = template_response if isinstance(template_response, list) else []
+    catalog_items = catalog_response if isinstance(catalog_response, list) else []
+
+    def _serialize_hostinger_item(item):
+        if hasattr(item, "model_dump"):
+            return item.model_dump()
+        if hasattr(item, "to_dict"):
+            return item.to_dict()
+        if isinstance(item, dict):
+            return item
+        if hasattr(item, "__dict__"):
+            return {k: v for k, v in item.__dict__.items() if not k.startswith("_")}
+        return item
+
+    return {
+        "data_centers": [_serialize_hostinger_item(x) for x in data_centers],
+        "templates": [_serialize_hostinger_item(x) for x in templates],
+        "catalog_items": [_serialize_hostinger_item(x) for x in catalog_items],
+    }
+
+
+def _get_digitalocean_vendor_options(token: str, lang: str):
+    from breathecode.provisioning.utils.vps_client import VPSProvisioningError
+    from breathecode.services.digitalocean.client import fetch_vendor_options
+
+    try:
+        return fetch_vendor_options(token)
+    except VPSProvisioningError as e:
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Cannot fetch DigitalOcean options: {e}",
+                es=f"No se pudieron obtener las opciones de DigitalOcean: {e}",
+                slug="digitalocean-options-fetch-failed",
+            ),
+            code=400,
+        )
 
 
 @private_view()
@@ -975,20 +1265,19 @@ class ProvisioningAcademyView(APIView):
                 ),
                 code=400,
             )
-        from .models import ProvisioningMachineTypes
 
         pa = ProvisioningAcademy.objects.create(
             academy_id=academy_id,
             vendor=vendor,
             credentials_token=data["credentials_token"],
             credentials_key=data.get("credentials_key") or "",
+            vendor_settings=validate_vendor_settings(vendor.name, data.get("vendor_settings") or {}, lang=lang),
             container_idle_timeout=data.get("container_idle_timeout", 15),
             max_active_containers=data.get("max_active_containers", 2),
         )
         if data.get("allowed_machine_type_ids"):
-            machine_types = ProvisioningMachineTypes.objects.filter(
-                id__in=data["allowed_machine_type_ids"],
-                vendor=vendor,
+            machine_types = resolve_allowed_machine_types_for_vendor(
+                vendor, data["allowed_machine_type_ids"], lang=lang
             )
             pa.allowed_machine_types.set(machine_types)
         out = GetProvisioningAcademySerializer(pa)
@@ -1046,16 +1335,15 @@ class ProvisioningAcademyByIdView(APIView):
             pa.credentials_token = data["credentials_token"]
         if "credentials_key" in data:
             pa.credentials_key = data["credentials_key"]
+        if "vendor_settings" in data:
+            pa.vendor_settings = validate_vendor_settings(pa.vendor.name, data["vendor_settings"] or {}, lang=lang)
         if "container_idle_timeout" in data:
             pa.container_idle_timeout = data["container_idle_timeout"]
         if "max_active_containers" in data:
             pa.max_active_containers = data["max_active_containers"]
         if "allowed_machine_type_ids" in data:
-            from .models import ProvisioningMachineTypes
-
-            machine_types = ProvisioningMachineTypes.objects.filter(
-                id__in=data["allowed_machine_type_ids"],
-                vendor=pa.vendor,
+            machine_types = resolve_allowed_machine_types_for_vendor(
+                pa.vendor, data["allowed_machine_type_ids"], lang=lang
             )
             pa.allowed_machine_types.set(machine_types)
         pa.save()
@@ -1082,6 +1370,139 @@ class ProvisioningAcademyByIdView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class ProvisioningAcademyVendorOptionsView(APIView):
+    """GET vendor options for one provisioning academy (unfiltered universe)."""
+
+    @capable_of("crud_provisioning_activity")
+    def get(self, request, academy_id=None, provisioning_academy_id=None):
+        lang = get_user_language(request)
+        pa = ProvisioningAcademy.objects.filter(id=provisioning_academy_id, academy_id=academy_id).select_related("vendor").first()
+        if not pa:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Provisioning academy config not found.",
+                    es="Configuración de aprovisionamiento de academia no encontrada.",
+                    slug="provisioning-academy-not-found",
+                ),
+                code=404,
+            )
+
+        vendor_slug = (getattr(pa.vendor, "name", "") or "").lower().strip()
+        if vendor_slug not in ("hostinger", "digitalocean"):
+            return Response(
+                {
+                    "catalog_items": [],
+                    "templates": [],
+                    "data_centers": [],
+                    "regions": [],
+                    "sizes": [],
+                    "images": [],
+                }
+            )
+        if not pa.credentials_token:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Missing vendor token for this provisioning academy.",
+                    es="Falta el token del vendor para esta configuración de aprovisionamiento.",
+                    slug="missing-vendor-token",
+                ),
+                code=400,
+            )
+
+        if vendor_slug == "hostinger":
+            options = _get_hostinger_vendor_options(pa.credentials_token, lang)
+            return Response(options)
+        options = _get_digitalocean_vendor_options(pa.credentials_token, lang)
+        return Response(options)
+
+
+class ProvisioningAcademyTestConnectionView(APIView):
+    """POST test vendor API connection and persist status fields."""
+
+    @capable_of("crud_provisioning_activity")
+    def post(self, request, academy_id=None, provisioning_academy_id=None):
+        lang = get_user_language(request)
+        pa = ProvisioningAcademy.objects.filter(id=provisioning_academy_id, academy_id=academy_id).select_related("vendor").first()
+        if not pa:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Provisioning academy config not found.",
+                    es="Configuración de aprovisionamiento de academia no encontrada.",
+                    slug="provisioning-academy-not-found",
+                ),
+                code=404,
+            )
+
+        vendor = pa.vendor
+        vendor_name = getattr(vendor, "name", "") if vendor else ""
+        credentials = {"token": pa.credentials_token or ""}
+        if pa.credentials_key:
+            credentials["key"] = pa.credentials_key
+        if pa.vendor_settings:
+            credentials.update(pa.vendor_settings)
+
+        try:
+            if not vendor:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Provisioning vendor not found for this academy config.",
+                        es="No se encontró el vendor de aprovisionamiento para esta configuración de academia.",
+                        slug="provisioning-vendor-not-found",
+                    ),
+                    code=400,
+                )
+
+            vendor_type = getattr(vendor, "vendor_type", None)
+            if vendor_type == ProvisioningVendor.VendorType.VPS_SERVER:
+                client = get_vps_client(vendor)
+                if not client:
+                    raise VPSProvisioningError(f"No VPS client registered for vendor '{vendor_name}'")
+                client.test_connection(credentials)
+            elif vendor_type == ProvisioningVendor.VendorType.CODING_EDITOR:
+                client = get_coding_editor_client(vendor)
+                if not client:
+                    raise CodingEditorConnectionError(f"No coding editor client registered for vendor '{vendor_name}'")
+                client.test_connection(credentials, vendor=vendor)
+            elif vendor_type == ProvisioningVendor.VendorType.LLM:
+                client = get_llm_client(vendor)
+                if not client:
+                    raise LLMConnectionError(f"No LLM client registered for vendor '{vendor_name}'")
+                client.test_connection(credentials, vendor=vendor)
+            else:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Unsupported vendor type '{vendor_type}'.",
+                        es=f"Tipo de vendor no soportado '{vendor_type}'.",
+                        slug="unsupported-vendor-type",
+                    ),
+                    code=400,
+                )
+
+            pa.connection_status = ProvisioningAcademy.ConnectionStatus.OK
+            pa.connection_status_text = translation(
+                lang,
+                en="Vendor connection check succeeded.",
+                es="La verificación de conexión del vendor fue exitosa.",
+                slug="vendor-connection-check-succeeded",
+            )
+        except (VPSProvisioningError, CodingEditorConnectionError, LLMConnectionError, ValidationException, Exception) as e:
+            pa.connection_status = ProvisioningAcademy.ConnectionStatus.ERROR
+            if isinstance(e, ValidationException):
+                pa.connection_status_text = str(e.detail)
+            else:
+                pa.connection_status_text = str(e)
+
+        pa.connection_test_at = timezone.now()
+        pa.save()
+        serializer = GetProvisioningAcademySerializer(pa)
+        return Response(serializer.data)
+
+
 class MeVPSView(APIView):
     """GET: list current user's VPS. POST: request a new VPS (consumes vps_server consumable)."""
 
@@ -1101,8 +1522,15 @@ class MeVPSView(APIView):
         if not serializer.is_valid():
             raise ValidationException(serializer.errors, code=400)
         plan_slug = (serializer.validated_data.get("plan_slug") or "").strip() or None
+        _, provisioning_academy = get_eligible_academy_and_vendor_for_vps(request.user)
+        vendor_selection = _build_vendor_selection(
+            provisioning_academy.vendor.name,
+            provisioning_academy.vendor_settings or {},
+            serializer.validated_data,
+            lang,
+        )
         try:
-            vps = request_vps(request.user, plan_slug=plan_slug)
+            vps = request_vps(request.user, plan_slug=plan_slug, vendor_selection=vendor_selection)
         except ValidationException:
             raise
         out_serializer = VPSListSerializer(vps)
@@ -1148,6 +1576,49 @@ class AcademyVPSView(APIView):
         items = handler.queryset(qs)
         serializer = AcademyVPSListSerializer(items, many=True)
         return handler.response(serializer.data)
+
+    @capable_of("crud_provisioning_activity")
+    def post(self, request, academy_id=None):
+        """Request a new VPS for a student; consumes the student's vps_server consumable."""
+        lang = get_user_language(request)
+        data = (request.data or {}).copy()
+        serializer = AcademyVPSCreateSerializer(data=data, context={"request": request, "lang": lang})
+        if not serializer.is_valid():
+            raise ValidationException(serializer.errors, code=400)
+        user_id = serializer.validated_data["user_id"]
+        plan_slug = (serializer.validated_data.get("plan_slug") or "").strip() or None
+        student = get_user_model().objects.filter(id=user_id).first()
+        if not student:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="User not found.",
+                    es="Usuario no encontrado.",
+                    slug="user-not-found",
+                ),
+                code=404,
+            )
+        academy = Academy.objects.filter(id=academy_id).first()
+        if not academy:
+            raise ValidationException(
+                translation(lang, en="Academy not found.", es="Academia no encontrada.", slug="academy-not-found"),
+                code=404,
+            )
+        try:
+            _, provisioning_academy = get_vps_provisioning_academy_for_academy(academy, lang=lang)
+            vendor_selection = _build_vendor_selection(
+                provisioning_academy.vendor.name,
+                provisioning_academy.vendor_settings or {},
+                serializer.validated_data,
+                lang,
+            )
+            vps = request_vps_for_student(
+                student, academy, plan_slug=plan_slug, vendor_selection=vendor_selection, lang=lang
+            )
+        except ValidationException:
+            raise
+        out_serializer = VPSListSerializer(vps)
+        return Response(out_serializer.data, status=status.HTTP_202_ACCEPTED)
 
 
 class AcademyVPSByIdView(APIView):

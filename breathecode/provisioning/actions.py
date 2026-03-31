@@ -15,6 +15,7 @@ from linked_services.django.actions import get_user
 
 from breathecode.admissions.models import Academy, CohortUser
 from breathecode.authenticate.models import (
+    ACTIVE as PROFILE_ACADEMY_ACTIVE,
     AcademyAuthSettings,
     CredentialsGithub,
     GithubAcademyUser,
@@ -39,7 +40,7 @@ from .models import (
     ProvisioningVendor,
     ProvisioningVPS,
 )
-from .vps_client import get_vps_client
+from .utils.vps_client import get_vps_client
 
 logger = getLogger(__name__)
 
@@ -102,6 +103,47 @@ def get_provisioning_vendor(user_id, profile_academy, cohort):
     )
 
 
+def get_vps_provisioning_academy_for_academy(academy: Academy, lang: str = "en"):
+    """
+    Resolve ProvisioningAcademy with VPS client and credentials for a fixed academy.
+    Returns (academy, provisioning_academy). Raises ValidationException if not configured.
+    """
+    profiles = ProvisioningProfile.objects.filter(academy=academy).select_related("vendor")
+    for profile in profiles:
+        if not profile.vendor_id:
+            continue
+        client = get_vps_client(profile.vendor)
+        if client is None:
+            continue
+        provisioning_academy = ProvisioningAcademy.objects.filter(
+            academy=academy, vendor=profile.vendor
+        ).first()
+        if not provisioning_academy or not (provisioning_academy.credentials_token or provisioning_academy.credentials_key):
+            continue
+        return (academy, provisioning_academy)
+    raise ValidationException(
+        translation(
+            lang,
+            en="Your academy does not have VPS provisioning configured. Please contact your program manager.",
+            es="Tu academia no tiene configurado el aprovisionamiento de VPS. Contacta a tu programa.",
+            slug="academy-vps-not-configured",
+        )
+    )
+
+
+def user_belongs_to_academy_for_vps(user, academy: Academy) -> bool:
+    """True if user has an active ProfileAcademy or active CohortUser in a cohort of this academy."""
+    if ProfileAcademy.objects.filter(user=user, academy=academy, status=PROFILE_ACADEMY_ACTIVE).exists():
+        return True
+    if CohortUser.objects.filter(
+        user=user,
+        cohort__academy_id=academy.id,
+        educational_status="ACTIVE",
+    ).exists():
+        return True
+    return False
+
+
 def get_eligible_academy_and_vendor_for_vps(user):
     """
     Resolve academy and ProvisioningAcademy for VPS provisioning for this user.
@@ -125,35 +167,21 @@ def get_eligible_academy_and_vendor_for_vps(user):
                 slug="no-academy-for-vps",
             )
         )
-    profiles = ProvisioningProfile.objects.filter(academy=academy).select_related("vendor")
-    for profile in profiles:
-        if not profile.vendor_id:
-            continue
-        client = get_vps_client(profile.vendor)
-        if client is None:
-            continue
-        provisioning_academy = ProvisioningAcademy.objects.filter(
-            academy=academy, vendor=profile.vendor
-        ).first()
-        if not provisioning_academy or not (provisioning_academy.credentials_token or provisioning_academy.credentials_key):
-            continue
-        return (academy, provisioning_academy)
-    raise ValidationException(
-        translation(
-            getattr(user, "lang", None) or "en",
-            en="Your academy does not have VPS provisioning configured. Please contact your program manager.",
-            es="Tu academia no tiene configurado el aprovisionamiento de VPS. Contacta a tu programa.",
-            slug="academy-vps-not-configured",
-        )
-    )
+    lang = getattr(user, "lang", None) or "en"
+    return get_vps_provisioning_academy_for_academy(academy, lang=lang)
 
 
-def request_vps(user, plan_slug=None):
-    """
-    Request a new VPS for the user. Consumes one vps_server consumable, creates ProvisioningVPS, enqueues task.
-    Returns the ProvisioningVPS instance. Raises ValidationException if ineligible, duplicate, or no credits.
-    """
-    academy, provisioning_academy = get_eligible_academy_and_vendor_for_vps(user)
+def _request_vps_core(
+    user,
+    academy: Academy,
+    provisioning_academy: ProvisioningAcademy,
+    plan_slug=None,
+    vendor_selection=None,
+    *,
+    lang: Optional[str] = None,
+    for_staff: bool = False,
+):
+    lang = lang or getattr(user, "lang", None) or "en"
     active_statuses = [
         ProvisioningVPS.VPS_STATUS_PENDING,
         ProvisioningVPS.VPS_STATUS_PROVISIONING,
@@ -162,25 +190,39 @@ def request_vps(user, plan_slug=None):
     if ProvisioningVPS.objects.filter(
         user=user, academy=academy, status__in=active_statuses
     ).exists():
-        raise ValidationException(
-            translation(
-                getattr(user, "lang", None) or "en",
+        if for_staff:
+            msg = translation(
+                lang,
+                en="This student already has an active or pending VPS for this academy.",
+                es="Este estudiante ya tiene un VPS activo o pendiente para esta academia.",
+                slug="duplicate-vps",
+            )
+        else:
+            msg = translation(
+                lang,
                 en="You already have an active or pending VPS for this academy.",
                 es="Ya tienes un VPS activo o pendiente para esta academia.",
                 slug="duplicate-vps",
             )
-        )
+        raise ValidationException(msg)
     consumables = Consumable.list(user=user, service="vps_server", include_zero_balance=False)
     consumables = consumables.filter(how_many__gt=0)
     if not consumables.exists():
-        raise ValidationException(
-            translation(
-                getattr(user, "lang", None) or "en",
+        if for_staff:
+            msg = translation(
+                lang,
+                en="This student doesn't have VPS server credits.",
+                es="Este estudiante no tiene créditos de servidor VPS.",
+                slug="insufficient-vps-server-credits",
+            )
+        else:
+            msg = translation(
+                lang,
                 en="You don't have VPS server credits.",
                 es="No tienes créditos de servidor VPS.",
                 slug="insufficient-vps-server-credits",
             )
-        )
+        raise ValidationException(msg)
     consumable = consumables.first()
     consume_service.send(sender=Consumable, instance=consumable, how_many=1)
     requested_at = timezone.now()
@@ -194,15 +236,50 @@ def request_vps(user, plan_slug=None):
         requested_at=requested_at,
     )
     from .tasks import provision_vps_task
-    provision_vps_task.delay(vps.id)
+
+    provision_vps_task.delay(vps.id, vendor_selection=vendor_selection or {})
     return vps
+
+
+def request_vps(user, plan_slug=None, vendor_selection=None):
+    """
+    Request a new VPS for the user. Consumes one vps_server consumable, creates ProvisioningVPS, enqueues task.
+    Returns the ProvisioningVPS instance. Raises ValidationException if ineligible, duplicate, or no credits.
+    """
+    academy, provisioning_academy = get_eligible_academy_and_vendor_for_vps(user)
+    return _request_vps_core(user, academy, provisioning_academy, plan_slug, vendor_selection=vendor_selection)
+
+
+def request_vps_for_student(student_user, academy: Academy, plan_slug=None, vendor_selection=None, lang: str = "en"):
+    """
+    Staff flow: request a VPS for a student in a fixed academy. Consumes the student's vps_server consumable.
+    """
+    if not user_belongs_to_academy_for_vps(student_user, academy):
+        raise ValidationException(
+            translation(
+                lang,
+                en="This user is not an active member of this academy.",
+                es="Este usuario no es miembro activo de esta academia.",
+                slug="student-not-in-academy",
+            )
+        )
+    _, provisioning_academy = get_vps_provisioning_academy_for_academy(academy, lang=lang)
+    return _request_vps_core(
+        student_user,
+        academy,
+        provisioning_academy,
+        plan_slug,
+        vendor_selection=vendor_selection,
+        lang=lang,
+        for_staff=True,
+    )
 
 
 def get_active_cohorts(user):
     now = timezone.now()
     active = CohortUser.objects.filter(user=user, educational_status="ACTIVE", role="STUDENT")
     # only cohorts that end
-    cohorts_that_end = active.filter(never_ends=False)
+    cohorts_that_end = active.filter(cohort__never_ends=False)
     # also are withing calendar dates and STARTED or FINAL PROJECT
     active_dates = cohorts_that_end.filter(
         cohort__kickoff_date__gte=now, cohort__ending_date__lte=now, cohort__stage__in=["STARTED", "FINAL_PROJECT"]

@@ -1,10 +1,9 @@
 from django.core.management.base import BaseCommand, CommandError
-from django.utils import timezone
 
-from breathecode.admissions.models import Cohort, CohortUser, FULLY_PAID, UP_TO_DATE
+from breathecode.admissions.models import CohortUser, FULLY_PAID, UP_TO_DATE
 from breathecode.authenticate.models import User
-from breathecode.certificate.actions import how_many_pending_tasks
-from breathecode.certificate.models import LayoutDesign, Specialty, UserSpecialty
+from breathecode.certificate.actions import how_many_pending_tasks, resolve_specialty_for_cohort
+from breathecode.certificate.models import LayoutDesign, UserSpecialty
 
 
 class Command(BaseCommand):
@@ -229,11 +228,7 @@ class Command(BaseCommand):
         
         # Check 3: Specialty exists
         if cohort.syllabus_version:
-            specialty = (
-                Specialty.objects.filter(syllabuses__id=cohort.syllabus_version.syllabus_id)
-                .distinct()
-                .first()
-            )
+            specialty = resolve_specialty_for_cohort(cohort)
             if not specialty:
                 issues.append("Specialty has no Syllabus assigned")
                 self.stdout.write(self.style.ERROR("❌ Specialty has no Syllabus assigned"))

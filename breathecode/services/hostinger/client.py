@@ -10,7 +10,7 @@ import secrets
 import string
 from typing import Any, Dict, Optional
 
-from breathecode.provisioning.vps_client import VPSProvisioningError, register_vps_client
+from breathecode.provisioning.utils.vps_client import VPSProvisioningError, register_vps_client
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +54,7 @@ class HostingerVPSClient:
             item_id = credentials.get("item_id")
             template_id = credentials.get("template_id")
             data_center_id = credentials.get("data_center_id")
+            defaults_lookup_error = None
 
             if not all([item_id, template_id, data_center_id]):
                 try:
@@ -75,10 +76,23 @@ class HostingerVPSClient:
                             item_id = str(getattr(first, "id", None) or getattr(first, "item_id", "") or "")
                 except ApiException as e:
                     logger.warning("Hostinger defaults lookup failed: %s", e)
+                    defaults_lookup_error = str(e)
 
             if not item_id or not template_id or not data_center_id:
+                missing = [
+                    key for key, value in (
+                        ("item_id", item_id),
+                        ("template_id", template_id),
+                        ("data_center_id", data_center_id),
+                    ) if not value
+                ]
+                details = f" Missing: {', '.join(missing)}."
+                if defaults_lookup_error:
+                    details += f" Hostinger defaults lookup failed: {defaults_lookup_error}"
                 raise VPSProvisioningError(
-                    "Missing item_id, template_id or data_center_id. Set in ProvisioningAcademy credentials or use Hostinger API defaults."
+                    "Missing item_id, template_id or data_center_id. "
+                    "Set allowed options in ProvisioningAcademy vendor_settings and send selected values when requesting VPS."
+                    + details
                 )
 
             try:
@@ -143,3 +157,27 @@ class HostingerVPSClient:
                 subs_api.cancel_subscription_v1(subscription_id)
             except ApiException as e:
                 raise VPSProvisioningError(f"Hostinger destroy VPS failed: {e}") from e
+
+    def test_connection(self, credentials: Dict[str, Any]) -> None:
+        """Validate Hostinger credentials by reading basic catalog endpoints."""
+        token = credentials.get("token") or credentials.get("access_token")
+        if not token:
+            raise VPSProvisioningError("Hostinger credentials missing token")
+
+        try:
+            import hostinger_api
+            from hostinger_api.rest import ApiException
+        except ImportError as e:
+            raise VPSProvisioningError("Hostinger API SDK not installed") from e
+
+        configuration = hostinger_api.Configuration(access_token=token)
+        with hostinger_api.ApiClient(configuration) as api_client:
+            try:
+                dc_api = hostinger_api.VPSDataCentersApi(api_client)
+                template_api = hostinger_api.VPSOSTemplatesApi(api_client)
+                catalog_api = hostinger_api.BillingCatalogApi(api_client)
+                dc_api.get_data_center_list_v1()
+                template_api.get_templates_v1()
+                catalog_api.get_catalog_item_list_v1(category="VPS")
+            except ApiException as e:
+                raise VPSProvisioningError(f"Hostinger connection failed: {e}") from e

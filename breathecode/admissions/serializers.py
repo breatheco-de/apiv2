@@ -16,7 +16,7 @@ from breathecode.utils import localize_query, serializers, serpy
 
 from breathecode.certificate.models import Specialty
 
-from .actions import haversine, test_syllabus
+from .actions import haversine, resolve_syllabus_json, test_syllabus
 from .models import (
     COHORT_STAGE,
     Academy,
@@ -1520,9 +1520,14 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
         ).exclude(revision_status="IGNORED")
 
         mandatory_slugs = []
+        effective_json = (
+            resolve_syllabus_json(cohort.syllabus_version.__dict__["json"])
+            if cohort and cohort.syllabus_version
+            else {"days": []}
+        )
         for task in tasks_pending:
-            if "days" in task.cohort.syllabus_version.__dict__["json"]:
-                for day in task.cohort.syllabus_version.__dict__["json"]["days"]:
+            if "days" in effective_json:
+                for day in effective_json["days"]:
                     for assignment in day["assignments"]:
                         if "mandatory" not in assignment or (
                             "mandatory" in assignment and assignment["mandatory"] == True
@@ -1680,6 +1685,17 @@ class SyllabusSerializer(serializers.ModelSerializer):
         exclude = ()
 
 
+def _raise_if_syllabus_test_failed(syllabus_log):
+    """Raise ValidationException with the same messages collected by test_syllabus."""
+    if syllabus_log.http_status() == 200:
+        return
+    lines = [
+        f"There are {len(syllabus_log.errors)} errors in your syllabus, please validate before submitting.",
+        *syllabus_log.errors,
+    ]
+    raise ValidationException("\n".join(lines), slug="syllabus-with-errors")
+
+
 class SyllabusVersionSerializer(serializers.ModelSerializer):
     json = serializers.JSONField()
 
@@ -1699,12 +1715,15 @@ class SyllabusVersionSerializer(serializers.ModelSerializer):
         if "json" in data:
             try:
                 ignore = request.GET.get("ignore", "")
-                _log = test_syllabus(data["json"], ignore=ignore.lower().split(","))
-                if _log.http_status() != 200:
-                    raise ValidationException(
-                        f"There are {len(_log.errors)} errors in your syllabus, please validate before submitting",
-                        slug="syllabus-with-errors",
-                    )
+                academy = self.context.get("academy")
+                _log = test_syllabus(
+                    data["json"],
+                    ignore=ignore.lower().split(","),
+                    academy_id=academy.id if academy else None,
+                )
+                _raise_if_syllabus_test_failed(_log)
+            except ValidationException:
+                raise
             except Exception as e:
                 raise ValidationException(f"Error when testing the syllabus: {str(e)}", slug="syllabus-with-errors")
 
@@ -1754,12 +1773,15 @@ class SyllabusVersionPutSerializer(serializers.ModelSerializer):
         if "json" in data:
             try:
                 ignore = request.GET.get("ignore", "")
-                _log = test_syllabus(data["json"], ignore=ignore.lower().split(","))
-                if _log.http_status() != 200:
-                    raise ValidationException(
-                        f"There are {len(_log.errors)} errors in your syllabus, please validate before submitting",
-                        slug="syllabus-with-errors",
-                    )
+                academy = self.context.get("academy")
+                _log = test_syllabus(
+                    data["json"],
+                    ignore=ignore.lower().split(","),
+                    academy_id=academy.id if academy else None,
+                )
+                _raise_if_syllabus_test_failed(_log)
+            except ValidationException:
+                raise
             except Exception as e:
                 raise ValidationException(f"Error when testing the syllabus: {str(e)}", slug="syllabus-with-errors")
 
