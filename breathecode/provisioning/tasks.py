@@ -20,7 +20,7 @@ from breathecode.payments.models import Consumable
 from breathecode.payments.services.stripe import Stripe
 from breathecode.payments.signals import consume_service, reimburse_service_units
 from breathecode.provisioning import actions
-from breathecode.provisioning.llm_client import LLMClientError, get_llm_client, get_llm_client_class
+from breathecode.provisioning.utils.llm_client import LLMClientError, get_llm_client
 from breathecode.provisioning.models import (
     ProvisioningAcademy,
     ProvisioningBill,
@@ -603,7 +603,7 @@ def monthly_vps_renewal_dispatcher(**_: Any):
 
 
 @task(priority=TaskPriority.STUDENT.value)
-def deprovision_litellm_user_task(user_id: int, **_: Any):
+def deprovision_litellm_user_task(user_id: int, academy_id: int | None = None, **_: Any):
     """
     Deprovision a user from Litellm by deleting the external user and its API keys.
 
@@ -613,19 +613,46 @@ def deprovision_litellm_user_task(user_id: int, **_: Any):
     if not user:
         raise AbortTask(f"User {user_id} not found")
 
-    if Consumable.list(user=user, service="free_monthly_llm_budget").exists():
-        logger.info(f"User {user_id} still has free_monthly_llm_budget, skipping deprovision")
-        return
+    if academy_id:
+        try:
+            academy_id = int(academy_id)
+        except Exception:
+            academy_id = None
+
+    if academy_id:
+        has_entitlement = (
+            Consumable.list(
+                user=user,
+                service="free-monthly-llm-budget",
+                extra={"subscription__academy_id": academy_id},
+            ).exists()
+            or Consumable.list(
+                user=user,
+                service="free-monthly-llm-budget",
+                extra={"plan_financing__academy_id": academy_id},
+            ).exists()
+        )
+        if has_entitlement:
+            logger.info(
+                "User %s still has free-monthly-llm-budget for academy %s, skipping deprovision",
+                user_id,
+                academy_id,
+            )
+            return
+    else:
+        if Consumable.list(user=user, service="free-monthly-llm-budget").exists():
+            logger.info("User %s still has free-monthly-llm-budget, skipping deprovision", user_id)
+            return
 
     provisioning_llms_qs = ProvisioningLLM.objects.filter(user=user).select_related("academy", "vendor").all()
+    if academy_id:
+        provisioning_llms_qs = provisioning_llms_qs.filter(academy_id=academy_id)
 
     # Group external users by (academy_id, vendor_id) so each deletion call
     # uses the correct ProvisioningAcademy credentials/base_url.
     provisioning_academy_groups: dict[tuple[int, int], set[str]] = {}
     for provisioning_llm in provisioning_llms_qs:
         if not provisioning_llm.vendor_id or not provisioning_llm.external_user_id:
-            continue
-        if get_llm_client_class(provisioning_llm.vendor) is None:
             continue
         key = (provisioning_llm.academy_id, provisioning_llm.vendor_id)
         provisioning_academy_groups.setdefault(key, set()).add(str(provisioning_llm.external_user_id))

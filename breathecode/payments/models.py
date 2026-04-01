@@ -2416,7 +2416,7 @@ class PlanFinancing(AbstractIOweYou):
                             sender=Service,
                             instance=service,
                             user_id=self.user.id,
-                            context={},
+                            context={"academy_id": getattr(self, "academy_id", None)},
                         )
 
 
@@ -2618,7 +2618,10 @@ class Subscription(AbstractIOweYou):
                         continue
                     service_ids.add(service.id)
                     signals.deprovision_service.send_robust(
-                        sender=Service, instance=service, user_id=self.user.id, context={}
+                        sender=Service,
+                        instance=service,
+                        user_id=self.user.id,
+                        context={"academy_id": getattr(self, "academy_id", None)},
                     )
                 for plan in self.plans.all():
                     for plan_service_item in PlanServiceItem.objects.select_related("service_item__service").filter(
@@ -2629,7 +2632,10 @@ class Subscription(AbstractIOweYou):
                             continue
                         service_ids.add(service.id)
                         signals.deprovision_service.send_robust(
-                            sender=Service, instance=service, user_id=self.user.id, context={}
+                            sender=Service,
+                            instance=service,
+                            user_id=self.user.id,
+                            context={"academy_id": getattr(self, "academy_id", None)},
                         )
 
 
@@ -3021,7 +3027,6 @@ class Consumable(AbstractServiceItem):
         extra: Optional[dict] = None,
         include_zero_balance: bool = False,
     ) -> QuerySet["Consumable"]:
-
         if extra is None:
             extra = {}
 

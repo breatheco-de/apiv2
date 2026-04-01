@@ -3,12 +3,13 @@ from typing import Any, Dict, Optional
 
 import requests
 
-from breathecode.provisioning.llm_client import register_llm_client
+from breathecode.provisioning.utils.llm_client import (
+    LLMClientError,
+    LLMConnectionError,
+    register_llm_client,
+)
 
 logger = logging.getLogger(__name__)
-
-
-from breathecode.provisioning.llm_client import LLMClientError
 
 
 class LiteLLMError(LLMClientError):
@@ -40,6 +41,17 @@ class LiteLLMClient:
             "Content-Type": "application/json",
         }
 
+    def test_connection(self, timeout: float = 15.0) -> None:
+        """Ping LiteLLM using this client's configured base_url/api_key."""
+        try:
+            resp = requests.get(f"{self.base_url}/models", headers=self.headers, timeout=timeout)
+        except requests.RequestException as exc:
+            raise LLMConnectionError(f"LLM connection failed: {exc}") from exc
+
+        if resp.status_code >= 400:
+            message = self._extract_error_message(resp)
+            raise LLMConnectionError(f"LLM connection failed with status {resp.status_code}: {message}")
+
     @staticmethod
     def _extract_error_message(resp: requests.Response) -> str:
         """
@@ -67,6 +79,7 @@ class LiteLLMClient:
         self,
         external_user_id: str,
         name: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
         timeout: float = 10.0,
     ) -> Dict[str, Any]:
         """
@@ -87,6 +100,8 @@ class LiteLLMClient:
             "duration": "30d",
             "key_alias": name,
         }
+        if isinstance(metadata, dict) and metadata:
+            payload["metadata"] = metadata
         try:
             resp = requests.post(url, headers=self.headers, json=payload, timeout=timeout)
         except requests.RequestException as exc:
@@ -164,8 +179,8 @@ class LiteLLMClient:
     def create_user(
         self,
         user_id: str,
-        user_email: str,
         user_alias: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
         timeout: float = 10.0,
     ) -> Dict[str, Any]:
         """
@@ -175,7 +190,12 @@ class LiteLLMClient:
         """
         url = f"{self.base_url.rstrip('/')}/user/new"
 
-        payload: Dict[str, Any] = {"user_id": user_id, "user_email": user_email, "auto_create_key": False}
+        if metadata is None:
+            metadata = {}
+
+        payload: Dict[str, Any] = {"user_id": user_id, "auto_create_key": False}
+        if metadata:
+            payload["metadata"] = metadata
         if user_alias:
             payload["user_alias"] = user_alias
 

@@ -53,7 +53,6 @@ from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExt
 from breathecode.utils.decorators import has_permission
 from breathecode.utils.io.file import count_csv_rows
 from breathecode.utils.views import private_view, render_message
-from .llm_client import LLMClientError
 
 from .actions import (
     get_provisioning_vendor,
@@ -75,7 +74,7 @@ from .models import (
     ProvisioningVendor,
 )
 from .utils.coding_editor_client import CodingEditorConnectionError, get_coding_editor_client
-from .utils.llm_client import LLMConnectionError, get_llm_client
+from .utils.llm_client import LLMClientError, LLMConnectionError, get_llm_client
 from .utils.vps_client import VPSProvisioningError, get_vps_client
 
 
@@ -1470,10 +1469,10 @@ class ProvisioningAcademyTestConnectionView(APIView):
                     raise CodingEditorConnectionError(f"No coding editor client registered for vendor '{vendor_name}'")
                 client.test_connection(credentials, vendor=vendor)
             elif vendor_type == ProvisioningVendor.VendorType.LLM:
-                client = get_llm_client(vendor)
+                client = get_llm_client(pa)
                 if not client:
                     raise LLMConnectionError(f"No LLM client registered for vendor '{vendor_name}'")
-                client.test_connection(credentials, vendor=vendor)
+                client.test_connection()
             else:
                 raise ValidationException(
                     translation(
@@ -1734,7 +1733,7 @@ class MeLLMKeysView(APIView):
     def get(self, request):
         lang = get_user_language(request)
         user = request.user
-        if not Consumable.list(user=user, service=3).exists():
+        if not Consumable.list(user=user, service="free-monthly-llm-budget").exists():
             raise ValidationException(
                 translation(
                     lang,
@@ -1768,9 +1767,10 @@ class MeLLMKeysView(APIView):
                 vendor=provisioning_academy.vendor,
             ).first()
 
-            external_user_id = (provisioning_llm.external_user_id if provisioning_llm else str(user.username)) or str(
-                user.username
-            )
+            academy_slug = getattr(provisioning_academy.academy, "slug", "") or str(academy_id)
+            external_user_id = f"{user.username}-{academy_slug}"
+            if provisioning_llm and provisioning_llm.external_user_id:
+                external_user_id = provisioning_llm.external_user_id
             try:
                 user_info = client.get_user_info(user_id=external_user_id)
             except LLMClientError:
@@ -1796,6 +1796,7 @@ class MeLLMKeysView(APIView):
                         "spend": item.get("spend"),
                         "created_at": item.get("created_at"),
                         "academy_id": academy_id,
+                        "metadata": item.get("metadata") or {},
                     }
                 )
 
@@ -1804,16 +1805,36 @@ class MeLLMKeysView(APIView):
     def post(self, request):
         lang = get_user_language(request)
         alias = (request.data or {}).get("key_alias")
+        plan_slug = (request.data or {}).get("plan_slug")
         if isinstance(alias, str):
             alias = alias.strip() or None
         else:
             alias = request.user.first_name or request.user.username
+        if isinstance(plan_slug, str):
+            plan_slug = plan_slug.strip() or None
+        else:
+            plan_slug = None
 
+        plan_title = None
+        if plan_slug:
+            from breathecode.payments.models import Plan
+
+            plan = Plan.objects.filter(slug=plan_slug).only("title").first()
+            if not plan:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Plan not found.",
+                        es="Plan no encontrado.",
+                        slug="plan-not-found",
+                    ),
+                    code=404,
+                )
+            plan_title = plan.title
         try:
-            client, external_user_id, academy_id = resolve_llm_client_and_external_id(
-                request, ensure_llm_user_record=True
-            )
-            created = client.create_api_key(external_user_id=external_user_id, name=alias)
+            client, external_user_id = resolve_llm_client_and_external_id(request, ensure_llm_user_record=True)
+            metadata = {"plan_title": plan_title} if plan_title else None
+            created = client.create_api_key(external_user_id=external_user_id, name=alias, metadata=metadata)
         except LLMClientError as exc:
             raise ValidationException(
                 translation(
@@ -1833,7 +1854,7 @@ class MeLLMKeyByIdView(APIView):
     def delete(self, request, key_id):
         lang = get_user_language(request)
         try:
-            client, external_user_id, _ = resolve_llm_client_and_external_id(request)
+            client, external_user_id = resolve_llm_client_and_external_id(request)
             client.delete_api_keys(user_id=external_user_id, token_ids=[key_id])
         except LLMClientError as exc:
             raise ValidationException(

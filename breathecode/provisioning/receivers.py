@@ -48,10 +48,43 @@ def deprovision_service_receiver(sender: Type[Service], instance: Service, user_
 
     service_slug = instance.slug
 
-    consumables = Consumable.list(user=user, service=instance)
-    if consumables.exists():
-        logger.info(f"User {user_id} still has consumables for service {service_slug}, skipping deprovisioning.")
-        return
+    academy_id = None
+    if isinstance(context, dict):
+        academy_id = context.get("academy_id") or context.get("academy")
+    if academy_id is not None:
+        try:
+            academy_id = int(academy_id)
+        except Exception:
+            academy_id = None
+
+    # When academy_id is provided, only skip deprovision if the user still has
+    # this service entitlement within that academy context.
+    if academy_id:
+        has_consumables = (
+            Consumable.list(
+                user=user,
+                service=instance,
+                extra={"subscription__academy_id": academy_id},
+            ).exists()
+            or Consumable.list(
+                user=user,
+                service=instance,
+                extra={"plan_financing__academy_id": academy_id},
+            ).exists()
+        )
+        if has_consumables:
+            logger.info(
+                "User %s still has consumables for service %s in academy %s, skipping deprovisioning.",
+                user_id,
+                service_slug,
+                academy_id,
+            )
+            return
+    else:
+        consumables = Consumable.list(user=user, service=instance)
+        if consumables.exists():
+            logger.info(f"User {user_id} still has consumables for service {service_slug}, skipping deprovisioning.")
+            return
 
     deprovisioner = get_service_deprovisioner(service_slug)
     if deprovisioner:
