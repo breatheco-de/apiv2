@@ -1867,6 +1867,21 @@ class MeLLMKeysView(APIView):
             client, external_user_id = resolve_llm_client_and_external_id(request, ensure_llm_user_record=True)
             metadata = {"plan_title": plan_title} if plan_title else None
             created = client.create_api_key(external_user_id=external_user_id, name=alias, metadata=metadata)
+            raw_academy_id = request.headers.get("Academy") or request.headers.get("academy")
+            try:
+                academy_id = int(str(raw_academy_id).strip())
+            except Exception:
+                academy_id = None
+            if academy_id:
+                ProvisioningLLM.objects.filter(
+                    user=request.user,
+                    academy_id=academy_id,
+                    external_user_id=external_user_id,
+                ).exclude(status=ProvisioningLLM.STATUS_DEPROVISIONED).update(
+                    status=ProvisioningLLM.STATUS_ACTIVE,
+                    deprovisioned_at=None,
+                    error_message="",
+                )
         except LLMClientError as exc:
             raise ValidationException(
                 translation(
@@ -1888,6 +1903,21 @@ class MeLLMKeyByIdView(APIView):
         try:
             client, external_user_id = resolve_llm_client_and_external_id(request)
             client.delete_api_keys(user_id=external_user_id, token_ids=[key_id])
+            raw_academy_id = request.headers.get("Academy") or request.headers.get("academy")
+            try:
+                academy_id = int(str(raw_academy_id).strip())
+            except Exception:
+                academy_id = None
+            if academy_id:
+                ProvisioningLLM.objects.filter(
+                    user=request.user,
+                    academy_id=academy_id,
+                    external_user_id=external_user_id,
+                ).exclude(status=ProvisioningLLM.STATUS_DEPROVISIONED).update(
+                    status=ProvisioningLLM.STATUS_ACTIVE,
+                    deprovisioned_at=None,
+                    error_message="",
+                )
         except LLMClientError as exc:
             raise ValidationException(
                 translation(
