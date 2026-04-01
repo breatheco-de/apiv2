@@ -6,12 +6,12 @@ This guide covers the entire flow to create a syllabus, including all dependenci
 
 1. [Prerequisites](#prerequisites)
 2. [Step-by-Step Flow](#step-by-step-flow)
-3. [Syllabus JSON Structure](#syllabus-json-structure)
-4. [Macro cohort syllabus overrides](#macro-cohort-syllabus-overrides)
-5. [API Endpoints Reference](#api-endpoints-reference)
-6. [Complete Examples](#complete-examples)
-7. [Validation and Testing](#validation-and-testing)
-8. [Troubleshooting](#troubleshooting)
+3. [Syllabus JSON Structure](#syllabus-json-structure) (includes [macro cohort overrides](#macro-cohort-syllabus-overrides-per-micro-slug))
+4. [API Endpoints Reference](#api-endpoints-reference)
+5. [Complete Examples](#complete-examples)
+6. [Validation and Testing](#validation-and-testing)
+7. [Troubleshooting](#troubleshooting)
+
 
 ---
 
@@ -356,6 +356,44 @@ curl -X POST "https://your-api.com/v1/admissions/syllabus/1/version" \
   ]
 }
 ```
+
+### Macro cohort syllabus overrides (per-micro slug)
+
+A macro cohort’s **`SyllabusVersion.json`** may include extra keys shaped like **`<micro-syllabus-slug>.v<version>`** (examples: `jumpstart.v2`, `basics-of-front-end-development.v2`). When the API resolves that micro syllabus with macro context, it **merges** the block into the micro JSON. See `resolve_syllabus_json` / `apply_reference_override` in `breathecode.admissions.actions`.
+
+| Rule | Behavior |
+|------|----------|
+| **`days`** | Merged **by array index** (`days[0]` with the first day of the micro, etc.). |
+| **`lessons`**, **`quizzes`**, **`replits`**, **`assignments`** | Merged **by index inside each day** (same as days). |
+| **Skip a slot** | Use **`null`** at that index (no change to the base item). |
+| **Remove an item** | Use **`{ "status": "DELETED" }`** at that index; it is dropped after merge. |
+| **Other day fields** | Shallow-merged into the base day (e.g. `teacher_instructions`, `extended_instructions`). |
+
+`teacher_instructions` alone do **not** add lessons; you must include a **`lessons`** array in the override day when you want to add or change lesson entries.
+
+#### Replacing the **first** lesson with a new one (`DELETED` + append)
+
+Because the merge is positional, you cannot “insert before” the first lesson without touching index `0`. A supported pattern when the day has **exactly one** lesson in the base micro syllabus:
+
+1. At **`lessons[0]`**, set **`{ "status": "DELETED" }`** so the original first lesson is removed.
+2. At **`lessons[1]`**, put the **full new** lesson object (`slug`, `title`, `url`, `target`, `mandatory`, etc.).
+
+After merge, that day ends up with only the new lesson (the old one is gone and the new one is appended after the deleted slot, then `null` entries are stripped).
+
+```json
+"lessons": [
+  { "status": "DELETED" },
+  {
+    "slug": "my-new-lesson",
+    "title": "My new lesson",
+    "url": "https://github.com/org/repo",
+    "target": "self",
+    "mandatory": true
+  }
+]
+```
+
+**Caveat:** If the base day has **more than one** lesson, `DELETED` at `0` plus a new object at `1` will **merge into the second base lesson**, not “replace first + keep the rest” in one shot. For multi-lesson days, either build the **full intended `lessons` list** explicitly (with `DELETED`, `{}`, and objects as needed) or publish a **new micro syllabus version** with the correct order.
 
 ---
 

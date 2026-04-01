@@ -105,6 +105,10 @@ To verify a cohort is a macro or to read its micro cohorts and order, use `GET /
 - **One or more micro cohort IDs do not exist or belong to another academy:** The API will reject the request. Tell the user that all IDs in `micro_cohorts` must be existing cohorts in the same academy; verify IDs from Step 1.
 - **Users were already in the macro before micro cohorts were linked:** New micro cohorts will not automatically get those users. Tell the user to use the sync endpoint per user or to run a bulk sync if available; do not leave this unmentioned.
 
+## Macro syllabus JSON overrides (optional)
+
+If the macro’s **`SyllabusVersion.json`** includes per-micro keys like **`jumpstart.v2`** to merge teacher copy or assets into a micro syllabus, see **[SYLLABUS.md — Macro cohort syllabus overrides](../../SYLLABUS.md#macro-cohort-syllabus-overrides-per-micro-slug)** for merge-by-index rules, **`status: "DELETED"`**, and replacing the first lesson of a day.
+
 ## Checklist
 
 1. Create each micro cohort with `POST /v1/admissions/academy/cohort` and record each returned `id`.
