@@ -77,6 +77,30 @@ from .utils.coding_editor_client import CodingEditorConnectionError, get_coding_
 from .utils.llm_client import LLMClientError, LLMConnectionError, get_llm_client
 from .utils.vps_client import VPSProvisioningError, get_vps_client
 
+_VALID_VENDOR_TYPE_VALUES = frozenset(c.value for c in ProvisioningVendor.VendorType)
+
+
+def _optional_vendor_type_from_query(request, *, lang: str) -> str | None:
+    """Parse optional ``vendor_type`` query string; raise ValidationException if invalid."""
+    raw = request.GET.get("vendor_type")
+    if raw is None:
+        return None
+    if isinstance(raw, str) and not raw.strip():
+        return None
+    normalized = raw.strip().upper()
+    if normalized not in _VALID_VENDOR_TYPE_VALUES:
+        allowed = ", ".join(sorted(_VALID_VENDOR_TYPE_VALUES))
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Invalid vendor_type. Must be one of: {allowed}.",
+                es=f"vendor_type no válido. Debe ser uno de: {allowed}.",
+                slug="invalid-provisioning-vendor-type",
+            ),
+            code=400,
+        )
+    return normalized
+
 
 def _normalize_allowed_values(settings, key, cast):
     values = settings.get(key) or []
@@ -1078,7 +1102,11 @@ class ProvisioningVendorView(APIView):
 
     @capable_of("read_provisioning_activity")
     def get(self, request, academy_id=None):
+        lang = get_user_language(request)
+        vendor_type = _optional_vendor_type_from_query(request, lang=lang)
         vendors = ProvisioningVendor.objects.all().order_by("name")
+        if vendor_type is not None:
+            vendors = vendors.filter(vendor_type=vendor_type)
         serializer = GetProvisioningVendorSerializer(vendors, many=True)
         return Response(serializer.data)
 
@@ -1216,12 +1244,16 @@ class ProvisioningAcademyView(APIView):
 
     @capable_of("read_provisioning_activity")
     def get(self, request, academy_id=None):
+        lang = get_user_language(request)
         handler = self.extensions(request)
+        vendor_type = _optional_vendor_type_from_query(request, lang=lang)
         items = (
             ProvisioningAcademy.objects.filter(academy_id=academy_id)
             .select_related("vendor", "academy")
             .prefetch_related("allowed_machine_types")
         )
+        if vendor_type is not None:
+            items = items.filter(vendor__vendor_type=vendor_type)
         items = handler.queryset(items)
         serializer = GetProvisioningAcademySerializer(items, many=True)
         return handler.response(serializer.data)
