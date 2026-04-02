@@ -23,6 +23,7 @@ from rest_framework_csv.renderers import CSVRenderer
 from breathecode.admissions.models import Academy, Cohort, CohortUser
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
+from breathecode.payments.models import Consumable
 from breathecode.notify.actions import get_template_content
 from breathecode.provisioning import tasks
 from breathecode.provisioning.serializers import (
@@ -30,7 +31,6 @@ from breathecode.provisioning.serializers import (
     AcademyVPSListSerializer,
     GetProvisioningAcademySerializer,
     GetProvisioningBillDetailSerializer,
-    GetProvisioningBillSerializer,
     GetProvisioningBillSmallSerializer,
     GetProvisioningProfile,
     GetProvisioningUserConsumptionDetailSerializer,
@@ -55,23 +55,26 @@ from breathecode.utils.io.file import count_csv_rows
 from breathecode.utils.views import private_view, render_message
 
 from .actions import (
-    get_eligible_academy_and_vendor_for_vps,
     get_provisioning_vendor,
-    get_vps_provisioning_academy_for_academy,
     request_vps,
+    resolve_llm_client_and_external_id,
+    resolve_provisioning_academy_for_llm,
+    get_eligible_academy_and_vendor_for_vps,
+    get_vps_provisioning_academy_for_academy,
     request_vps_for_student,
 )
 from .models import (
     BILL_STATUS,
     ProvisioningAcademy,
     ProvisioningBill,
+    ProvisioningLLM,
     ProvisioningProfile,
     ProvisioningUserConsumption,
     ProvisioningVPS,
     ProvisioningVendor,
 )
 from .utils.coding_editor_client import CodingEditorConnectionError, get_coding_editor_client
-from .utils.llm_client import LLMConnectionError, get_llm_client
+from .utils.llm_client import LLMClientError, LLMConnectionError, get_llm_client
 from .utils.vps_client import VPSProvisioningError, get_vps_client
 
 _VALID_VENDOR_TYPE_VALUES = frozenset(c.value for c in ProvisioningVendor.VendorType)
@@ -1084,9 +1087,7 @@ class AcademyBillConsumptionsView(APIView):
         bill = ProvisioningBill.objects.filter(academy__id=academy_id, id=bill_id).first()
 
         if bill is None:
-            raise ValidationException(
-                "Provisioning Bill not found", code=404, slug="provisioning_bill-not-found"
-            )
+            raise ValidationException("Provisioning Bill not found", code=404, slug="provisioning_bill-not-found")
 
         consumptions = ProvisioningUserConsumption.objects.filter(bills=bill).order_by("username")
 
@@ -1149,13 +1150,9 @@ class ProvisioningProfileView(APIView):
             vendor=vendor,
         )
         if data.get("cohort_ids"):
-            profile.cohorts.set(
-                Cohort.objects.filter(id__in=data["cohort_ids"], academy_id=academy_id)
-            )
+            profile.cohorts.set(Cohort.objects.filter(id__in=data["cohort_ids"], academy_id=academy_id))
         if data.get("member_ids"):
-            profile.members.set(
-                ProfileAcademy.objects.filter(id__in=data["member_ids"], academy_id=academy_id)
-            )
+            profile.members.set(ProfileAcademy.objects.filter(id__in=data["member_ids"], academy_id=academy_id))
         out = GetProvisioningProfile(profile)
         return Response(out.data, status=status.HTTP_201_CREATED)
 
@@ -1216,13 +1213,9 @@ class ProvisioningProfileByIdView(APIView):
             profile.vendor = vendor
             profile.save()
         if "cohort_ids" in data:
-            profile.cohorts.set(
-                Cohort.objects.filter(id__in=data["cohort_ids"], academy_id=academy_id)
-            )
+            profile.cohorts.set(Cohort.objects.filter(id__in=data["cohort_ids"], academy_id=academy_id))
         if "member_ids" in data:
-            profile.members.set(
-                ProfileAcademy.objects.filter(id__in=data["member_ids"], academy_id=academy_id)
-            )
+            profile.members.set(ProfileAcademy.objects.filter(id__in=data["member_ids"], academy_id=academy_id))
         out = GetProvisioningProfile(profile)
         return Response(out.data)
 
@@ -1408,7 +1401,11 @@ class ProvisioningAcademyVendorOptionsView(APIView):
     @capable_of("crud_provisioning_activity")
     def get(self, request, academy_id=None, provisioning_academy_id=None):
         lang = get_user_language(request)
-        pa = ProvisioningAcademy.objects.filter(id=provisioning_academy_id, academy_id=academy_id).select_related("vendor").first()
+        pa = (
+            ProvisioningAcademy.objects.filter(id=provisioning_academy_id, academy_id=academy_id)
+            .select_related("vendor")
+            .first()
+        )
         if not pa:
             raise ValidationException(
                 translation(
@@ -1456,7 +1453,11 @@ class ProvisioningAcademyTestConnectionView(APIView):
     @capable_of("crud_provisioning_activity")
     def post(self, request, academy_id=None, provisioning_academy_id=None):
         lang = get_user_language(request)
-        pa = ProvisioningAcademy.objects.filter(id=provisioning_academy_id, academy_id=academy_id).select_related("vendor").first()
+        pa = (
+            ProvisioningAcademy.objects.filter(id=provisioning_academy_id, academy_id=academy_id)
+            .select_related("vendor")
+            .first()
+        )
         if not pa:
             raise ValidationException(
                 translation(
@@ -1500,10 +1501,10 @@ class ProvisioningAcademyTestConnectionView(APIView):
                     raise CodingEditorConnectionError(f"No coding editor client registered for vendor '{vendor_name}'")
                 client.test_connection(credentials, vendor=vendor)
             elif vendor_type == ProvisioningVendor.VendorType.LLM:
-                client = get_llm_client(vendor)
+                client = get_llm_client(pa)
                 if not client:
                     raise LLMConnectionError(f"No LLM client registered for vendor '{vendor_name}'")
-                client.test_connection(credentials, vendor=vendor)
+                client.test_connection()
             else:
                 raise ValidationException(
                     translation(
@@ -1522,7 +1523,13 @@ class ProvisioningAcademyTestConnectionView(APIView):
                 es="La verificación de conexión del vendor fue exitosa.",
                 slug="vendor-connection-check-succeeded",
             )
-        except (VPSProvisioningError, CodingEditorConnectionError, LLMConnectionError, ValidationException, Exception) as e:
+        except (
+            VPSProvisioningError,
+            CodingEditorConnectionError,
+            LLMConnectionError,
+            ValidationException,
+            Exception,
+        ) as e:
             pa.connection_status = ProvisioningAcademy.ConnectionStatus.ERROR
             if isinstance(e, ValidationException):
                 pa.connection_status_text = str(e.detail)
@@ -1659,7 +1666,9 @@ class AcademyVPSByIdView(APIView):
     @capable_of("crud_provisioning_activity")
     def delete(self, request, academy_id=None, vps_id=None):
         lang = get_user_language(request)
-        vps = ProvisioningVPS.objects.filter(id=vps_id, academy_id=academy_id).select_related("vendor", "academy").first()
+        vps = (
+            ProvisioningVPS.objects.filter(id=vps_id, academy_id=academy_id).select_related("vendor", "academy").first()
+        )
         if not vps:
             raise ValidationException(
                 translation(
@@ -1671,6 +1680,7 @@ class AcademyVPSByIdView(APIView):
                 code=404,
             )
         from breathecode.provisioning.tasks import deprovision_vps_task
+
         deprovision_vps_task.delay(vps.id)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -1747,3 +1757,175 @@ class AcademyVPSByIdView(APIView):
 #         item.save()
 
 #     return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+class MeLLMKeysView(APIView):
+    """GET: list keys from all academies. POST: create a new API key."""
+
+    def get(self, request):
+        lang = get_user_language(request)
+        user = request.user
+        if not Consumable.list(user=user, service="free-monthly-llm-budget").exists():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="You don't have the LLM budget consumable required to manage API keys.",
+                    es="No tienes el consumible de presupuesto de LLM necesario para administrar llaves de API.",
+                    slug="llm-budget-required",
+                ),
+                code=403,
+            )
+
+        academy_ids = (
+            ProvisioningLLM.objects.filter(user=user)
+            .exclude(status=ProvisioningLLM.STATUS_DEPROVISIONED)
+            .values_list("academy_id", flat=True)
+            .distinct()
+        )
+        all_keys = []
+        token_ids: set[str] = set()
+        for academy_id in academy_ids:
+            provisioning_academy = resolve_provisioning_academy_for_llm(academy_id)
+            if not provisioning_academy:
+                continue
+
+            client = get_llm_client(provisioning_academy)
+            if client is None:
+                continue
+
+            provisioning_llm = ProvisioningLLM.objects.filter(
+                user=user,
+                academy_id=academy_id,
+                vendor=provisioning_academy.vendor,
+            ).first()
+
+            academy_slug = getattr(provisioning_academy.academy, "slug", "") or str(academy_id)
+            external_user_id = f"{user.username}-{academy_slug}"
+            if provisioning_llm and provisioning_llm.external_user_id:
+                external_user_id = provisioning_llm.external_user_id
+            try:
+                user_info = client.get_user_info(user_id=external_user_id)
+            except LLMClientError:
+                continue
+            keys_data = user_info.get("keys") or []
+            if not isinstance(keys_data, list):
+                continue
+            for item in keys_data:
+                if not isinstance(item, dict):
+                    continue
+
+                token_id = item.get("token_id") or item.get("token")
+                if not token_id:
+                    continue
+                # Avoid duplicated keys if multiple academies point to the same Litellm tenant.
+                if token_id in token_ids:
+                    continue
+                token_ids.add(token_id)
+                all_keys.append(
+                    {
+                        "token_id": token_id,
+                        "key_alias": item.get("key_alias"),
+                        "spend": item.get("spend"),
+                        "created_at": item.get("created_at"),
+                        "academy_id": academy_id,
+                        "metadata": item.get("metadata") or {},
+                    }
+                )
+
+        return Response(all_keys, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        lang = get_user_language(request)
+        alias = (request.data or {}).get("key_alias")
+        plan_slug = (request.data or {}).get("plan_slug")
+        if isinstance(alias, str):
+            alias = alias.strip() or None
+        else:
+            alias = request.user.first_name or request.user.username
+        if isinstance(plan_slug, str):
+            plan_slug = plan_slug.strip() or None
+        else:
+            plan_slug = None
+
+        plan_title = None
+        if plan_slug:
+            from breathecode.payments.models import Plan
+
+            plan = Plan.objects.filter(slug=plan_slug).only("title").first()
+            if not plan:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Plan not found.",
+                        es="Plan no encontrado.",
+                        slug="plan-not-found",
+                    ),
+                    code=404,
+                )
+            plan_title = plan.title
+        try:
+            client, external_user_id = resolve_llm_client_and_external_id(request, ensure_llm_user_record=True)
+            metadata = {"plan_title": plan_title} if plan_title else None
+            created = client.create_api_key(external_user_id=external_user_id, name=alias, metadata=metadata)
+            raw_academy_id = request.headers.get("Academy") or request.headers.get("academy")
+            try:
+                academy_id = int(str(raw_academy_id).strip())
+            except Exception:
+                academy_id = None
+            if academy_id:
+                ProvisioningLLM.objects.filter(
+                    user=request.user,
+                    academy_id=academy_id,
+                    external_user_id=external_user_id,
+                ).exclude(status=ProvisioningLLM.STATUS_DEPROVISIONED).update(
+                    status=ProvisioningLLM.STATUS_ACTIVE,
+                    deprovisioned_at=None,
+                    error_message="",
+                )
+        except LLMClientError as exc:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Error creating LLM API key: {exc}",
+                    es=f"Error al crear la llave de API de LLM: {exc}",
+                    slug="llm-key-create-error",
+                ),
+                code=502,
+            )
+        return Response(created, status=status.HTTP_201_CREATED)
+
+
+class MeLLMKeyByIdView(APIView):
+    """DELETE: delete a single key by token_id."""
+
+    def delete(self, request, key_id):
+        lang = get_user_language(request)
+        try:
+            client, external_user_id = resolve_llm_client_and_external_id(request)
+            client.delete_api_keys(user_id=external_user_id, token_ids=[key_id])
+            raw_academy_id = request.headers.get("Academy") or request.headers.get("academy")
+            try:
+                academy_id = int(str(raw_academy_id).strip())
+            except Exception:
+                academy_id = None
+            if academy_id:
+                ProvisioningLLM.objects.filter(
+                    user=request.user,
+                    academy_id=academy_id,
+                    external_user_id=external_user_id,
+                ).exclude(status=ProvisioningLLM.STATUS_DEPROVISIONED).update(
+                    status=ProvisioningLLM.STATUS_ACTIVE,
+                    deprovisioned_at=None,
+                    error_message="",
+                )
+        except LLMClientError as exc:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Error deleting LLM API key: {exc}",
+                    es=f"Error al borrar la llave de API de LLM: {exc}",
+                    slug="llm-key-delete-error",
+                ),
+                code=502,
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)

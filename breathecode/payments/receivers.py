@@ -14,24 +14,22 @@ from breathecode.authenticate.models import Cohort, CredentialsDiscord, GoogleWe
 from breathecode.authenticate.signals import google_webhook_saved, invite_status_updated
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.mentorship.signals import mentorship_session_status
-from breathecode.monitoring import signals as monitoring_signals
-from breathecode.monitoring.models import StripeEvent
 from breathecode.payments import actions, tasks
-from breathecode.payments.models import Invoice
 
 from .actions import validate_auto_recharge_service_units
 from .models import (
     Consumable,
     Plan,
     PlanFinancing,
-    PlanFinancingSeat,
     PlanFinancingTeam,
+    Service,
     Subscription,
     SubscriptionBillingTeam,
     SubscriptionSeat,
 )
 from .signals import (
     consume_service,
+    deprovision_service,
     grant_plan_permissions,
     grant_service_permissions,
     lose_service_permissions,
@@ -117,6 +115,18 @@ def lose_service_permissions_receiver(sender: Type[Consumable], instance: Consum
         how_many = consumables.filter(service_item__service__groups__name=group.name).distinct().count()
         if how_many == 0:
             user.groups.remove(group)
+            service = instance.service_item.service
+            academy_id = None
+            if instance.subscription and getattr(instance.subscription, "academy_id", None):
+                academy_id = instance.subscription.academy_id
+            elif instance.plan_financing and getattr(instance.plan_financing, "academy_id", None):
+                academy_id = instance.plan_financing.academy_id
+            deprovision_service.send_robust(
+                sender=Service,
+                instance=service,
+                user_id=user.id,
+                context={"academy_id": academy_id} if academy_id else {},
+            )
 
 
 def grant_service_permissions_receiver(sender: Type[Consumable], instance: Consumable, **kwargs):
