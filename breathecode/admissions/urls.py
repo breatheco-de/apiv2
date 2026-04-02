@@ -34,11 +34,7 @@ REST Naming Conventions:
    - /admin/* - Admin-only endpoints
    - /catalog/* - Reference data endpoints
 
-6. Deprecated Endpoints:
-   - Marked with 🔽 comments for gradual migration
-   - Maintained for backward compatibility
-
-7. URL Naming:
+6. URL Naming:
    - Use snake_case for URL names: academy_cohort_id
    - Include resource type and ID when applicable
    - Be descriptive but concise
@@ -164,20 +160,13 @@ urlpatterns = [
     ),
     path("academy/cohort/sync/timeslot", AcademySyncCohortTimeSlotView.as_view(), name="academy_cohort_sync_timeslot"),
     path("academy/cohort/<str:cohort_id>", AcademyCohortView.as_view(), name="academy_cohort_id"),
-    # 🔽 this endpoint is deprecated 🔽
-    path("academy/certificate/<int:certificate_id>/timeslot", AcademySyllabusScheduleTimeSlotView.as_view()),
-    # 🔽 this endpoint is deprecated 🔽
     path(
-        "academy/certificate/<int:certificate_id>/timeslot/<int:timeslot_id>",
-        AcademySyllabusScheduleTimeSlotView.as_view(),
-    ),
-    path(
-        "academy/schedule/<int:certificate_id>/timeslot",
+        "academy/schedule/<int:schedule_id>/timeslot",
         AcademySyllabusScheduleTimeSlotView.as_view(),
         name="academy_schedule_id_timeslot",
     ),
     path(
-        "academy/schedule/<int:certificate_id>/timeslot/<int:timeslot_id>",
+        "academy/schedule/<int:schedule_id>/timeslot/<int:timeslot_id>",
         AcademySyllabusScheduleTimeSlotView.as_view(),
         name="academy_schedule_id_timeslot_id",
     ),
@@ -191,16 +180,10 @@ urlpatterns = [
     path("academy/activate", AcademyActivateView.as_view(), name="academy_activate"),
     path("user/me", UserMeView.as_view(), name="user_me"),
     path("user", UserView.as_view(), name="user"),
-    # 🔽 this endpoint is deprecated 🔽
-    path("certificate", SyllabusScheduleView.as_view()),
-    # 🔽 this endpoint is deprecated 🔽
-    path("certificate/<int:schedule_id>/", get_schedule),
     path("schedule", SyllabusScheduleView.as_view(), name="schedule"),
     path("schedule/<int:schedule_id>/", get_schedule, name="schedule_id"),
-    # 🔽 this endpoint is deprecated 🔽
-    path("academy/certificate", AcademySyllabusScheduleView.as_view()),
     path("academy/schedule", AcademySyllabusScheduleView.as_view(), name="academy_schedule"),
-    path("academy/schedule/<int:certificate_id>", AcademySyllabusScheduleView.as_view(), name="academy_schedule_id"),
+    path("academy/schedule/<int:schedule_id>", AcademySyllabusScheduleView.as_view(), name="academy_schedule_id"),
     path("syllabus", SyllabusView.as_view(), name="syllabus"),
     path("syllabus/test", handle_test_syllabus),
     path("syllabus/<int:syllabus_id>", SyllabusView.as_view(), name="syllabus_id"),

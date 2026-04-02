@@ -1462,19 +1462,19 @@ class AcademySyncCohortTimeSlotView(APIView, GenerateLookupsMixin):
 
         data = []
         for cohort in cohorts:
-            certificate_id = cohort.schedule.id
-            certificate_timeslots = SyllabusScheduleTimeSlot.objects.filter(
-                schedule__academy__id=academy_id, schedule__id=certificate_id
+            schedule_id = cohort.schedule.id
+            syllabus_schedule_timeslots = SyllabusScheduleTimeSlot.objects.filter(
+                schedule__academy__id=academy_id, schedule__id=schedule_id
             )
 
-            for certificate_timeslot in certificate_timeslots:
+            for syllabus_schedule_timeslot in syllabus_schedule_timeslots:
                 data.append(
                     {
                         "cohort": cohort.id,
-                        "starting_at": certificate_timeslot.starting_at,
-                        "ending_at": certificate_timeslot.ending_at,
-                        "recurrent": certificate_timeslot.recurrent,
-                        "recurrency_type": certificate_timeslot.recurrency_type,
+                        "starting_at": syllabus_schedule_timeslot.starting_at,
+                        "ending_at": syllabus_schedule_timeslot.ending_at,
+                        "recurrent": syllabus_schedule_timeslot.recurrent,
+                        "recurrency_type": syllabus_schedule_timeslot.recurrency_type,
                         "timezone": cohort.timezone or academy.timezone,
                     }
                 )
@@ -1489,10 +1489,10 @@ class AcademySyncCohortTimeSlotView(APIView, GenerateLookupsMixin):
 class AcademySyllabusScheduleTimeSlotView(APIView, GenerateLookupsMixin):
 
     @capable_of("read_certificate")
-    def get(self, request, certificate_id=None, timeslot_id=None, academy_id=None):
+    def get(self, request, schedule_id=None, timeslot_id=None, academy_id=None):
         if timeslot_id:
             item = SyllabusScheduleTimeSlot.objects.filter(
-                schedule__academy__id=academy_id, schedule__id=certificate_id, id=timeslot_id
+                schedule__academy__id=academy_id, schedule__id=schedule_id, id=timeslot_id
             ).first()
 
             if item is None:
@@ -1501,7 +1501,7 @@ class AcademySyllabusScheduleTimeSlotView(APIView, GenerateLookupsMixin):
             serializer = GETSyllabusScheduleTimeSlotSerializer(item, many=False)
             return Response(serializer.data)
 
-        items = SyllabusScheduleTimeSlot.objects.filter(schedule__academy__id=academy_id, schedule__id=certificate_id)
+        items = SyllabusScheduleTimeSlot.objects.filter(schedule__academy__id=academy_id, schedule__id=schedule_id)
 
         recurrency_type = request.GET.get("recurrency_type")
         if recurrency_type:
@@ -1511,13 +1511,13 @@ class AcademySyllabusScheduleTimeSlotView(APIView, GenerateLookupsMixin):
         return Response(serializer.data)
 
     @capable_of("crud_cohort")
-    def post(self, request, certificate_id=None, academy_id=None):
-        if "certificate" in request.data or "certificate_id" in request.data:
-            raise ValidationException("Certificate can't be passed is the body", 400, slug="certificate-in-body")
+    def post(self, request, schedule_id=None, academy_id=None):
+        if "certificate" in request.data or "certificate_id" in request.data or "schedule" in request.data:
+            raise ValidationException("Schedule can't be passed in the body", 400, slug="schedule-in-body")
 
-        certificate = SyllabusSchedule.objects.filter(id=certificate_id, academy__id=academy_id).first()
+        syllabus_schedule = SyllabusSchedule.objects.filter(id=schedule_id, academy__id=academy_id).first()
 
-        if certificate_id and not certificate:
+        if schedule_id and not syllabus_schedule:
             raise ValidationException("Schedule not found", 404, slug="certificate-not-found")
 
         timezone = Academy.objects.filter(id=academy_id).values_list("timezone", flat=True).first()
@@ -1527,7 +1527,7 @@ class AcademySyllabusScheduleTimeSlotView(APIView, GenerateLookupsMixin):
         data = {
             **request.data,
             "academy": academy_id,
-            "schedule": certificate.id,
+            "schedule": syllabus_schedule.id,
             "timezone": timezone,
         }
 
@@ -1544,16 +1544,16 @@ class AcademySyllabusScheduleTimeSlotView(APIView, GenerateLookupsMixin):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of("crud_cohort")
-    def put(self, request, certificate_id=None, timeslot_id=None, academy_id=None):
-        if "certificate" in request.data or "certificate_id" in request.data:
-            raise ValidationException("Certificate can't be passed is the body", 400)
+    def put(self, request, schedule_id=None, timeslot_id=None, academy_id=None):
+        if "certificate" in request.data or "certificate_id" in request.data or "schedule" in request.data:
+            raise ValidationException("Schedule can't be passed in the body", 400, slug="schedule-in-body")
 
-        certificate = SyllabusSchedule.objects.filter(id=certificate_id, academy__id=academy_id).first()
+        syllabus_schedule = SyllabusSchedule.objects.filter(id=schedule_id, academy__id=academy_id).first()
 
-        if certificate_id and not certificate:
-            raise ValidationException("Certificate not found", 404, slug="certificate-not-found")
+        if schedule_id and not syllabus_schedule:
+            raise ValidationException("Schedule not found", 404, slug="certificate-not-found")
 
-        item = SyllabusScheduleTimeSlot.objects.filter(schedule__id=certificate_id, id=timeslot_id).first()
+        item = SyllabusScheduleTimeSlot.objects.filter(schedule__id=schedule_id, id=timeslot_id).first()
 
         if not item:
             raise ValidationException("Time slot not found", 404, slug="time-slot-not-found")
@@ -1566,7 +1566,7 @@ class AcademySyllabusScheduleTimeSlotView(APIView, GenerateLookupsMixin):
             **request.data,
             "id": timeslot_id,
             "academy": academy_id,
-            "schedule": certificate.id,
+            "schedule": syllabus_schedule.id,
             "timezone": timezone,
         }
 
@@ -1583,9 +1583,9 @@ class AcademySyllabusScheduleTimeSlotView(APIView, GenerateLookupsMixin):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of("crud_cohort")
-    def delete(self, request, certificate_id=None, timeslot_id=None, academy_id=None):
+    def delete(self, request, schedule_id=None, timeslot_id=None, academy_id=None):
         item = SyllabusScheduleTimeSlot.objects.filter(
-            schedule__academy__id=academy_id, schedule__id=certificate_id, id=timeslot_id
+            schedule__academy__id=academy_id, schedule__id=schedule_id, id=timeslot_id
         ).first()
 
         if not item:
@@ -1999,7 +1999,15 @@ class SyllabusScheduleView(APIView):
 class AcademySyllabusScheduleView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
     @capable_of("read_certificate")
-    def get(self, request, academy_id=None):
+    def get(self, request, academy_id=None, schedule_id=None):
+        if schedule_id is not None:
+            schedule = SyllabusSchedule.objects.filter(id=schedule_id, academy__id=academy_id).first()
+            if not schedule:
+                raise ValidationException("Schedule not found", code=404, slug="specialty-mode-not-found")
+
+            serializer = GetSyllabusScheduleSerializer(schedule, many=False)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
         items = SyllabusSchedule.objects.filter(academy__id=academy_id)
 
         syllabus_id = request.GET.get("syllabus_id")
@@ -2046,8 +2054,8 @@ class AcademySyllabusScheduleView(APIView, HeaderLimitOffsetPagination, Generate
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of("crud_certificate")
-    def put(self, request, certificate_id=None, academy_id=None):
-        schedule = SyllabusSchedule.objects.filter(id=certificate_id).first()
+    def put(self, request, schedule_id=None, academy_id=None):
+        schedule = SyllabusSchedule.objects.filter(id=schedule_id).first()
         if not schedule:
             raise ValidationException("Schedule not found", code=404, slug="specialty-mode-not-found")
 
@@ -2073,8 +2081,15 @@ class AcademySyllabusScheduleView(APIView, HeaderLimitOffsetPagination, Generate
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of("crud_certificate")
-    def delete(self, request, academy_id=None):
-        # TODO: here i don't add one single delete, because i don't know if it is required
+    def delete(self, request, academy_id=None, schedule_id=None):
+        if schedule_id is not None:
+            schedule = SyllabusSchedule.objects.filter(id=schedule_id, academy__id=academy_id).first()
+            if not schedule:
+                raise ValidationException("Schedule not found", code=404, slug="specialty-mode-not-found")
+
+            schedule.delete()
+            return Response(None, status=status.HTTP_204_NO_CONTENT)
+
         lookups = self.generate_lookups(request, many_fields=["id"])
 
         if not lookups:

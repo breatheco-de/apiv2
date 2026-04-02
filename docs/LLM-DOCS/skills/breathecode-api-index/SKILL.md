@@ -57,6 +57,7 @@ Some user requests touch multiple domains. Load ALL listed skills before proceed
 | User Request | Skills to Load |
 |---|---|
 | Create a cohort | `bc-admissions-create-cohort` + `bc-certificate-*` (syllabus must have an associated specialty) |
+| Create and apply syllabus schedule templates to cohorts | `bc-admissions-create-manage-syllabus-schedules` + `bc-admissions-create-cohort` (cohorts must have `schedule` assigned before sync) |
 | Create a macro cohort | `bc-admissions-create-macro-cohort` + `bc-certificate-*` + `bc-admissions-create-cohort` |
 | Configure or fetch micro syllabus with macro-specific overrides | `bc-admissions-create-macro-cohort` + [SYLLABUS.md — Macro cohort syllabus overrides](../../SYLLABUS.md#macro-cohort-syllabus-overrides) |
 | Enroll a student in a cohort | `bc-admissions-enroll-student` + `bc-payments-*` (student must have a valid plan) |
@@ -66,6 +67,7 @@ Some user requests touch multiple domains. Load ALL listed skills before proceed
 | Onboard a new student | `bc-admissions-*` + `bc-payments-*` + `bc-authenticate-*` |
 | Provision a resource for a student | `bc-provisioning-*` + `bc-admissions-*` (verify enrollment status first) |
 | Configure academy VPS provisioning (profiles, credentials, settings) | `bc-provisioning-settings-and-credentials` |
+| Create or edit an academy event with tags and workshop asset selection | `bc-events-create-and-edit-event` + `bc-marketing-*` (fetch valid `DISCOVERY` tags) + `bc-registry-*` (search and validate workshop assets by type) |
 | Configure academy Slack integration and manage sync health | `bc-notify-manage-academy-slackintegration` + `bc-admissions-*` (students/cohorts drive Slack mappings) + `bc-authenticate-*` (Slack OAuth endpoints live in auth) |
 | Align or extend syllabus design with the school skills framework (job role stages, skills on the go) | `bc-admissions-*` (syllabus, cohorts) + `bc-talentdevelopment-manage-skills` (career path, stages, `stage_skill`, domains) |
 

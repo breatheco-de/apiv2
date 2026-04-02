@@ -21,7 +21,7 @@ Use this skill when the user asks to **create or update a provisioning profile**
 
 ## Workflow
 
-1. **List provisioning vendors (optional).** When you need valid `vendor_id` values for creating profiles or academy configs, call `GET /v1/provisioning/academy/vendor` with `Authorization` and `Academy: <academy_id>`. Response is a list of vendors; each vendor includes `settings_schema` that describes which keys/types to send inside `vendor_settings` for that vendor.
+1. **List provisioning vendors (optional).** When you need valid `vendor_id` values for creating profiles or academy configs, call `GET /v1/provisioning/academy/vendor` with `Authorization` and `Academy: <academy_id>`. Optional query string: `vendor_type` (`CODING_EDITOR`, `VPS_SERVER`, `LLM`; case-insensitive) to return only vendors of one type. Response is a list of vendors; each vendor includes `settings_schema` that describes which keys/types to send inside `vendor_settings` for that vendor.
 
 2. **List current profiles.** Call `GET /v1/provisioning/academy/provisioningprofile` with `Authorization` and `Academy: <academy_id>`. Response includes each profile's id, vendor, academy, cohort_ids, member_ids. Use the profile id for update or delete.
 
@@ -29,7 +29,7 @@ Use this skill when the user asks to **create or update a provisioning profile**
 
 4. **Update or delete a profile.** Call `PUT /v1/provisioning/academy/provisioningprofile/<profile_id>` to update (body: optional vendor_id, cohort_ids, member_ids) or `DELETE /v1/provisioning/academy/provisioningprofile/<profile_id>` to remove. Academy is from the header.
 
-5. **List academy configs (credentials/settings).** Call `GET /v1/provisioning/academy/provisioningacademy` with `Authorization` and `Academy: <academy_id>`. Response includes id, vendor, academy_id, credentials_set (boolean), `connection_status`, `connection_status_text`, `connection_test_at`, container_idle_timeout, max_active_containers; credentials are never returned.
+5. **List academy configs (credentials/settings).** Call `GET /v1/provisioning/academy/provisioningacademy` with `Authorization` and `Academy: <academy_id>`. Optional query string: `vendor_type` (`CODING_EDITOR`, `VPS_SERVER`, `LLM`; case-insensitive) to return only configs whose `vendor.vendor_type` matches. Response includes id, vendor, academy_id, credentials_set (boolean), `connection_status`, `connection_status_text`, `connection_test_at`, container_idle_timeout, max_active_containers; credentials are never returned.
 
 6. **Create academy config.** Call `POST /v1/provisioning/academy/provisioningacademy` with `Authorization` and `Academy: <academy_id>`. Body: `vendor_id` (required), `credentials_token` (required), optional `credentials_key`, `vendor_settings` (object; required shape depends on vendor — see `settings_schema` and Hostinger/DigitalOcean allowlists above), `container_idle_timeout` (default 15), `max_active_containers` (default 2), `allowed_machine_type_ids` (optional list of integer ids and/or string slugs). Only one config per (academy, vendor). Response is 201; credentials are not echoed.
 
@@ -55,13 +55,13 @@ VPS provisioning will fail at request time if the allowlists needed for that ven
 
 | Action | Method | Path | Headers | Body | Response |
 |--------|--------|------|---------|------|----------|
-| List vendors | GET | `/v1/provisioning/academy/vendor` | `Authorization`, `Academy: <academy_id>` | — | List of vendors (id, name, vendor_type, workspaces_url, settings_schema). Use vendor id when creating profiles or academy configs; use settings_schema to build `vendor_settings` for that vendor. |
+| List vendors | GET | `/v1/provisioning/academy/vendor` | `Authorization`, `Academy: <academy_id>` | Optional query: `vendor_type` (`CODING_EDITOR`, `VPS_SERVER`, `LLM`; case-insensitive). | List of vendors (id, name, vendor_type, workspaces_url, settings_schema). Use vendor id when creating profiles or academy configs; use settings_schema to build `vendor_settings` for that vendor. |
 | List profiles | GET | `/v1/provisioning/academy/provisioningprofile` | `Authorization`, `Academy: <academy_id>` | — | List of profiles (id, vendor, academy, cohort_ids, member_ids). |
 | Create profile | POST | `/v1/provisioning/academy/provisioningprofile` | `Authorization`, `Academy: <academy_id>` | See request sample below. | 201, profile object (see response sample). |
 | Get profile | GET | `/v1/provisioning/academy/provisioningprofile/<profile_id>` | `Authorization`, `Academy: <academy_id>` | — | Profile object. |
 | Update profile | PUT | `/v1/provisioning/academy/provisioningprofile/<profile_id>` | `Authorization`, `Academy: <academy_id>` | Optional: vendor_id, cohort_ids, member_ids. | Profile object. |
 | Delete profile | DELETE | `/v1/provisioning/academy/provisioningprofile/<profile_id>` | `Authorization`, `Academy: <academy_id>` | — | 204 No Content. |
-| List academy configs | GET | `/v1/provisioning/academy/provisioningacademy` | `Authorization`, `Academy: <academy_id>` | — | List of configs (id, vendor, academy_id, credentials_set, connection_status, connection_status_text, connection_test_at, container_idle_timeout, max_active_containers; no credentials). |
+| List academy configs | GET | `/v1/provisioning/academy/provisioningacademy` | `Authorization`, `Academy: <academy_id>` | Optional query: `vendor_type` (`CODING_EDITOR`, `VPS_SERVER`, `LLM`; case-insensitive). | List of configs (id, vendor, academy_id, credentials_set, connection_status, connection_status_text, connection_test_at, container_idle_timeout, max_active_containers; no credentials). |
 | Create academy config | POST | `/v1/provisioning/academy/provisioningacademy` | `Authorization`, `Academy: <academy_id>` | See request sample below (`vendor_settings`, `allowed_machine_type_ids` optional). | 201, config object (credentials not echoed; see response sample). |
 | Get academy config | GET | `/v1/provisioning/academy/provisioningacademy/<provisioning_academy_id>` | `Authorization`, `Academy: <academy_id>` | — | Config object (credentials_set, connection_status, connection_status_text, connection_test_at; no raw credentials). |
 | Update academy config | PUT | `/v1/provisioning/academy/provisioningacademy/<provisioning_academy_id>` | `Authorization`, `Academy: <academy_id>` | Optional: credentials_token, credentials_key, vendor_settings, container_idle_timeout, max_active_containers, allowed_machine_type_ids. All optional; omit credentials to leave unchanged. | Config object. |
@@ -159,6 +159,12 @@ Do **not** put template or data center allowlists at the top level (`allowed_tem
 
 Capabilities: `read_provisioning_activity` for GET; `crud_provisioning_activity` for POST, PUT, DELETE.
 
+**Filter vendors by type — request example:**
+`GET /v1/provisioning/academy/vendor?vendor_type=VPS_SERVER`
+
+**Filter academy configs by vendor type — request example:**
+`GET /v1/provisioning/academy/provisioningacademy?vendor_type=VPS_SERVER`
+
 ## Edge Cases
 
 - **vendor-not-found (404):** vendor_id does not exist. Tell the user to use a valid vendor id; do not retry the same id.
@@ -171,13 +177,14 @@ Capabilities: `read_provisioning_activity` for GET; `crud_provisioning_activity`
 - **Invalid cohort_ids or member_ids:** IDs must belong to the academy. If the API returns validation errors, tell the user to use cohort/member ids for that academy only.
 - **unknown-provisioning-machine-type (400):** One or more values in `allowed_machine_type_ids` are not a valid id or slug for that academy config’s vendor. Fix the list using ids/slugs from the provisioning machine types for that vendor.
 - **vendor_settings validation (400):** Hostinger requires `item_ids`, `template_ids`, and `data_center_ids` with the correct element types; DigitalOcean requires the three slug lists. Extra keys inside `vendor_settings` may be rejected — follow `settings_schema` from `GET /v1/provisioning/academy/vendor`.
+- **invalid-provisioning-vendor-type (400):** `vendor_type` query value is invalid for `GET /v1/provisioning/academy/vendor` or `GET /v1/provisioning/academy/provisioningacademy`. Use one of `CODING_EDITOR`, `VPS_SERVER`, `LLM` (case-insensitive).
 
 ## Checklist
 
-1. To get valid vendor ids for profiles/configs: call `GET /v1/provisioning/academy/vendor` with `Authorization` and `Academy` header.
+1. To get valid vendor ids for profiles/configs: call `GET /v1/provisioning/academy/vendor` with `Authorization` and `Academy` header; optionally filter with `?vendor_type=...`.
 2. To list or create profiles: call `GET` or `POST /v1/provisioning/academy/provisioningprofile` with `Authorization` and `Academy` header.
 3. To update or delete a profile: call `PUT` or `DELETE /v1/provisioning/academy/provisioningprofile/<profile_id>` with `Academy` header.
-4. To list or create academy configs: call `GET` or `POST /v1/provisioning/academy/provisioningacademy` with `Academy` header; for POST send vendor_id and credentials_token.
+4. To list or create academy configs: call `GET` or `POST /v1/provisioning/academy/provisioningacademy` with `Academy` header; for GET you can filter with `?vendor_type=...`; for POST send vendor_id and credentials_token.
 5. To update academy config: call `PUT /v1/provisioning/academy/provisioningacademy/<id>` with optional body (`vendor_settings`, timeouts, `allowed_machine_type_ids`, credentials); omit credentials to leave unchanged.
 6. To delete academy config: call `DELETE /v1/provisioning/academy/provisioningacademy/<id>` with `Academy` header; returns 204.
 7. To refresh connection health fields, call `POST /v1/provisioning/academy/provisioningacademy/<id>/test-connection`.
