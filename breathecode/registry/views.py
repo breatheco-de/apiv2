@@ -2117,7 +2117,16 @@ class AcademyAssetCommentView(APIView, GenerateLookupsMixin):
 
         if "asset" in self.request.GET:
             param = self.request.GET.get("asset")
-            lookup["asset__slug__in"] = [p.lower() for p in param.split(",")]
+            assets = [p.strip() for p in param.split(",") if p.strip()]
+            asset_ids = [int(p) for p in assets if p.isnumeric()]
+            asset_slugs = [p.lower() for p in assets if not p.isnumeric()]
+
+            if asset_ids and asset_slugs:
+                items = items.filter(Q(asset__id__in=asset_ids) | Q(asset__slug__in=asset_slugs))
+            elif asset_ids:
+                lookup["asset__id__in"] = asset_ids
+            elif asset_slugs:
+                lookup["asset__slug__in"] = asset_slugs
 
         if "resolved" in self.request.GET:
             param = self.request.GET.get("resolved")
