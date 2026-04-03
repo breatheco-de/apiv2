@@ -1,6 +1,6 @@
 ---
 name: bc-registry-asset-comments-and-issues
-description: Use when academy staff need to manage registry asset comments and asset error issues end-to-end, and do NOT use for public asset browsing or non-registry workflows.
+description: Use when academy staff need to manage registry asset comments (optional `academies` query on GET for multi-academy scope) and asset error issues end-to-end, and do NOT use for public asset browsing or non-registry workflows.
 requires: []
 ---
 
@@ -16,6 +16,7 @@ Use this skill when staff need to create, assign, review, resolve, update, or de
 - An **asset issue** here refers to an `AssetErrorLog` record with status lifecycle `ERROR` -> `FIXED` or `IGNORED`.
 - A comment is considered "closed" by setting `resolved=true` (there is no separate comment status enum).
 - Comments and error logs use different capabilities and different endpoints.
+- **Listing comments** is scoped to the academy in the `Academy` header by default. Optional query param `academies=<id>,<id>,...` lets callers request several academies at once; the API returns comments only for assets whose academy is **both** in that list **and** an academy where the user has `read_asset` on an active academy (requested IDs without capability are ignored; invalid tokens in the list return `400`).
 
 ```mermaid
 flowchart LR
@@ -47,7 +48,8 @@ flowchart LR
    - `author` is set by the backend from the authenticated user.
 
 4. Review/filter comments:
-   - `GET /v1/registry/academy/asset/comment` with filters such as `asset`, `resolved`, `delivered`, `owner`, and `author`.
+   - `GET /v1/registry/academy/asset/comment` with filters such as `asset`, `academies`, `resolved`, `delivered`, `owner`, and `author`.
+   - The `Academy` header is still required (`capable_of` checks `read_asset` for that academy). To aggregate comments across several academies where the user is allowed, add `academies=<comma-separated numeric ids>`; results include only comments on assets in those academies that pass the permission check.
    - This list is paginated and sorted by newest (`-created_at`) by default.
 
 5. Manage comment lifecycle:
@@ -70,7 +72,7 @@ flowchart LR
 
 | Action | Method | Path | Required headers | Required body fields | Response notes |
 |---|---|---|---|---|---|
-| List comments | GET | `/v1/registry/academy/asset/comment` | `Authorization`, `Academy` | None | Paginated list (default sort: newest first). |
+| List comments | GET | `/v1/registry/academy/asset/comment` | `Authorization`, `Academy` | None | Paginated list (default sort: newest first). Optional `academies` query param scopes across multiple allowed academies. |
 | Create comment | POST | `/v1/registry/academy/asset/comment` | `Authorization`, `Academy` | `asset`, `text` | `201` comment object; `author` set from session user. |
 | Update comment | PUT | `/v1/registry/academy/asset/comment/<comment_id>` | `Authorization`, `Academy` | None globally required; send fields to change | `200` updated comment object. |
 | Delete comment | DELETE | `/v1/registry/academy/asset/comment/<comment_id>` | `Authorization`, `Academy` | None | `204` no content. |
@@ -80,6 +82,7 @@ flowchart LR
 - POST/PUT/DELETE require `crud_asset`.
 
 **List filters**
+- `academies=<id1,id2,...>` (optional) — restrict the list to comments on assets in these academies; each ID must be numeric. Only IDs where the user has `read_asset` on an **ACTIVE** academy are applied; others are skipped (no error). If omitted, only the academy from the `Academy` header is used (unchanged behavior).
 - `asset=<id1,id2>` or `asset=<slug1,slug2>` (mixed values are supported)
 - `resolved=true|false`
 - `delivered=true|false`
@@ -208,22 +211,25 @@ flowchart LR
 
 ## Edge Cases
 
-1. **Comment text is immutable after creation**  
+1. **`academies` vs header academy**  
+   The header academy must still be one where the user has `read_asset` (otherwise the request fails before listing). The `academies` query param only **narrows or expands** which asset academies appear in the comment list; it does not replace the header requirement.
+
+2. **Comment text is immutable after creation**  
    `PUT` for comments cannot update `text`, `asset`, or `author`; only lifecycle/assignment fields should be changed.
 
-2. **Owner cannot self-resolve**  
+3. **Owner cannot self-resolve**  
    If the current session user is the same as `owner`, changing `resolved` raises a validation error.
 
-3. **Comment response does not expose all stored fields**  
+4. **Comment response does not expose all stored fields**  
    `urgent` and `priority` exist on the model, but the comment response serializer does not return them.
 
-4. **Comment PUT `status` is not a supported lifecycle field**  
+5. **Comment PUT `status` is not a supported lifecycle field**  
    The view checks `status=NOT_STARTED`, but comment serializer logic excludes `author`; do not rely on `status` when updating comments.
 
-5. **Error status updates can affect grouped rows**  
+6. **Error status updates can affect grouped rows**  
    Updating `status` for one error can propagate to other rows with the same `slug`, `asset_type`, `path`, and `asset`.
 
-6. **Error delete mode validation**  
+7. **Error delete mode validation**  
    Do not mix URL `error_id` with bulk lookup query params in the same delete request.
 
 ## Checklist
@@ -232,6 +238,6 @@ flowchart LR
 2. Used comment `POST` with `asset` + `text`, and verified `author` came from session.
 3. Used comment `PUT` only for assignment/lifecycle fields, not `text`.
 4. Closed or reopened comments using `resolved` flag and handled owner-resolve restriction.
-5. Listed and filtered comments/issues with proper query parameters.
+5. Listed and filtered comments/issues with proper query parameters (including `academies` when listing across several academies the user may access).
 6. Updated error issues with awareness of grouped status propagation.
 7. Deleted comments/issues using the correct single or bulk endpoint pattern.

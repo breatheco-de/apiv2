@@ -2097,6 +2097,58 @@ class AssetImageView(APIView, GenerateLookupsMixin):
         return handler.response(serializer.data)
 
 
+def _academy_ids_for_asset_comment_scope(request, header_academy_id: int) -> list[int]:
+    """
+    Resolve which academies may scope AssetComment rows for GET.
+
+    - Without ``academies`` query param: only the academy from the ``Academy`` header (``capable_of`` already
+      validated ``read_asset`` for that academy).
+    - With ``academies=<id>,<id>,...``: return the requested IDs the user may access with ``read_asset`` on an
+      ACTIVE academy (subset / intersection; IDs without capability are ignored).
+    """
+    param = (request.GET.get("academies") or "").strip()
+    if not param:
+        return [int(header_academy_id)]
+
+    requested: list[int] = []
+    for part in param.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        if not part.isdigit():
+            raise ValidationException(
+                translation(
+                    "en",
+                    en="Parameter academies must be comma-separated academy IDs (integers).",
+                    es="El parámetro academies debe ser IDs de academia separados por comas (enteros).",
+                    slug="invalid-academies-param",
+                )
+            )
+        requested.append(int(part))
+
+    if not requested:
+        return [int(header_academy_id)]
+
+    # Preserve order, drop duplicates
+    seen: set[int] = set()
+    unique_requested = []
+    for aid in requested:
+        if aid not in seen:
+            seen.add(aid)
+            unique_requested.append(aid)
+
+    allowed_ids = set(
+        ProfileAcademy.objects.filter(
+            user_id=request.user.id,
+            role__capabilities__slug="read_asset",
+            academy__id__in=unique_requested,
+            academy__status="ACTIVE",
+        ).values_list("academy__id", flat=True)
+    )
+
+    return [aid for aid in unique_requested if aid in allowed_ids]
+
+
 class AcademyAssetCommentView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
@@ -2112,7 +2164,13 @@ class AcademyAssetCommentView(APIView, GenerateLookupsMixin):
         if cache is not None:
             return cache
 
-        items = AssetComment.objects.filter(asset__academy__id=academy_id)
+        academy_ids = _academy_ids_for_asset_comment_scope(request, academy_id)
+        if not academy_ids:
+            items = AssetComment.objects.none()
+        elif len(academy_ids) == 1:
+            items = AssetComment.objects.filter(asset__academy__id=academy_ids[0])
+        else:
+            items = AssetComment.objects.filter(asset__academy__id__in=academy_ids)
         lookup = {}
 
         if "asset" in self.request.GET:
