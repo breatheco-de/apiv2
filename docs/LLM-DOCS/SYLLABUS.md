@@ -359,7 +359,7 @@ curl -X POST "https://your-api.com/v1/admissions/syllabus/1/version" \
 
 ### Macro cohort syllabus overrides (per-micro slug)
 
-A macro cohort’s **`SyllabusVersion.json`** may include extra keys shaped like **`<micro-syllabus-slug>.v<version>`** (examples: `jumpstart.v2`, `basics-of-front-end-development.v2`). When the API resolves that micro syllabus with macro context, it **merges** the block into the micro JSON. See `resolve_syllabus_json` / `apply_reference_override` in `breathecode.admissions.actions`.
+A macro cohort’s **`SyllabusVersion.json`** may include extra keys shaped like **`<micro-syllabus-slug>.v<version>`** or **`<position>:<micro-syllabus-slug>.v<version>`** (examples: `jumpstart.v2`, `0:jumpstart.v2`, `1:basics-of-front-end-development.v2`). When the API resolves that micro syllabus with macro context, it **merges** the block into the micro JSON. See `resolve_syllabus_json` / `apply_reference_override` in `breathecode.admissions.actions`.
 
 | Rule | Behavior |
 |------|----------|
@@ -403,7 +403,10 @@ Macro cohorts can carry a **`SyllabusVersion`** whose JSON is not only the usual
 
 #### Reference keys
 
-- Pattern: **`<micro-syllabus-slug>.v<version>`** (examples: `front-end.v1`, `data-science.v3`).
+- Pattern (legacy): **`<micro-syllabus-slug>.v<version>`** (examples: `front-end.v1`, `data-science.v3`).
+- Pattern (ordered): **`<position>:<micro-syllabus-slug>.v<version>`** (examples: `0:front-end.v1`, `1:data-science.v3`).
+- Backward compatibility: both formats are accepted. If both formats point to the same canonical reference (`slug.vN`) in one JSON object, validation reports it as duplicated.
+- Ordering: when a numeric prefix is present, the prefix is the authoritative order metadata for reference processing.
 - Each key maps to an **object** (typically with a **`days`** array) that is merged into the **micro** syllabus JSON for that slug/version.
 - The backend resolves which block to apply using the **micro** syllabus’s `slug` and `version` being requested.
 
@@ -433,7 +436,7 @@ When fetching an **academy-scoped** syllabus version, pass the macro cohort **sl
 {
   "days": [],
 
-  "front-end.v1": {
+  "0:front-end.v1": {
     "days": [
       {},
       {},

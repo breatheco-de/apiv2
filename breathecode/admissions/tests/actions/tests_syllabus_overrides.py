@@ -61,6 +61,27 @@ def test_resolve_syllabus_json_with_macro_reference():
     assert resolved["days"][0]["assignments"][0]["slug"] == "new-project"
 
 
+def test_resolve_syllabus_json_with_prefixed_macro_reference():
+    micro = {
+        "days": [
+            {"id": 1, "lessons": [], "quizzes": [], "replits": [], "assignments": [{"slug": "old-project"}]}
+        ]
+    }
+    macro = {
+        "days": [],
+        "0:web-ui-fundamentals-with-tailwind.v2": {"days": [{"assignments": [{"slug": "new-project"}]}]},
+    }
+
+    resolved = resolve_syllabus_json(
+        micro,
+        macro_syllabus_json=macro,
+        syllabus_slug="web-ui-fundamentals-with-tailwind",
+        syllabus_version=2,
+    )
+
+    assert resolved["days"][0]["assignments"][0]["slug"] == "new-project"
+
+
 def test_test_syllabus_accepts_existing_reference(database: capy.Database):
     model = database.create(
         city=1,
@@ -72,6 +93,25 @@ def test_test_syllabus_accepts_existing_reference(database: capy.Database):
 
     payload = {
         "front-end.v2": {
+            "days": [],
+        }
+    }
+
+    result = test_syllabus(payload, academy_id=model.academy.id)
+    assert result.errors == []
+
+
+def test_test_syllabus_accepts_existing_prefixed_reference(database: capy.Database):
+    model = database.create(
+        city=1,
+        country=1,
+        academy=1,
+        syllabus={"slug": "front-end"},
+        syllabus_version={"version": 2, "json": {"days": []}},
+    )
+
+    payload = {
+        "0:front-end.v2": {
             "days": [],
         }
     }
@@ -175,6 +215,44 @@ def test_test_syllabus_rejects_self_reference_override():
 
     result = test_syllabus(payload, academy_id=1)
     assert any("cannot override itself" in e.lower() for e in result.errors)
+
+
+def test_test_syllabus_rejects_prefixed_self_reference_override():
+    payload = {
+        "slug": "same-syllabus",
+        "version": 2,
+        "days": [
+            {
+                "id": 1,
+                "lessons": [],
+                "quizzes": [],
+                "replits": [],
+                "assignments": [],
+            }
+        ],
+        "0:same-syllabus.v2": {"days": [{}]},
+    }
+
+    result = test_syllabus(payload, academy_id=1)
+    assert any("cannot override itself" in e.lower() for e in result.errors)
+
+
+def test_test_syllabus_rejects_duplicate_canonical_references(database: capy.Database):
+    model = database.create(
+        city=1,
+        country=1,
+        academy=1,
+        syllabus={"slug": "front-end"},
+        syllabus_version={"version": 2, "json": {"days": []}},
+    )
+
+    payload = {
+        "front-end.v2": {"days": []},
+        "0:front-end.v2": {"days": []},
+    }
+
+    result = test_syllabus(payload, academy_id=model.academy.id)
+    assert any("duplicated" in e.lower() and "front-end.v2" in e for e in result.errors)
 
 
 def test_test_syllabus_root_days_still_require_all_asset_lists():

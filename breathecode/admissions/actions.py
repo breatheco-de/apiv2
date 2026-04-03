@@ -23,7 +23,7 @@ from .signals import syllabus_asset_slug_updated
 BUCKET_NAME = "admissions-breathecode"
 logger = logging.getLogger(__name__)
 ASSET_LIST_KEYS = ("lessons", "quizzes", "replits", "assignments")
-REFERENCE_KEY_PATTERN = re.compile(r"^.+\.v\d+$")
+REFERENCE_KEY_PATTERN = re.compile(r"^(?:(\d+):)?(.+)\.v(\d+)$")
 
 
 def _normalize_syllabus_json(data: dict | str | None) -> dict:
@@ -144,10 +144,62 @@ def build_reference_key(syllabus_slug: str, version: int | str) -> str:
     return f"{syllabus_slug}.v{version}"
 
 
+def _parse_reference_key_meta(value: str) -> tuple[int | None, str, int] | None:
+    if not isinstance(value, str):
+        return None
+
+    match = REFERENCE_KEY_PATTERN.match(value)
+    if not match:
+        return None
+
+    position_str, slug, version_str = match.groups()
+    if not slug:
+        return None
+
+    try:
+        position = int(position_str) if position_str is not None else None
+        version = int(version_str)
+    except Exception:
+        return None
+
+    return position, slug, version
+
+
+def _canonical_reference_key(value: str) -> str | None:
+    parsed = _parse_reference_key_meta(value)
+    if parsed is None:
+        return None
+
+    _position, slug, version = parsed
+    return build_reference_key(slug, version)
+
+
 def get_reference_payload(syllabus_json: dict | str, reference_key: str) -> dict | None:
     normalized = _normalize_syllabus_json(syllabus_json)
     payload = normalized.get(reference_key)
-    return payload if isinstance(payload, dict) else None
+    if isinstance(payload, dict):
+        return payload
+
+    candidates: list[tuple[int | None, str, dict]] = []
+    for key, value in normalized.items():
+        if not isinstance(value, dict):
+            continue
+
+        if _canonical_reference_key(key) != reference_key:
+            continue
+
+        parsed = _parse_reference_key_meta(key)
+        if parsed is None:
+            continue
+
+        position, _slug, _version = parsed
+        candidates.append((position, key, value))
+
+    if not candidates:
+        return None
+
+    candidates = sorted(candidates, key=lambda item: (item[0] is None, item[0] or 0, item[1]))
+    return candidates[0][2]
 
 
 def apply_reference_override(base_json: dict | str, reference_payload: dict | None) -> dict:
@@ -464,14 +516,12 @@ class SyllabusLog(object):
 
 
 def _parse_reference_key(value: str) -> tuple[str, int] | None:
-    if not isinstance(value, str) or not REFERENCE_KEY_PATTERN.match(value):
+    parsed = _parse_reference_key_meta(value)
+    if parsed is None:
         return None
 
-    try:
-        slug, version = value.rsplit(".v", 1)
-        return slug, int(version)
-    except Exception:
-        return None
+    _position, slug, version = parsed
+    return slug, version
 
 
 def _get_reference_syllabus_version(value: str, academy_id: int | None = None):
@@ -502,7 +552,35 @@ def test_syllabus(syl, validate_assets=False, ignore=None, academy_id: int | Non
         return syllabus_log
 
     has_days = "days" in syl and isinstance(syl.get("days"), list)
-    reference_keys = [key for key in syl.keys() if key != "days" and _parse_reference_key(key) is not None]
+    reference_key_items = []
+    for key in syl.keys():
+        if key == "days":
+            continue
+
+        parsed = _parse_reference_key_meta(key)
+        if parsed is None:
+            continue
+
+        position, slug, version = parsed
+        canonical_key = build_reference_key(slug, version)
+        reference_key_items.append({"key": key, "position": position, "canonical_key": canonical_key})
+
+    canonical_key_map: dict[str, list[str]] = {}
+    for item in reference_key_items:
+        canonical_key_map.setdefault(item["canonical_key"], []).append(item["key"])
+
+    for canonical_key, keys in canonical_key_map.items():
+        if len(keys) > 1:
+            options = ", ".join(f"`{key}`" for key in sorted(keys))
+            syllabus_log.error(f"Reference `{canonical_key}` is duplicated with keys: {options}")
+
+    reference_keys = [
+        item["key"]
+        for item in sorted(
+            reference_key_items,
+            key=lambda item: (item["position"] is None, item["position"] or 0, item["canonical_key"], item["key"]),
+        )
+    ]
 
     if not has_days and not reference_keys:
         syllabus_log.error("Syllabus must have a 'days' or 'modules' property")
@@ -597,11 +675,11 @@ def test_syllabus(syl, validate_assets=False, ignore=None, academy_id: int | Non
             syllabus_log.error(f"Reference `{key}` must be an object")
             continue
 
-        # Prevent self-references like `<slug>.v<version>` living inside the same syllabus json.
+        # Prevent self-references like `<slug>.v<version>` or `0:<slug>.v<version>` in the same syllabus json.
         if isinstance(root_slug, str) and root_slug and root_version is not None:
             try:
                 self_key = build_reference_key(root_slug, root_version)
-                if key == self_key:
+                if _canonical_reference_key(key) == self_key:
                     syllabus_log.error(f"Syllabus cannot override itself with reference `{key}`")
             except Exception:
                 pass

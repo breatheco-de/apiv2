@@ -59,12 +59,14 @@ Some user requests touch multiple domains. Load ALL listed skills before proceed
 | Create a cohort | `bc-admissions-create-cohort` + `bc-certificate-*` (syllabus must have an associated specialty) |
 | Create and apply syllabus schedule templates to cohorts | `bc-admissions-create-manage-syllabus-schedules` + `bc-admissions-create-cohort` (cohorts must have `schedule` assigned before sync) |
 | Create a macro cohort | `bc-admissions-create-macro-cohort` + `bc-certificate-*` + `bc-admissions-create-cohort` |
-| Configure or fetch micro syllabus with macro-specific overrides | `bc-admissions-create-macro-cohort` + [SYLLABUS.md — Macro cohort syllabus overrides](../../SYLLABUS.md#macro-cohort-syllabus-overrides) |
+| Configure or fetch micro syllabus with macro-specific overrides | `bc-admissions-create-macro-cohort` + [SYLLABUS.md — Macro cohort syllabus overrides](../../SYLLABUS.md#macro-cohort-syllabus-overrides) (supports `slug.vN` and ordered `N:slug.vN` keys) |
 | Enroll a student in a cohort | `bc-admissions-enroll-student` + `bc-payments-*` (student must have a valid plan) |
 | Issue a certificate to a student | `bc-certificate-*` + `bc-admissions-*` (verify cohort completion status) |
 | Schedule a mentorship session | `bc-mentorship-*` + `bc-notify-*` (session confirmation messaging) |
 | Send a notification | `bc-notify-*` + the domain that triggered the notification |
+| Inbound signups, attribution, and acquisition (forms + invites) | `bc-marketing-inbound-leads-attribution-and-acquisition` (covers `/v1/marketing` lead capture/analytics + `/v1/auth` invite-based signup attribution, plus referral and webhook context) |
 | Onboard a new student | `bc-admissions-*` + `bc-payments-*` + `bc-authenticate-*` |
+| Connect a third-party app to student authentication (hosted login redirect + callback token) | `bc-authenticate-student-authentication` |
 | Provision a resource for a student | `bc-provisioning-*` + `bc-admissions-*` (verify enrollment status first) |
 | Create and run an NPS-style cohort satisfaction study | `bc-feedback-create-manage-nps-survey` + `bc-admissions-*` (resolve target cohorts before configuration scope or `send_emails`) |
 | Configure academy VPS provisioning (profiles, credentials, settings) | `bc-provisioning-settings-and-credentials` |

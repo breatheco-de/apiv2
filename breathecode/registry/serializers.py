@@ -1018,9 +1018,10 @@ class PutAssetCommentSerializer(serializers.ModelSerializer):
         validated_data = super().validate(data)
         session_user = self.context.get("request").user
 
-        if self.instance.owner is not None and self.instance.owner.id == session_user.id:
-            if "resolved" in data and data["resolved"] != self.instance.resolved:
-                raise ValidationException("You cannot update the resolved property if you are the Asset Comment owner")
+        # TODO: we are not sure if we want this validation yet, we need to discuss it with the team
+        # if self.instance.owner is not None and self.instance.owner.id == session_user.id:
+        #     if "resolved" in data and data["resolved"] != self.instance.resolved:
+        #         raise ValidationException("You cannot update the resolved property if you are the Asset Comment owner")
 
         return validated_data
 

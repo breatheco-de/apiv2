@@ -367,6 +367,18 @@ class UserInviteNoUrlSerializer(UserInviteShortSerializer):
     cohort = CohortTinySerializer(required=False)
     role = RoleSmallSerializer(required=False)
     event_slug = serpy.Field(required=False)
+    asset_slug = serpy.Field(required=False)
+    conversion_info = serpy.Field(required=False)
+    course = serpy.MethodField(required=False)
+
+    def get_course(self, obj):
+        if obj.course is None:
+            return None
+
+        return {
+            "id": obj.course.id,
+            "slug": obj.course.slug,
+        }
 
 
 class UserInviteSerializer(UserInviteNoUrlSerializer):
