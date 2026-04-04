@@ -37,7 +37,11 @@ from breathecode.services.seo import SEOAnalyzer
 from breathecode.utils import GenerateLookupsMixin, capable_of, consume
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import has_permission
-from breathecode.utils.decorators.capable_of import acapable_of
+from breathecode.utils.decorators.capable_of import (
+    acapable_of,
+    academy_scope_response_meta,
+    get_academy_ids_from_capability,
+)
 from breathecode.utils.views import render_message
 
 from .actions import (
@@ -2097,58 +2101,6 @@ class AssetImageView(APIView, GenerateLookupsMixin):
         return handler.response(serializer.data)
 
 
-def _academy_ids_for_asset_comment_scope(request, header_academy_id: int) -> list[int]:
-    """
-    Resolve which academies may scope AssetComment rows for GET.
-
-    - Without ``academies`` query param: only the academy from the ``Academy`` header (``capable_of`` already
-      validated ``read_asset`` for that academy).
-    - With ``academies=<id>,<id>,...``: return the requested IDs the user may access with ``read_asset`` on an
-      ACTIVE academy (subset / intersection; IDs without capability are ignored).
-    """
-    param = (request.GET.get("academies") or "").strip()
-    if not param:
-        return [int(header_academy_id)]
-
-    requested: list[int] = []
-    for part in param.split(","):
-        part = part.strip()
-        if not part:
-            continue
-        if not part.isdigit():
-            raise ValidationException(
-                translation(
-                    "en",
-                    en="Parameter academies must be comma-separated academy IDs (integers).",
-                    es="El parámetro academies debe ser IDs de academia separados por comas (enteros).",
-                    slug="invalid-academies-param",
-                )
-            )
-        requested.append(int(part))
-
-    if not requested:
-        return [int(header_academy_id)]
-
-    # Preserve order, drop duplicates
-    seen: set[int] = set()
-    unique_requested = []
-    for aid in requested:
-        if aid not in seen:
-            seen.add(aid)
-            unique_requested.append(aid)
-
-    allowed_ids = set(
-        ProfileAcademy.objects.filter(
-            user_id=request.user.id,
-            role__capabilities__slug="read_asset",
-            academy__id__in=unique_requested,
-            academy__status="ACTIVE",
-        ).values_list("academy__id", flat=True)
-    )
-
-    return [aid for aid in unique_requested if aid in allowed_ids]
-
-
 class AcademyAssetCommentView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
@@ -2164,13 +2116,13 @@ class AcademyAssetCommentView(APIView, GenerateLookupsMixin):
         if cache is not None:
             return cache
 
-        academy_ids = _academy_ids_for_asset_comment_scope(request, academy_id)
-        if not academy_ids:
-            items = AssetComment.objects.none()
-        elif len(academy_ids) == 1:
-            items = AssetComment.objects.filter(asset__academy__id=academy_ids[0])
-        else:
-            items = AssetComment.objects.filter(asset__academy__id__in=academy_ids)
+        academy_ids = [int(academy_id)]
+        if academies_param := request.GET.get("academies"):
+            academy_ids = get_academy_ids_from_capability(
+                {"academy_id": academies_param}, request, "read_asset", scope="read_aggregate"
+            )
+
+        items = AssetComment.objects.filter(asset__academy__id__in=academy_ids)
         lookup = {}
 
         if "asset" in self.request.GET:
@@ -2212,6 +2164,10 @@ class AcademyAssetCommentView(APIView, GenerateLookupsMixin):
         items = handler.queryset(items)
 
         serializer = AcademyCommentSerializer(items, many=True)
+        meta = academy_scope_response_meta(request)
+        if meta:
+            return handler.response({"results": serializer.data, **meta})
+
         return handler.response(serializer.data)
 
     @capable_of("crud_asset")

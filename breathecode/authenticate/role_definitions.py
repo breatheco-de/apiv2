@@ -47,6 +47,10 @@ CAPABILITIES = [
     {"slug": "crud_certificate", "description": "Create, update or delete student certificates"},
     {"slug": "read_layout", "description": "Read layouts to generate new certificates"},
     {"slug": "read_syllabus", "description": "List and read syllabus information"},
+    {
+        "slug": "read_teacher_instructions",
+        "description": "Read teacher-only instructions in syllabus days (guidance for instructors, not shown to students)",
+    },
     {"slug": "crud_syllabus", "description": "Create, update or delete syllabus versions"},
     {"slug": "read_organization", "description": "Read academy organization details"},
     {"slug": "crud_organization", "description": "Update, create or delete academy organization details"},
@@ -514,6 +518,7 @@ def get_extended_roles():
                 "start_or_end_event",
                 "read_liveclass",
                 "read_user_assessment",
+                "read_teacher_instructions",
             ],
         }
     )

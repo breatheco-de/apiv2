@@ -101,7 +101,7 @@ Assume these conventions for all BreatheCode API endpoints unless a domain skill
 ### Academy (staff) endpoints
 
 - **Rule:** Any endpoint whose path contains `/academy/` (after the app prefix, e.g. `/v1/admissions/academy/...`) is for **staff** (academy-scoped operations).
-- **Required header:** Send the **`Academy`** header with the academy ID (e.g. `Academy: 1`). Missing it returns an error (e.g. "Missing academy_id... or 'Academy' header").
+- **Required header:** Send the **`Academy`** header with the academy ID (e.g. `Academy: 1`). For endpoints documented with read aggregation, the same header may accept a comma-separated list (e.g. `Academy: 1,2,3`) and the response may include partial-scope metadata. Missing it returns an error (e.g. "Missing academy_id... or 'Academy' header").
 - **Examples:** `/v1/admissions/academy/cohort/user`, `/v1/assessment/academy/user/assessment`, `/v1/assignments/academy/coderevision/<id>`.
 
 ### Error responses

@@ -59,7 +59,7 @@ class RegistryTestSuite(RegistryTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual({x["id"] for x in data}, {comment_alpha.id, comment_beta.id})
 
-    def test_get_comments_academies_query_param_scopes_to_allowed_ids(self):
+    def test_get_comments_academies_querystring_full_scope(self):
         model = self.generate_models(
             authenticate=True,
             academy=2,
@@ -89,17 +89,42 @@ class RegistryTestSuite(RegistryTestCase):
         comment_two = AssetComment.objects.create(asset=model.asset[1], text="on-academy-two")
 
         url = "/v1/registry/academy/asset/comment?academies=1,2"
-        response = self.client.get(url, HTTP_ACADEMY=model.academy[0].id)
+        response = self.client.get(url, HTTP_ACADEMY=1)
         data = response.json()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual({x["id"] for x in data}, {comment_one.id, comment_two.id})
 
-        url_only_two = "/v1/registry/academy/asset/comment?academies=2"
-        response_two = self.client.get(url_only_two, HTTP_ACADEMY=model.academy[0].id)
+        response_two = self.client.get("/v1/registry/academy/asset/comment?academies=2", HTTP_ACADEMY=1)
         self.assertEqual(response_two.status_code, status.HTTP_200_OK)
         self.assertEqual({x["id"] for x in response_two.json()}, {comment_two.id})
 
-    def test_get_comments_academies_without_capability_returns_empty(self):
+    def test_get_comments_academies_querystring_partial_scope_returns_meta(self):
+        model = self.generate_models(
+            authenticate=True,
+            academy=2,
+            profile_academy=1,
+            role=1,
+            capability="read_asset",
+            asset_category=2,
+            asset=[
+                {"slug": "x1", "academy_id": 1, "category_id": 1},
+                {"slug": "x2", "academy_id": 2, "category_id": 2},
+            ],
+        )
+        self.client.force_authenticate(user=model.user)
+
+        comment_one = AssetComment.objects.create(asset=model.asset[0], text="only-academy-one")
+        AssetComment.objects.create(asset=model.asset[1], text="other-academy")
+
+        response = self.client.get("/v1/registry/academy/asset/comment?academies=1,2", HTTP_ACADEMY=1)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(data["academy_scope"]["requested_academy_ids"], [1, 2])
+        self.assertEqual(data["academy_scope"]["applied_academy_ids"], [1])
+        self.assertEqual(data["academy_scope"]["resolution"], "partial")
+        self.assertEqual({x["id"] for x in data["results"]}, {comment_one.id})
+
+    def test_get_comments_academies_querystring_without_capability_returns_403(self):
         model = self.generate_models(
             authenticate=True,
             academy=2,
@@ -116,12 +141,14 @@ class RegistryTestSuite(RegistryTestCase):
 
         AssetComment.objects.create(asset=model.asset[1], text="other-academy")
 
-        url = "/v1/registry/academy/asset/comment?academies=2"
-        response = self.client.get(url, HTTP_ACADEMY=model.academy[0].id)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.json(), [])
+        response = self.client.get("/v1/registry/academy/asset/comment?academies=2", HTTP_ACADEMY=1)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(
+            response.json()["detail"],
+            "You (user: 1) don't have this capability: read_asset for requested academies",
+        )
 
-    def test_get_comments_academies_non_integer_returns_400(self):
+    def test_get_comments_academies_querystring_non_integer_returns_400(self):
         model = self.generate_models(
             authenticate=True,
             profile_academy=1,
@@ -132,8 +159,5 @@ class RegistryTestSuite(RegistryTestCase):
         )
         self.client.force_authenticate(user=model.user)
 
-        response = self.client.get(
-            "/v1/registry/academy/asset/comment?academies=1,not-a-number",
-            HTTP_ACADEMY=model.academy.id,
-        )
+        response = self.client.get("/v1/registry/academy/asset/comment?academies=1,not-a-number", HTTP_ACADEMY=1)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

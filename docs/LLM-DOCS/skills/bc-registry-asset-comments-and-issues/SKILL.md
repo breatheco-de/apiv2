@@ -1,6 +1,6 @@
 ---
 name: bc-registry-asset-comments-and-issues
-description: Use when academy staff need to manage registry asset comments (optional `academies` query on GET for multi-academy scope) and asset error issues end-to-end, and do NOT use for public asset browsing or non-registry workflows.
+description: Use when academy staff need to manage registry asset comments (optional `academies=<id,id>` querystring on GET for multi-academy scope) and asset error issues end-to-end, and do NOT use for public asset browsing or non-registry workflows.
 requires: []
 ---
 
@@ -16,7 +16,7 @@ Use this skill when staff need to create, assign, review, resolve, update, or de
 - An **asset issue** here refers to an `AssetErrorLog` record with status lifecycle `ERROR` -> `FIXED` or `IGNORED`.
 - A comment is considered "closed" by setting `resolved=true` (there is no separate comment status enum).
 - Comments and error logs use different capabilities and different endpoints.
-- **Listing comments** is scoped to the academy in the `Academy` header by default. Optional query param `academies=<id>,<id>,...` lets callers request several academies at once; the API returns comments only for assets whose academy is **both** in that list **and** an academy where the user has `read_asset` on an active academy (requested IDs without capability are ignored; invalid tokens in the list return `400`).
+- **Listing comments** requires a single `Academy` header scope and supports optional `academies=<id,id,...>` on GET for read aggregation. The API returns only academies where the user has `read_asset`; if some requested academies are not allowed, response includes `academy_scope` metadata with requested/applied IDs and `resolution=partial`. If none are allowed, the API returns `403`.
 
 ```mermaid
 flowchart LR
@@ -48,8 +48,8 @@ flowchart LR
    - `author` is set by the backend from the authenticated user.
 
 4. Review/filter comments:
-   - `GET /v1/registry/academy/asset/comment` with filters such as `asset`, `academies`, `resolved`, `delivered`, `owner`, and `author`.
-   - The `Academy` header is still required (`capable_of` checks `read_asset` for that academy). To aggregate comments across several academies where the user is allowed, add `academies=<comma-separated numeric ids>`; results include only comments on assets in those academies that pass the permission check.
+   - `GET /v1/registry/academy/asset/comment` with filters such as `asset`, `resolved`, `delivered`, `owner`, `author`, and `academies`.
+   - The `Academy` header is required (single academy). For read aggregation, send `academies=<id1,id2,...>` in querystring; the API applies only academies where the user has `read_asset`, and partial application returns `academy_scope` metadata.
    - This list is paginated and sorted by newest (`-created_at`) by default.
 
 5. Manage comment lifecycle:
@@ -72,7 +72,7 @@ flowchart LR
 
 | Action | Method | Path | Required headers | Required body fields | Response notes |
 |---|---|---|---|---|---|
-| List comments | GET | `/v1/registry/academy/asset/comment` | `Authorization`, `Academy` | None | Paginated list (default sort: newest first). Optional `academies` query param scopes across multiple allowed academies. |
+| List comments | GET | `/v1/registry/academy/asset/comment` | `Authorization`, `Academy` | None | Paginated list (default sort: newest first). Use querystring `academies=<id1,id2,...>` for multi-academy read aggregation. |
 | Create comment | POST | `/v1/registry/academy/asset/comment` | `Authorization`, `Academy` | `asset`, `text` | `201` comment object; `author` set from session user. |
 | Update comment | PUT | `/v1/registry/academy/asset/comment/<comment_id>` | `Authorization`, `Academy` | None globally required; send fields to change | `200` updated comment object. |
 | Delete comment | DELETE | `/v1/registry/academy/asset/comment/<comment_id>` | `Authorization`, `Academy` | None | `204` no content. |
@@ -81,8 +81,8 @@ flowchart LR
 - GET requires `read_asset`.
 - POST/PUT/DELETE require `crud_asset`.
 
-**List filters**
-- `academies=<id1,id2,...>` (optional) — restrict the list to comments on assets in these academies; each ID must be numeric. Only IDs where the user has `read_asset` on an **ACTIVE** academy are applied; others are skipped (no error). If omitted, only the academy from the `Academy` header is used (unchanged behavior).
+**List scope and filters**
+- `academies=<id1,id2,...>` on GET (optional multi-academy) — each ID must be numeric. The API applies only IDs where the user has `read_asset` on an **ACTIVE** academy. If some are filtered, response includes `academy_scope` metadata; if all are filtered, response is `403`.
 - `asset=<id1,id2>` or `asset=<slug1,slug2>` (mixed values are supported)
 - `resolved=true|false`
 - `delivered=true|false`
@@ -211,8 +211,8 @@ flowchart LR
 
 ## Edge Cases
 
-1. **`academies` vs header academy**  
-   The header academy must still be one where the user has `read_asset` (otherwise the request fails before listing). The `academies` query param only **narrows or expands** which asset academies appear in the comment list; it does not replace the header requirement.
+1. **Single or multiple academy IDs in header**  
+   `Academy` can be a single ID (`Academy: 1`) or a comma-separated list (`Academy: 1,2,3`) for GET aggregation. Mutating endpoints still expect a single academy scope.
 
 2. **Comment text is immutable after creation**  
    `PUT` for comments cannot update `text`, `asset`, or `author`; only lifecycle/assignment fields should be changed.
@@ -238,6 +238,6 @@ flowchart LR
 2. Used comment `POST` with `asset` + `text`, and verified `author` came from session.
 3. Used comment `PUT` only for assignment/lifecycle fields, not `text`.
 4. Closed or reopened comments using `resolved` flag and handled owner-resolve restriction.
-5. Listed and filtered comments/issues with proper query parameters (including `academies` when listing across several academies the user may access).
+5. Listed and filtered comments/issues with proper query parameters and used multi-academy `Academy` header on GET when cross-academy aggregation was needed.
 6. Updated error issues with awareness of grouped status propagation.
 7. Deleted comments/issues using the correct single or bulk endpoint pattern.
