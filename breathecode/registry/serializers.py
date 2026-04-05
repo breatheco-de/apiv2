@@ -1201,6 +1201,10 @@ class AssetPUTSerializer(serializers.ModelSerializer):
         return validated_data
 
     def update(self, instance, validated_data):
+        # Scoped academy PUT implies claiming an unclaimed (global) asset for this academy.
+        academy_id = self.context.get("academy_id")
+        if instance.academy_id is None and academy_id is not None:
+            instance.academy_id = int(academy_id)
 
         data = {}
 
