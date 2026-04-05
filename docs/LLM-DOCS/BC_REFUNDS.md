@@ -52,7 +52,14 @@ POST /v1/payments/academy/invoice/{invoice_id}/refund
 Headers: Academy: {academy_id}
 ```
 
-**Permission requirements:** `crud_invoice`
+Alternative endpoint for reconciliation-only flow (already refunded outside this API):
+
+```bash
+POST /v1/payments/academy/invoice/{invoice_id}/record-refund
+Headers: Academy: {academy_id}
+```
+
+**Permission requirements:** `issue_refund`
 
 ### 2. Request Parameters
 
@@ -73,6 +80,10 @@ Headers: Academy: {academy_id}
   - Keys are plan or service slugs
   - Values are the amounts to refund for each item
 - `reason` (string, optional): Refund reason
+
+For `record-refund`, add:
+- `external_reference` (string, required): proof/reference for the external payout (ticket id, wire id, dashboard reference)
+- `stripe_refund_id` (string, optional, max 32 chars): existing Stripe refund id when payout was done externally in Stripe
 
 ### 3. Validations
 
@@ -136,6 +147,11 @@ If the invoice has `stripe_id`:
 If the invoice does NOT have `stripe_id`:
 - Manually updates `invoice.amount_refunded`
 - Updates `invoice.status` to `PARTIALLY_REFUNDED` or `REFUNDED` as appropriate
+
+For `record-refund`:
+- Never calls Stripe
+- Always updates `invoice.amount_refunded` and `invoice.status` in this API
+- Optionally stores `stripe_refund_id` when the payout already happened in Stripe outside this API
 
 #### Step 3: Create CreditNote
 A `CreditNote` record is created with:
@@ -206,6 +222,34 @@ If service-items are being refunded:
 - Creates a `CreditNote` record
 - Expires associated subscriptions and plan financings
 - Deletes associated service items
+
+### `process_refund_record_external()`
+
+**Location:** `breathecode/payments/actions.py`
+
+**Purpose:** Records a refund already issued outside this API and applies invoice/entitlement side effects without calling Stripe.
+
+**Parameters:**
+- `invoice` (Invoice): The invoice to reconcile
+- `amount` (float): Amount to record as refunded
+- `items_to_refund` (dict[str, float]): Refunded item slugs and amounts
+- `external_reference` (str): Required external payout reference
+- `stripe_refund_id` (str, optional): Existing Stripe refund id if known
+
+**Returns:**
+- `CreditNote`: The created CreditNote object
+
+**Side effects:**
+- Updates invoice refund balance and status
+- Creates a `CreditNote` with external refund provenance
+- Expires associated subscriptions and plan financings
+- Deletes associated service items
+
+## Reconciliation vs Stripe Refund
+
+- Use `/refund` when this API should initiate payout (Stripe call for invoices with `stripe_id`).
+- Use `/record-refund` when payout already happened elsewhere and you only need to reconcile state.
+- Do not use `/refund` for already-paid-out invoices unless you intentionally want this API to attempt payout again.
 
 ### `refund_payment()` (Stripe Service)
 

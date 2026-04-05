@@ -243,7 +243,11 @@ CAPABILITIES = [
     },
     {
         "slug": "crud_invoice",
-        "description": "Create, update, delete invoices and process refunds",
+        "description": "Create, update, and delete invoices",
+    },
+    {
+        "slug": "issue_refund",
+        "description": "Issue invoice refunds and record external refunds",
     },
     {
         "slug": "read_career_path",
@@ -674,6 +678,7 @@ def get_extended_roles():
                 "read_mentorship_bill",
                 "read_project_invoice",
                 "crud_project_invoice",
+                "issue_refund",
                 "get_github_user",
                 "read_provisioning_bill",
                 "crud_provisioning_bill",
@@ -817,6 +822,7 @@ def get_extended_roles():
                 "crud_plan",
                 "crud_academyservice",
                 "crud_academy_payment_settings",
+                "issue_refund",
                 "manage_academy_roles",
             ],
         }

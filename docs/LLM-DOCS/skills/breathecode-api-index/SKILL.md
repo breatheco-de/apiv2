@@ -73,6 +73,7 @@ Some user requests touch multiple domains. Load ALL listed skills before proceed
 | Create or edit an academy event with tags and workshop asset selection | `bc-events-create-and-edit-event` + `bc-marketing-*` (fetch valid `DISCOVERY` tags) + `bc-registry-*` (search and validate workshop assets by type) |
 | Configure academy Slack integration and manage sync health | `bc-notify-manage-academy-slackintegration` + `bc-admissions-*` (students/cohorts drive Slack mappings) + `bc-authenticate-*` (Slack OAuth endpoints live in auth) |
 | Align or extend syllabus design with the school skills framework (job role stages, skills on the go) | `bc-admissions-*` (syllabus, cohorts) + `bc-talentdevelopment-manage-skills` (career path, stages, `stage_skill`, domains) |
+| Cancel a user subscription and optionally issue a refund | `bc-payments-cancel-subscription-and-refund` + [`docs/llm-docs/BC_REFUNDS.md`](../../BC_REFUNDS.md) (use the skill for actor-specific flow and endpoint order, then use BC_REFUNDS for refund payload semantics and validations) |
 
 ---
 
