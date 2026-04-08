@@ -25,6 +25,7 @@ from .actions import (
     revoke_user_discord_permissions,
     set_gitpod_user_expiration,
 )
+from .actions import grant_copilot_seat_for_user, revoke_copilot_seat_after_delay
 
 API_URL = os.getenv("API_URL", "")
 
@@ -438,3 +439,17 @@ def process_bulk_student_upload(job_id: str, **_kwargs: Any) -> None:
 
     update_bulk_job_state(job_id, status="completed", processed=processed, results=results)
     logger.info("Completed process_bulk_student_upload for job_id=%s processed=%s", job_id, processed)
+
+
+@task(priority=TaskPriority.ACADEMY.value)
+def grant_github_copilot_seat_task(github_academy_user_id: int, **_):
+    """Assign Copilot seat when GithubAcademyUser becomes SYNCHED+ADD."""
+    return grant_copilot_seat_for_user(github_academy_user_id)
+
+
+@task(priority=TaskPriority.ACADEMY.value)
+def revoke_github_copilot_seat_delayed(github_academy_user_id: int, **_):
+    """
+    After 2 hours, revoke Copilot if the user is still not SYNCHED+ADD and no sibling academy keeps them eligible.
+    """
+    return revoke_copilot_seat_after_delay(github_academy_user_id)

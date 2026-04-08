@@ -44,25 +44,40 @@ class Github:
 
         return self._call("POST", action_name, json=request_data)
 
-    def delete(self, action_name, request_data=None):
-
+    def delete(self, action_name, request_data=None, json=None):
+        """
+        DELETE: `request_data` are query-string params (default behavior).
+        Pass `json=dict` to send a JSON body instead (e.g. Copilot selected_users); params stay in `request_data`.
+        """
         if request_data is None:
             request_data = {}
 
-        return self._call("DELETE", action_name, params=request_data)
+        return self._call("DELETE", action_name, params=request_data, json=json)
 
     def _call(self, method_name, action_name, params=None, json=None):
 
         self.headers = {
             "Authorization": "Bearer " + self.token,
             "Content-type": "application/json",
+            "Accept": "application/vnd.github+json",
         }
 
         url = self.HOST + action_name
         resp = requests.request(method=method_name, url=url, headers=self.headers, params=params, json=json, timeout=20)
 
         if resp.status_code >= 200 and resp.status_code < 300:
-            if method_name in ["DELETE", "HEAD"]:
+            if method_name == "HEAD":
+                return resp
+
+            if method_name == "DELETE":
+                # Body was sent (e.g. Copilot): API returns JSON; legacy DELETE has no body → raw response.
+                if json is not None:
+                    if not resp.content:
+                        return {}
+                    try:
+                        return resp.json()
+                    except Exception:
+                        return {}
                 return resp
 
             data = resp.json()
@@ -362,8 +377,38 @@ class Github:
             team_ids = []
 
         return self.post(
-            f"/orgs/{self.org}/invitations", request_data={"email": email, "role": role, "team_ids": [12, 26]}
+            f"/orgs/{self.org}/invitations", request_data={"email": email, "role": role, "team_ids": team_ids}
         )
+
+    def copilot_add_selected_users(self, usernames: list):
+        """Assign Copilot seats to organization members (idempotent for existing seats)."""
+        return self.post(
+            f"/orgs/{self.org}/copilot/billing/selected_users",
+            request_data={"selected_usernames": usernames},
+        )
+
+    def copilot_remove_selected_users(self, usernames: list):
+        """Remove Copilot seats (may be pending cancellation until end of billing cycle per GitHub)."""
+        return self.delete(
+            f"/orgs/{self.org}/copilot/billing/selected_users",
+            json={"selected_usernames": usernames},
+        )
+
+    def copilot_list_billing_seats(self) -> list:
+        """All billed Copilot seats for the organization (paginated)."""
+        results = []
+        page = 1
+        while True:
+            data = self.get(
+                f"/orgs/{self.org}/copilot/billing/seats",
+                request_data={"per_page": self.page_size, "page": page},
+            )
+            seats = data.get("seats") or []
+            results.extend(seats)
+            if len(seats) < self.page_size:
+                break
+            page += 1
+        return results
 
     def delete_org_member(self, username):
         return self.delete(f"/orgs/{self.org}/members/{username}")
