@@ -37,7 +37,11 @@ from breathecode.services.seo import SEOAnalyzer
 from breathecode.utils import GenerateLookupsMixin, capable_of, consume
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import has_permission
-from breathecode.utils.decorators.capable_of import acapable_of
+from breathecode.utils.decorators.capable_of import (
+    acapable_of,
+    academy_scope_response_meta,
+    get_academy_ids_from_capability,
+)
 from breathecode.utils.views import render_message
 
 from .actions import (
@@ -1768,6 +1772,11 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
 
     extensions = APIViewExtensions(cache=AssetCache, sort="-published_at", paginate=True)
 
+    @staticmethod
+    def _asset_academy_scope_q(academy_id):
+        """Unclaimed or same-academy assets; DB equivalent of _get_asset_by_slug_or_id visibility."""
+        return Q(academy__id=int(academy_id)) | Q(academy__isnull=True)
+
     def _get_asset_by_slug_or_id(self, asset_slug_or_id, academy_id, request=None):
         """
         Helper method to retrieve an asset by either slug or ID.
@@ -1780,15 +1789,16 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
         Returns:
             Asset instance or None if not found
         """
+        academy_id = int(academy_id)
         if asset_slug_or_id.isdigit():
-            # It's an ID
-            return Asset.objects.filter(id=int(asset_slug_or_id), academy__id=academy_id).first()
+            asset = Asset.objects.filter(id=int(asset_slug_or_id)).select_related("academy").first()
         else:
-            # It's a slug - use the existing get_by_slug method with academy filter
             asset = Asset.get_by_slug(asset_slug_or_id, request)
-            if asset is None or (asset.academy is not None and asset.academy.id != int(academy_id)):
-                return None
-            return asset
+
+        # Same rule for ID and slug: visible if unclaimed (academy null) or owned by this academy
+        if asset is None or (asset.academy is not None and asset.academy.id != academy_id):
+            return None
+        return asset
 
     @capable_of("read_asset")
     def get(self, request, asset_slug_or_id=None, academy_id=None):
@@ -1812,7 +1822,7 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
             serializer = AcademyAssetSerializer(asset)
             return handler.response(serializer.data)
 
-        items = Asset.objects.filter(Q(academy__id=academy_id) | Q(academy__isnull=True))
+        items = Asset.objects.filter(self._asset_academy_scope_q(academy_id))
 
         lookup = {}
 
@@ -1968,23 +1978,27 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
     @capable_of("crud_asset")
     def put(self, request, asset_slug_or_id=None, academy_id=None):
 
-        data_list = request.data
-        if not isinstance(request.data, list):
-
-            # make it a list
-            data_list = [request.data]
-
+        raw = request.data
+        if isinstance(raw, list):
+            data_list = [{**item} if isinstance(item, dict) else dict(item) for item in raw]
+        else:
             if asset_slug_or_id is None:
                 raise ValidationException("Missing asset_slug_or_id")
+            data_list = [{**raw} if isinstance(raw, dict) else dict(raw)]
 
-            # Use helper method to find asset by slug or ID
+        if asset_slug_or_id is not None:
             asset = self._get_asset_by_slug_or_id(asset_slug_or_id, academy_id, request)
             if asset is None:
                 raise ValidationException(
                     f"This asset {asset_slug_or_id} does not exist for this academy {academy_id}", 404
                 )
+            # Single payload + URL asset: id must follow the URL (slug/id). List bodies used to skip this merge,
+            # leaving a stale body id (e.g. 3146) that does not match the slug or academy scope.
+            if len(data_list) == 1:
+                data_list[0]["id"] = asset.id
 
-            data_list[0]["id"] = asset.id
+        if len(data_list) == 0:
+            raise ValidationException("Request body must not be empty", slug="empty-body")
 
         all_assets = []
         for data in data_list:
@@ -2023,7 +2037,7 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
             if "id" not in data:
                 raise ValidationException("Cannot determine asset id", slug="without-id")
 
-            instance = Asset.objects.filter(id=data["id"], academy__id=academy_id).first()
+            instance = Asset.objects.filter(id=data["id"]).filter(self._asset_academy_scope_q(academy_id)).first()
             if not instance:
                 raise ValidationException(
                     f'Asset({data["id"]}) does not exist on this academy', code=404, slug="not-found"
@@ -2171,12 +2185,27 @@ class AcademyAssetCommentView(APIView, GenerateLookupsMixin):
         if cache is not None:
             return cache
 
-        items = AssetComment.objects.filter(asset__academy__id=academy_id)
+        academy_ids = [int(academy_id)]
+        if academies_param := request.GET.get("academies"):
+            academy_ids = get_academy_ids_from_capability(
+                {"academy_id": academies_param}, request, "read_asset", scope="read_aggregate"
+            )
+
+        items = AssetComment.objects.filter(asset__academy__id__in=academy_ids)
         lookup = {}
 
         if "asset" in self.request.GET:
             param = self.request.GET.get("asset")
-            lookup["asset__slug__in"] = [p.lower() for p in param.split(",")]
+            assets = [p.strip() for p in param.split(",") if p.strip()]
+            asset_ids = [int(p) for p in assets if p.isnumeric()]
+            asset_slugs = [p.lower() for p in assets if not p.isnumeric()]
+
+            if asset_ids and asset_slugs:
+                items = items.filter(Q(asset__id__in=asset_ids) | Q(asset__slug__in=asset_slugs))
+            elif asset_ids:
+                lookup["asset__id__in"] = asset_ids
+            elif asset_slugs:
+                lookup["asset__slug__in"] = asset_slugs
 
         if "resolved" in self.request.GET:
             param = self.request.GET.get("resolved")
@@ -2204,6 +2233,10 @@ class AcademyAssetCommentView(APIView, GenerateLookupsMixin):
         items = handler.queryset(items)
 
         serializer = AcademyCommentSerializer(items, many=True)
+        meta = academy_scope_response_meta(request)
+        if meta:
+            return handler.response({"results": serializer.data, **meta})
+
         return handler.response(serializer.data)
 
     @capable_of("crud_asset")

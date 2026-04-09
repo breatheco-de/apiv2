@@ -676,7 +676,7 @@ All endpoints are prefixed with `/v1/admissions` for syllabus operations and `/v
 **Permission Required:** `read_asset`
 
 **Query Parameters:**
-- `asset`: Filter by asset slug
+- `asset`: Filter by asset ID(s) or slug(s) (comma-separated)
 - `status`: Filter by comment status
 - `author`: Filter by author ID
 

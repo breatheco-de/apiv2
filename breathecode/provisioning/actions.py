@@ -4,7 +4,7 @@ import random
 import re
 from datetime import datetime
 from decimal import ROUND_HALF_UP, Decimal, localcontext
-from typing import Optional, TypedDict
+from typing import Any, Optional, TypedDict
 
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
@@ -14,6 +14,7 @@ from django.utils import timezone
 from linked_services.django.actions import get_user
 
 from breathecode.admissions.models import Academy, CohortUser
+from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import (
     ACTIVE as PROFILE_ACADEMY_ACTIVE,
     AcademyAuthSettings,
@@ -27,6 +28,7 @@ from breathecode.payments.signals import consume_service
 from breathecode.registry.models import Asset
 from breathecode.services.github import Github
 from breathecode.utils import getLogger
+from breathecode.utils.decorators import service_deprovisioner
 
 from .models import (
     ProvisioningAcademy,
@@ -37,10 +39,12 @@ from .models import (
     ProvisioningPrice,
     ProvisioningProfile,
     ProvisioningUserConsumption,
+    ProvisioningLLM,
     ProvisioningVendor,
     ProvisioningVPS,
 )
-from .vps_client import get_vps_client
+from .utils.llm_client import LLMClientError, get_llm_client
+from .utils.vps_client import get_vps_client
 
 logger = getLogger(__name__)
 
@@ -115,10 +119,10 @@ def get_vps_provisioning_academy_for_academy(academy: Academy, lang: str = "en")
         client = get_vps_client(profile.vendor)
         if client is None:
             continue
-        provisioning_academy = ProvisioningAcademy.objects.filter(
-            academy=academy, vendor=profile.vendor
-        ).first()
-        if not provisioning_academy or not (provisioning_academy.credentials_token or provisioning_academy.credentials_key):
+        provisioning_academy = ProvisioningAcademy.objects.filter(academy=academy, vendor=profile.vendor).first()
+        if not provisioning_academy or not (
+            provisioning_academy.credentials_token or provisioning_academy.credentials_key
+        ):
             continue
         return (academy, provisioning_academy)
     raise ValidationException(
@@ -167,6 +171,271 @@ def get_eligible_academy_and_vendor_for_vps(user):
                 slug="no-academy-for-vps",
             )
         )
+    profiles = ProvisioningProfile.objects.filter(academy=academy).select_related("vendor")
+    for profile in profiles:
+        if not profile.vendor_id:
+            continue
+        client = get_vps_client(profile.vendor)
+        if client is None:
+            continue
+        provisioning_academy = ProvisioningAcademy.objects.filter(academy=academy, vendor=profile.vendor).first()
+        if not provisioning_academy or not (
+            provisioning_academy.credentials_token or provisioning_academy.credentials_key
+        ):
+            continue
+        return (academy, provisioning_academy)
+    raise ValidationException(
+        translation(
+            getattr(user, "lang", None) or "en",
+            en="Your academy does not have VPS provisioning configured. Please contact your program manager.",
+            es="Tu academia no tiene configurado el aprovisionamiento de VPS. Contacta a tu programa.",
+            slug="academy-vps-not-configured",
+        )
+    )
+
+
+def resolve_provisioning_academy_for_llm(academy):
+    """
+    Given an academy, return the first ProvisioningAcademy whose vendor is registered
+    in the LLM client registry and has credentials configured.  Returns None when no
+    suitable configuration is found.
+
+    Used by both ``ensure_llm_user`` and the student-facing LLM views.
+    """
+    for pa in ProvisioningAcademy.objects.select_related("vendor").filter(academy=academy, vendor__isnull=False):
+        if get_llm_client(pa) is not None:
+            return pa
+    return None
+
+
+def ensure_llm_user(user, provisioning_academy, client=None):
+    """
+    Ensure a ProvisioningLLM record exists for ``user`` + ``provisioning_academy``.
+
+    Creates the record (status ACTIVE) when missing, and re-activates a
+    previously deprovisioned record when the user still holds entitlement.
+    Returns the ProvisioningLLM instance.
+    """
+    if not provisioning_academy:
+        return None
+
+    vendor = provisioning_academy.vendor
+
+    academy_slug = getattr(provisioning_academy.academy, "slug", "") or str(provisioning_academy.academy_id)
+    external_user_id = f"{user.username}-{academy_slug}"
+
+    provisioning_llm, created = ProvisioningLLM.objects.get_or_create(
+        user=user,
+        academy=provisioning_academy.academy,
+        vendor=vendor,
+        defaults={
+            "external_user_id": external_user_id,
+            "status": ProvisioningLLM.STATUS_ACTIVE,
+            "deprovisioned_at": None,
+            "error_message": "",
+        },
+    )
+    # Note: even if we just created the ProvisioningLLM row, we still want to ensure
+    # that the user exists in the external LLM provider before generating API keys.
+
+    changed = False
+
+    if provisioning_llm.status == ProvisioningLLM.STATUS_DEPROVISIONED:
+        academy_id = provisioning_academy.academy.id
+        has_entitlement = (
+            Consumable.list(
+                user=user,
+                service="free-monthly-llm-budget",
+                extra={"subscription__academy_id": academy_id},
+            ).exists()
+            or Consumable.list(
+                user=user,
+                service="free-monthly-llm-budget",
+                extra={"plan_financing__academy_id": academy_id},
+            ).exists()
+        )
+        if has_entitlement:
+            provisioning_llm.status = ProvisioningLLM.STATUS_ACTIVE
+            provisioning_llm.deprovisioned_at = None
+            provisioning_llm.error_message = ""
+            changed = True
+
+    external_user_id = provisioning_llm.external_user_id or str(user.username)
+
+    if provisioning_llm.external_user_id != external_user_id:
+        provisioning_llm.external_user_id = external_user_id
+        changed = True
+
+    if changed:
+        provisioning_llm.save(
+            update_fields=["external_user_id", "status", "deprovisioned_at", "error_message", "updated_at"]
+        )
+
+    if client is None:
+        client = get_llm_client(provisioning_academy)
+    if client and hasattr(client, "get_user_info") and hasattr(client, "create_user"):
+        try:
+            client.get_user_info(user_id=external_user_id)
+        except LLMClientError as exc:
+            exc_str = str(exc).lower()
+            # LiteLLM returns: User <id> not found (code 404 in our wrapper)
+            if "404" in exc_str and "not found" in exc_str:
+                user_email = getattr(user, "email", None) or ""
+                try:
+                    user_metadata = {"email": user_email} if user_email else None
+                    client.create_user(
+                        user_id=external_user_id,
+                        user_alias=getattr(user, "username", None),
+                        metadata=user_metadata,
+                    )
+                except LLMClientError:
+                    # If the user already exists due to a race condition, generation will work anyway.
+                    retry_msg = str(exc).lower()
+                    if "409" not in retry_msg and "already" not in retry_msg:
+                        raise
+
+    return provisioning_llm
+
+
+def resolve_llm_client_and_external_id(request, ensure_llm_user_record: bool = False):
+    """
+    Resolve an LLM client and the external_user_id.
+
+    The ``Academy`` or ``academy`` request header (academy id) is **required**
+    for POST create and DELETE key flows. The global GET ``me/llm/keys`` listing
+    does not use this helper.
+
+    When *ensure_llm_user_record* is True the ProvisioningLLM row is created
+    synchronously (used by POST endpoints).  When False (default) only an
+    existing row is looked up (used by DELETE).
+
+    Returns: (client, external_user_id)
+    """
+    user = request.user
+    lang = get_user_language(request)
+
+    raw_academy_id = request.headers.get("Academy") or request.headers.get("academy")
+    if raw_academy_id is None or (isinstance(raw_academy_id, str) and not raw_academy_id.strip()):
+        raise ValidationException(
+            translation(
+                lang,
+                en="The Academy header is required to manage LLM API keys.",
+                es="El header Academy es obligatorio para administrar las llaves de API de LLM.",
+                slug="llm-academy-header-required",
+            ),
+            code=400,
+        )
+
+    try:
+        academy_id = int(str(raw_academy_id).strip())
+    except ValueError:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Invalid Academy header.",
+                es="El header Academy no es válido.",
+                slug="academy-header-invalid",
+            ),
+            code=400,
+        )
+
+    has_entitlement = (
+        Consumable.list(
+            user=user,
+            service="free-monthly-llm-budget",
+            extra={"subscription__academy_id": academy_id},
+        ).exists()
+        or Consumable.list(
+            user=user,
+            service="free-monthly-llm-budget",
+            extra={"plan_financing__academy_id": academy_id},
+        ).exists()
+    )
+    if not has_entitlement:
+        raise ValidationException(
+            translation(
+                lang,
+                en="You don't have the LLM budget consumable required to manage API keys.",
+                es="No tienes el consumible de presupuesto de LLM necesario para administrar llaves de API.",
+                slug="llm-budget-required",
+            ),
+            code=403,
+        )
+
+    academy = Academy.objects.filter(id=academy_id).first()
+    if not academy:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Academy not found.",
+                es="Academia no encontrada.",
+                slug="academy-not-found",
+            ),
+            code=404,
+        )
+
+    is_member = get_active_cohorts(user).filter(cohort__academy_id=academy_id).exists()
+    if not is_member:
+        is_member = ProfileAcademy.objects.filter(user=user, academy_id=academy_id).exists()
+
+    if not is_member:
+        raise ValidationException(
+            translation(
+                lang,
+                en="You do not have permission for this Academy.",
+                es="No tienes permiso para esta academia.",
+                slug="academy-not-permitted",
+            ),
+            code=403,
+        )
+
+    provisioning_academy = resolve_provisioning_academy_for_llm(academy)
+    if not provisioning_academy:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Your academy does not have LLM provisioning configured. Please contact your program manager.",
+                es="Tu academia no tiene configurado el aprovisionamiento de LLM. Contacta a tu programa.",
+                slug="academy-llm-not-configured",
+            ),
+            code=400,
+        )
+
+    client = get_llm_client(provisioning_academy)
+    if client is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="LLM provisioning is not configured for your academy.",
+                es="El aprovisionamiento de LLM no está configurado para tu academia.",
+                slug="llm-client-not-configured",
+            ),
+            code=400,
+        )
+
+    if ensure_llm_user_record:
+        provisioning_llm = ensure_llm_user(user, provisioning_academy, client=client)
+    else:
+        provisioning_llm = ProvisioningLLM.objects.filter(
+            user=user,
+            academy=academy,
+            vendor=provisioning_academy.vendor,
+        ).first()
+
+    academy_slug = getattr(academy, "slug", "") or str(academy_id)
+    external_user_id = f"{user.username}-{academy_slug}"
+    if provisioning_llm and provisioning_llm.external_user_id:
+        external_user_id = provisioning_llm.external_user_id
+
+    return client, external_user_id
+
+
+def request_vps(user, plan_slug=None):
+    """
+    Request a new VPS for the user. Consumes one vps_server consumable, creates ProvisioningVPS, enqueues task.
+    Returns the ProvisioningVPS instance. Raises ValidationException if ineligible, duplicate, or no credits.
+    """
+    academy, provisioning_academy = get_eligible_academy_and_vendor_for_vps(user)
     lang = getattr(user, "lang", None) or "en"
     return get_vps_provisioning_academy_for_academy(academy, lang=lang)
 
@@ -176,6 +445,7 @@ def _request_vps_core(
     academy: Academy,
     provisioning_academy: ProvisioningAcademy,
     plan_slug=None,
+    vendor_selection=None,
     *,
     lang: Optional[str] = None,
     for_staff: bool = False,
@@ -186,9 +456,7 @@ def _request_vps_core(
         ProvisioningVPS.VPS_STATUS_PROVISIONING,
         ProvisioningVPS.VPS_STATUS_ACTIVE,
     ]
-    if ProvisioningVPS.objects.filter(
-        user=user, academy=academy, status__in=active_statuses
-    ).exists():
+    if ProvisioningVPS.objects.filter(user=user, academy=academy, status__in=active_statuses).exists():
         if for_staff:
             msg = translation(
                 lang,
@@ -236,20 +504,11 @@ def _request_vps_core(
     )
     from .tasks import provision_vps_task
 
-    provision_vps_task.delay(vps.id)
+    provision_vps_task.delay(vps.id, vendor_selection=vendor_selection or {})
     return vps
 
 
-def request_vps(user, plan_slug=None):
-    """
-    Request a new VPS for the user. Consumes one vps_server consumable, creates ProvisioningVPS, enqueues task.
-    Returns the ProvisioningVPS instance. Raises ValidationException if ineligible, duplicate, or no credits.
-    """
-    academy, provisioning_academy = get_eligible_academy_and_vendor_for_vps(user)
-    return _request_vps_core(user, academy, provisioning_academy, plan_slug)
-
-
-def request_vps_for_student(student_user, academy: Academy, plan_slug=None, lang: str = "en"):
+def request_vps_for_student(student_user, academy: Academy, plan_slug=None, vendor_selection=None, lang: str = "en"):
     """
     Staff flow: request a VPS for a student in a fixed academy. Consumes the student's vps_server consumable.
     """
@@ -268,6 +527,7 @@ def request_vps_for_student(student_user, academy: Academy, plan_slug=None, lang
         academy,
         provisioning_academy,
         plan_slug,
+        vendor_selection=vendor_selection,
         lang=lang,
         for_staff=True,
     )
@@ -1002,3 +1262,17 @@ def add_rigobot_activity(context: ActivityContext, field: dict, position: int) -
             pa.bills.add(provisioning_bill)
 
     pa.events.add(item)
+
+
+@service_deprovisioner("free-monthly-llm-budget")
+def deprovision_free_monthly_llm_budget(user_id: int, context: dict | None = None, **_: Any):
+    """
+    Deprovision the free monthly LLM budget for the given user and academy.
+    """
+    # The signal receiver calls handlers synchronously; keep this handler lightweight.
+    from breathecode.provisioning.tasks import deprovision_litellm_user_task
+
+    academy_id = None
+    if isinstance(context, dict):
+        academy_id = context.get("academy_id") or context.get("academy")
+    deprovision_litellm_user_task.delay(user_id=user_id, academy_id=academy_id)

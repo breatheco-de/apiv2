@@ -15,6 +15,7 @@ from ..views import (
     AcademyCouponView,
     AcademyFinancingOptionView,
     AcademyInvoiceRefundView,
+    AcademyInvoiceRecordRefundView,
     AcademyInvoiceView,
     AcademyPaymentMethodView,
     AcademyPaymentSettingsView,
@@ -195,6 +196,11 @@ urlpatterns = [
     path("academy/invoice/<int:invoice_id>", AcademyInvoiceView.as_view(), name="academy_invoice_id"),
     path(
         "academy/invoice/<int:invoice_id>/refund", AcademyInvoiceRefundView.as_view(), name="academy_invoice_id_refund"
+    ),
+    path(
+        "academy/invoice/<int:invoice_id>/record-refund",
+        AcademyInvoiceRecordRefundView.as_view(),
+        name="academy_invoice_id_record_refund",
     ),
     path("academy/bag/<int:bag_id>", AcademyBagByIdView.as_view(), name="academy_bag_id"),
     path("academy/coupon", AcademyCouponView.as_view(), name="academy_coupon"),

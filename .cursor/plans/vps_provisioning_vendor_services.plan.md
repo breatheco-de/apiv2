@@ -1,3 +1,10 @@
+---
+name: ""
+overview: ""
+todos: []
+isProject: false
+---
+
 # Addendum: Vendor service scopes (vps_server, coding_environment)
 
 This extends the "VPS provisioning API-only config" work with vendor service scopes and validation.
@@ -44,16 +51,14 @@ This extends the "VPS provisioning API-only config" work with vendor service sco
 **Preferred approach**
 
 1. **Model method on ProvisioningVendor**
-   - `def offers_service(self, service: str) -> bool`
-   - Return `service in (self.services or [])`.
-   - Reusable and easy to test.
-
+  - `def offers_service(self, service: str) -> bool`
+  - Return `service in (self.services or [])`.
+  - Reusable and easy to test.
 2. **Use at “use” sites**
-   - **get_eligible_academy_and_vendor_for_vps** ([actions.py](breathecode/provisioning/actions.py)): in the loop over profiles, after `get_vps_client(profile.vendor)` and before checking ProvisioningAcademy, add: `if not profile.vendor.offers_service("vps_server"): continue`. So we only consider vendors that offer `vps_server`.
-   - **ProvisioningAcademy create/update (API):** in the serializer’s `validate()` or in the view, when saving a ProvisioningAcademy for VPS (which is the current use case), validate that `vendor.offers_service("vps_server")`. If not, raise ValidationException (e.g. “This vendor does not offer VPS provisioning”). That way staff cannot attach a coding-environment-only vendor as the VPS academy config.
-
+  - **get_eligible_academy_and_vendor_for_vps** ([actions.py](breathecode/provisioning/actions.py)): in the loop over profiles, after `get_vps_client(profile.vendor)` and before checking ProvisioningAcademy, add: `if not profile.vendor.offers_service("vps_server"): continue`. So we only consider vendors that offer `vps_server`.
+  - **ProvisioningAcademy create/update (API):** in the serializer’s `validate()` or in the view, when saving a ProvisioningAcademy for VPS (which is the current use case), validate that `vendor.offers_service("vps_server")`. If not, raise ValidationException (e.g. “This vendor does not offer VPS provisioning”). That way staff cannot attach a coding-environment-only vendor as the VPS academy config.
 3. **Optional helper** (if you want a single place that raises)
-   - `require_vendor_offers_service(vendor, service, lang=None)` in actions or utils: if not `vendor.offers_service(service)`, raise ValidationException with translation. Call it from the ProvisioningAcademy serializer or from `get_eligible_academy_and_vendor_for_vps` instead of a bare `continue`, if you want a clear error when no vendor is found because none offer the service (you already raise “academy-vps-not-configured”; the current message is still correct).
+  - `require_vendor_offers_service(vendor, service, lang=None)` in actions or utils: if not `vendor.offers_service(service)`, raise ValidationException with translation. Call it from the ProvisioningAcademy serializer or from `get_eligible_academy_and_vendor_for_vps` instead of a bare `continue`, if you want a clear error when no vendor is found because none offer the service (you already raise “academy-vps-not-configured”; the current message is still correct).
 
 **Summary:** Add `ProvisioningVendor.offers_service(service)`. Use it explicitly in the VPS resolution loop and in ProvisioningAcademy create/update. No decorator.
 

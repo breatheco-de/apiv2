@@ -3422,41 +3422,7 @@ def calculate_refund_breakdown(
     return refund_breakdown
 
 
-def process_refund(
-    invoice: Invoice,
-    amount: float | None,
-    items_to_refund: dict[str, float],
-    breakdown: dict[str, Any] | None = None,
-    reason: str = "",
-    country_code: str | None = None,
-    legal_text: str | None = None,
-    lang: str = "en",
-) -> "CreditNote":
-    """
-    Process a refund for an invoice.
-
-    Args:
-        invoice: The invoice to refund
-        amount: Total amount to refund (required, must match sum of items_to_refund values)
-        breakdown: Breakdown of what to refund (plans, service-items)
-        items_to_refund: Dictionary mapping slugs to refund amounts (e.g., {'plan-slug': 100, 'service-slug': 50}). Required.
-        reason: Reason for the refund
-        country_code: Country code for legal compliance
-        legal_text: Country-specific legal text
-        lang: Language code
-
-    Returns:
-        CreditNote object created for the refund
-    """
-    from breathecode.payments.models import (
-        CreditNote,
-        Plan,
-        PlanFinancing,
-        PlanServiceItemHandler,
-        Subscription,
-        SubscriptionServiceItem,
-    )
-
+def _validate_refund_request(invoice: Invoice, amount: float | None, lang: str) -> float:
     already_refunded = invoice.amount_refunded or 0
     available_to_refund = invoice.amount - already_refunded
 
@@ -3471,7 +3437,6 @@ def process_refund(
             code=400,
         )
 
-    # Amount must always be provided explicitly
     if amount is None:
         raise ValidationException(
             translation(
@@ -3522,46 +3487,21 @@ def process_refund(
             code=400,
         )
 
-    if breakdown is None:
-        breakdown = invoice.amount_breakdown or {}
+    return amount
 
-    # Process refund through Stripe first (if applicable) before creating CreditNote
-    refund_stripe_id = None
-    if invoice.stripe_id:
-        from breathecode.payments.services.stripe import Stripe
 
-        stripe_service = Stripe(academy=invoice.academy)
-        stripe_service.set_language(lang)
-        try:
-            refund_result = stripe_service.refund_payment(invoice, amount=amount)
-            refund_stripe_id = refund_result["refund"]["id"]
-            invoice.refresh_from_db()
-        except Exception as e:
-            logger.error(f"Error processing Stripe refund: {str(e)}")
-            raise
+def _apply_invoice_refund_balance(invoice: Invoice, amount: float) -> None:
+    invoice.amount_refunded = (invoice.amount_refunded or 0) + amount
+    if invoice.amount_refunded >= invoice.amount:
+        invoice.status = Invoice.Status.REFUNDED
+        invoice.refunded_at = timezone.now()
+    elif invoice.amount_refunded > 0:
+        invoice.status = Invoice.Status.PARTIALLY_REFUNDED
+    invoice.save()
 
-    # Update invoice status if not using Stripe
-    if not invoice.stripe_id:
-        invoice.amount_refunded = (invoice.amount_refunded or 0) + amount
-        if invoice.amount_refunded >= invoice.amount:
-            invoice.status = Invoice.Status.REFUNDED
-            invoice.refunded_at = timezone.now()
-        elif invoice.amount_refunded > 0:
-            invoice.status = Invoice.Status.PARTIALLY_REFUNDED
-        invoice.save()
 
-    # Create CreditNote only after successful Stripe refund (or if no Stripe)
-    credit_note = CreditNote.objects.create(
-        invoice=invoice,
-        amount=amount,
-        currency=invoice.currency,
-        reason=reason,
-        status=CreditNote.Status.ISSUED,
-        legal_text=legal_text,
-        country_code=country_code or invoice.bag.country_code,
-        breakdown=breakdown,
-        refund_stripe_id=refund_stripe_id,
-    )
+def _apply_refund_entitlements(invoice: Invoice, items_to_refund: dict[str, float]) -> None:
+    from breathecode.payments.models import PlanServiceItemHandler, SubscriptionServiceItem
 
     bag = invoice.bag
     user = invoice.user
@@ -3572,15 +3512,11 @@ def process_refund(
     if items_to_refund:
         original_breakdown = invoice.amount_breakdown or {}
 
-        # Check plans (main plans and plan addons are both in "plans")
-        # If a plan has a refund amount > 0 in items_to_refund, we deprecate it
         if original_breakdown.get("plans"):
             for plan_slug, refund_amount_for_plan in items_to_refund.items():
                 if plan_slug in original_breakdown["plans"] and refund_amount_for_plan > 0:
                     plans_to_deprecate.append(plan_slug)
 
-        # Check service items
-        # If a service has a refund amount > 0 in items_to_refund, we remove it
         if original_breakdown.get("service-items"):
             for service_slug, refund_amount_for_service in items_to_refund.items():
                 if service_slug in original_breakdown["service-items"] and refund_amount_for_service > 0:
@@ -3591,8 +3527,6 @@ def process_refund(
     if plans_to_deprecate:
         plans = Plan.objects.filter(slug__in=plans_to_deprecate)
         for plan in plans:
-            # Expire subscription if it exists (regardless of whether it's main plan or plan addon)
-            # Using plans__in for ManyToManyField
             subscriptions = Subscription.objects.filter(
                 user=user, plans__in=[plan], status__in=[Subscription.Status.ACTIVE]
             )
@@ -3601,8 +3535,6 @@ def process_refund(
                 subscription.status_message = f"Subscription expired due to refund of invoice {invoice.id}"
                 subscription.save()
 
-            # Expire plan financing if it exists (regardless of whether it's main plan or plan addon)
-            # Using plans__in for ManyToManyField
             plan_financings = PlanFinancing.objects.filter(
                 user=user, plans__in=[plan], status__in=[PlanFinancing.Status.ACTIVE]
             )
@@ -3621,6 +3553,107 @@ def process_refund(
             handler__service_item_id__in=service_items_to_remove,
         ).delete()
 
+
+def process_refund(
+    invoice: Invoice,
+    amount: float | None,
+    items_to_refund: dict[str, float],
+    breakdown: dict[str, Any] | None = None,
+    reason: str = "",
+    country_code: str | None = None,
+    legal_text: str | None = None,
+    lang: str = "en",
+) -> "CreditNote":
+    """
+    Process a refund for an invoice.
+
+    Args:
+        invoice: The invoice to refund
+        amount: Total amount to refund (required, must match sum of items_to_refund values)
+        breakdown: Breakdown of what to refund (plans, service-items)
+        items_to_refund: Dictionary mapping slugs to refund amounts (e.g., {'plan-slug': 100, 'service-slug': 50}). Required.
+        reason: Reason for the refund
+        country_code: Country code for legal compliance
+        legal_text: Country-specific legal text
+        lang: Language code
+
+    Returns:
+        CreditNote object created for the refund
+    """
+    amount = _validate_refund_request(invoice, amount, lang)
+    if breakdown is None:
+        breakdown = invoice.amount_breakdown or {}
+
+    refund_stripe_id = None
+    if invoice.stripe_id:
+        from breathecode.payments.services.stripe import Stripe
+
+        stripe_service = Stripe(academy=invoice.academy)
+        stripe_service.set_language(lang)
+        try:
+            refund_result = stripe_service.refund_payment(invoice, amount=amount)
+            refund_stripe_id = refund_result["refund"]["id"]
+            invoice.refresh_from_db()
+        except Exception as e:
+            logger.error(f"Error processing Stripe refund: {str(e)}")
+            raise
+
+    if not invoice.stripe_id:
+        _apply_invoice_refund_balance(invoice, amount)
+
+    credit_note = CreditNote.objects.create(
+        invoice=invoice,
+        amount=amount,
+        currency=invoice.currency,
+        reason=reason,
+        status=CreditNote.Status.ISSUED,
+        legal_text=legal_text,
+        country_code=country_code or invoice.bag.country_code,
+        breakdown=breakdown,
+        refund_stripe_id=refund_stripe_id,
+    )
+
+    _apply_refund_entitlements(invoice, items_to_refund)
+    return credit_note
+
+
+def process_refund_record_external(
+    invoice: Invoice,
+    amount: float | None,
+    items_to_refund: dict[str, float],
+    external_reference: str,
+    stripe_refund_id: str | None = None,
+    breakdown: dict[str, Any] | None = None,
+    reason: str = "",
+    country_code: str | None = None,
+    legal_text: str | None = None,
+    lang: str = "en",
+) -> "CreditNote":
+    """
+    Record a refund that happened outside this API without calling Stripe.
+    """
+    amount = _validate_refund_request(invoice, amount, lang)
+    _apply_invoice_refund_balance(invoice, amount)
+
+    refund_breakdown = breakdown.copy() if isinstance(breakdown, dict) else (invoice.amount_breakdown or {}).copy()
+    refund_breakdown["external-refund"] = {
+        "recorded_externally": True,
+        "external_reference": external_reference,
+    }
+
+    credit_note = CreditNote.objects.create(
+        invoice=invoice,
+        amount=amount,
+        currency=invoice.currency,
+        reason=reason,
+        status=CreditNote.Status.ISSUED,
+        legal_text=legal_text,
+        country_code=country_code or invoice.bag.country_code,
+        breakdown=refund_breakdown,
+        refund_stripe_id=stripe_refund_id,
+    )
+
+    _apply_refund_entitlements(invoice, items_to_refund)
     return credit_note
 
 

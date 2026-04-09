@@ -47,6 +47,10 @@ CAPABILITIES = [
     {"slug": "crud_certificate", "description": "Create, update or delete student certificates"},
     {"slug": "read_layout", "description": "Read layouts to generate new certificates"},
     {"slug": "read_syllabus", "description": "List and read syllabus information"},
+    {
+        "slug": "read_teacher_instructions",
+        "description": "Read teacher-only instructions in syllabus days (guidance for instructors, not shown to students)",
+    },
     {"slug": "crud_syllabus", "description": "Create, update or delete syllabus versions"},
     {"slug": "read_organization", "description": "Read academy organization details"},
     {"slug": "crud_organization", "description": "Update, create or delete academy organization details"},
@@ -239,7 +243,11 @@ CAPABILITIES = [
     },
     {
         "slug": "crud_invoice",
-        "description": "Create, update, delete invoices and process refunds",
+        "description": "Create, update, and delete invoices",
+    },
+    {
+        "slug": "issue_refund",
+        "description": "Issue invoice refunds and record external refunds",
     },
     {
         "slug": "read_career_path",
@@ -425,6 +433,7 @@ BASE_ROLES = [
             "read_subscription",
             "read_academyservice",
             "upload_assignment_telemetry",
+            "read_provisioning_activity",
             "validate_assignment_flag",
         ],
     },
@@ -513,6 +522,7 @@ def get_extended_roles():
                 "start_or_end_event",
                 "read_liveclass",
                 "read_user_assessment",
+                "read_teacher_instructions",
             ],
         }
     )
@@ -668,6 +678,7 @@ def get_extended_roles():
                 "read_mentorship_bill",
                 "read_project_invoice",
                 "crud_project_invoice",
+                "issue_refund",
                 "get_github_user",
                 "read_provisioning_bill",
                 "crud_provisioning_bill",
@@ -811,6 +822,7 @@ def get_extended_roles():
                 "crud_plan",
                 "crud_academyservice",
                 "crud_academy_payment_settings",
+                "issue_refund",
                 "manage_academy_roles",
             ],
         }
