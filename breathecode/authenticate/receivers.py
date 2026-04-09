@@ -3,14 +3,15 @@ from typing import Type
 
 from django.contrib.auth.models import Group, User
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models.signals import post_delete, post_save, pre_delete
+from django.db.models.signals import post_delete, post_save, pre_delete, pre_save
 from django.dispatch import receiver
 from task_manager.django.actions import schedule_task
 
 from breathecode.admissions.models import CohortUser
 from breathecode.admissions.signals import student_edu_status_updated
 from breathecode.authenticate import tasks
-from breathecode.authenticate.models import ProfileAcademy, UserInvite
+from breathecode.authenticate.actions import COPILOT_REVOKE_DELAY_SECONDS
+from breathecode.authenticate.models import GithubAcademyUser, ProfileAcademy, UserInvite
 from breathecode.authenticate.signals import (
     cohort_user_deleted,
     invite_status_updated,
@@ -266,3 +267,27 @@ def sync_email_validation_across_invites(sender, instance, **kwargs):
         f"Email validation synced: {updated_count} invites with email '{instance.email}' "
         f"were automatically validated based on invite {instance.id}"
     )
+
+
+@receiver(pre_save, sender=GithubAcademyUser)
+def github_academy_user_copilot_capture_prev(sender, instance, **kwargs):
+    ps, pa = GithubAcademyUser.copilot_read_previous_storage(instance.pk)
+    instance._copilot_prev_storage_status = ps
+    instance._copilot_prev_storage_action = pa
+
+
+@receiver(post_save, sender=GithubAcademyUser)
+def github_academy_user_copilot_schedule(sender, instance, created, update_fields=None, **kwargs):
+    if not GithubAcademyUser.copilot_should_handle_save(update_fields):
+        return
+
+    ps = getattr(instance, "_copilot_prev_storage_status", None)
+    pa = getattr(instance, "_copilot_prev_storage_action", None)
+    kind = GithubAcademyUser.copilot_transition_kind(ps, pa, instance.storage_status, instance.storage_action)
+    if kind == "grant":
+        tasks.grant_github_copilot_seat_task.delay(instance.id)
+    elif kind == "revoke":
+        tasks.revoke_github_copilot_seat_delayed.apply_async(
+            args=[instance.id],
+            countdown=COPILOT_REVOKE_DELAY_SECONDS,
+        )
