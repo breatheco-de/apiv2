@@ -1499,8 +1499,13 @@ def record_github_activity(asset_slug: str, kind: str, **kw: Any) -> None:
                 return
             events = normalize_github_activity_log(asset.github_activity_log)
             patch(events)
-            asset.github_activity_log = events
-            asset.save(update_fields=["github_activity_log", "updated_at"])
+            # Use QuerySet.update() so we do not call Asset.save(): that would fire asset_saved,
+            # run build_ai_context(), full_clean(), etc. on every log line — heavy and can break
+            # flows like academy pull (two log writes per request) that worked before this feature.
+            Asset.objects.filter(pk=asset.pk).update(
+                github_activity_log=events,
+                updated_at=timezone.now(),
+            )
     except Exception:
         logger.exception("record_github_activity slug=%s kind=%s", asset_slug, kind)
 
