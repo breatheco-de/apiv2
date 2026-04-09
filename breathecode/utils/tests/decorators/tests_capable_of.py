@@ -21,6 +21,22 @@ def get_id(request, id, academy_id=None):
     return Response({"id": id, "academy_id": academy_id})
 
 
+@api_view(["GET"])
+@permission_classes([AllowAny])
+@decorators.capable_of_many(PERMISSION, scope="strict")
+def get_ids_strict(request, id, academy_ids=None):
+    return Response({"id": id, "academy_ids": academy_ids})
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+@decorators.capable_of_many(PERMISSION, scope="read_aggregate")
+def get_ids_read_aggregate(request, id, academy_ids=None):
+    return Response(
+        {"id": id, "academy_ids": academy_ids, "academy_scope": getattr(request, "academy_scope", None)}
+    )
+
+
 class CustomTestView(APIView):
     """
     List all snippets, or create a new snippet.
@@ -177,6 +193,92 @@ class ViewTestSuite(UtilsTestCase):
         response = view(request, id=1).render()
         expected = {
             "detail": "Missing academy_id parameter expected for the endpoint url or 'Academy' header",
+            "status_code": 403,
+        }
+
+        self.assertEqual(json.loads(response.content.decode("utf-8")), expected)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+class FunctionBasedViewManyTestSuite(UtilsTestCase):
+    def test_capable_of_many__strict__with_user__with_capability(self):
+        model = self.bc.database.create(
+            user=1,
+            academy=2,
+            role=1,
+            capability="can_kill_kenny",
+            profile_academy=[{"academy_id": 1}, {"academy_id": 2}],
+        )
+
+        factory = APIRequestFactory()
+        request = factory.get("/they-killed-kenny", headers={"academy": "1,2"})
+        force_authenticate(request, user=model.user)
+
+        response = get_ids_strict(request, id=1).render()
+        expected = {"academy_ids": [1, 2], "id": 1}
+
+        self.assertEqual(json.loads(response.content.decode("utf-8")), expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_capable_of_many__strict__without_capability_in_one_academy(self):
+        model = self.bc.database.create(
+            user=1,
+            academy=2,
+            role=1,
+            capability="can_kill_kenny",
+            profile_academy=[{"academy_id": 1}, {"academy_id": 2}],
+        )
+
+        factory = APIRequestFactory()
+        request = factory.get("/they-killed-kenny", headers={"academy": "1,2,3"})
+        force_authenticate(request, user=model.user)
+
+        response = get_ids_strict(request, id=1).render()
+        expected = {
+            "detail": "You (user: 1) don't have this capability: can_kill_kenny for academy 3",
+            "status_code": 403,
+        }
+
+        self.assertEqual(json.loads(response.content.decode("utf-8")), expected)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_capable_of_many__read_aggregate__partial(self):
+        model = self.bc.database.create(
+            user=1,
+            academy=2,
+            role=1,
+            capability="can_kill_kenny",
+            profile_academy=[{"academy_id": 1}, {"academy_id": 2}],
+        )
+
+        factory = APIRequestFactory()
+        request = factory.get("/they-killed-kenny", headers={"academy": "1,2,3"})
+        force_authenticate(request, user=model.user)
+
+        response = get_ids_read_aggregate(request, id=1).render()
+        expected = {
+            "academy_ids": [1, 2],
+            "id": 1,
+            "academy_scope": {
+                "requested_academy_ids": [1, 2, 3],
+                "applied_academy_ids": [1, 2],
+                "resolution": "partial",
+            },
+        }
+
+        self.assertEqual(json.loads(response.content.decode("utf-8")), expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_capable_of_many__read_aggregate__without_any_capability(self):
+        model = self.bc.database.create(user=1, academy=1, role=1, capability="can_kill_kenny", profile_academy=1)
+
+        factory = APIRequestFactory()
+        request = factory.get("/they-killed-kenny", headers={"academy": "2,3"})
+        force_authenticate(request, user=model.user)
+
+        response = get_ids_read_aggregate(request, id=1).render()
+        expected = {
+            "detail": "You (user: 1) don't have this capability: can_kill_kenny for requested academies",
             "status_code": 403,
         }
 

@@ -15,6 +15,7 @@ from .models import (
     ProvisioningContainer,
     ProvisioningProfile,
     ProvisioningVPS,
+    ProvisioningLLM,
 )
 
 logger = logging.getLogger(__name__)
@@ -27,6 +28,13 @@ class ProvisioningVendorAdmin(admin.ModelAdmin):
     list_display = ("id", "name")
 
 
+@admin.register(ProvisioningLLM)
+class ProvisioningLLMAdmin(admin.ModelAdmin):
+    list_display = ["user", "academy", "vendor", "external_user_id", "status"]
+    search_fields = ["user__email", "academy__name", "vendor__name", "external_user_id"]
+    list_filter = ["status", "vendor"]
+
+
 @admin.register(ProvisioningMachineTypes)
 class ProvisioningMachineTypesAdmin(admin.ModelAdmin):
     list_display = ["name", "slug", "vendor"]
@@ -36,9 +44,9 @@ class ProvisioningMachineTypesAdmin(admin.ModelAdmin):
 
 @admin.register(ProvisioningAcademy)
 class ProvisioningAcademyAdmin(admin.ModelAdmin):
-    list_display = ["academy", "vendor", "created_at"]
+    list_display = ["academy", "vendor", "connection_status", "connection_test_at", "created_at"]
     search_fields = ("academy__name", "academy__slug")
-    list_filter = ["vendor"]
+    list_filter = ["vendor", "connection_status"]
 
 
 @admin.register(ProvisioningConsumptionKind)
@@ -177,7 +185,18 @@ class ProvisioningProfileAdmin(admin.ModelAdmin):
 
 @admin.register(ProvisioningVPS)
 class ProvisioningVPSAdmin(admin.ModelAdmin):
-    list_display = ("id", "user", "academy", "vendor", "status", "hostname", "ip_address", "provisioned_at", "deleted_at", "created_at")
+    list_display = (
+        "id",
+        "user",
+        "academy",
+        "vendor",
+        "status",
+        "hostname",
+        "ip_address",
+        "provisioned_at",
+        "deleted_at",
+        "created_at",
+    )
     list_filter = ["status", "academy", "vendor"]
     search_fields = ["user__email", "hostname", "ip_address", "external_id"]
     raw_id_fields = ["user", "academy", "vendor", "consumed_consumable"]

@@ -7,6 +7,7 @@ from django.urls import reverse_lazy
 from rest_framework import status
 
 from ..mixins import ProvisioningTestCase
+from breathecode.provisioning.serializers import get_vendor_settings_schema
 
 
 def profile_serializer(profile):
@@ -14,7 +15,12 @@ def profile_serializer(profile):
     return {
         "id": profile.id,
         "vendor": (
-            {"id": vendor.id, "name": vendor.name, "workspaces_url": vendor.workspaces_url}
+            {
+                "id": vendor.id,
+                "name": vendor.name,
+                "workspaces_url": vendor.workspaces_url,
+                "settings_schema": get_vendor_settings_schema(vendor.name),
+            }
             if vendor
             else None
         ),
@@ -88,7 +94,8 @@ class AcademyProvisioningProfileTestSuite(ProvisioningTestCase):
         url = reverse_lazy("provisioning:academy_provisioning_profile")
         response = self.client.post(url, data={"vendor_id": 999}, format="json")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.json().get("slug"), "vendor-not-found")
+        # ValidationException returns `detail` as the stable error slug.
+        self.assertEqual(response.json().get("detail"), "vendor-not-found")
 
     def test_get_by_id_success(self):
         model = self.bc.database.create(

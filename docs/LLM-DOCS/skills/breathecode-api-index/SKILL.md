@@ -46,6 +46,7 @@ This skill is the entry point for all BreatheCode API interactions. Its only job
 | **payments** | Billing plans, invoices, subscriptions, shop items, payment history | `bc-payments-*` |
 | **provisioning** | Student VPS servers, Codespaces containers, provisioning requests | `bc-provisioning-*` |
 | **registry** | Learning assets — lessons, exercises, projects, asset versioning | `bc-registry-*` |
+| **talent development** | Job families, job roles, career paths and stages, skill domains, global skills, competencies, stage-anchored skills (`/v1/talent/`) | `bc-talentdevelopment-*` |
 
 ---
 
@@ -56,16 +57,23 @@ Some user requests touch multiple domains. Load ALL listed skills before proceed
 | User Request | Skills to Load |
 |---|---|
 | Create a cohort | `bc-admissions-create-cohort` + `bc-certificate-*` (syllabus must have an associated specialty) |
+| Create and apply syllabus schedule templates to cohorts | `bc-admissions-create-manage-syllabus-schedules` + `bc-admissions-create-cohort` (cohorts must have `schedule` assigned before sync) |
 | Create a macro cohort | `bc-admissions-create-macro-cohort` + `bc-certificate-*` + `bc-admissions-create-cohort` |
-| Configure or fetch micro syllabus with macro-specific overrides | `bc-admissions-create-macro-cohort` + [SYLLABUS.md — Macro cohort syllabus overrides](../../SYLLABUS.md#macro-cohort-syllabus-overrides) |
+| Configure or fetch micro syllabus with macro-specific overrides | `bc-admissions-create-macro-cohort` + [SYLLABUS.md — Macro cohort syllabus overrides](../../SYLLABUS.md#macro-cohort-syllabus-overrides) (supports `slug.vN` and ordered `N:slug.vN` keys) |
 | Enroll a student in a cohort | `bc-admissions-enroll-student` + `bc-payments-*` (student must have a valid plan) |
 | Issue a certificate to a student | `bc-certificate-*` + `bc-admissions-*` (verify cohort completion status) |
 | Schedule a mentorship session | `bc-mentorship-*` + `bc-notify-*` (session confirmation messaging) |
 | Send a notification | `bc-notify-*` + the domain that triggered the notification |
+| Inbound signups, attribution, and acquisition (forms + invites) | `bc-marketing-inbound-leads-attribution-and-acquisition` (covers `/v1/marketing` lead capture/analytics + `/v1/auth` invite-based signup attribution, plus referral and webhook context) |
 | Onboard a new student | `bc-admissions-*` + `bc-payments-*` + `bc-authenticate-*` |
+| Connect a third-party app to student authentication (hosted login redirect + callback token) | `bc-authenticate-student-authentication` |
 | Provision a resource for a student | `bc-provisioning-*` + `bc-admissions-*` (verify enrollment status first) |
+| Create and run an NPS-style cohort satisfaction study | `bc-feedback-create-manage-nps-survey` + `bc-admissions-*` (resolve target cohorts before configuration scope or `send_emails`) |
 | Configure academy VPS provisioning (profiles, credentials, settings) | `bc-provisioning-settings-and-credentials` |
+| Create or edit an academy event with tags and workshop asset selection | `bc-events-create-and-edit-event` + `bc-marketing-*` (fetch valid `DISCOVERY` tags) + `bc-registry-*` (search and validate workshop assets by type) |
 | Configure academy Slack integration and manage sync health | `bc-notify-manage-academy-slackintegration` + `bc-admissions-*` (students/cohorts drive Slack mappings) + `bc-authenticate-*` (Slack OAuth endpoints live in auth) |
+| Align or extend syllabus design with the school skills framework (job role stages, skills on the go) | `bc-admissions-*` (syllabus, cohorts) + `bc-talentdevelopment-manage-skills` (career path, stages, `stage_skill`, domains) |
+| Cancel a user subscription and optionally issue a refund | `bc-payments-cancel-subscription-and-refund` + [`docs/llm-docs/BC_REFUNDS.md`](../../BC_REFUNDS.md) (use the skill for actor-specific flow and endpoint order, then use BC_REFUNDS for refund payload semantics and validations) |
 
 ---
 
@@ -94,7 +102,7 @@ Assume these conventions for all BreatheCode API endpoints unless a domain skill
 ### Academy (staff) endpoints
 
 - **Rule:** Any endpoint whose path contains `/academy/` (after the app prefix, e.g. `/v1/admissions/academy/...`) is for **staff** (academy-scoped operations).
-- **Required header:** Send the **`Academy`** header with the academy ID (e.g. `Academy: 1`). Missing it returns an error (e.g. "Missing academy_id... or 'Academy' header").
+- **Required header:** Send the **`Academy`** header with the academy ID (e.g. `Academy: 1`). For endpoints documented with read aggregation, the same header may accept a comma-separated list (e.g. `Academy: 1,2,3`) and the response may include partial-scope metadata. Missing it returns an error (e.g. "Missing academy_id... or 'Academy' header").
 - **Examples:** `/v1/admissions/academy/cohort/user`, `/v1/assessment/academy/user/assessment`, `/v1/assignments/academy/coderevision/<id>`.
 
 ### Error responses

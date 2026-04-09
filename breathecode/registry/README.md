@@ -10,7 +10,11 @@ You can retrieve the entire registry with: `GET /registry/asset`, [here is an ex
 
 ## Learn.json
 
-All the assets originally made by breathecode or its partners contain a learn.json file that contains meta-information about the content like title, slug, translation languages, descripcion, difficulty, etc. Here is an example of learn.json file:
+All the assets originally made by breathecode or its partners contain a learn.json file that contains meta-information about the content like title, slug, translation languages, descripcion, difficulty, etc.
+
+For **`grading`**, **`interactive` / `gitpod`**, **`learnpack_deploy_url`**, and how the **4Geeks.com** modal (local vs Codespaces) behaves — including the case **without** “Start interactive” (single **“Start exercise”** / **“Start project”** button that opens the modal with cloud + local) — see **[LEARNPACK_CONFIGURATION.md](./LEARNPACK_CONFIGURATION.md)** (English) or **[LEARNPACK_CONFIGURATION.es.md](./LEARNPACK_CONFIGURATION.es.md)** (español).
+
+Here is an example of learn.json file:
 
 ```json
 {

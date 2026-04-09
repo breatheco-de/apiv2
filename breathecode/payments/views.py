@@ -41,6 +41,7 @@ from breathecode.payments.actions import (
     get_discounted_price,
     max_coupons_allowed,
     process_refund,
+    process_refund_record_external,
 )
 from breathecode.payments.caches import PlanFinancingCache, PlanOfferCache, SubscriptionCache
 from breathecode.payments.models import (
@@ -2823,13 +2824,156 @@ class AcademyInvoiceView(APIView):
         return handler.response(serializer.data)
 
 
+def _parse_and_validate_refund_request(request, invoice: Invoice, lang: str) -> tuple[float, dict[str, float], str, dict[str, Any] | None]:
+    already_refunded = invoice.amount_refunded or 0
+    available_to_refund = invoice.amount - already_refunded
+
+    if already_refunded >= invoice.amount:
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Invoice has already been fully refunded. Total refunded: {already_refunded}, Invoice amount: {invoice.amount}",
+                es=f"La factura ya ha sido completamente reembolsada. Total reembolsado: {already_refunded}, Monto de la factura: {invoice.amount}",
+                slug="invoice-already-fully-refunded",
+            ),
+            code=400,
+        )
+
+    refund_amount = request.data.get("refund_amount")
+    if refund_amount is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="refund_amount is required",
+                es="refund_amount es requerido",
+                slug="refund-amount-required",
+            ),
+            code=400,
+        )
+
+    try:
+        refund_amount = float(refund_amount)
+        if refund_amount <= 0:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Refund amount must be greater than 0",
+                    es="El monto del reembolso debe ser mayor que 0",
+                    slug="invalid-refund-amount",
+                ),
+                code=400,
+            )
+        if refund_amount > available_to_refund:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Refund amount ({refund_amount}) exceeds available amount to refund ({available_to_refund}). "
+                    f"Already refunded: {already_refunded}, Invoice total: {invoice.amount}",
+                    es=f"El monto del reembolso ({refund_amount}) excede el monto disponible para reembolsar ({available_to_refund}). "
+                    f"Ya reembolsado: {already_refunded}, Total de la factura: {invoice.amount}",
+                    slug="refund-amount-exceeds-available",
+                ),
+                code=400,
+            )
+    except ValueError:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Invalid refund_amount. Must be a number.",
+                es="refund_amount inválido. Debe ser un número.",
+                slug="invalid-refund-amount",
+            ),
+            code=400,
+        )
+
+    reason = request.data.get("reason", "")
+
+    items_to_refund = request.data.get("items_to_refund")
+    if items_to_refund is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="items_to_refund is required. Must be an object mapping slugs to refund amounts (e.g., {'plan-slug': 100, 'service-slug': 50})",
+                es="items_to_refund es requerido. Debe ser un objeto que mapee slugs a montos de reembolso (ej: {'plan-slug': 100, 'service-slug': 50})",
+                slug="items-to-refund-required",
+            ),
+            code=400,
+        )
+
+    if not isinstance(items_to_refund, dict):
+        raise ValidationException(
+            translation(
+                lang,
+                en="items_to_refund must be an object mapping slugs to refund amounts (e.g., {'plan-slug': 100, 'service-slug': 50})",
+                es="items_to_refund debe ser un objeto que mapee slugs a montos de reembolso (ej: {'plan-slug': 100, 'service-slug': 50})",
+                slug="invalid-items-to-refund",
+            ),
+            code=400,
+        )
+
+    if len(items_to_refund) == 0:
+        raise ValidationException(
+            translation(
+                lang,
+                en="items_to_refund cannot be empty. Must contain at least one slug with its refund amount",
+                es="items_to_refund no puede estar vacío. Debe contener al menos un slug con su monto de reembolso",
+                slug="items-to-refund-empty",
+            ),
+            code=400,
+        )
+
+    for slug, amount in items_to_refund.items():
+        try:
+            amount_float = float(amount)
+            if amount_float <= 0:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Refund amount for '{slug}' must be greater than 0, got {amount}",
+                        es=f"El monto del reembolso para '{slug}' debe ser mayor que 0, se obtuvo {amount}",
+                        slug="invalid-refund-amount-for-item",
+                    ),
+                    code=400,
+                )
+        except (ValueError, TypeError):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Refund amount for '{slug}' must be a number, got {type(amount).__name__}",
+                    es=f"El monto del reembolso para '{slug}' debe ser un número, se obtuvo {type(amount).__name__}",
+                    slug="invalid-refund-amount-type",
+                ),
+                code=400,
+            )
+
+    total_items_refund = sum(float(amount) for amount in items_to_refund.values())
+    if abs(refund_amount - total_items_refund) > 0.01:
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Refund amount ({refund_amount}) does not match the sum of items_to_refund amounts ({total_items_refund}). "
+                f"Items to refund: {items_to_refund}",
+                es=f"El monto del reembolso ({refund_amount}) no coincide con la suma de los montos de items_to_refund ({total_items_refund}). "
+                f"Items a reembolsar: {items_to_refund}",
+                slug="refund-amount-mismatch",
+            ),
+            code=400,
+        )
+
+    refund_breakdown = None
+    if invoice.amount_breakdown and refund_amount is not None:
+        refund_breakdown = calculate_refund_breakdown(invoice, refund_amount, items_to_refund, lang=lang)
+
+    return refund_amount, items_to_refund, reason, refund_breakdown
+
+
 class AcademyInvoiceRefundView(APIView):
     """
     Process a refund for an invoice.
     Creates a credit note and processes the refund through Stripe if applicable.
     """
 
-    @capable_of("crud_invoice")
+    @capable_of("issue_refund")
     def post(self, request, invoice_id, academy_id=None):
         lang = get_user_language(request)
         invoice = Invoice.objects.filter(id=invoice_id, academy__id=academy_id).first()
@@ -2839,149 +2983,7 @@ class AcademyInvoiceRefundView(APIView):
                 translation(lang, en="Invoice not found", es="La factura no existe", slug="not-found"), code=404
             )
 
-        # Validate invoice is not already fully refunded
-        already_refunded = invoice.amount_refunded or 0
-        available_to_refund = invoice.amount - already_refunded
-
-        if already_refunded >= invoice.amount:
-            raise ValidationException(
-                translation(
-                    lang,
-                    en=f"Invoice has already been fully refunded. Total refunded: {already_refunded}, Invoice amount: {invoice.amount}",
-                    es=f"La factura ya ha sido completamente reembolsada. Total reembolsado: {already_refunded}, Monto de la factura: {invoice.amount}",
-                    slug="invoice-already-fully-refunded",
-                ),
-                code=400,
-            )
-
-        # refund_amount is required
-        refund_amount = request.data.get("refund_amount")
-        if refund_amount is None:
-            raise ValidationException(
-                translation(
-                    lang,
-                    en="refund_amount is required",
-                    es="refund_amount es requerido",
-                    slug="refund-amount-required",
-                ),
-                code=400,
-            )
-
-        try:
-            refund_amount = float(refund_amount)
-            if refund_amount <= 0:
-                raise ValidationException(
-                    translation(
-                        lang,
-                        en="Refund amount must be greater than 0",
-                        es="El monto del reembolso debe ser mayor que 0",
-                        slug="invalid-refund-amount",
-                    ),
-                    code=400,
-                )
-            if refund_amount > available_to_refund:
-                raise ValidationException(
-                    translation(
-                        lang,
-                        en=f"Refund amount ({refund_amount}) exceeds available amount to refund ({available_to_refund}). "
-                        f"Already refunded: {already_refunded}, Invoice total: {invoice.amount}",
-                        es=f"El monto del reembolso ({refund_amount}) excede el monto disponible para reembolsar ({available_to_refund}). "
-                        f"Ya reembolsado: {already_refunded}, Total de la factura: {invoice.amount}",
-                        slug="refund-amount-exceeds-available",
-                    ),
-                    code=400,
-                )
-        except ValueError:
-            raise ValidationException(
-                translation(
-                    lang,
-                    en="Invalid refund_amount. Must be a number.",
-                    es="refund_amount inválido. Debe ser un número.",
-                    slug="invalid-refund-amount",
-                ),
-                code=400,
-            )
-
-        reason = request.data.get("reason", "")
-
-        # items_to_refund is required - it's a dict mapping slugs to refund amounts
-        items_to_refund = request.data.get("items_to_refund")
-        if items_to_refund is None:
-            raise ValidationException(
-                translation(
-                    lang,
-                    en="items_to_refund is required. Must be an object mapping slugs to refund amounts (e.g., {'plan-slug': 100, 'service-slug': 50})",
-                    es="items_to_refund es requerido. Debe ser un objeto que mapee slugs a montos de reembolso (ej: {'plan-slug': 100, 'service-slug': 50})",
-                    slug="items-to-refund-required",
-                ),
-                code=400,
-            )
-
-        if not isinstance(items_to_refund, dict):
-            raise ValidationException(
-                translation(
-                    lang,
-                    en="items_to_refund must be an object mapping slugs to refund amounts (e.g., {'plan-slug': 100, 'service-slug': 50})",
-                    es="items_to_refund debe ser un objeto que mapee slugs a montos de reembolso (ej: {'plan-slug': 100, 'service-slug': 50})",
-                    slug="invalid-items-to-refund",
-                ),
-                code=400,
-            )
-
-        if len(items_to_refund) == 0:
-            raise ValidationException(
-                translation(
-                    lang,
-                    en="items_to_refund cannot be empty. Must contain at least one slug with its refund amount",
-                    es="items_to_refund no puede estar vacío. Debe contener al menos un slug con su monto de reembolso",
-                    slug="items-to-refund-empty",
-                ),
-                code=400,
-            )
-
-        # Validate that all values in items_to_refund are positive numbers
-        for slug, amount in items_to_refund.items():
-            try:
-                amount_float = float(amount)
-                if amount_float <= 0:
-                    raise ValidationException(
-                        translation(
-                            lang,
-                            en=f"Refund amount for '{slug}' must be greater than 0, got {amount}",
-                            es=f"El monto del reembolso para '{slug}' debe ser mayor que 0, se obtuvo {amount}",
-                            slug="invalid-refund-amount-for-item",
-                        ),
-                        code=400,
-                    )
-            except (ValueError, TypeError):
-                raise ValidationException(
-                    translation(
-                        lang,
-                        en=f"Refund amount for '{slug}' must be a number, got {type(amount).__name__}",
-                        es=f"El monto del reembolso para '{slug}' debe ser un número, se obtuvo {type(amount).__name__}",
-                        slug="invalid-refund-amount-type",
-                    ),
-                    code=400,
-                )
-
-        # Validate that refund_amount matches the sum of items_to_refund amounts
-        total_items_refund = sum(float(amount) for amount in items_to_refund.values())
-        if abs(refund_amount - total_items_refund) > 0.01:  # Allow small floating point differences
-            raise ValidationException(
-                translation(
-                    lang,
-                    en=f"Refund amount ({refund_amount}) does not match the sum of items_to_refund amounts ({total_items_refund}). "
-                    f"Items to refund: {items_to_refund}",
-                    es=f"El monto del reembolso ({refund_amount}) no coincide con la suma de los montos de items_to_refund ({total_items_refund}). "
-                    f"Items a reembolsar: {items_to_refund}",
-                    slug="refund-amount-mismatch",
-                ),
-                code=400,
-            )
-
-        refund_breakdown = None
-        if invoice.amount_breakdown and refund_amount is not None:
-            refund_breakdown = calculate_refund_breakdown(invoice, refund_amount, items_to_refund, lang=lang)
+        refund_amount, items_to_refund, reason, refund_breakdown = _parse_and_validate_refund_request(request, invoice, lang)
 
         credit_note = process_refund(
             invoice=invoice,
@@ -2990,6 +2992,74 @@ class AcademyInvoiceRefundView(APIView):
             items_to_refund=items_to_refund,
             reason=reason,
             country_code=invoice.bag.country_code if invoice.bag else None,
+            lang=lang,
+        )
+
+        serializer = CreditNoteSerializer(credit_note, many=False)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class AcademyInvoiceRecordRefundView(APIView):
+    """
+    Record a refund that was issued outside this API without calling Stripe.
+    """
+
+    @capable_of("issue_refund")
+    def post(self, request, invoice_id, academy_id=None):
+        lang = get_user_language(request)
+        invoice = Invoice.objects.filter(id=invoice_id, academy__id=academy_id).first()
+
+        if not invoice:
+            raise ValidationException(
+                translation(lang, en="Invoice not found", es="La factura no existe", slug="not-found"), code=404
+            )
+
+        refund_amount, items_to_refund, reason, refund_breakdown = _parse_and_validate_refund_request(request, invoice, lang)
+
+        external_reference = request.data.get("external_reference")
+        if not isinstance(external_reference, str) or not external_reference.strip():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="external_reference is required and must be a non-empty string",
+                    es="external_reference es requerido y debe ser un texto no vacío",
+                    slug="external-reference-required",
+                ),
+                code=400,
+            )
+
+        stripe_refund_id = request.data.get("stripe_refund_id")
+        if stripe_refund_id is not None:
+            if not isinstance(stripe_refund_id, str):
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="stripe_refund_id must be a string",
+                        es="stripe_refund_id debe ser un texto",
+                        slug="invalid-stripe-refund-id",
+                    ),
+                    code=400,
+                )
+            if len(stripe_refund_id) > 32:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="stripe_refund_id must be 32 characters or fewer",
+                        es="stripe_refund_id debe tener 32 caracteres o menos",
+                        slug="stripe-refund-id-too-long",
+                    ),
+                    code=400,
+                )
+
+        credit_note = process_refund_record_external(
+            invoice=invoice,
+            amount=refund_amount,
+            breakdown=refund_breakdown,
+            items_to_refund=items_to_refund,
+            reason=reason,
+            country_code=invoice.bag.country_code if invoice.bag else None,
+            external_reference=external_reference.strip(),
+            stripe_refund_id=stripe_refund_id,
             lang=lang,
         )
 
