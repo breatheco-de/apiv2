@@ -12,6 +12,7 @@ from breathecode.marketing.serializers import GetCourseSmallSerializer
 from breathecode.utils import serpy
 from breathecode.utils.validators import language_codes_for_lookup, languages_equivalent
 
+from .utils import normalize_github_activity_log, record_github_activity
 from .models import (
     Asset,
     AssetAlias,
@@ -305,6 +306,11 @@ class AssetSerializer(serpy.Serializer):
         return _s
 
 
+def _serialize_github_activity_logs(obj):
+    """Normalized list (max 10) of GitHub sync events for API consumers."""
+    return normalize_github_activity_log(obj.github_activity_log)
+
+
 class AcademyAssetSerializer(AssetSerializer):
     test_status = serpy.Field()
     last_test_at = serpy.Field()
@@ -334,6 +340,7 @@ class AcademyAssetSerializer(AssetSerializer):
     config = serpy.Field()
     flag_seed = serpy.Field()
     dependencies = serpy.Field()
+    github_activity_logs = serpy.MethodField()
 
     created_at = serpy.Field()
     updated_at = serpy.Field()
@@ -343,6 +350,9 @@ class AcademyAssetSerializer(AssetSerializer):
     previous_versions = serpy.MethodField()
 
     academy = serpy.MethodField()
+
+    def get_github_activity_logs(self, obj):
+        return _serialize_github_activity_logs(obj)
 
     def get_academy(self, obj):
         return obj.academy.id if obj.academy else None
@@ -387,6 +397,8 @@ class AssetBigSerializer(AssetMidSerializer):
     author = UserSerializer(required=False)
     owner = UserSerializer(required=False)
 
+    github_activity_logs = serpy.MethodField()
+
     test_status = serpy.Field()
     last_test_at = serpy.Field()
     sync_status = serpy.Field()
@@ -409,6 +421,9 @@ class AssetBigSerializer(AssetMidSerializer):
 
     assets_related = serpy.MethodField()
     superseded_by = AssetTinySerializer(required=False)
+
+    def get_github_activity_logs(self, obj):
+        return _serialize_github_activity_logs(obj)
 
     def get_assets_related(self, obj):
         _assets_related = [AssetSmallSerializer(asset).data for asset in obj.assets_related.filter(lang=obj.lang)]
@@ -472,6 +487,11 @@ class AssetBigAndTechnologyPublishedSerializer(AssetBigSerializer):
 
 
 class AssetExpandableSerializer(AssetMidSerializer):
+
+    github_activity_logs = serpy.MethodField()
+
+    def get_github_activity_logs(self, obj):
+        return _serialize_github_activity_logs(obj)
 
     def format_technologies(self, obj):
         techs = AssetTechnology.objects.filter(
@@ -1279,12 +1299,26 @@ class AssetPUTSerializer(serializers.ModelSerializer):
             if owner_id and updated_instance.readme_url and "github.com" in updated_instance.readme_url:
                 if updated_instance.asset_type in ["LESSON", "ARTICLE", "QUIZ"]:
                     from breathecode.registry.tasks import async_push_to_github_task
-                    async_push_to_github_task.delay(updated_instance.slug, owner_id=owner_id)
+
+                    r = async_push_to_github_task.delay(updated_instance.slug, owner_id=owner_id)
+                    record_github_activity(
+                        updated_instance.slug,
+                        "academy",
+                        action="push_queued",
+                        detail=f"AssetPUTSerializer celery_task_id={r.id}",
+                    )
                 elif updated_instance.asset_type in ["PROJECT", "EXERCISE"]:
                     from breathecode.registry.tasks import async_push_project_or_exercise_to_github
-                    async_push_project_or_exercise_to_github.delay(
-                        updated_instance.slug, 
-                        create_or_update=False
+
+                    r = async_push_project_or_exercise_to_github.delay(
+                        updated_instance.slug,
+                        create_or_update=False,
+                    )
+                    record_github_activity(
+                        updated_instance.slug,
+                        "academy",
+                        action="push_queued",
+                        detail=f"AssetPUTSerializer project/exercise celery_task_id={r.id}",
                     )
         
         return updated_instance
@@ -1450,12 +1484,26 @@ class AssetPUTMeSerializer(serializers.ModelSerializer):
             if owner_id and updated_instance.readme_url and "github.com" in updated_instance.readme_url:
                 if updated_instance.asset_type in ["LESSON", "ARTICLE", "QUIZ"]:
                     from breathecode.registry.tasks import async_push_to_github_task
-                    async_push_to_github_task.delay(updated_instance.slug, owner_id=owner_id)
+
+                    r = async_push_to_github_task.delay(updated_instance.slug, owner_id=owner_id)
+                    record_github_activity(
+                        updated_instance.slug,
+                        "academy",
+                        action="push_queued",
+                        detail=f"AssetPUTMeSerializer celery_task_id={r.id}",
+                    )
                 elif updated_instance.asset_type in ["PROJECT", "EXERCISE"]:
                     from breathecode.registry.tasks import async_push_project_or_exercise_to_github
-                    async_push_project_or_exercise_to_github.delay(
-                        updated_instance.slug, 
-                        create_or_update=False
+
+                    r = async_push_project_or_exercise_to_github.delay(
+                        updated_instance.slug,
+                        create_or_update=False,
+                    )
+                    record_github_activity(
+                        updated_instance.slug,
+                        "academy",
+                        action="push_queued",
+                        detail=f"AssetPUTMeSerializer project/exercise celery_task_id={r.id}",
                     )
         
         return updated_instance

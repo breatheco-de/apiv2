@@ -42,6 +42,11 @@ from .actions import (
     test_asset,
     upload_image_to_bucket,
 )
+from .utils import (
+    log_outbound_push_from_db,
+    log_pull_outcome_from_db,
+    record_github_activity,
+)
 from .models import Asset, AssetContext, AssetImage
 
 logger = logging.getLogger(__name__)
@@ -73,13 +78,22 @@ def is_remote_image(_str):
 
 
 @shared_task(priority=TaskPriority.ACADEMY.value)
-def async_pull_from_github(asset_slug, user_id=None, override_meta=False):
+def async_pull_from_github(
+    asset_slug, user_id=None, override_meta=False, source_webhook_id=None, source_commit_sha=None
+):
     logger.debug(f"Synching asset {asset_slug} with data found on github")
-    asset_or_status = pull_from_github(asset_slug, override_meta=override_meta)
-    if asset_or_status != "ERROR":
+    pull_from_github(asset_slug, author_id=user_id, override_meta=override_meta)
+    refreshed = Asset.objects.filter(slug=asset_slug).only("sync_status").first()
+    ok = refreshed is not None and refreshed.sync_status != "ERROR"
+    log_pull_outcome_from_db(
+        asset_slug,
+        repository_webhook_id=source_webhook_id,
+        commit_sha=source_commit_sha,
+    )
+    if ok:
         async_pull_project_dependencies.delay(asset_slug)
 
-    return asset_or_status != "ERROR"
+    return ok
 
 
 @shared_task(priority=TaskPriority.ACADEMY.value)
@@ -638,7 +652,20 @@ def async_synchonize_repository_content(self, webhook, override_meta=True):
                         # probably the asset was updated in github using the breathecode api
                         continue
                     logger.debug(f"Pulling asset from github for asset: {a.slug}")
-                    async_pull_from_github.delay(a.slug, override_meta)
+                    record_github_activity(
+                        a.slug,
+                        "inbound_webhook",
+                        repository_webhook_id=webhook.id,
+                        commit_sha=commit["id"],
+                        modified_file=file_path,
+                    )
+                    async_pull_from_github.delay(
+                        a.slug,
+                        user_id=None,
+                        override_meta=override_meta,
+                        source_webhook_id=webhook.id,
+                        source_commit_sha=commit["id"],
+                    )
 
     return webhook
 
@@ -704,6 +731,12 @@ def async_generate_quiz_config(assessment_id):
                     # This ensures the key exists for the full 15 minutes
                     cache.set(cache_key, result.id, timeout=960)  # 16 minutes to be safe
                     logger.debug(f"Scheduled push task {result.id} for asset {a.slug} with 15min delay")
+                    record_github_activity(
+                        a.slug,
+                        "schedule_push",
+                        celery_task_id=str(result.id),
+                        countdown_seconds=900,
+                    )
                 else:
                     logger.debug(f"Push task already scheduled for asset {a.slug}, skipping duplicate schedule")
 
@@ -836,8 +869,8 @@ def sync_asset_telemetry_stats(asset_id: int, **_: Any):
     return stats
 
 
-@shared_task(priority=TaskPriority.CONTENT.value)
-def async_push_to_github_task(asset_slug, owner_id=None):
+@shared_task(bind=True, priority=TaskPriority.CONTENT.value)
+def async_push_to_github_task(self, asset_slug, owner_id=None):
     """
     Async task to push a LESSON/ARTICLE/QUIZ asset to GitHub.
 
@@ -849,11 +882,14 @@ def async_push_to_github_task(asset_slug, owner_id=None):
         int: Asset ID if successful, False otherwise
     """
     logger.debug(f"Async task: pushing asset {asset_slug} to GitHub")
+    task_id = self.request.id
 
     try:
         from breathecode.registry.actions import push_to_github
         from django.contrib.auth.models import User
         from django.core.cache import cache
+
+        record_github_activity(asset_slug, "clear_scheduled_push")
 
         # Clear the cache key when task starts executing
         # This allows future updates to schedule new tasks
@@ -865,20 +901,30 @@ def async_push_to_github_task(asset_slug, owner_id=None):
             owner = User.objects.filter(id=owner_id).first()
 
         asset = push_to_github(asset_slug, owner=owner)
-        if asset and hasattr(asset, 'id'):
+        log_outbound_push_from_db(asset_slug, celery_task_id=task_id)
+        if asset and hasattr(asset, "id"):
             logger.info(f"Successfully pushed asset {asset_slug} to GitHub")
             return asset.id
         return False
     except Exception as e:
         logger.exception(f"Error pushing asset {asset_slug} to GitHub: {str(e)}")
+        record_github_activity(
+            asset_slug,
+            "outbound_push",
+            success=False,
+            detail=str(e)[:500],
+            celery_task_id=task_id,
+        )
         # Clear cache even on error so a new task can be scheduled
         cache_key = f"quiz_push_task:{asset_slug}"
         cache.delete(cache_key)
         return False
 
 
-@shared_task(priority=TaskPriority.ACADEMY.value)
-def async_push_project_or_exercise_to_github(asset_slug, create_or_update=False, organization_github_username=None):
+@shared_task(bind=True, priority=TaskPriority.ACADEMY.value)
+def async_push_project_or_exercise_to_github(
+    self, asset_slug, create_or_update=False, organization_github_username=None
+):
     """
     Async task to push a project or exercise asset to GitHub.
 
@@ -891,6 +937,7 @@ def async_push_project_or_exercise_to_github(asset_slug, create_or_update=False,
         bool: True if successful, False otherwise
     """
     logger.debug(f"Async task: pushing project/exercise {asset_slug} to GitHub")
+    task_id = self.request.id
 
     try:
         asset = push_project_or_exercise_to_github(
@@ -898,8 +945,16 @@ def async_push_project_or_exercise_to_github(asset_slug, create_or_update=False,
             create_or_update=create_or_update,
             organization_github_username=organization_github_username,
         )
+        log_outbound_push_from_db(asset_slug, celery_task_id=task_id)
         logger.info(f"Successfully pushed asset {asset_slug} to GitHub")
         return asset.id
     except Exception as e:
         logger.exception(f"Error pushing asset {asset_slug} to GitHub: {str(e)}")
+        record_github_activity(
+            asset_slug,
+            "outbound_push",
+            success=False,
+            detail=str(e)[:500],
+            celery_task_id=task_id,
+        )
         return False
