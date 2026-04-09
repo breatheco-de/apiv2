@@ -112,6 +112,7 @@ from .serializers import (
 from .tasks import async_build_asset_context, async_pull_from_github, async_regenerate_asset_readme
 from .utils import (
     AssetErrorLogType,
+    build_request_url_for_activity_log,
     is_url,
     log_outbound_push_from_db,
     log_pull_outcome_from_db,
@@ -1378,6 +1379,9 @@ class AssetMeView(APIView, GenerateLookupsMixin):
                     "academy",
                     action="pull_queued",
                     detail="POST create asset (public): initial pull",
+                    status="ok",
+                    http_status=status.HTTP_201_CREATED,
+                    request_url=build_request_url_for_activity_log(request),
                 )
                 async_pull_from_github.delay(instance.slug)
             return Response(AssetBigSerializer(instance).data, status=status.HTTP_201_CREATED)
@@ -1419,6 +1423,9 @@ class AssetContextView(APIView, GenerateLookupsMixin):
         return handler.response(serializer.data)
 
 
+ACADEMY_GITHUB_SYNC_ACTIONS = frozenset({"pull", "push", "create_repo"})
+
+
 # Create your views here.
 class AcademyAssetActionView(APIView):
     """
@@ -1426,7 +1433,14 @@ class AcademyAssetActionView(APIView):
     """
 
     @staticmethod
-    async def update_asset_action(asset: Asset, user: User, data: dict[str, Any], academy_id: int):
+    async def update_asset_action(
+        asset: Asset,
+        user: User,
+        data: dict[str, Any],
+        academy_id: int,
+        *,
+        request_url: str | None = None,
+    ):
         """
         This function updates the asset type based on the action slug
         """
@@ -1445,9 +1459,6 @@ class AcademyAssetActionView(APIView):
                 override_meta = False
                 if data and "override_meta" in data:
                     override_meta = data["override_meta"]
-                await sync_to_async(record_github_activity)(
-                    asset.slug, "academy", action="pull", detail="AcademyAssetActionView PUT"
-                )
                 try:
                     await apull_from_github(asset.slug, override_meta=override_meta)
                 finally:
@@ -1457,9 +1468,6 @@ class AcademyAssetActionView(APIView):
                     raise ValidationException(
                         f"Asset type {asset.asset_type} cannot be pushed to GitHub, please update the Github repository manually"
                     )
-                await sync_to_async(record_github_activity)(
-                    asset.slug, "academy", action="push", detail="AcademyAssetActionView PUT"
-                )
                 try:
                     if asset.asset_type in ["PROJECT", "EXERCISE"]:
                         await apush_project_or_exercise_to_github(
@@ -1477,9 +1485,6 @@ class AcademyAssetActionView(APIView):
 
                 # Extract organization_github_username from data if provided
                 organization_github_username = data.get("organization_github_username")
-                await sync_to_async(record_github_activity)(
-                    asset.slug, "academy", action="create_repo", detail="AcademyAssetActionView PUT"
-                )
                 try:
                     await apush_project_or_exercise_to_github(
                         asset.slug,
@@ -1511,14 +1516,11 @@ class AcademyAssetActionView(APIView):
                 asset.academy = academy
                 await asset.asave()
 
+        except ValidationException:
+            raise
         except Exception as e:
             logger.exception(e)
-            if isinstance(e, Exception):
-                raise ValidationException(str(e))
-
-            raise ValidationException(
-                "; ".join([k.capitalize() + ": " + "".join(v) for k, v in e.message_dict.items()])
-            )
+            raise ValidationException(str(e))
 
         # Using sync_to_async is still needed because Serpy serializers might perform synchronous operations.
         # Prefetching reduces the chance of implicit sync DB calls within the serializer.
@@ -1553,13 +1555,53 @@ class AcademyAssetActionView(APIView):
         if asset is None:
             raise ValidationException(f"This asset {asset_slug} does not exist for this academy {academy_id}", 404)
 
-        data = await self.update_asset_action(
-            asset, request.user, {**request.data, "action_slug": action_slug}, academy_id
-        )
+        _req_url = build_request_url_for_activity_log(request)
+        try:
+            data = await self.update_asset_action(
+                asset,
+                request.user,
+                {**request.data, "action_slug": action_slug},
+                academy_id,
+                request_url=_req_url,
+            )
+        except ValidationException as exc:
+            if action_slug in ACADEMY_GITHUB_SYNC_ACTIONS:
+                _st = int(getattr(exc, "status_code", status.HTTP_400_BAD_REQUEST))
+                _detail = getattr(exc, "detail", None)
+                await sync_to_async(record_github_activity)(
+                    asset.slug,
+                    "academy",
+                    action=action_slug,
+                    detail="AcademyAssetActionView PUT",
+                    status="error",
+                    http_status=_st,
+                    error=(str(_detail) if _detail is not None else str(exc))[:500],
+                    request_url=_req_url,
+                )
+            raise
+        else:
+            if action_slug in ACADEMY_GITHUB_SYNC_ACTIONS:
+                await sync_to_async(record_github_activity)(
+                    asset.slug,
+                    "academy",
+                    action=action_slug,
+                    detail="AcademyAssetActionView PUT",
+                    status="ok",
+                    http_status=status.HTTP_200_OK,
+                    request_url=_req_url,
+                )
         return Response(data, status=status.HTTP_200_OK)
 
     @staticmethod
-    async def create_asset_action(action_slug: str, asset: Asset, user: User, data: dict[str, Any], academy_id: int):
+    async def create_asset_action(
+        action_slug: str,
+        asset: Asset,
+        user: User,
+        data: dict[str, Any],
+        academy_id: int,
+        *,
+        request_url: str | None = None,
+    ):
         """
         This function creates a new asset
         """
@@ -1573,21 +1615,24 @@ class AcademyAssetActionView(APIView):
                 override_meta = False
                 if data and "override_meta" in data:
                     override_meta = data["override_meta"]
-                await sync_to_async(record_github_activity)(
-                    asset.slug, "academy", action="pull", detail="AcademyAssetActionView POST bulk"
-                )
                 try:
                     await apull_from_github(asset.slug, override_meta=override_meta)
                 finally:
                     await sync_to_async(log_pull_outcome_from_db)(asset.slug)
+                await sync_to_async(record_github_activity)(
+                    asset.slug,
+                    "academy",
+                    action="pull",
+                    detail="AcademyAssetActionView POST bulk",
+                    status="ok",
+                    http_status=status.HTTP_200_OK,
+                    request_url=request_url,
+                )
             elif action_slug == "push":
                 if asset.asset_type not in ["ARTICLE", "LESSON", "QUIZ", "PROJECT", "EXERCISE"]:
                     raise ValidationException(
                         "Only lessons, articles, quizzes, projects, and exercises can be pushed to github"
                     )
-                await sync_to_async(record_github_activity)(
-                    asset.slug, "academy", action="push", detail="AcademyAssetActionView POST bulk"
-                )
                 try:
                     if asset.asset_type in ["PROJECT", "EXERCISE"]:
                         await apush_project_or_exercise_to_github(
@@ -1597,6 +1642,15 @@ class AcademyAssetActionView(APIView):
                         await apush_to_github(asset.slug, owner=user)
                 finally:
                     await sync_to_async(log_outbound_push_from_db)(asset.slug)
+                await sync_to_async(record_github_activity)(
+                    asset.slug,
+                    "academy",
+                    action="push",
+                    detail="AcademyAssetActionView POST bulk",
+                    status="ok",
+                    http_status=status.HTTP_200_OK,
+                    request_url=request_url,
+                )
             elif action_slug == "create_repo":
                 if asset.asset_type not in ["PROJECT", "EXERCISE"]:
                     raise ValidationException(
@@ -1605,9 +1659,6 @@ class AcademyAssetActionView(APIView):
 
                 # Extract organization_github_username from data if provided
                 organization_github_username = data.get("organization_github_username")
-                await sync_to_async(record_github_activity)(
-                    asset.slug, "academy", action="create_repo", detail="AcademyAssetActionView POST bulk"
-                )
                 try:
                     await apush_project_or_exercise_to_github(
                         asset.slug,
@@ -1616,6 +1667,15 @@ class AcademyAssetActionView(APIView):
                     )
                 finally:
                     await sync_to_async(log_outbound_push_from_db)(asset.slug)
+                await sync_to_async(record_github_activity)(
+                    asset.slug,
+                    "academy",
+                    action="create_repo",
+                    detail="AcademyAssetActionView POST bulk",
+                    status="ok",
+                    http_status=status.HTTP_200_OK,
+                    request_url=request_url,
+                )
             elif action_slug == "analyze_seo":
                 report = SEOAnalyzer(asset)
                 await report.astart()
@@ -1636,8 +1696,35 @@ class AcademyAssetActionView(APIView):
 
             return True
 
+        except ValidationException as ve:
+            logger.exception(ve)
+            if action_slug in ACADEMY_GITHUB_SYNC_ACTIONS:
+                _st = int(getattr(ve, "status_code", status.HTTP_400_BAD_REQUEST))
+                _detail = getattr(ve, "detail", None)
+                await sync_to_async(record_github_activity)(
+                    asset.slug,
+                    "academy",
+                    action=action_slug,
+                    detail="AcademyAssetActionView POST bulk",
+                    status="error",
+                    http_status=_st,
+                    error=(str(_detail) if _detail is not None else str(ve))[:500],
+                    request_url=request_url,
+                )
+            return False
         except Exception as e:
             logger.exception(e)
+            if action_slug in ACADEMY_GITHUB_SYNC_ACTIONS:
+                await sync_to_async(record_github_activity)(
+                    asset.slug,
+                    "academy",
+                    action=action_slug,
+                    detail="AcademyAssetActionView POST bulk",
+                    status="error",
+                    http_status=status.HTTP_400_BAD_REQUEST,
+                    error=str(e)[:500],
+                    request_url=request_url,
+                )
             return False
 
     @acapable_of("crud_asset")
@@ -1660,6 +1747,7 @@ class AcademyAssetActionView(APIView):
             raise ValidationException("The list of Assets is empty.")
 
         invalid_assets = []
+        _bulk_req_url = build_request_url_for_activity_log(request)
 
         for asset_slug in assets:
             asset = (
@@ -1672,7 +1760,9 @@ class AcademyAssetActionView(APIView):
                 invalid_assets.append(asset_slug)
                 continue
 
-            if not await self.create_asset_action(action_slug, asset, request.user, request.data, academy_id):
+            if not await self.create_asset_action(
+                action_slug, asset, request.user, request.data, academy_id, request_url=_bulk_req_url
+            ):
                 invalid_assets.append(asset_slug)
 
         pulled_assets = list(set(assets).difference(set(invalid_assets)))
@@ -2116,6 +2206,9 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
                     "academy",
                     action="pull_queued",
                     detail="POST create academy asset: initial pull",
+                    status="ok",
+                    http_status=status.HTTP_201_CREATED,
+                    request_url=build_request_url_for_activity_log(request),
                 )
                 async_pull_from_github.delay(instance.slug)
             return Response(AssetBigSerializer(instance).data, status=status.HTTP_201_CREATED)
