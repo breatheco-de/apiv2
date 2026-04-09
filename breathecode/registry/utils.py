@@ -15,6 +15,7 @@ Also includes helpers for ``Asset.github_activity_log`` (JSON array of recent Gi
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import re
@@ -1342,8 +1343,9 @@ KIND_HELP_TEXT: dict[str, str] = {
         "prior inbound webhook."
     ),
     "academy": (
-        "Something was triggered from the academy API or admin UI (for example pull, push, or "
-        "queueing a background task)."
+        "Something was triggered from the academy API or admin UI (pull, push, create_repo, queueing tasks, etc.). "
+        "Includes ``status`` (ok|error), optional ``http_status`` (HTTP status code of our API response for that "
+        "request), optional ``error`` (message when ``status`` is error), and ``detail`` context."
     ),
     "schedule_push": (
         "A push from this asset to GitHub was scheduled to run later (for example after a debounce)."
@@ -1381,6 +1383,31 @@ def sure_kind(e: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
+def _github_activity_log_payload_for_db(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """
+    Ensure only JSON-native values before persisting. Avoids odd types and keeps the write
+    path ORM-friendly (see ``_persist_github_activity_log``).
+    """
+    return json.loads(json.dumps(events, default=str))
+
+
+def _persist_github_activity_log(asset: Any, events: list[dict[str, Any]]) -> None:
+    """
+    Write ``github_activity_log`` + ``updated_at`` without ``QuerySet.update``.
+
+    Using ``.update(github_activity_log=...)`` on JSONField regressed on Django 5.x with
+    ``RecursionError`` inside query compilation (``contains_aggregate``). ``bulk_update``
+    matches the old behaviour of not running ``Asset.save()`` (signals / slug checks).
+
+    Expects ``asset`` to be the locked row (e.g. from ``select_for_update``) with ``pk`` set.
+    """
+    from breathecode.registry.models import Asset
+
+    asset.github_activity_log = _github_activity_log_payload_for_db(events)
+    asset.updated_at = timezone.now()
+    Asset.objects.bulk_update([asset], ["github_activity_log", "updated_at"])
+
+
 def record_github_activity(asset_slug: str, kind: str, **kw: Any) -> None:
     """
     Appends or updates entries in ``Asset.github_activity_log`` as a JSON **array** of
@@ -1389,6 +1416,10 @@ def record_github_activity(asset_slug: str, kind: str, **kw: Any) -> None:
 
     **``kind`` values:** ``inbound_webhook``, ``pull_outcome``, ``academy``, ``schedule_push``,
     ``clear_scheduled_push``, ``outbound_push``. See implementation for kwargs.
+
+    Persistence intentionally uses ``bulk_update`` on the locked instance instead of
+    ``QuerySet.update(..., github_activity_log=...)`` to avoid Django 5.x ORM recursion when
+    compiling UPDATE queries over JSONField (seen on academy ``pull`` / double log writes).
     """
     from breathecode.registry.models import Asset
 
@@ -1406,6 +1437,8 @@ def record_github_activity(asset_slug: str, kind: str, **kw: Any) -> None:
             }
             if kw.get("detail"):
                 entry["detail"] = str(kw["detail"])[:500]
+            if kw.get("error"):
+                entry["error"] = str(kw["error"])[:500]
             events.insert(0, entry)
 
         elif kind == "pull_outcome":
@@ -1476,16 +1509,24 @@ def record_github_activity(asset_slug: str, kind: str, **kw: Any) -> None:
             )
 
         elif kind == "academy":
-            events.insert(
-                0,
-                {
-                    "kind": "academy",
-                    "kind_help_text": _kind_help_text_for("academy"),
-                    "at": now,
-                    "action": kw["action"],
-                    "detail": str(kw.get("detail") or "")[:500],
-                },
-            )
+            entry_ac: dict[str, Any] = {
+                "kind": "academy",
+                "kind_help_text": _kind_help_text_for("academy"),
+                "at": now,
+                "action": kw["action"],
+                "detail": str(kw.get("detail") or "")[:500],
+                "status": str(kw.get("status") or "")[:16],
+            }
+            if kw.get("http_status") is not None:
+                try:
+                    entry_ac["http_status"] = int(kw["http_status"])
+                except (TypeError, ValueError):
+                    pass
+            if kw.get("error"):
+                entry_ac["error"] = str(kw["error"])[:500]
+            if kw.get("exception_type"):
+                entry_ac["exception_type"] = str(kw["exception_type"])[:120]
+            events.insert(0, entry_ac)
 
         else:
             logger.warning("record_github_activity: unknown kind %r", kind)
@@ -1494,18 +1535,18 @@ def record_github_activity(asset_slug: str, kind: str, **kw: Any) -> None:
 
     try:
         with transaction.atomic():
-            asset = Asset.objects.select_for_update().filter(slug=asset_slug).first()
+            # Minimal columns: less work per row and only fields we read/write here.
+            asset = (
+                Asset.objects.select_for_update()
+                .only("id", "github_activity_log")
+                .filter(slug=asset_slug)
+                .first()
+            )
             if asset is None:
                 return
             events = normalize_github_activity_log(asset.github_activity_log)
             patch(events)
-            # Use QuerySet.update() so we do not call Asset.save(): that would fire asset_saved,
-            # run build_ai_context(), full_clean(), etc. on every log line — heavy and can break
-            # flows like academy pull (two log writes per request) that worked before this feature.
-            Asset.objects.filter(pk=asset.pk).update(
-                github_activity_log=events,
-                updated_at=timezone.now(),
-            )
+            _persist_github_activity_log(asset, events)
     except Exception:
         logger.exception("record_github_activity slug=%s kind=%s", asset_slug, kind)
 
