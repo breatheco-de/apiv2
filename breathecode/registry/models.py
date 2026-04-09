@@ -496,6 +496,19 @@ class Asset(models.Model):
     last_synch_at = models.DateTimeField(null=True, blank=True, default=None, db_index=True)
     github_commit_hash = models.CharField(max_length=100, null=True, blank=True, default=None, db_index=True)
 
+    github_activity_log = models.JSONField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text=(
+            "JSON array (max 10 objects, newest first) logging GitHub-related activity: pulls, pushes, "
+            "webhooks, scheduled jobs, and academy API actions. Each object includes ``kind`` and "
+            "``kind_help_text`` (English). "
+            "Written by Celery tasks, academy views, and the GitHub webhook handler. "
+            "Update via registry.utils.record_github_activity. API exposes this as ``github_activity_logs`` (array) on asset payloads."
+        ),
+    )
+
     test_status = models.CharField(
         max_length=20,
         choices=ASSET_SYNC_STATUS,

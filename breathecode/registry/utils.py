@@ -9,14 +9,22 @@ The trusted URL system supports:
 - Trusted URLs: Specific URLs (ignoring query strings) that will be skipped
 
 Configuration is done through TRUSTED_DOMAINS and TRUSTED_URLS sets in breathecode.utils.url_validator.
+
+Also includes helpers for ``Asset.github_activity_log`` (JSON array of recent GitHub-related events).
 """
+
+from __future__ import annotations
 
 import logging
 import os
 import re
 import requests
+from typing import Any
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
+
+from django.db import transaction
+from django.utils import timezone
 
 from breathecode.authenticate.models import CredentialsGithub
 from breathecode.services.github import Github, GithubAuthException
@@ -1314,3 +1322,221 @@ def is_internal_github_url(url, base_readme_url):
         return False
 
     return url_info["owner"] == base_info["owner"] and url_info["repo"] == base_info["repo"]
+
+
+# ---------------------------------------------------------------------------
+# GitHub activity log (``Asset.github_activity_log``): JSON array, max 10 objects, newest first.
+# ---------------------------------------------------------------------------
+
+MAX_GITHUB_ACTIVITY_EVENTS = 10
+
+INBOUND_WEBHOOK_STATUS_RECEIVED = "webhook_received"
+
+KIND_HELP_TEXT: dict[str, str] = {
+    "inbound_webhook": (
+        "GitHub called our webhook (usually after a push to the repo). We may enqueue syncing "
+        "files into this asset."
+    ),
+    "pull_outcome": (
+        "Outcome of syncing content from GitHub into this asset, or an update linked to a "
+        "prior inbound webhook."
+    ),
+    "academy": (
+        "Something was triggered from the academy API or admin UI (for example pull, push, or "
+        "queueing a background task)."
+    ),
+    "schedule_push": (
+        "A push from this asset to GitHub was scheduled to run later (for example after a debounce)."
+    ),
+    "clear_scheduled_push": (
+        "The scheduled push job is starting, or the pending scheduled push was cleared."
+    ),
+    "outbound_push": (
+        "The application pushed content from this asset to the GitHub repository (or the attempt finished)."
+    ),
+    "unknown": "Unknown or legacy event type.",
+}
+
+
+def _kind_help_text_for(kind: str) -> str:
+    return KIND_HELP_TEXT.get(kind, KIND_HELP_TEXT["unknown"])
+
+
+def normalize_github_activity_log(raw: Any) -> list[dict[str, Any]]:
+    """
+    Returns a list of at most ``MAX_GITHUB_ACTIVITY_EVENTS`` event dicts (newest first).
+    Expects ``None`` or a JSON array of objects; any other shape yields ``[]``.
+    """
+    if raw is None:
+        return []
+    if isinstance(raw, list):
+        return [sure_kind(e) for e in raw if isinstance(e, dict)][:MAX_GITHUB_ACTIVITY_EVENTS]
+    return []
+
+
+def sure_kind(e: dict[str, Any]) -> dict[str, Any]:
+    out = dict(e)
+    k = out.setdefault("kind", "unknown")
+    out.setdefault("kind_help_text", _kind_help_text_for(k))
+    return out
+
+
+def record_github_activity(asset_slug: str, kind: str, **kw: Any) -> None:
+    """
+    Appends or updates entries in ``Asset.github_activity_log`` as a JSON **array** of
+    objects (max ``MAX_GITHUB_ACTIVITY_EVENTS``, newest first). Each object includes ``kind``,
+    ``kind_help_text``, and ``at`` (ISO timestamp).
+
+    **``kind`` values:** ``inbound_webhook``, ``pull_outcome``, ``academy``, ``schedule_push``,
+    ``clear_scheduled_push``, ``outbound_push``. See implementation for kwargs.
+    """
+    from breathecode.registry.models import Asset
+
+    def patch(events: list[dict[str, Any]]) -> None:
+        now = timezone.now().isoformat()
+        if kind == "inbound_webhook":
+            entry: dict[str, Any] = {
+                "kind": "inbound_webhook",
+                "kind_help_text": _kind_help_text_for("inbound_webhook"),
+                "repository_webhook_id": kw["repository_webhook_id"],
+                "at": now,
+                "status": kw.get("status", INBOUND_WEBHOOK_STATUS_RECEIVED),
+                "commit_sha": kw["commit_sha"],
+                "modified_file": kw["modified_file"],
+            }
+            if kw.get("detail"):
+                entry["detail"] = str(kw["detail"])[:500]
+            events.insert(0, entry)
+
+        elif kind == "pull_outcome":
+            success = kw["success"]
+            message = kw.get("message")
+            wid, csha = kw.get("repository_webhook_id"), kw.get("commit_sha")
+            updated = False
+            if wid is not None and csha:
+                for c in events:
+                    if c.get("kind") != "inbound_webhook":
+                        continue
+                    if c.get("repository_webhook_id") == wid and c.get("commit_sha") == csha:
+                        c["pull_status"] = "ok" if success else "error"
+                        if message:
+                            c["pull_detail"] = str(message)[:500]
+                        c["pull_finished_at"] = now
+                        c["kind_help_text"] = _kind_help_text_for("inbound_webhook")
+                        updated = True
+                        break
+            if not updated:
+                events.insert(
+                    0,
+                    {
+                        "kind": "pull_outcome",
+                        "kind_help_text": _kind_help_text_for("pull_outcome"),
+                        "repository_webhook_id": wid,
+                        "at": now,
+                        "commit_sha": csha,
+                        "pull_status": "ok" if success else "error",
+                        "pull_detail": (message or "")[:500],
+                        "source": "pull_task",
+                    },
+                )
+
+        elif kind == "schedule_push":
+            events.insert(
+                0,
+                {
+                    "kind": "schedule_push",
+                    "kind_help_text": _kind_help_text_for("schedule_push"),
+                    "at": now,
+                    "celery_task_id": str(kw["celery_task_id"]),
+                    "countdown_seconds": int(kw["countdown_seconds"]),
+                },
+            )
+
+        elif kind == "clear_scheduled_push":
+            events.insert(
+                0,
+                {
+                    "kind": "clear_scheduled_push",
+                    "kind_help_text": _kind_help_text_for("clear_scheduled_push"),
+                    "at": now,
+                },
+            )
+
+        elif kind == "outbound_push":
+            events.insert(
+                0,
+                {
+                    "kind": "outbound_push",
+                    "kind_help_text": _kind_help_text_for("outbound_push"),
+                    "at": now,
+                    "status": "ok" if kw["success"] else "error",
+                    "celery_task_id": str(kw["celery_task_id"]) if kw.get("celery_task_id") else None,
+                    "detail": str(kw.get("detail") or "")[:500],
+                },
+            )
+
+        elif kind == "academy":
+            events.insert(
+                0,
+                {
+                    "kind": "academy",
+                    "kind_help_text": _kind_help_text_for("academy"),
+                    "at": now,
+                    "action": kw["action"],
+                    "detail": str(kw.get("detail") or "")[:500],
+                },
+            )
+
+        else:
+            logger.warning("record_github_activity: unknown kind %r", kind)
+
+        del events[MAX_GITHUB_ACTIVITY_EVENTS:]
+
+    try:
+        with transaction.atomic():
+            asset = Asset.objects.select_for_update().filter(slug=asset_slug).first()
+            if asset is None:
+                return
+            events = normalize_github_activity_log(asset.github_activity_log)
+            patch(events)
+            asset.github_activity_log = events
+            asset.save(update_fields=["github_activity_log", "updated_at"])
+    except Exception:
+        logger.exception("record_github_activity slug=%s kind=%s", asset_slug, kind)
+
+
+def log_pull_outcome_from_db(
+    asset_slug: str, *, repository_webhook_id: int | None = None, commit_sha: str | None = None
+) -> None:
+    """After pull_from_github: reads sync_status / status_text on the asset and records pull_outcome."""
+    from breathecode.registry.models import Asset
+
+    a = Asset.objects.filter(slug=asset_slug).only("sync_status", "status_text").first()
+    if not a:
+        return
+    ok = a.sync_status != "ERROR"
+    record_github_activity(
+        asset_slug,
+        "pull_outcome",
+        success=ok,
+        message=a.status_text,
+        repository_webhook_id=repository_webhook_id,
+        commit_sha=commit_sha,
+    )
+
+
+def log_outbound_push_from_db(asset_slug: str, *, celery_task_id: str | None = None) -> None:
+    """After push to GitHub: reads the asset and records outbound_push."""
+    from breathecode.registry.models import Asset
+
+    a = Asset.objects.filter(slug=asset_slug).only("sync_status", "status_text").first()
+    if not a:
+        return
+    ok = a.sync_status != "ERROR"
+    record_github_activity(
+        asset_slug,
+        "outbound_push",
+        success=ok,
+        detail=a.status_text or "",
+        celery_task_id=celery_task_id,
+    )
