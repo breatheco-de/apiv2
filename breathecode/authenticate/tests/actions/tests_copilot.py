@@ -15,6 +15,25 @@ from breathecode.authenticate.models import GithubAcademyUser
 from ..mixins.new_auth_test_case import AuthTestCase
 
 
+class GithubAcademyUserStorageLogTestSuite(AuthTestCase):
+    def test_log_keeps_last_five_entries_with_timestamps(self):
+        models = self.bc.database.create(user=True, academy=True, github_academy_user=True)
+        gau = GithubAcademyUser.objects.get(id=models.github_academy_user.id)
+        for i in range(7):
+            gau.log(f"step-{i}")
+        self.assertEqual(len(gau.storage_log), GithubAcademyUser.STORAGE_LOG_MAX_ENTRIES)
+        msgs = [e["msg"] for e in gau.storage_log]
+        self.assertEqual(msgs, ["step-2", "step-3", "step-4", "step-5", "step-6"])
+        self.assertTrue(all("at" in e and e["at"] for e in gau.storage_log))
+
+    def test_log_reset_true_replaces_history_with_single_entry(self):
+        models = self.bc.database.create(user=True, academy=True, github_academy_user=True)
+        gau = GithubAcademyUser.objects.get(id=models.github_academy_user.id)
+        gau.log("first")
+        gau.log("second", reset=True)
+        self.assertEqual([e["msg"] for e in gau.storage_log], ["second"])
+
+
 class CopilotActionsHelpersTestSuite(AuthTestCase):
     def test_resolve_github_username_prefers_credentials(self):
         models = self.bc.database.create(
