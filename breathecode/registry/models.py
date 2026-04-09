@@ -335,10 +335,13 @@ class Asset(models.Model):
 
     def __init__(self, *args, **kwargs):
         super(Asset, self).__init__(*args, **kwargs)
-        self.__old_slug = self.slug
-        self.__old_title = self.title
-        self.__old_status = self.status
-        self.__old_readme_raw = self.readme_raw
+        # Never use self.slug / self.title / … here: with .only() / .defer() those fields are
+        # deferred and touching them runs refresh_from_db → from_db → __init__ → RecursionError.
+        _d = self.__dict__
+        self.__old_slug = _d.get("slug")
+        self.__old_title = _d.get("title")
+        self.__old_status = _d.get("status")
+        self.__old_readme_raw = _d.get("readme_raw")
 
     slug = models.SlugField(
         max_length=200,
@@ -757,9 +760,11 @@ class Asset(models.Model):
         self.full_clean()
 
         super().save(*args, **kwargs)
-        self.__old_slug = self.slug
-        self.__old_readme_raw = self.readme_raw
-        self.__old_status = self.status
+        _d = self.__dict__
+        self.__old_slug = _d.get("slug")
+        self.__old_readme_raw = _d.get("readme_raw")
+        self.__old_status = _d.get("status")
+        self.__old_title = _d.get("title")
 
         if slug_modified:
             asset_slug_modified.send_robust(instance=self, sender=Asset)
