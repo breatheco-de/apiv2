@@ -12,7 +12,11 @@ from breathecode.marketing.serializers import GetCourseSmallSerializer
 from breathecode.utils import serpy
 from breathecode.utils.validators import language_codes_for_lookup, languages_equivalent
 
-from .utils import normalize_github_activity_log, record_github_activity
+from .utils import (
+    build_request_url_for_activity_log,
+    normalize_github_activity_log,
+    record_github_activity,
+)
 from .models import (
     Asset,
     AssetAlias,
@@ -1306,6 +1310,9 @@ class AssetPUTSerializer(serializers.ModelSerializer):
                         "academy",
                         action="push_queued",
                         detail=f"AssetPUTSerializer celery_task_id={r.id}",
+                        status="ok",
+                        http_status=status.HTTP_200_OK,
+                        request_url=build_request_url_for_activity_log(self.context.get("request")),
                     )
                 elif updated_instance.asset_type in ["PROJECT", "EXERCISE"]:
                     from breathecode.registry.tasks import async_push_project_or_exercise_to_github
@@ -1319,6 +1326,9 @@ class AssetPUTSerializer(serializers.ModelSerializer):
                         "academy",
                         action="push_queued",
                         detail=f"AssetPUTSerializer project/exercise celery_task_id={r.id}",
+                        status="ok",
+                        http_status=status.HTTP_200_OK,
+                        request_url=build_request_url_for_activity_log(self.context.get("request")),
                     )
         
         return updated_instance
@@ -1491,6 +1501,9 @@ class AssetPUTMeSerializer(serializers.ModelSerializer):
                         "academy",
                         action="push_queued",
                         detail=f"AssetPUTMeSerializer celery_task_id={r.id}",
+                        status="ok",
+                        http_status=status.HTTP_200_OK,
+                        request_url=build_request_url_for_activity_log(self.context.get("request")),
                     )
                 elif updated_instance.asset_type in ["PROJECT", "EXERCISE"]:
                     from breathecode.registry.tasks import async_push_project_or_exercise_to_github
@@ -1504,6 +1517,9 @@ class AssetPUTMeSerializer(serializers.ModelSerializer):
                         "academy",
                         action="push_queued",
                         detail=f"AssetPUTMeSerializer project/exercise celery_task_id={r.id}",
+                        status="ok",
+                        http_status=status.HTTP_200_OK,
+                        request_url=build_request_url_for_activity_log(self.context.get("request")),
                     )
         
         return updated_instance

@@ -1345,8 +1345,9 @@ KIND_HELP_TEXT: dict[str, str] = {
     "academy": (
         "Something was triggered from the academy API or admin UI (pull, push, create_repo, queueing tasks, etc.). "
         "``status``: ok|error for a completed API outcome, or ``triggered`` when only the request is logged (default "
-        "if omitted). Outcome of sync to/from GitHub is in ``pull_outcome`` / ``outbound_push``. Optional "
-        "``http_status``, ``error``, ``detail``."
+        "if omitted). ``http_status`` is the HTTP status code of our API response for that request (when known). "
+        "Outcome of sync to/from GitHub is in ``pull_outcome`` / ``outbound_push``. Optional ``error``, ``detail``, "
+        "``request_url``."
     ),
     "schedule_push": (
         "A push from this asset to GitHub was scheduled to run later (for example after a debounce)."
@@ -1363,6 +1364,25 @@ KIND_HELP_TEXT: dict[str, str] = {
 
 def _kind_help_text_for(kind: str) -> str:
     return KIND_HELP_TEXT.get(kind, KIND_HELP_TEXT["unknown"])
+
+
+GITHUB_ACTIVITY_REQUEST_URL_MAX_LEN = 1000
+
+
+def build_request_url_for_activity_log(request: Any | None, *, max_length: int = GITHUB_ACTIVITY_REQUEST_URL_MAX_LEN) -> str | None:
+    """
+    Absolute URL of the current request, truncated for JSON log storage.
+    Use when recording ``academy`` events from Django/DRF views or serializer context.
+    """
+    if request is None:
+        return None
+    try:
+        u = request.build_absolute_uri()
+        if not u:
+            return None
+        return str(u)[:max_length]
+    except Exception:
+        return None
 
 
 def normalize_github_activity_log(raw: Any) -> list[dict[str, Any]]:
@@ -1416,7 +1436,8 @@ def record_github_activity(asset_slug: str, kind: str, **kw: Any) -> None:
     ``kind_help_text``, and ``at`` (ISO timestamp).
 
     **``kind`` values:** ``inbound_webhook``, ``pull_outcome``, ``academy``, ``schedule_push``,
-    ``clear_scheduled_push``, ``outbound_push``. See implementation for kwargs.
+    ``clear_scheduled_push``, ``outbound_push``. See implementation for kwargs; for ``academy`` you may pass
+    ``request_url`` (e.g. from ``build_request_url_for_activity_log(request)``).
 
     Persistence intentionally uses ``bulk_update`` on the locked instance instead of
     ``QuerySet.update(..., github_activity_log=...)`` to avoid Django 5.x ORM recursion when
@@ -1531,6 +1552,9 @@ def record_github_activity(asset_slug: str, kind: str, **kw: Any) -> None:
                 entry_ac["error"] = str(kw["error"])[:500]
             if kw.get("exception_type"):
                 entry_ac["exception_type"] = str(kw["exception_type"])[:120]
+            _ru = kw.get("request_url")
+            if _ru:
+                entry_ac["request_url"] = str(_ru)[:GITHUB_ACTIVITY_REQUEST_URL_MAX_LEN]
             events.insert(0, entry_ac)
 
         else:
