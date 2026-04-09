@@ -1344,8 +1344,9 @@ KIND_HELP_TEXT: dict[str, str] = {
     ),
     "academy": (
         "Something was triggered from the academy API or admin UI (pull, push, create_repo, queueing tasks, etc.). "
-        "Includes ``status`` (ok|error), optional ``http_status`` (HTTP status code of our API response for that "
-        "request), optional ``error`` (message when ``status`` is error), and ``detail`` context."
+        "``status``: ok|error for a completed API outcome, or ``triggered`` when only the request is logged (default "
+        "if omitted). Outcome of sync to/from GitHub is in ``pull_outcome`` / ``outbound_push``. Optional "
+        "``http_status``, ``error``, ``detail``."
     ),
     "schedule_push": (
         "A push from this asset to GitHub was scheduled to run later (for example after a debounce)."
@@ -1509,13 +1510,17 @@ def record_github_activity(asset_slug: str, kind: str, **kw: Any) -> None:
             )
 
         elif kind == "academy":
+            # Call sites usually omit status (only action + detail); avoid empty string in the payload.
+            _academy_status = kw.get("status")
+            if _academy_status is None or (isinstance(_academy_status, str) and not _academy_status.strip()):
+                _academy_status = "triggered"
             entry_ac: dict[str, Any] = {
                 "kind": "academy",
                 "kind_help_text": _kind_help_text_for("academy"),
                 "at": now,
                 "action": kw["action"],
                 "detail": str(kw.get("detail") or "")[:500],
-                "status": str(kw.get("status") or "")[:16],
+                "status": str(_academy_status)[:16],
             }
             if kw.get("http_status") is not None:
                 try:
