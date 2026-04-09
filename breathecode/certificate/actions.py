@@ -6,13 +6,17 @@ import hashlib
 import json
 import logging
 import os
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import User
+from django.db.models import Q
 from django.utils import timezone
 
-from breathecode.admissions.models import FULLY_PAID, UP_TO_DATE, CohortUser, SyllabusVersion
+from breathecode.admissions.models import FULLY_PAID, UP_TO_DATE, CohortUser, Syllabus, SyllabusVersion
+
+if TYPE_CHECKING:
+    from breathecode.admissions.models import Cohort
 from breathecode.assignments.models import Task
 from breathecode.registry.actions import generate_screenshot
 
@@ -145,6 +149,33 @@ def how_many_pending_tasks(
     return how_many_pending_tasks
 
 
+def resolve_specialty_for_cohort(cohort: "Cohort") -> Optional[Specialty]:
+    """Pick certificate Specialty for cohort syllabus: cohort academy first, then global (academy null)."""
+    if cohort.syllabus_version is None:
+        return None
+    syllabus_id = cohort.syllabus_version.syllabus_id
+    base = Specialty.objects.filter(syllabuses__id=syllabus_id).distinct()
+    spec = base.filter(academy_id=cohort.academy_id).order_by("id").first()
+    if spec:
+        return spec
+    return base.filter(academy_id__isnull=True).order_by("id").first()
+
+
+def get_syllabus_specialty_bucket_conflict(specialty: Specialty, syllabus: Syllabus) -> Optional[Specialty]:
+    """Another specialty in the same academy bucket (or global) already linked to this syllabus."""
+    if specialty.academy_id is not None:
+        bucket = Q(academy_id=specialty.academy_id)
+    else:
+        bucket = Q(academy_id__isnull=True)
+    return (
+        Specialty.objects.filter(bucket, syllabuses__id=syllabus.pk)
+        .exclude(pk=specialty.pk)
+        .distinct()
+        .order_by("id")
+        .first()
+    )
+
+
 def generate_certificate(user, cohort=None, layout=None):
     query = {"user__id": user.id}
 
@@ -167,9 +198,7 @@ def generate_certificate(user, cohort=None, layout=None):
             slug="missing-syllabus-version",
         )
 
-    specialty = (
-        Specialty.objects.filter(syllabuses__id=cohort.syllabus_version.syllabus_id).distinct().first()
-    )
+    specialty = resolve_specialty_for_cohort(cohort)
     if not specialty:
         raise ValidationException("Specialty has no Syllabus assigned", slug="missing-specialty")
 
@@ -294,9 +323,7 @@ def generate_certificate_ignoring_tasks(user, cohort=None, layout=None):
             slug="missing-syllabus-version",
         )
 
-    specialty = (
-        Specialty.objects.filter(syllabuses__id=cohort.syllabus_version.syllabus_id).distinct().first()
-    )
+    specialty = resolve_specialty_for_cohort(cohort)
     if not specialty:
         raise ValidationException("Specialty has no Syllabus assigned", slug="missing-specialty")
 

@@ -13,7 +13,8 @@ Use this skill when the user asks to **list or view academy specialties**, **see
 ## Concepts
 
 - **Specialty**: A certificate type (e.g. "Full-Stack Web Development"). In the API it is the certificate the student receives. A specialty can optionally **belong to an academy** (`academy_id`). Academy-owned specialties can be created and updated by staff with `crud_certificate`; global specialties (no academy) are read-only for academy staff. A specialty is linked to one or many syllabi via the **syllabuses** (ManyToMany); the response also includes `syllabus` (first of syllabuses) for compatibility.
-- **Assigning a specialty to a student**: Issuing a certificate — creating a user-specialty record that states the student has completed the specialty. The certificate is tied to a cohort and the cohort's syllabus; the system finds the specialty that has that syllabus in its **syllabuses**.
+- **Assigning a specialty to a student**: Issuing a certificate — creating a user-specialty record that states the student has completed the specialty. The certificate is tied to a cohort and the cohort's syllabus. The system picks a **single** specialty for that syllabus using **cohort academy first**, then **global** specialties (`academy_id` null): it uses a specialty that lists the cohort's syllabus in **syllabuses** and whose `academy_id` equals the cohort's academy; if none, it uses a global specialty that lists that syllabus. If neither exists, issuance fails with `missing-specialty`.
+- **Syllabus–specialty link uniqueness**: For each syllabus, at most **one** specialty per **academy bucket** may list it: one specialty with `academy_id = A` (per academy), and at most **one** global specialty (`academy_id` null). Different academies may each have their own specialty linked to the same syllabus. This is enforced when linking via the API and when editing the M2M in Django admin.
 - **Managing specialties**: Staff can **list** specialties, **create** academy-owned specialties (POST), **update** academy-owned specialties (PUT/PATCH when `specialty.academy_id` matches the request academy), and **link a syllabus to a specialty** (POST specialty/:id/syllabus, requires `crud_syllabus`). The source of truth for "which syllabi a specialty uses" is **syllabuses**; the response includes `syllabus` (first of syllabuses) and `syllabuses`.
 
 ## Workflow
@@ -22,7 +23,7 @@ Use this skill when the user asks to **list or view academy specialties**, **see
 
 2. **Update a specialty.** Call `PUT` or `PATCH /v1/certificate/academy/specialty/<specialty_id>` with `Authorization`, `Academy: <academy_id>`, and capability `crud_certificate`. Allowed only when the specialty's `academy_id` equals the request academy. Body: fields to update (name, slug, description, status, etc.). Response 200 with the updated specialty.
 
-3. **Link a syllabus to a specialty.** Call `POST /v1/certificate/academy/specialty/<specialty_id>/syllabus` with `Authorization`, `Academy: <academy_id>`, and capability `crud_syllabus`. Body: `{ "syllabus_id": <id> }` or `{ "syllabus_slug": "<slug>" }`. Response 200 or 201 with the updated specialty (syllabuses list includes the newly linked syllabus).
+3. **Link a syllabus to a specialty.** Call `POST /v1/certificate/academy/specialty/<specialty_id>/syllabus` with `Authorization`, `Academy: <academy_id>`, and capability `crud_syllabus`. Body: `{ "syllabus_id": <id> }` or `{ "syllabus_slug": "<slug>" }`. Response 200 or 201 with the updated specialty (syllabuses list includes the newly linked syllabus). If another specialty in the **same bucket** (same `academy_id`, or both global) already links that syllabus, the API returns **400** with `detail` / slug `syllabus-specialty-already-linked`. If the syllabus is already linked **to this** specialty, the call is idempotent (200).
 
 4. **List specialties offered by the academy.** Call `GET /v1/certificate/academy/specialty` with `Authorization` and `Academy: <academy_id>`. The list includes specialties linked via syllabi owned by the academy and specialties owned by the academy (`academy_id`). Response includes each specialty's id, slug, name, status, academy, syllabus (first of syllabuses), syllabuses. Use query `syllabus_slug=<slug>` to filter by syllabus, or `like=<text>` to search by name.
 
@@ -34,7 +35,7 @@ Use this skill when the user asks to **list or view academy specialties**, **see
 
 8. **List or filter issued certificates (academy).** Call `GET /v1/certificate/` (root) with `Authorization` and `Academy: <academy_id>`. Optional query: `user_id=<id>` or `like=<name>` to filter. Use this to verify who has been assigned which specialty.
 
-**Prerequisite:** The cohort's syllabus must be in a specialty's syllabuses. If issuing fails with "Specialty has no Syllabus assigned" or "missing-specialty", tell the user the cohort's syllabus must be linked to a specialty (via the link-syllabus endpoint) before issuing.
+**Prerequisite:** The cohort's syllabus must appear in a specialty's **syllabuses** for **that cohort's academy** (academy-owned specialty) or in a **global** specialty. If issuing fails with "Specialty has no Syllabus assigned" or "missing-specialty", link the syllabus to an appropriate specialty (POST specialty/:id/syllabus) — e.g. an academy-owned specialty for that academy, or a global one — then retry.
 
 ## Endpoints
 
@@ -44,7 +45,7 @@ Use this skill when the user asks to **list or view academy specialties**, **see
 | Create specialty | POST | `/v1/certificate/academy/specialty` | `Authorization`, `Academy: <academy_id>` | name, slug; optional: description, logo_url, duration_in_hours, expiration_day_delta, status | 201, specialty object. |
 | Get one specialty | GET | `/v1/certificate/academy/specialty/<specialty_id>` | `Authorization`, `Academy: <academy_id>` | — | Specialty object or 404. |
 | Update specialty | PUT / PATCH | `/v1/certificate/academy/specialty/<specialty_id>` | `Authorization`, `Academy: <academy_id>` | Fields to update | 200, specialty object. |
-| Link syllabus to specialty | POST | `/v1/certificate/academy/specialty/<specialty_id>/syllabus` | `Authorization`, `Academy: <academy_id>` | syllabus_id or syllabus_slug | 200/201, specialty object. |
+| Link syllabus to specialty | POST | `/v1/certificate/academy/specialty/<specialty_id>/syllabus` | `Authorization`, `Academy: <academy_id>` | syllabus_id or syllabus_slug | 200/201, specialty object; 400 `syllabus-specialty-already-linked` if another specialty in the same academy/global bucket already uses that syllabus. |
 | Issue certificate for one student | POST | `/v1/certificate/cohort/<cohort_id>/student/<student_id>` | `Authorization`, `Academy: <academy_id>` | Optional; see request sample. | 201, certificate (user_specialty) object. |
 | Issue certificates for cohort | POST | `/v1/certificate/cohort/<cohort_id>` | `Authorization`, `Academy: <academy_id>` | Optional; see request sample. | 201, list of certificate objects. |
 | Get one student's certificate | GET | `/v1/certificate/cohort/<cohort_id>/student/<student_id>` | `Authorization`, `Academy: <academy_id>` | — | Certificate object or 404. |
@@ -133,8 +134,9 @@ Body is optional; omit or use `"layout_slug": "default"` if the academy has a de
 
 - **specialty not found (404):** Get/update/link when `specialty_id` is invalid or the specialty is not visible to the academy. Tell the user to check the id.
 - **academy cannot update this specialty:** The specialty is global (`academy_id` null) or belongs to another academy. Only create/update when `specialty.academy_id == request academy`. Tell the user they can only update specialties that belong to their academy.
-- **syllabus already linked:** When linking a syllabus that is already in the specialty's syllabuses, the endpoint is idempotent (returns 200 with the same specialty).
-- **missing-specialty / Specialty has no Syllabus assigned:** The cohort's syllabus is not in any specialty's syllabuses. Tell the user to link the syllabus to a specialty (POST specialty/:id/syllabus) before issuing; then retry.
+- **syllabus already linked (same specialty):** When linking a syllabus that is already in **this** specialty's syllabuses, the endpoint is idempotent (returns 200 with the same specialty).
+- **syllabus-specialty-already-linked (400):** Another specialty in the same **bucket** (same `academy_id`, or both global) already lists this syllabus. Tell the user to unlink from the other specialty or use the existing specialty; the same syllabus may still be linked to specialties **under other academies**.
+- **missing-specialty / Specialty has no Syllabus assigned:** No specialty applies for this cohort's syllabus under the **academy-first, then global** rule (e.g. only a specialty owned by a different academy lists the syllabus). Link the syllabus to an academy-owned specialty for the cohort's academy or to a global specialty; then retry.
 - **missing-syllabus-version / The cohort has no syllabus assigned:** The cohort has no syllabus. Tell the user to set a syllabus (and syllabus version) for the cohort via the API first, then retry.
 - **student-not-found / Student not found for this cohort:** The user is not a STUDENT in that cohort or the cohort does not belong to the academy. Verify cohort_id and student_id; do not retry the same pair.
 - **already-exists / This user already has a certificate created:** The student already has an issued (PERSISTED) certificate for that cohort. Tell the user; no need to issue again unless they want to reattempt (use reattempt flow if available).

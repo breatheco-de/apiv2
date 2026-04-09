@@ -38,7 +38,8 @@ class MeVPSViewTestSuite(ProvisioningTestCase):
 
     def test_me_vps_post_202_accepts_and_enqueues(self):
         model = self.bc.database.create(user=1, academy=1, provisioning_vendor=1, provisioning_academy=1)
-        self.bc.database.update(model.provisioning_vendor, name="hostinger")
+        model.provisioning_vendor.name = "hostinger"
+        model.provisioning_vendor.save()
         with patch("breathecode.provisioning.views.request_vps") as mock_request:
             mock_vps = ProvisioningVPS(
                 id=1,
@@ -58,14 +59,15 @@ class MeVPSViewTestSuite(ProvisioningTestCase):
 
 class MeVPSByIdViewTestSuite(ProvisioningTestCase):
     def test_me_vps_by_id_404_for_non_owner(self):
-        model = self.bc.database.create(user=2, academy=1, provisioning_vendor=1)
+        owner_model = self.bc.database.create(user=1, academy=1, provisioning_vendor=1)
+        other_model = self.bc.database.create(user=1)
         vps = ProvisioningVPS.objects.create(
-            user=model.user,
-            academy=model.academy,
-            vendor=model.provisioning_vendor,
+            user=owner_model.user,
+            academy=owner_model.academy,
+            vendor=owner_model.provisioning_vendor,
             status=ProvisioningVPS.VPS_STATUS_ACTIVE,
         )
-        other_user = self.bc.database.create(user=1).user
+        other_user = other_model.user
         self.client.force_authenticate(other_user)
         url = reverse_lazy("provisioning:me_vps_id", kwargs={"vps_id": vps.id})
         response = self.client.get(url)

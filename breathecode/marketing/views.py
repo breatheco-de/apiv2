@@ -73,6 +73,7 @@ from .serializers import (
     FormEntrySerializerV2,
     FormEntrySmallSerializer,
     GetCourseSerializer,
+    CoursePOSTSerializer,
     CoursePUTSerializer,
     CourseTranslationPUTSerializer,
     LeadgenAppSmallSerializer,
@@ -1710,6 +1711,27 @@ def _get_course_translation_or_404(request, course_identifier, academy_id):
 
 class AcademyCourseView(APIView):
     permission_classes = [IsAuthenticated]
+
+    @capable_of("crud_course")
+    def post(self, request, academy_id=None):
+        request_lang = get_user_language(request)
+        serializer = CoursePOSTSerializer(data=request.data, context={"academy_id": academy_id})
+
+        if serializer.is_valid():
+            course = serializer.save()
+            CourseCache.clear()
+
+            response_lang = request.GET.get("lang") or request_lang
+            country_code = request.GET.get("country_code")
+            course.lang = response_lang
+            payload = GetCourseSerializer(
+                course,
+                context={"lang": response_lang, "country_code": country_code},
+                many=False,
+            ).data
+            return Response(payload, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of("crud_course")
     def put(self, request, course_identifier, academy_id=None):
