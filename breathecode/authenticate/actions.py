@@ -1672,10 +1672,22 @@ def grant_copilot_seat_for_user(github_academy_user_id: int) -> bool:
         return False
 
     try:
+        logger.info(
+            "grant_copilot_seat_for_user start academy_id=%s gau_id=%s github_username=%s",
+            gau.academy_id,
+            gau.id,
+            username,
+        )
         gh.copilot_add_selected_users([username])
         gau.log(f"GitHub Copilot seat granted (or refreshed) for {username}")
         gau.copilot_granted = True
         gau.save(update_fields=["copilot_granted", "storage_log", "updated_at"])
+        logger.info(
+            "grant_copilot_seat_for_user success academy_id=%s gau_id=%s github_username=%s",
+            gau.academy_id,
+            gau.id,
+            username,
+        )
         return True
     except Exception as e:
         logger.exception("grant_copilot_seat_for_user failed for %s", github_academy_user_id)
@@ -1692,6 +1704,11 @@ def schedule_copilot_grants_for_academy_users(academy_id: int, user_ids: list[in
     from . import tasks
 
     unique_user_ids = sorted({int(x) for x in user_ids if x})
+    logger.info(
+        "schedule_copilot_grants_for_academy_users start academy_id=%s requested_users=%s",
+        academy_id,
+        len(unique_user_ids),
+    )
     rows = (
         GithubAcademyUser.objects.filter(academy_id=academy_id, user_id__in=unique_user_ids)
         .select_related("user")
@@ -1735,19 +1752,35 @@ def schedule_copilot_grants_for_academy_users(academy_id: int, user_ids: list[in
             gau.log("GitHub Copilot grant scheduled via academy endpoint")
             gau.save(update_fields=["storage_log", "updated_at"])
             scheduled.append({"user_id": user_id, "github_academy_user_id": gau.id, "github_username": username})
+            logger.info(
+                "schedule_copilot_grants_for_academy_users scheduled academy_id=%s user_id=%s gau_id=%s github_username=%s",
+                academy_id,
+                user_id,
+                gau.id,
+                username,
+            )
         except Exception as e:
             logger.exception("schedule_copilot_grants_for_academy_users failed for gau=%s", gau.id)
             gau.log(f"GitHub Copilot schedule error: {e}")
             gau.save(update_fields=["storage_log", "updated_at"])
             errors.append({"user_id": user_id, "github_academy_user_id": gau.id, "reason": "task_schedule_error"})
 
-    return {
+    result = {
         "academy_id": academy_id,
         "total_requested": len(unique_user_ids),
         "scheduled": scheduled,
         "skipped": skipped,
         "errors": errors,
     }
+    logger.info(
+        "schedule_copilot_grants_for_academy_users done academy_id=%s requested=%s scheduled=%s skipped=%s errors=%s",
+        academy_id,
+        result["total_requested"],
+        len(result["scheduled"]),
+        len(result["skipped"]),
+        len(result["errors"]),
+    )
+    return result
 
 
 def revoke_copilot_seat_after_delay(github_academy_user_id: int) -> bool:
