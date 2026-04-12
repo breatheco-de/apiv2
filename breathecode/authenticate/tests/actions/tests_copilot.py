@@ -288,8 +288,9 @@ class CopilotGithubAcademyUserReceiverTestSuite(AuthTestCase):
         gau.save(update_fields=["storage_log", "updated_at"])
         mock_grant_delay.assert_not_called()
 
+    @patch("breathecode.authenticate.receivers.academy_allows_auto_copilot_by_id", return_value=False)
     @patch("breathecode.authenticate.tasks.grant_github_copilot_seat_task.delay")
-    def test_receiver_skips_grant_for_selective_mode(self, mock_grant_delay):
+    def test_receiver_skips_grant_for_selective_mode(self, mock_grant_delay, _mock_auto):
         models = self.bc.database.create(
             user=True,
             academy=True,
@@ -298,8 +299,15 @@ class CopilotGithubAcademyUserReceiverTestSuite(AuthTestCase):
             github_academy_user_kwargs={"storage_status": "PENDING", "storage_action": "ADD"},
         )
         gau = GithubAcademyUser.objects.get(id=models.github_academy_user.id)
+        gau._copilot_prev_storage_status = "PENDING"
+        gau._copilot_prev_storage_action = "ADD"
         gau.storage_status = "SYNCHED"
-        gau.save()
+        github_academy_user_copilot_schedule(
+            sender=GithubAcademyUser,
+            instance=gau,
+            created=False,
+            update_fields={"storage_status", "storage_action"},
+        )
         gau.refresh_from_db()
         mock_grant_delay.assert_not_called()
         self.assertIn("auto-grant skipped", (gau.storage_log or [])[-1]["msg"])
