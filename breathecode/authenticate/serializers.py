@@ -309,6 +309,7 @@ class GithubUserSerializer(serpy.Serializer):
 
     storage_status = serpy.Field()
     storage_action = serpy.Field()
+    copilot_granted = serpy.Field()
     storage_log = serpy.Field()
     storage_synch_at = serpy.Field()
 
@@ -1454,7 +1455,7 @@ class PUTGithubUserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GithubAcademyUser
-        exclude = ("storage_status", "user", "academy", "storage_log", "storage_synch_at", "username")
+        exclude = ("storage_status", "user", "academy", "storage_log", "storage_synch_at", "username", "copilot_granted")
 
     # def validate(self, data):
 
@@ -1484,7 +1485,7 @@ class POSTGithubUserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GithubAcademyUser
-        exclude = ("storage_status", "academy", "storage_log", "storage_synch_at", "username")
+        exclude = ("storage_status", "academy", "storage_log", "storage_synch_at", "username", "copilot_granted")
 
     def validate(self, data):
 
@@ -1509,6 +1510,18 @@ class POSTGithubUserSerializer(serializers.ModelSerializer):
         return super().create(
             {**validated_data, "academy": Academy.objects.filter(id=self.context["academy_id"]).first()}
         )
+
+
+class GithubCopilotProvisionSerializer(serializers.Serializer):
+    users = serializers.ListField(child=serializers.IntegerField(min_value=1), required=False, allow_empty=False)
+    cohort_id = serializers.IntegerField(required=False, min_value=1)
+
+    def validate(self, attrs):
+        users = attrs.get("users")
+        cohort_id = attrs.get("cohort_id")
+        if not users and not cohort_id:
+            raise ValidationError("You must provide users or cohort_id")
+        return attrs
 
 
 class AuthSerializer(serializers.Serializer):

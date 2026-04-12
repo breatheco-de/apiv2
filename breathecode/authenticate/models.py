@@ -600,6 +600,11 @@ class GithubAcademyUser(models.Model):
     )
     storage_status = models.CharField(max_length=20, choices=STORAGE_STATUS, default=PENDING)
     storage_action = models.CharField(max_length=20, choices=STORAGE_ACTION, default=ADD)
+    copilot_granted = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="True when a GitHub Copilot seat has been explicitly granted/scheduled for this academy user row.",
+    )
     storage_log = models.JSONField(default=None, null=True, blank=True)
     storage_synch_at = models.DateTimeField(default=None, null=True, blank=True)
     # deletion_scheduled_at = models.DateTimeField(default=None, null=True, blank=True)
