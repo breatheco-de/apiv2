@@ -300,7 +300,9 @@ class CopilotGithubAcademyUserReceiverTestSuite(AuthTestCase):
         gau = GithubAcademyUser.objects.get(id=models.github_academy_user.id)
         gau.storage_status = "SYNCHED"
         gau.save()
+        gau.refresh_from_db()
         mock_grant_delay.assert_not_called()
+        self.assertIn("auto-grant skipped", (gau.storage_log or [])[-1]["msg"])
 
 
 class CopilotBatchScheduleTestSuite(AuthTestCase):
