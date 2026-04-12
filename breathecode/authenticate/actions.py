@@ -1586,9 +1586,24 @@ def academy_allows_auto_copilot(academy: Optional[Academy]) -> bool:
     return academy_copilot_provisioning_mode(academy) == COPILOT_PROVISIONING_ALL
 
 
+def academy_copilot_provisioning_mode_from_features(features: Any) -> str:
+    if not isinstance(features, dict):
+        return COPILOT_PROVISIONING_SELECTIVE
+
+    raw = features.get("commerce", {}).get("copilot_provisioning")
+    if isinstance(raw, str) and raw.lower() == COPILOT_PROVISIONING_ALL:
+        return COPILOT_PROVISIONING_ALL
+
+    return COPILOT_PROVISIONING_SELECTIVE
+
+
 def academy_allows_auto_copilot_by_id(academy_id: int) -> bool:
-    academy = Academy.objects.filter(id=academy_id).only("id", "academy_features").first()
-    return academy_allows_auto_copilot(academy)
+    # Use values() to avoid instantiating Academy model with deferred fields.
+    # Academy.__init__ reads slug/features and can recurse when fields are deferred.
+    row = Academy.objects.filter(id=academy_id).values("academy_features").first()
+    if not row:
+        return False
+    return academy_copilot_provisioning_mode_from_features(row.get("academy_features")) == COPILOT_PROVISIONING_ALL
 
 
 def resolve_github_username(gau: GithubAcademyUser) -> Optional[str]:
