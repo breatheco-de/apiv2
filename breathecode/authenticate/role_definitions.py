@@ -126,6 +126,7 @@ CAPABILITIES = [
     {"slug": "update_gitpod_user", "description": "Update gitpod user expiration based on available information"},
     {"slug": "get_github_user", "description": "List github user the academy is consuming"},
     {"slug": "update_github_user", "description": "Update github user expiration based on available information"},
+    {"slug": "manage_github_copilot_seats", "description": "Provision GitHub Copilot seats for academy users"},
     {
         "slug": "sync_organization_users",
         "description": "Calls for the github API and brings all org users, then tries to synch them",
@@ -596,6 +597,7 @@ def get_extended_roles():
                 "crud_technology",
                 "read_freelancer_bill",
                 "crud_freelancer_bill",
+                "manage_github_copilot_seats",
             ],
         }
     )
