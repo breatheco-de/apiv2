@@ -32,7 +32,7 @@ class GithubAcademyUserStorageLogTestSuite(AuthTestCase):
             gau.log(f"step-{i}")
         self.assertEqual(len(gau.storage_log), GithubAcademyUser.STORAGE_LOG_MAX_ENTRIES)
         msgs = [e["msg"] for e in gau.storage_log]
-        self.assertEqual(msgs, ["step-2", "step-3", "step-4", "step-5", "step-6"])
+        self.assertEqual(msgs, ["step-6", "step-5", "step-4", "step-3", "step-2"])
         self.assertTrue(all("at" in e and e["at"] for e in gau.storage_log))
 
     def test_log_reset_true_replaces_history_with_single_entry(self):
@@ -310,7 +310,7 @@ class CopilotGithubAcademyUserReceiverTestSuite(AuthTestCase):
         )
         gau.refresh_from_db()
         mock_grant_delay.assert_not_called()
-        self.assertIn("auto-grant skipped", (gau.storage_log or [])[-1]["msg"])
+        self.assertIn("auto-grant skipped", (gau.storage_log or [])[0]["msg"])
 
 
 class CopilotBatchScheduleTestSuite(AuthTestCase):

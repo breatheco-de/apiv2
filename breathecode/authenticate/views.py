@@ -4005,6 +4005,13 @@ class AcademyGithubCopilotView(APIView):
             target_user_ids.update(cohort_user_ids)
 
         result = schedule_copilot_grants_for_academy_users(academy_id, list(target_user_ids))
+        logger.info(
+            "AcademyGithubCopilotView.post result academy_id=%s scheduled=%s skipped=%s errors=%s",
+            academy_id,
+            len(result.get("scheduled", [])),
+            len(result.get("skipped", [])),
+            len(result.get("errors", [])),
+        )
         return Response(result, status=status.HTTP_200_OK)
 
 
