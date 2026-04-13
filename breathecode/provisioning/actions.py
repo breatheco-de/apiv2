@@ -60,10 +60,21 @@ def sync_machine_types(provisioning_academy, assignment):
     print(machines)
 
 
-def get_provisioning_vendor(user_id, profile_academy, cohort):
+def get_provisioning_vendor(
+    user_id,
+    profile_academy,
+    cohort,
+    *,
+    vendor_type: str = ProvisioningVendor.VendorType.CODING_EDITOR,
+):
+    """Resolve vendor by scope (member, then cohort, then academy). Defaults to coding editor vendors."""
 
     academy = profile_academy.academy
-    all_profiles = ProvisioningProfile.objects.filter(academy=academy)
+    all_profiles = ProvisioningProfile.objects.filter(
+        academy=academy,
+        vendor__isnull=False,
+        vendor__vendor_type=vendor_type,
+    )
     if all_profiles.count() == 0:
         raise Exception(
             f"No provisioning vendors have been found for this academy {academy.name}, please speak with your program manager"
