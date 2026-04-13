@@ -444,7 +444,10 @@ def process_bulk_student_upload(job_id: str, **_kwargs: Any) -> None:
 @task(priority=TaskPriority.ACADEMY.value)
 def grant_github_copilot_seat_task(github_academy_user_id: int, **_):
     """Assign Copilot seat when GithubAcademyUser becomes SYNCHED+ADD."""
-    return grant_copilot_seat_for_user(github_academy_user_id)
+    logger.info("grant_github_copilot_seat_task start gau_id=%s", github_academy_user_id)
+    result = grant_copilot_seat_for_user(github_academy_user_id)
+    logger.info("grant_github_copilot_seat_task done gau_id=%s success=%s", github_academy_user_id, result)
+    return result
 
 
 @task(priority=TaskPriority.ACADEMY.value)
@@ -452,4 +455,7 @@ def revoke_github_copilot_seat_delayed(github_academy_user_id: int, **_):
     """
     After 2 hours, revoke Copilot if the user is still not SYNCHED+ADD and no sibling academy keeps them eligible.
     """
-    return revoke_copilot_seat_after_delay(github_academy_user_id)
+    logger.info("revoke_github_copilot_seat_delayed start gau_id=%s", github_academy_user_id)
+    result = revoke_copilot_seat_after_delay(github_academy_user_id)
+    logger.info("revoke_github_copilot_seat_delayed done gau_id=%s success=%s", github_academy_user_id, result)
+    return result

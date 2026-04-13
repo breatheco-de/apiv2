@@ -580,7 +580,7 @@ STORAGE_ACTION = (
 
 
 class GithubAcademyUser(models.Model):
-    """Rolling audit log for sync/Copilot messages; newest last, max ``STORAGE_LOG_MAX_ENTRIES``."""
+    """Rolling audit log for sync/Copilot messages; newest first, max ``STORAGE_LOG_MAX_ENTRIES``."""
 
     STORAGE_LOG_MAX_ENTRIES = 5
 
@@ -600,6 +600,11 @@ class GithubAcademyUser(models.Model):
     )
     storage_status = models.CharField(max_length=20, choices=STORAGE_STATUS, default=PENDING)
     storage_action = models.CharField(max_length=20, choices=STORAGE_ACTION, default=ADD)
+    copilot_granted = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="True when a GitHub Copilot seat has been explicitly granted/scheduled for this academy user row.",
+    )
     storage_log = models.JSONField(default=None, null=True, blank=True)
     storage_synch_at = models.DateTimeField(default=None, null=True, blank=True)
     # deletion_scheduled_at = models.DateTimeField(default=None, null=True, blank=True)
@@ -619,7 +624,7 @@ class GithubAcademyUser(models.Model):
 
     def log(self, msg, reset=False):
         """
-        Append ``msg`` with timestamp. Keeps the last ``STORAGE_LOG_MAX_ENTRIES`` entries (FIFO).
+        Prepend ``msg`` with timestamp. Keeps the first ``STORAGE_LOG_MAX_ENTRIES`` entries (newest first).
 
         :param reset: If True, discard previous entries and only store this message.
         """
@@ -628,10 +633,10 @@ class GithubAcademyUser(models.Model):
         elif self.storage_log is None or not isinstance(self.storage_log, list):
             self.storage_log = []
 
-        self.storage_log.append(GithubAcademyUser.create_log(msg))
+        self.storage_log.insert(0, GithubAcademyUser.create_log(msg))
         cap = GithubAcademyUser.STORAGE_LOG_MAX_ENTRIES
         if len(self.storage_log) > cap:
-            self.storage_log = self.storage_log[-cap:]
+            self.storage_log = self.storage_log[:cap]
 
     @classmethod
     def copilot_read_previous_storage(cls, pk):
