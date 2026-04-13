@@ -47,7 +47,7 @@ class Github:
     def delete(self, action_name, request_data=None, json=None):
         """
         DELETE: `request_data` are query-string params (default behavior).
-        Pass `json=dict` to send a JSON body instead (e.g. Copilot selected_users); params stay in `request_data`.
+        Pass `json=dict` to send a JSON body instead; params stay in `request_data`.
         """
         if request_data is None:
             request_data = {}
@@ -70,7 +70,7 @@ class Github:
                 return resp
 
             if method_name == "DELETE":
-                # Body was sent (e.g. Copilot): API returns JSON; legacy DELETE has no body → raw response.
+                # Body was sent: API returns JSON; legacy DELETE has no body → raw response.
                 if json is not None:
                     if not resp.content:
                         return {}
@@ -379,36 +379,6 @@ class Github:
         return self.post(
             f"/orgs/{self.org}/invitations", request_data={"email": email, "role": role, "team_ids": team_ids}
         )
-
-    def copilot_add_selected_users(self, usernames: list):
-        """Assign Copilot seats to organization members (idempotent for existing seats)."""
-        return self.post(
-            f"/orgs/{self.org}/copilot/billing/selected_users",
-            request_data={"selected_usernames": usernames},
-        )
-
-    def copilot_remove_selected_users(self, usernames: list):
-        """Remove Copilot seats (may be pending cancellation until end of billing cycle per GitHub)."""
-        return self.delete(
-            f"/orgs/{self.org}/copilot/billing/selected_users",
-            json={"selected_usernames": usernames},
-        )
-
-    def copilot_list_billing_seats(self) -> list:
-        """All billed Copilot seats for the organization (paginated)."""
-        results = []
-        page = 1
-        while True:
-            data = self.get(
-                f"/orgs/{self.org}/copilot/billing/seats",
-                request_data={"per_page": self.page_size, "page": page},
-            )
-            seats = data.get("seats") or []
-            results.extend(seats)
-            if len(seats) < self.page_size:
-                break
-            page += 1
-        return results
 
     def delete_org_member(self, username):
         return self.delete(f"/orgs/{self.org}/members/{username}")

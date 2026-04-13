@@ -580,7 +580,7 @@ STORAGE_ACTION = (
 
 
 class GithubAcademyUser(models.Model):
-    """Rolling audit log for sync/Copilot messages; newest first, max ``STORAGE_LOG_MAX_ENTRIES``."""
+    """Rolling audit log for sync messages; newest first, max ``STORAGE_LOG_MAX_ENTRIES``."""
 
     STORAGE_LOG_MAX_ENTRIES = 5
 
@@ -600,11 +600,6 @@ class GithubAcademyUser(models.Model):
     )
     storage_status = models.CharField(max_length=20, choices=STORAGE_STATUS, default=PENDING)
     storage_action = models.CharField(max_length=20, choices=STORAGE_ACTION, default=ADD)
-    copilot_granted = models.BooleanField(
-        default=False,
-        db_index=True,
-        help_text="True when a GitHub Copilot seat has been explicitly granted/scheduled for this academy user row.",
-    )
     storage_log = models.JSONField(default=None, null=True, blank=True)
     storage_synch_at = models.DateTimeField(default=None, null=True, blank=True)
     # deletion_scheduled_at = models.DateTimeField(default=None, null=True, blank=True)
@@ -637,43 +632,6 @@ class GithubAcademyUser(models.Model):
         cap = GithubAcademyUser.STORAGE_LOG_MAX_ENTRIES
         if len(self.storage_log) > cap:
             self.storage_log = self.storage_log[:cap]
-
-    @classmethod
-    def copilot_read_previous_storage(cls, pk):
-        """Values from DB before save (for signal handlers). New rows: (None, None)."""
-        if not pk:
-            return None, None
-        row = cls.objects.filter(pk=pk).values("storage_status", "storage_action").first()
-        if not row:
-            return None, None
-        return row["storage_status"], row["storage_action"]
-
-    @classmethod
-    def copilot_is_eligible(cls, storage_status, storage_action) -> bool:
-        if storage_status is None or storage_action is None:
-            return False
-        return storage_status == SYNCHED and storage_action == ADD
-
-    @classmethod
-    def copilot_transition_kind(cls, prev_status, prev_action, new_status, new_action):
-        """
-        If storage moved in/out of Copilot eligibility, return "grant" or "revoke".
-        Used by post_save receiver; all rules live here.
-        """
-        prev_e = cls.copilot_is_eligible(prev_status, prev_action)
-        new_e = cls.copilot_is_eligible(new_status, new_action)
-        if new_e and not prev_e:
-            return "grant"
-        if prev_e and not new_e:
-            return "revoke"
-        return None
-
-    @staticmethod
-    def copilot_should_handle_save(update_fields):
-        """Skip Copilot when save() only touches other columns (e.g. storage_log)."""
-        if update_fields is None:
-            return True
-        return "storage_status" in update_fields or "storage_action" in update_fields
 
     def save(self, *args, **kwargs):
         has_mutated = False
