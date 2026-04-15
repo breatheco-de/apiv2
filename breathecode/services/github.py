@@ -380,6 +380,50 @@ class Github:
             f"/orgs/{self.org}/invitations", request_data={"email": email, "role": role, "team_ids": team_ids}
         )
 
+    def copilot_add_selected_users(self, usernames: list):
+        """Assign Copilot seats to organization members."""
+        return self.post(
+            f"/orgs/{self.org}/copilot/billing/selected_users",
+            request_data={"selected_usernames": usernames},
+        )
+
+    def copilot_remove_selected_users(self, usernames: list):
+        """Remove Copilot seats from organization members."""
+        return self.delete(
+            f"/orgs/{self.org}/copilot/billing/selected_users",
+            json={"selected_usernames": usernames},
+        )
+
+    def copilot_list_seat_usernames(self) -> list[str]:
+        """GitHub org members currently assigned a Copilot seat (paginated billing API)."""
+        usernames: list[str] = []
+        page = 1
+        while True:
+            data = self.get(
+                f"/orgs/{self.org}/copilot/billing/seats",
+                request_data={"page": page, "per_page": self.page_size},
+            )
+            if not isinstance(data, dict):
+                break
+            batch = data.get("seats") or []
+            if not batch:
+                break
+            for seat in batch:
+                if not isinstance(seat, dict):
+                    continue
+                assignee = seat.get("assignee") or seat.get("user") or {}
+                if isinstance(assignee, dict):
+                    login = assignee.get("login")
+                    if login:
+                        usernames.append(str(login))
+            if len(batch) < self.page_size:
+                break
+            page += 1
+            if page > 500:
+                logger.warning("Copilot seats pagination stopped at page 500 for org %s", self.org)
+                break
+        return list(dict.fromkeys(usernames))
+
     def delete_org_member(self, username):
         return self.delete(f"/orgs/{self.org}/members/{username}")
 

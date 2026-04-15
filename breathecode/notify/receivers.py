@@ -29,7 +29,7 @@ from breathecode.mentorship.signals import mentorship_session_status
 from breathecode.notify.models import HookError
 from breathecode.payments.models import PlanFinancing, Subscription
 from breathecode.payments.serializers import GetPlanFinancingSerializer, GetSubscriptionHookSerializer
-from breathecode.payments.signals import planfinancing_created, subscription_created
+from breathecode.payments.signals import planfinancing_created, revoke_plan_permissions, subscription_created
 
 from .tasks import send_mentorship_starting_notification
 from .utils.hook_manager import HookManager
@@ -187,6 +187,27 @@ def new_subscription_created(sender, instance, **kwargs):
         model_label,
         "subscription_created",
         payload_override=serializer.data,
+        academy_override=instance.academy,
+    )
+
+
+@receiver(revoke_plan_permissions, sender=Subscription)
+@receiver(revoke_plan_permissions, sender=PlanFinancing)
+def student_plan_revoked(sender, instance, **kwargs):
+    event_name = (
+        "subscription.subscription_revoked"
+        if isinstance(instance, Subscription)
+        else "planfinancing.planfinancing_revoked"
+    )
+    HookManager.process_model_event(
+        instance=instance,
+        event_name=event_name,
+        trust_event_name=True,
+        payload_override=(
+            GetSubscriptionHookSerializer(instance).data
+            if isinstance(instance, Subscription)
+            else GetPlanFinancingSerializer(instance).data
+        ),
         academy_override=instance.academy,
     )
 

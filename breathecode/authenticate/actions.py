@@ -24,7 +24,9 @@ from django.utils import timezone
 import breathecode.notify.actions as notify_actions
 from breathecode.admissions.models import Academy, CohortUser, UP_TO_DATE
 from breathecode.authenticate.models import CredentialsDiscord
+from breathecode.payments.models import Consumable
 from breathecode.services.github import Github
+from breathecode.utils.decorators import service_deprovisioner
 
 from .models import (
     ADD,
@@ -42,6 +44,109 @@ from .models import (
 )
 
 logger = logging.getLogger(__name__)
+
+def github_academy_user_allows_copilot(user: User, academy_id: int | None = None) -> bool:
+    """Copilot is tied to org membership tracking: user must be SYNCHED + ADD for the academy (or any academy)."""
+    if not user or not user.id:
+        return False
+    qs = GithubAcademyUser.objects.filter(user_id=user.id, storage_status=SYNCHED, storage_action=ADD)
+    if academy_id:
+        return qs.filter(academy_id=academy_id).exists()
+    return qs.exists()
+
+
+def _user_has_copilot_entitlement(user: User, academy_id: int | None = None) -> bool:
+    extra = {"subscription__academy_id": academy_id} if academy_id else None
+    extra_financing = {"plan_financing__academy_id": academy_id} if academy_id else None
+
+    consumer = Service.Consumer.GITHUB_COPILOT
+    if academy_id:
+        return (
+            Consumable.list(user=user, service=consumer, extra=extra).exists()
+            or Consumable.list(user=user, service=consumer, extra=extra_financing).exists()
+        )
+
+    return Consumable.list(user=user, service=consumer).exists()
+
+
+def _get_copilot_client_for_user(user: User, academy_id: int | None = None) -> tuple[Github | None, str | None]:
+    settings_qs = AcademyAuthSettings.objects.select_related("github_owner")
+    
+    if academy_id:
+        settings_qs = settings_qs.filter(academy_id=academy_id)
+
+    settings = settings_qs.exclude(github_username="").exclude(github_username__isnull=True).first()
+    if not settings or not settings.github_owner_id:
+        return None, None
+
+    owner_creds = CredentialsGithub.objects.filter(user_id=settings.github_owner_id).first()
+    user_creds = CredentialsGithub.objects.filter(user_id=user.id).first()
+    if not owner_creds or not owner_creds.token or not user_creds or not user_creds.username:
+        return None, None
+
+    return Github(org=settings.github_username, token=owner_creds.token), user_creds.username
+
+
+def provision_github_copilot_for_user(user_id: int, academy_id: int | None = None) -> bool:
+    user = User.objects.filter(id=user_id).first()
+    if not user:
+        return False
+
+    if not _user_has_copilot_entitlement(user, academy_id):
+        return False
+
+    if not github_academy_user_allows_copilot(user, academy_id):
+        return False
+
+    gh, github_username = _get_copilot_client_for_user(user, academy_id)
+    if not gh or not github_username:
+        return False
+
+    try:
+        gh.copilot_add_selected_users([github_username])
+        return True
+    except Exception:
+        logger.exception("Unable to provision Copilot for user %s", user_id)
+        return False
+
+
+def deprovision_github_copilot_for_user(
+    user_id: int,
+    academy_id: int | None = None,
+    *,
+    ignore_entitlement: bool = False,
+) -> bool:
+    user = User.objects.filter(id=user_id).first()
+    if not user:
+        return False
+
+    if not ignore_entitlement and _user_has_copilot_entitlement(user, academy_id):
+        return False
+
+    gh, github_username = _get_copilot_client_for_user(user, academy_id)
+    if not gh or not github_username:
+        return False
+
+    try:
+        gh.copilot_remove_selected_users([github_username])
+        return True
+    except Exception:
+        logger.exception("Unable to deprovision Copilot for user %s", user_id)
+        return False
+
+
+@service_deprovisioner("github-copilot")
+def deprovision_github_copilot(user_id: int, context: dict | None = None, **_: Any):
+    academy_id = None
+
+    if isinstance(context, dict):
+        academy_id = context.get("academy_id") or context.get("academy")
+    try:
+        academy_id = int(academy_id) if academy_id else None
+    except Exception:
+        academy_id = None
+
+    return deprovision_github_copilot_for_user(user_id=user_id, academy_id=academy_id)
 
 
 def convert_youtube_to_embed(url):
