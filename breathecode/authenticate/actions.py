@@ -24,7 +24,6 @@ from django.utils import timezone
 import breathecode.notify.actions as notify_actions
 from breathecode.admissions.models import Academy, CohortUser, UP_TO_DATE
 from breathecode.authenticate.models import CredentialsDiscord
-from breathecode.payments.models import Consumable
 from breathecode.services.github import Github
 from breathecode.utils.decorators import service_deprovisioner
 
@@ -56,6 +55,9 @@ def github_academy_user_allows_copilot(user: User, academy_id: int | None = None
 
 
 def _user_has_copilot_entitlement(user: User, academy_id: int | None = None) -> bool:
+    # Local import: payments.models imports get_user_settings from this module at load time.
+    from breathecode.payments.models import Consumable, Service
+
     extra = {"subscription__academy_id": academy_id} if academy_id else None
     extra_financing = {"plan_financing__academy_id": academy_id} if academy_id else None
 
