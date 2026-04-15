@@ -74,6 +74,8 @@ Some user requests touch multiple domains. Load ALL listed skills before proceed
 | Configure academy Slack integration and manage sync health | `bc-notify-manage-academy-slackintegration` + `bc-admissions-*` (students/cohorts drive Slack mappings) + `bc-authenticate-*` (Slack OAuth endpoints live in auth) |
 | Align or extend syllabus design with the school skills framework (job role stages, skills on the go) | `bc-admissions-*` (syllabus, cohorts) + `bc-talentdevelopment-manage-skills` (career path, stages, `stage_skill`, domains) |
 | Cancel a user subscription and optionally issue a refund | `bc-payments-cancel-subscription-and-refund` + [`docs/llm-docs/BC_REFUNDS.md`](../../BC_REFUNDS.md) (use the skill for actor-specific flow and endpoint order, then use BC_REFUNDS for refund payload semantics and validations) |
+| Diagnose why an asset telemetry is missing for users/tasks | `bc-assignment-diagnose-asset-telemetry` + `bc-registry-*` (validate asset slug and translation/canonical context when telemetry appears split by locale) |
+| Queue or interpret asset-level telemetry_stats (`telemetry_stats` JSON on assets) | `bc-assignment-diagnose-asset-telemetry` + `bc-registry-*` (registry asset action `sync_telemetry_stats` queues Celery recompute; read updated stats from asset) |
 
 ---
 
