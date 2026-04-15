@@ -654,6 +654,7 @@ def get_extended_roles():
             "caps": extend(roles, ["staff", "community_manager"])
             + [
                 "crud_media",
+                "webmaster",
                 "read_consumable",
                 "read_activity",
                 "read_lead",
