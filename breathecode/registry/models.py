@@ -1402,6 +1402,28 @@ class Asset(models.Model):
             tasks.append(task)
         return tasks
 
+    def get_canonical_translation_asset(self):
+        """
+        Return the canonical asset among this asset and its translations.
+
+        Canonical rule is language-agnostic and deterministic: pick the asset with the
+        smallest id in the translation group.
+        """
+        candidates = [self]
+        candidates.extend(list(self.all_translations.all()))
+
+        # Keep unique ids only to avoid duplicated self-references in all_translations.
+        unique_candidates = {}
+        for candidate in candidates:
+            if candidate and candidate.id is not None:
+                unique_candidates[candidate.id] = candidate
+
+        if not unique_candidates:
+            return self
+
+        canonical_id = min(unique_candidates.keys())
+        return unique_candidates[canonical_id]
+
     @staticmethod
     def get_by_slug(asset_slug, request=None, asset_type=None):
         is_alias = True
