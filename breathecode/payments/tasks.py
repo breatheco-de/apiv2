@@ -616,7 +616,6 @@ def charge_subscription(self, subscription_id: int, **_: Any):
     ]
 
     no_charge_statuses = [
-        Subscription.Status.CANCELLED,
         Subscription.Status.DEPRECATED,
         Subscription.Status.EXPIRED,
     ]
@@ -626,12 +625,21 @@ def charge_subscription(self, subscription_id: int, **_: Any):
             if not (subscription := Subscription.objects.filter(id=subscription_id).first()):
                 raise AbortTask(f"Subscription with id {subscription_id} not found")
 
-            if subscription.status in no_charge_statuses:
+            utc_now = timezone.now()
+
+            if subscription.status == Subscription.Status.CANCELLED:
+                if subscription.next_payment_at and subscription.next_payment_at <= utc_now:
+                    from breathecode.payments import signals
+
+                    signals.revoke_plan_permissions.send_robust(instance=subscription, sender=Subscription)
                 raise AbortTask(
                     f"Subscription with id {subscription_id} is in status {subscription.status} and cannot be charged"
                 )
 
-            utc_now = timezone.now()
+            if subscription.status in no_charge_statuses:
+                raise AbortTask(
+                    f"Subscription with id {subscription_id} is in status {subscription.status} and cannot be charged"
+                )
 
             if subscription.status == Subscription.Status.PAYMENT_ISSUE:
                 days_overdue = (utc_now - subscription.next_payment_at).days
@@ -1035,7 +1043,6 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
     ]
 
     no_charge_statuses = [
-        PlanFinancing.Status.CANCELLED,
         PlanFinancing.Status.DEPRECATED,
         PlanFinancing.Status.EXPIRED,
     ]
@@ -1046,12 +1053,21 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
             if not (plan_financing := PlanFinancing.objects.filter(id=plan_financing_id).first()):
                 raise AbortTask(f"PlanFinancing with id {plan_financing_id} not found")
 
-            if plan_financing.status in no_charge_statuses:
+            utc_now = timezone.now()
+
+            if plan_financing.status == PlanFinancing.Status.CANCELLED:
+                if plan_financing.next_payment_at and plan_financing.next_payment_at <= utc_now:
+                    from breathecode.payments import signals
+
+                    signals.revoke_plan_permissions.send_robust(instance=plan_financing, sender=PlanFinancing)
                 raise AbortTask(
                     f"PlanFinancing with id {plan_financing_id} is in status {plan_financing.status} and cannot be charged"
                 )
 
-            utc_now = timezone.now()
+            if plan_financing.status in no_charge_statuses:
+                raise AbortTask(
+                    f"PlanFinancing with id {plan_financing_id} is in status {plan_financing.status} and cannot be charged"
+                )
 
             if plan_financing.status == PlanFinancing.Status.PAYMENT_ISSUE:
                 if (utc_now - plan_financing.next_payment_at).days >= 5:

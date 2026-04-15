@@ -272,6 +272,7 @@ class Service(AbstractAsset):
         AI_INTERACTION = ("AI_INTERACTION", "AI Interaction")
         VPS_SERVER = ("VPS_SERVER", "VPS server")
         MONTHLY_LLM_BUDGET = ("MONTHLY_LLM_BUDGET", "Monthly LLM budget")
+        GITHUB_COPILOT = ("GITHUB_COPILOT", "GitHub Copilot")
         NO_SET = ("NO_SET", "No set")
 
     groups = models.ManyToManyField(
@@ -2309,6 +2310,17 @@ class PlanFinancing(AbstractIOweYou):
                 )
             )
 
+        if self.pk:
+            prior = PlanFinancing.objects.filter(pk=self.pk).only("status").first()
+            if prior and prior.status == self.Status.FULLY_PAID and self.status == self.Status.CANCELLED:
+                raise forms.ValidationError(
+                    translation(
+                        settings.lang,
+                        en="A fully paid plan financing cannot be cancelled",
+                        es="Un plan financiado totalmente pagado no puede cancelarse",
+                    )
+                )
+
         return super().clean()
 
     def _sync_team(self) -> None:
@@ -2378,7 +2390,6 @@ class PlanFinancing(AbstractIOweYou):
         self._sync_team()
 
         revoke_statuses = [
-            self.Status.CANCELLED,
             self.Status.DEPRECATED,
             self.Status.PAYMENT_ISSUE,
             self.Status.ERROR,
@@ -2398,7 +2409,14 @@ class PlanFinancing(AbstractIOweYou):
             if self.status == self.Status.ACTIVE and is_paid:
                 signals.grant_plan_permissions.send_robust(instance=self, sender=self.__class__)
 
-            if self.status in revoke_statuses:
+            if self.status == self.Status.CANCELLED:
+                # Revoke when the billing tick runs (charge_plan_financing) after next_payment_at.
+                # If that moment already passed, revoke immediately.
+                cutoff = self.next_payment_at
+                if not cutoff or cutoff <= timezone.now():
+                    signals.revoke_plan_permissions.send_robust(instance=self, sender=self.__class__)
+
+            elif self.status in revoke_statuses:
                 signals.revoke_plan_permissions.send_robust(instance=self, sender=self.__class__)
 
             if self.status in [self.Status.EXPIRED, self.Status.DEPRECATED]:
@@ -2589,7 +2607,6 @@ class Subscription(AbstractIOweYou):
         super().save(*args, **kwargs)
 
         revoke_statuses = [
-            self.Status.CANCELLED,
             self.Status.DEPRECATED,
             self.Status.PAYMENT_ISSUE,
             self.Status.ERROR,
@@ -2608,7 +2625,11 @@ class Subscription(AbstractIOweYou):
         if old_instance and old_instance.status != self.status:
             if self.status == self.Status.ACTIVE and is_paid:
                 signals.grant_plan_permissions.send_robust(instance=self, sender=self.__class__)
-            if self.status in revoke_statuses:
+            if self.status == self.Status.CANCELLED:
+                cutoff = self.next_payment_at
+                if not cutoff or cutoff <= timezone.now():
+                    signals.revoke_plan_permissions.send_robust(instance=self, sender=self.__class__)
+            elif self.status in revoke_statuses:
                 signals.revoke_plan_permissions.send_robust(instance=self, sender=self.__class__)
             if self.status in [self.Status.EXPIRED, self.Status.DEPRECATED]:
                 service_ids: set[int] = set()
