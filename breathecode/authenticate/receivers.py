@@ -302,6 +302,10 @@ def provision_github_copilot_on_service_granted(sender, instance: Consumable, **
 
 @receiver(pre_save, sender=GithubAcademyUser)
 def github_academy_user_copilot_track_prev(sender, instance: GithubAcademyUser, **kwargs):
+    update_fields = kwargs.get("update_fields")
+    if update_fields and set(update_fields).issubset({"storage_log", "updated_at"}):
+        return
+
     if not instance.pk:
         instance._copilot_prev_good = False
         logger.info(
@@ -327,6 +331,10 @@ def github_academy_user_copilot_track_prev(sender, instance: GithubAcademyUser, 
 
 @receiver(post_save, sender=GithubAcademyUser)
 def github_academy_user_copilot_react(sender, instance: GithubAcademyUser, created: bool, **kwargs):
+    update_fields = kwargs.get("update_fields")
+    if update_fields and set(update_fields).issubset({"storage_log", "updated_at"}):
+        return
+
     if not instance.user_id:
         return
 
@@ -334,16 +342,23 @@ def github_academy_user_copilot_react(sender, instance: GithubAcademyUser, creat
     now_good = instance.storage_status == SYNCHED and instance.storage_action == ADD
 
     if prev_good and not now_good:
-        async_result = tasks.deferred_github_copilot_remove_if_still_revoked.apply_async(
-            args=[instance.user_id, instance.academy_id],
-            countdown=7200,
-        )
+        args = (instance.user_id, instance.academy_id)
+        manager = schedule_task(tasks.deferred_github_copilot_remove_if_still_revoked, "2h")
+        if manager.exists(*args):
+            logger.info(
+                "[COPILOT GithubAcademyUser post_save] id=%s user_id=%s academy_id=%s lost_eligibility -> deferred revoke 2h already_scheduled",
+                instance.id,
+                instance.user_id,
+                instance.academy_id,
+            )
+            return
+        async_result = manager.call(*args)
         logger.info(
             "[COPILOT GithubAcademyUser post_save] id=%s user_id=%s academy_id=%s lost_eligibility -> deferred revoke 2h task_id=%s",
             instance.id,
             instance.user_id,
             instance.academy_id,
-            async_result.id,
+            getattr(async_result, "id", None),
         )
     elif now_good and (created or not prev_good):
         async_result = tasks.provision_github_copilot_task.delay(instance.user_id, academy_id=instance.academy_id)
