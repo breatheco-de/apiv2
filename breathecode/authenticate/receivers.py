@@ -10,7 +10,7 @@ from task_manager.django.actions import schedule_task
 from breathecode.admissions.models import CohortUser
 from breathecode.admissions.signals import student_edu_status_updated
 from breathecode.authenticate import tasks
-from breathecode.authenticate.actions import COPILOT_REVOKE_DELAY_SECONDS
+from breathecode.authenticate.actions import COPILOT_REVOKE_DELAY_SECONDS, academy_allows_auto_copilot_by_id
 from breathecode.authenticate.models import GithubAcademyUser, ProfileAcademy, UserInvite
 from breathecode.authenticate.signals import (
     cohort_user_deleted,
@@ -285,6 +285,13 @@ def github_academy_user_copilot_schedule(sender, instance, created, update_field
     pa = getattr(instance, "_copilot_prev_storage_action", None)
     kind = GithubAcademyUser.copilot_transition_kind(ps, pa, instance.storage_status, instance.storage_action)
     if kind == "grant":
+        if not academy_allows_auto_copilot_by_id(instance.academy_id):
+            instance.log(
+                "GitHub Copilot auto-grant skipped: academy feature "
+                "'academy_features.commerce.copilot_provisioning' is set to 'selective'"
+            )
+            instance.save(update_fields=["storage_log", "updated_at"])
+            return
         tasks.grant_github_copilot_seat_task.delay(instance.id)
     elif kind == "revoke":
         tasks.revoke_github_copilot_seat_delayed.apply_async(
