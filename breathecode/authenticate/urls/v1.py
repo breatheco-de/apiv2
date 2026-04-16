@@ -27,7 +27,6 @@ from ..views import (
     AcademyCapabilitiesView,
     AcademyCapabilityListView,
     AcademyGithubSyncView,
-    AcademyGithubCopilotView,
     AcademyRoleSlugView,
     AcademyRoleView,
     AcademyInviteStatsView,
@@ -201,7 +200,6 @@ urlpatterns = [
     # sync with gitHUB
     path("academy/github/user", GithubUserView.as_view(), name="github_user"),
     path("academy/github/user/sync", AcademyGithubSyncView.as_view(), name="github_user_sync"),
-    path("academy/github/copilot", AcademyGithubCopilotView.as_view(), name="academy_github_copilot"),
     path("academy/github/user/<int:githubuser_id>", GithubUserView.as_view(), name="github_user_id"),
     # sync with gitPOD
     path("academy/gitpod/user", GitpodUserView.as_view(), name="gitpod_user"),

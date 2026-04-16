@@ -71,10 +71,6 @@ def default_academy_features():
         },
         "commerce": {
             "reseller": False,  # allow academy to resell courses from other academies (requires white_labeled=True)
-            # Copilot seat provisioning strategy:
-            # - selective: only manual academy endpoint
-            # - all: automatic receiver + reconciliation jobs
-            "copilot_provisioning": "selective",
         },
         "navigation": {
             "custom_links": [],  # Additional links added to academy navbar (follow frontend structure)

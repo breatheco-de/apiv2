@@ -192,6 +192,18 @@ HOOK_EVENTS_METADATA = {
         # app, signal, sender, event_action all auto-derived from action
         "serializer": "breathecode.payments.serializers.GetSubscriptionHookSerializer",
     },
+    "planfinancing.planfinancing_revoked": {
+        "action": "payments.PlanFinancing.planfinancing_revoked",
+        "description": "Triggered when financing plan access is revoked",
+        "serializer": "breathecode.payments.serializers.GetPlanFinancingSerializer",
+        "auto_register": False,
+    },
+    "subscription.subscription_revoked": {
+        "action": "payments.Subscription.subscription_revoked",
+        "description": "Triggered when a subscription access is revoked",
+        "serializer": "breathecode.payments.serializers.GetSubscriptionHookSerializer",
+        "auto_register": False,
+    },
     # Mentorship (app auto-derived from action)
     "session.mentorship_session_status": {
         "action": "mentorship.MentorshipSession.mentorship_session_status",

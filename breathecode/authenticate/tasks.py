@@ -20,12 +20,13 @@ from breathecode.utils.decorators import TaskPriority
 
 from .actions import (
     add_to_organization,
+    deprovision_github_copilot_for_user,
     get_user_settings,
+    provision_github_copilot_for_user,
     remove_from_organization,
     revoke_user_discord_permissions,
     set_gitpod_user_expiration,
 )
-from .actions import grant_copilot_seat_for_user, revoke_copilot_seat_after_delay
 
 API_URL = os.getenv("API_URL", "")
 
@@ -442,20 +443,38 @@ def process_bulk_student_upload(job_id: str, **_kwargs: Any) -> None:
 
 
 @task(priority=TaskPriority.ACADEMY.value)
-def grant_github_copilot_seat_task(github_academy_user_id: int, **_):
-    """Assign Copilot seat when GithubAcademyUser becomes SYNCHED+ADD."""
-    logger.info("grant_github_copilot_seat_task start gau_id=%s", github_academy_user_id)
-    result = grant_copilot_seat_for_user(github_academy_user_id)
-    logger.info("grant_github_copilot_seat_task done gau_id=%s success=%s", github_academy_user_id, result)
-    return result
+def provision_github_copilot_task(user_id: int, academy_id: int | None = None, **_):
+    return provision_github_copilot_for_user(user_id=user_id, academy_id=academy_id)
 
 
 @task(priority=TaskPriority.ACADEMY.value)
-def revoke_github_copilot_seat_delayed(github_academy_user_id: int, **_):
-    """
-    After 2 hours, revoke Copilot if the user is still not SYNCHED+ADD and no sibling academy keeps them eligible.
-    """
-    logger.info("revoke_github_copilot_seat_delayed start gau_id=%s", github_academy_user_id)
-    result = revoke_copilot_seat_after_delay(github_academy_user_id)
-    logger.info("revoke_github_copilot_seat_delayed done gau_id=%s success=%s", github_academy_user_id, result)
-    return result
+def deprovision_github_copilot_task(user_id: int, academy_id: int | None = None, ignore_entitlement: bool = False, **_):
+    return deprovision_github_copilot_for_user(
+        user_id=user_id, academy_id=academy_id, ignore_entitlement=ignore_entitlement
+    )
+
+
+@task(priority=TaskPriority.ACADEMY.value)
+def deferred_github_copilot_remove_if_still_revoked(user_id: int, academy_id: int, **_):
+    from breathecode.authenticate.models import GithubAcademyUser
+
+    row = GithubAcademyUser.objects.filter(user_id=user_id, academy_id=academy_id).first()
+    if row is not None and row.storage_action == "ADD":
+        logger.info(
+            "Deferred Copilot revoke skipped (GithubAcademyUser.storage_action=ADD) user=%s academy=%s",
+            user_id,
+            academy_id,
+        )
+        return False
+    return deprovision_github_copilot_for_user(
+        user_id=user_id, academy_id=academy_id, ignore_entitlement=True
+    )
+
+
+@task(priority=TaskPriority.BACKGROUND.value)
+def reconcile_github_copilot_seats_nightly(**_):
+    from breathecode.authenticate.management.commands.reconcile_github_copilot_seats import (
+        run_reconcile_github_copilot_seats,
+    )
+
+    return run_reconcile_github_copilot_seats()

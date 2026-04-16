@@ -1,54 +1,85 @@
-"""
-Nightly (or on-demand) reconciliation of GitHub Copilot seats vs GithubAcademyUser (SYNCHED + ADD).
-
-ORM receivers do not run for raw SQL / psql / QuerySet.update() on Heroku Postgres; this command
-grants missing seats and revokes disallowed ones so manual DB edits still converge.
-
-Heroku Scheduler example (run after business hours):
-  python manage.py reconcile_github_copilot_seats
-
-Related automation (auto-remove org members for inactive cohort users — enable on Heroku if not already):
-  1) python manage.py delete_expired_githubusers
-  2) python manage.py sync_github_organization
-
-The github_owner user PAT/OAuth token must include admin:org or manage_billing:copilot for Copilot API calls.
-Copilot seat removal may remain "pending cancellation" until the GitHub billing cycle ends.
-
-See: https://docs.github.com/en/rest/copilot/copilot-user-management
-"""
+import logging
 
 from django.core.management.base import BaseCommand
 
-from breathecode.authenticate.actions import distinct_github_org_logins, reconcile_copilot_seats_for_org
+from breathecode.authenticate.models import ADD, AcademyAuthSettings, CredentialsGithub, GithubAcademyUser, SYNCHED
+from breathecode.services.github import Github
+
+logger = logging.getLogger(__name__)
+
+
+def _reconcile_copilot_seats_for_academy_settings(settings: AcademyAuthSettings) -> int:
+    """
+    Remove Copilot seats for org members who are billed for Copilot but have no GithubAcademyUser
+    SYNCHED+ADD in any academy that shares this GitHub organization.
+    """
+    if not settings.github_owner_id:
+        return 0
+
+    owner_creds = CredentialsGithub.objects.filter(user_id=settings.github_owner_id).first()
+    if not owner_creds or not owner_creds.token:
+        return 0
+
+    org = (settings.github_username or "").strip()
+    if not org:
+        return 0
+
+    gb = Github(org=org, token=owner_creds.token)
+    try:
+        seat_usernames = gb.copilot_list_seat_usernames()
+    except Exception:
+        logger.exception("Could not list Copilot seats for org %s", org)
+        return 0
+
+    sibling_academy_ids = list(
+        AcademyAuthSettings.objects.filter(github_username__iexact=org).values_list("academy_id", flat=True)
+    )
+    if not sibling_academy_ids:
+        return 0
+
+    removed = 0
+    for username in seat_usernames:
+        cred = CredentialsGithub.objects.filter(username__iexact=username).select_related("user").first()
+        if not cred or not cred.user_id:
+            continue
+        allowed = GithubAcademyUser.objects.filter(
+            user_id=cred.user_id,
+            academy_id__in=sibling_academy_ids,
+            storage_status=SYNCHED,
+            storage_action=ADD,
+        ).exists()
+        if allowed:
+            continue
+        try:
+            gb.copilot_remove_selected_users([username])
+            removed += 1
+        except Exception:
+            logger.exception("Failed to remove Copilot seat for %s in org %s", username, org)
+
+    return removed
+
+
+def run_reconcile_github_copilot_seats() -> dict[str, int]:
+    """Run seat reconciliation once per distinct GitHub org (shared github_username)."""
+    seen_orgs: set[str] = set()
+    seats_removed = 0
+    for settings in AcademyAuthSettings.objects.filter(github_owner_id__isnull=False).select_related(
+        "academy", "github_owner"
+    ):
+        org = (settings.github_username or "").strip().lower()
+        if not org or org in seen_orgs:
+            continue
+        seen_orgs.add(org)
+        seats_removed += _reconcile_copilot_seats_for_academy_settings(settings)
+    return {"github_orgs_processed": len(seen_orgs), "copilot_seats_removed": seats_removed}
 
 
 class Command(BaseCommand):
     help = (
-        "Sync Copilot seats with GithubAcademyUser SYNCHED+ADD: add missing API seats, remove orphans "
-        "(covers DB changes that skip Django save/signals)."
+        "Remove GitHub Copilot seats for org members who are not tracked as SYNCHED+ADD in GithubAcademyUser "
+        "for any academy sharing that GitHub org. Schedule nightly (e.g. Heroku Scheduler) after backups."
     )
 
     def handle(self, *args, **options):
-        orgs = distinct_github_org_logins()
-        if not orgs:
-            self.stdout.write("No AcademyAuthSettings with github_username; nothing to do.")
-            return
-
-        for org_login in orgs:
-            self.stdout.write(f"Reconciling Copilot seats for org: {org_login}")
-            try:
-                stats = reconcile_copilot_seats_for_org(org_login)
-                if stats.get("skipped"):
-                    self.stdout.write(self.style.WARNING(f"  Skipped: {stats.get('reason')}"))
-                else:
-                    self.stdout.write(
-                        f"  allowed={stats['allowed_count']} api_seats={stats['seat_count']} "
-                        f"to_add={len(stats['added_usernames'])} add_batches={stats['add_batches']} "
-                        f"to_remove={len(stats['removed_usernames'])} remove_batches={stats['remove_batches']}"
-                    )
-                    if stats["added_usernames"]:
-                        self.stdout.write(f"  added logins: {','.join(stats['added_usernames'])}")
-                    if stats["removed_usernames"]:
-                        self.stdout.write(f"  removed logins: {','.join(stats['removed_usernames'])}")
-            except Exception as e:
-                self.stderr.write(self.style.ERROR(f"  Error for {org_login}: {e}"))
+        result = run_reconcile_github_copilot_seats()
+        self.stdout.write(str(result))

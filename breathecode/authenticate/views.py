@@ -78,7 +78,6 @@ from .actions import (
     get_user_language,
     resend_invite,
     reset_password,
-    schedule_copilot_grants_for_academy_users,
     set_gitpod_user_expiration,
     sync_organization_members,
     update_gitpod_users,
@@ -125,7 +124,6 @@ from .serializers import (
     GetProfileAcademySerializer,
     GetProfileAcademySmallSerializer,
     GetProfileSerializer,
-    GithubCopilotProvisionSerializer,
     GithubUserSerializer,
     GitpodUserSmallSerializer,
     MemberPOSTSerializer,
@@ -3982,37 +3980,6 @@ class AcademyGithubSyncView(APIView, GenerateLookupsMixin):
 
         _status = status.HTTP_200_OK if result else status.HTTP_400_BAD_REQUEST
         return Response(None, status=_status)
-
-
-class AcademyGithubCopilotView(APIView):
-    @capable_of("manage_github_copilot_seats")
-    def post(self, request, academy_id):
-        serializer = GithubCopilotProvisionSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        payload = serializer.validated_data
-        target_user_ids = set(payload.get("users", []))
-
-        cohort_id = payload.get("cohort_id")
-        if cohort_id is not None:
-            if not Cohort.objects.filter(id=cohort_id, academy_id=academy_id).exists():
-                raise ValidationException(
-                    translation(en="Cohort not found for this academy", es="La cohorte no pertenece a esta academia"),
-                    slug="cohort-not-found",
-                )
-
-            cohort_user_ids = CohortUser.objects.filter(cohort_id=cohort_id).values_list("user_id", flat=True)
-            target_user_ids.update(cohort_user_ids)
-
-        result = schedule_copilot_grants_for_academy_users(academy_id, list(target_user_ids))
-        logger.info(
-            "AcademyGithubCopilotView.post result academy_id=%s scheduled=%s skipped=%s errors=%s",
-            academy_id,
-            len(result.get("scheduled", [])),
-            len(result.get("skipped", [])),
-            len(result.get("errors", [])),
-        )
-        return Response(result, status=status.HTTP_200_OK)
 
 
 class AcademyAuthSettingsView(APIView, GenerateLookupsMixin):

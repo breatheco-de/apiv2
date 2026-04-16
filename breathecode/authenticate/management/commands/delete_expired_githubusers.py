@@ -6,31 +6,35 @@ from django.utils import timezone
 
 
 class Command(BaseCommand):
-    help = "Delete expired temporal and login tokens"
+    help = (
+        "Mark inactive students for GitHub org removal (storage_action=DELETE) and remove members that are "
+        "already SYNCHED+DELETE from the org API. Intended to run periodically (e.g. nightly) via cron or "
+        "Heroku Scheduler; pair with sync_github_organization so PENDING rows are processed."
+    )
 
     def handle(self, *args, **options):
         self.update_inactive_github_users()
         self.delete_from_github_org()
 
     def delete_from_github_org(self):
-        academies: dict[str, Github] = {}
+        academies: dict[int, Github] = {}
         deleted_users = GithubAcademyUser.objects.filter(storage_action="DELETE", storage_status="SYNCHED")
-        for github in deleted_users:
-            if github.academy.id not in academies:
-                settings = AcademyAuthSettings.objects.filter(academy__id=github.academy.id).first()
-                academies[github.academy.id] = Github(
+        for org_member in deleted_users:
+            if org_member.academy.id not in academies:
+                settings = AcademyAuthSettings.objects.filter(academy__id=org_member.academy.id).first()
+                academies[org_member.academy.id] = Github(
                     org=settings.github_username, token=settings.github_owner.credentialsgithub.token
                 )
 
-            gb = academies[github.academy.id]
+            gb = academies[org_member.academy.id]
 
             try:
-                gb.delete_org_member(github.username)
-                github.log("Successfully deleted in github organization")
-                print("Deleted github user: " + github.username)
+                gb.delete_org_member(org_member.username)
+                org_member.log("Successfully deleted in github organization")
+                print("Deleted github user: " + str(org_member.username))
             except Exception as e:
-                github.log("Error calling github API while deleting member from org: " + str(e))
-                print("Error deleting github user: " + github.username)
+                org_member.log("Error calling github API while deleting member from org: " + str(e))
+                print("Error deleting github user: " + str(org_member.username))
 
     def is_user_active_in_other_cohorts(self, user, current_cohort, academy):
         active_cohorts_count = (
