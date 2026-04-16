@@ -342,23 +342,16 @@ def github_academy_user_copilot_react(sender, instance: GithubAcademyUser, creat
     now_good = instance.storage_status == SYNCHED and instance.storage_action == ADD
 
     if prev_good and not now_good:
-        args = (instance.user_id, instance.academy_id)
-        manager = schedule_task(tasks.deferred_github_copilot_remove_if_still_revoked, "2h")
-        if manager.exists(*args):
-            logger.info(
-                "[COPILOT GithubAcademyUser post_save] id=%s user_id=%s academy_id=%s lost_eligibility -> deferred revoke 2h already_scheduled",
-                instance.id,
-                instance.user_id,
-                instance.academy_id,
-            )
-            return
-        async_result = manager.call(*args)
+        async_result = tasks.deferred_github_copilot_remove_if_still_revoked.apply_async(
+            args=[instance.user_id, instance.academy_id],
+            countdown=120,
+        )
         logger.info(
-            "[COPILOT GithubAcademyUser post_save] id=%s user_id=%s academy_id=%s lost_eligibility -> deferred revoke 2h task_id=%s",
+            "[COPILOT GithubAcademyUser post_save] id=%s user_id=%s academy_id=%s lost_eligibility -> deferred revoke 2h celery_task_id=%s",
             instance.id,
             instance.user_id,
             instance.academy_id,
-            getattr(async_result, "id", None),
+            async_result.id,
         )
     elif now_good and (created or not prev_good):
         async_result = tasks.provision_github_copilot_task.delay(instance.user_id, academy_id=instance.academy_id)
