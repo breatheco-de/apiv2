@@ -1,6 +1,7 @@
 import base64
 import datetime
 import io
+import json
 import logging
 import os
 import random
@@ -43,6 +44,22 @@ from .models import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _github_copilot_response_for_log(response: Any) -> str:
+    if response is None:
+        return "null"
+    if isinstance(response, dict):
+        try:
+            s = json.dumps(response, default=str, ensure_ascii=True)
+        except Exception:
+            s = str(response)
+    else:
+        s = str(response)
+    if len(s) > 2000:
+        return s[:2000] + "...[truncated]"
+    return s
+
 
 def github_academy_user_allows_copilot(user: User, academy_id: int | None = None) -> bool:
     """Copilot is tied to org membership tracking: user must be SYNCHED + ADD for the academy (or any academy)."""
@@ -92,23 +109,58 @@ def _get_copilot_client_for_user(user: User, academy_id: int | None = None) -> t
 def provision_github_copilot_for_user(user_id: int, academy_id: int | None = None) -> bool:
     user = User.objects.filter(id=user_id).first()
     if not user:
+        logger.info(
+            "[COPILOT provision] user_id=%s academy_id=%s ok=False skipped reason=no_user",
+            user_id,
+            academy_id,
+        )
         return False
 
     if not _user_has_copilot_entitlement(user, academy_id):
+        logger.info(
+            "[COPILOT provision] user_id=%s academy_id=%s ok=False skipped reason=no_copilot_entitlement",
+            user_id,
+            academy_id,
+        )
         return False
 
     if not github_academy_user_allows_copilot(user, academy_id):
+        logger.info(
+            "[COPILOT provision] user_id=%s academy_id=%s ok=False skipped reason=github_academy_not_eligible",
+            user_id,
+            academy_id,
+        )
         return False
 
     gh, github_username = _get_copilot_client_for_user(user, academy_id)
     if not gh or not github_username:
+        logger.info(
+            "[COPILOT provision] user_id=%s academy_id=%s ok=False skipped reason=no_github_client_or_username",
+            user_id,
+            academy_id,
+        )
         return False
 
+    org = getattr(gh, "org", None)
     try:
-        gh.copilot_add_selected_users([github_username])
+        response = gh.copilot_add_selected_users([github_username])
+        logger.info(
+            "[COPILOT provision] user_id=%s academy_id=%s org=%s github_username=%s ok=True github_response=%s",
+            user_id,
+            academy_id,
+            org,
+            github_username,
+            _github_copilot_response_for_log(response),
+        )
         return True
     except Exception:
-        logger.exception("Unable to provision Copilot for user %s", user_id)
+        logger.exception(
+            "[COPILOT provision] user_id=%s academy_id=%s org=%s github_username=%s ok=False github_api_error",
+            user_id,
+            academy_id,
+            org,
+            github_username,
+        )
         return False
 
 
@@ -120,21 +172,68 @@ def deprovision_github_copilot_for_user(
 ) -> bool:
     user = User.objects.filter(id=user_id).first()
     if not user:
+        logger.info(
+            "[COPILOT deprovision] user_id=%s academy_id=%s ignore_entitlement=%s ok=False skipped reason=no_user",
+            user_id,
+            academy_id,
+            ignore_entitlement,
+        )
         return False
 
     if not ignore_entitlement and _user_has_copilot_entitlement(user, academy_id):
+        logger.info(
+            "[COPILOT deprovision] user_id=%s academy_id=%s ok=False skipped reason=still_has_copilot_entitlement",
+            user_id,
+            academy_id,
+        )
         return False
 
     gh, github_username = _get_copilot_client_for_user(user, academy_id)
     if not gh or not github_username:
+        logger.info(
+            "[COPILOT deprovision] user_id=%s academy_id=%s ignore_entitlement=%s ok=False skipped reason=no_github_client_or_username",
+            user_id,
+            academy_id,
+            ignore_entitlement,
+        )
         return False
 
+    org = getattr(gh, "org", None)
     try:
-        gh.copilot_remove_selected_users([github_username])
+        response = gh.copilot_remove_selected_users([github_username])
+        logger.info(
+            "[COPILOT deprovision] user_id=%s academy_id=%s org=%s github_username=%s ok=True github_response=%s",
+            user_id,
+            academy_id,
+            org,
+            github_username,
+            _github_copilot_response_for_log(response),
+        )
         return True
     except Exception:
-        logger.exception("Unable to deprovision Copilot for user %s", user_id)
+        logger.exception(
+            "[COPILOT deprovision] user_id=%s academy_id=%s org=%s github_username=%s ok=False github_api_error",
+            user_id,
+            academy_id,
+            org,
+            github_username,
+        )
         return False
+
+
+def deferred_github_copilot_remove_if_still_revoked(user_id: int, academy_id: int) -> bool:
+    """If GithubAcademyUser is still ADD, skip; else remove Copilot seat (ignore entitlement)."""
+    row = GithubAcademyUser.objects.filter(user_id=user_id, academy_id=academy_id).first()
+    if row is not None and row.storage_action == ADD:
+        logger.info(
+            "[COPILOT deprovision] user_id=%s academy_id=%s ok=False skipped reason=deferred_revoke_user_still_add",
+            user_id,
+            academy_id,
+        )
+        return False
+    return deprovision_github_copilot_for_user(
+        user_id=user_id, academy_id=academy_id, ignore_entitlement=True
+    )
 
 
 @service_deprovisioner("github-copilot")
