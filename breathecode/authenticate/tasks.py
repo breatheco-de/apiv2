@@ -20,6 +20,7 @@ from breathecode.utils.decorators import TaskPriority
 
 from .actions import (
     add_to_organization,
+    deferred_github_copilot_remove_if_still_revoked as run_deferred_github_copilot_remove_if_still_revoked,
     deprovision_github_copilot_for_user,
     get_user_settings,
     provision_github_copilot_for_user,
@@ -456,19 +457,7 @@ def deprovision_github_copilot_task(user_id: int, academy_id: int | None = None,
 
 @task(priority=TaskPriority.ACADEMY.value)
 def deferred_github_copilot_remove_if_still_revoked(user_id: int, academy_id: int, **_):
-    from breathecode.authenticate.models import GithubAcademyUser
-
-    row = GithubAcademyUser.objects.filter(user_id=user_id, academy_id=academy_id).first()
-    if row is not None and row.storage_action == "ADD":
-        logger.info(
-            "Deferred Copilot revoke skipped (GithubAcademyUser.storage_action=ADD) user=%s academy=%s",
-            user_id,
-            academy_id,
-        )
-        return False
-    return deprovision_github_copilot_for_user(
-        user_id=user_id, academy_id=academy_id, ignore_entitlement=True
-    )
+    return run_deferred_github_copilot_remove_if_still_revoked(user_id, academy_id)
 
 
 @task(priority=TaskPriority.BACKGROUND.value)
