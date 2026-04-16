@@ -61,6 +61,29 @@ def _github_copilot_response_for_log(response: Any) -> str:
     return s
 
 
+def _get_github_academy_user_for_copilot_log(user_id: int, academy_id: int | None) -> GithubAcademyUser | None:
+    qs = GithubAcademyUser.objects.filter(user_id=user_id)
+    if academy_id:
+        qs = qs.filter(academy_id=academy_id)
+    return qs.order_by("-updated_at").first()
+
+
+def _append_copilot_storage_log(user_id: int, academy_id: int | None, message: str) -> None:
+    row = _get_github_academy_user_for_copilot_log(user_id=user_id, academy_id=academy_id)
+    if not row:
+        return
+    try:
+        row.log(message)
+        row.save(update_fields=["storage_log", "updated_at"])
+    except Exception:
+        logger.exception(
+            "[COPILOT storage_log] failed user_id=%s academy_id=%s message=%s",
+            user_id,
+            academy_id,
+            message[:250],
+        )
+
+
 def github_academy_user_allows_copilot(user: User, academy_id: int | None = None) -> bool:
     """Copilot is tied to org membership tracking: user must be SYNCHED + ADD for the academy (or any academy)."""
     if not user or not user.id:
@@ -117,6 +140,11 @@ def provision_github_copilot_for_user(user_id: int, academy_id: int | None = Non
         return False
 
     if not _user_has_copilot_entitlement(user, academy_id):
+        _append_copilot_storage_log(
+            user_id=user_id,
+            academy_id=academy_id,
+            message="Copilot add skipped: no github-copilot entitlement",
+        )
         logger.info(
             "[COPILOT provision] user_id=%s academy_id=%s ok=False skipped reason=no_copilot_entitlement",
             user_id,
@@ -125,6 +153,11 @@ def provision_github_copilot_for_user(user_id: int, academy_id: int | None = Non
         return False
 
     if not github_academy_user_allows_copilot(user, academy_id):
+        _append_copilot_storage_log(
+            user_id=user_id,
+            academy_id=academy_id,
+            message="Copilot add skipped: GithubAcademyUser is not SYNCHED+ADD",
+        )
         logger.info(
             "[COPILOT provision] user_id=%s academy_id=%s ok=False skipped reason=github_academy_not_eligible",
             user_id,
@@ -134,6 +167,11 @@ def provision_github_copilot_for_user(user_id: int, academy_id: int | None = Non
 
     gh, github_username = _get_copilot_client_for_user(user, academy_id)
     if not gh or not github_username:
+        _append_copilot_storage_log(
+            user_id=user_id,
+            academy_id=academy_id,
+            message="Copilot add skipped: missing GitHub org owner token or user github username",
+        )
         logger.info(
             "[COPILOT provision] user_id=%s academy_id=%s ok=False skipped reason=no_github_client_or_username",
             user_id,
@@ -144,16 +182,27 @@ def provision_github_copilot_for_user(user_id: int, academy_id: int | None = Non
     org = getattr(gh, "org", None)
     try:
         response = gh.copilot_add_selected_users([github_username])
+        response_for_log = _github_copilot_response_for_log(response)
+        _append_copilot_storage_log(
+            user_id=user_id,
+            academy_id=academy_id,
+            message=f"Copilot add done for @{github_username} in org {org}; github_response={response_for_log}",
+        )
         logger.info(
             "[COPILOT provision] user_id=%s academy_id=%s org=%s github_username=%s ok=True github_response=%s",
             user_id,
             academy_id,
             org,
             github_username,
-            _github_copilot_response_for_log(response),
+            response_for_log,
         )
         return True
-    except Exception:
+    except Exception as e:
+        _append_copilot_storage_log(
+            user_id=user_id,
+            academy_id=academy_id,
+            message=f"Copilot add failed for @{github_username} in org {org}; error={str(e)}",
+        )
         logger.exception(
             "[COPILOT provision] user_id=%s academy_id=%s org=%s github_username=%s ok=False github_api_error",
             user_id,
@@ -181,6 +230,11 @@ def deprovision_github_copilot_for_user(
         return False
 
     if not ignore_entitlement and _user_has_copilot_entitlement(user, academy_id):
+        _append_copilot_storage_log(
+            user_id=user_id,
+            academy_id=academy_id,
+            message="Copilot remove skipped: user still has github-copilot entitlement",
+        )
         logger.info(
             "[COPILOT deprovision] user_id=%s academy_id=%s ok=False skipped reason=still_has_copilot_entitlement",
             user_id,
@@ -190,6 +244,11 @@ def deprovision_github_copilot_for_user(
 
     gh, github_username = _get_copilot_client_for_user(user, academy_id)
     if not gh or not github_username:
+        _append_copilot_storage_log(
+            user_id=user_id,
+            academy_id=academy_id,
+            message="Copilot remove skipped: missing GitHub org owner token or user github username",
+        )
         logger.info(
             "[COPILOT deprovision] user_id=%s academy_id=%s ignore_entitlement=%s ok=False skipped reason=no_github_client_or_username",
             user_id,
@@ -201,16 +260,27 @@ def deprovision_github_copilot_for_user(
     org = getattr(gh, "org", None)
     try:
         response = gh.copilot_remove_selected_users([github_username])
+        response_for_log = _github_copilot_response_for_log(response)
+        _append_copilot_storage_log(
+            user_id=user_id,
+            academy_id=academy_id,
+            message=f"Copilot remove done for @{github_username} in org {org}; github_response={response_for_log}",
+        )
         logger.info(
             "[COPILOT deprovision] user_id=%s academy_id=%s org=%s github_username=%s ok=True github_response=%s",
             user_id,
             academy_id,
             org,
             github_username,
-            _github_copilot_response_for_log(response),
+            response_for_log,
         )
         return True
-    except Exception:
+    except Exception as e:
+        _append_copilot_storage_log(
+            user_id=user_id,
+            academy_id=academy_id,
+            message=f"Copilot remove failed for @{github_username} in org {org}; error={str(e)}",
+        )
         logger.exception(
             "[COPILOT deprovision] user_id=%s academy_id=%s org=%s github_username=%s ok=False github_api_error",
             user_id,
