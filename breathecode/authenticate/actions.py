@@ -292,9 +292,9 @@ def deprovision_github_copilot_for_user(
 
 
 def deferred_github_copilot_remove_if_still_revoked(user_id: int, academy_id: int) -> bool:
-    """If GithubAcademyUser is still ADD, skip; else remove Copilot seat (ignore entitlement)."""
+    """If GithubAcademyUser is back to SYNCHED+ADD, skip; else remove Copilot seat (ignore entitlement)."""
     row = GithubAcademyUser.objects.filter(user_id=user_id, academy_id=academy_id).first()
-    if row is not None and row.storage_action == ADD:
+    if row is not None and row.storage_status == SYNCHED and row.storage_action == ADD:
         logger.info(
             "[COPILOT deprovision] user_id=%s academy_id=%s ok=False skipped reason=deferred_revoke_user_still_add",
             user_id,

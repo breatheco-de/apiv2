@@ -334,21 +334,23 @@ def github_academy_user_copilot_react(sender, instance: GithubAcademyUser, creat
     now_good = instance.storage_status == SYNCHED and instance.storage_action == ADD
 
     if prev_good and not now_good:
-        logger.info(
-            "[COPILOT GithubAcademyUser post_save] id=%s user_id=%s academy_id=%s lost_eligibility -> deferred revoke 2h",
-            instance.id,
-            instance.user_id,
-            instance.academy_id,
-        )
-        tasks.deferred_github_copilot_remove_if_still_revoked.apply_async(
+        async_result = tasks.deferred_github_copilot_remove_if_still_revoked.apply_async(
             args=[instance.user_id, instance.academy_id],
             countdown=7200,
         )
-    elif now_good and (created or not prev_good):
         logger.info(
-            "[COPILOT GithubAcademyUser post_save] id=%s user_id=%s academy_id=%s eligible -> provision task",
+            "[COPILOT GithubAcademyUser post_save] id=%s user_id=%s academy_id=%s lost_eligibility -> deferred revoke 2h task_id=%s",
             instance.id,
             instance.user_id,
             instance.academy_id,
+            async_result.id,
         )
-        tasks.provision_github_copilot_task.delay(instance.user_id, academy_id=instance.academy_id)
+    elif now_good and (created or not prev_good):
+        async_result = tasks.provision_github_copilot_task.delay(instance.user_id, academy_id=instance.academy_id)
+        logger.info(
+            "[COPILOT GithubAcademyUser post_save] id=%s user_id=%s academy_id=%s eligible -> provision task_id=%s",
+            instance.id,
+            instance.user_id,
+            instance.academy_id,
+            async_result.id,
+        )
