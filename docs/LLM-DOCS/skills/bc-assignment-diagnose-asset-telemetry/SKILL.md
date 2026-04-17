@@ -34,22 +34,27 @@ Use this skill when you need to confirm if telemetry exists for an asset, user, 
    - Expect plain text `ok` when accepted.
    - If accepted but still missing in reads, treat it as async processing delay first.
 
-4. Validate persistence for a specific user+asset:
+4. Inspect LearnPack webhook processing state (academy staff):
+   - Call `GET /v1/assignment/academy/learnpack/webhook` to confirm webhook records are present after ingestion.
+   - Filter by `student`, `event`, `asset_id`, and `learnpack_package_id` to narrow the queue.
+   - Use webhook `status` (`PENDING`, `DONE`, `ERROR`) and `status_text` to explain why telemetry is delayed or failing.
+
+5. Validate persistence for a specific user+asset:
    - Use `POST /v1/assignment/academy/asset/{asset_slug}/user/{user_id}/telemetry` for upsert.
    - Use `PUT /v1/assignment/academy/asset/{asset_slug}/user/{user_id}/telemetry` only when record should already exist.
    - Use response status (`201`, `200`, `404`) to determine create/update/not-found outcomes.
 
-5. Validate retrieval from assignment task:
+6. Validate retrieval from assignment task:
    - Call `GET /v1/assignment/task/{task_id}`.
    - Read `assignment_telemetry` from response.
    - If `assignment_telemetry` is `null`, telemetry for that task's `user + associated_slug` is not currently found.
 
-6. Check canonical slug implications when telemetry appears split:
+7. Check canonical slug implications when telemetry appears split:
    - Translation variants can map to a canonical asset slug.
    - Missing telemetry under one slug may exist under canonical translation slug.
    - Diagnose by comparing task `associated_slug` and the slug used in telemetry upsert/update requests.
 
-7. Queue recomputation of asset-level telemetry stats (staff):
+8. Queue recomputation of asset-level telemetry stats (staff):
    - Call `PUT /v1/registry/academy/asset/{asset_slug}/action/sync_telemetry_stats` with `crud_asset` scope.
    - Expect `200` with the serialized asset; `telemetry_stats` may update only after the background task runs.
    - Re-fetch the asset (registry GET) after a short delay to read updated `telemetry_stats`.
@@ -81,6 +86,78 @@ Use this skill when you need to confirm if telemetry exists for an asset, user, 
 **Response example**
 ```json
 "ok"
+```
+
+### List LearnPack webhook logs (academy staff observability)
+
+- **Method:** `GET`
+- **Path:** `/v1/assignment/academy/learnpack/webhook`
+- **Required headers:** `Authorization`, `Academy`
+- **Required capability:** `read_assignment`
+- **Required body fields:** none
+- **Supported filters:** comma-separated values for `student`, `event`, `asset_id`, `learnpack_package_id`; optional `status`
+- **Response that matters:** paginated webhook list with processing fields (`status`, `status_text`) and normalized ids (`asset_id`, `learnpack_package_id`)
+- **Pagination:** Paginated
+- **Translated errors:** optional `Accept-Language: en|es`
+
+**Request example**
+```json
+GET /v1/assignment/academy/learnpack/webhook?student=123,456&event=batch,open_step&asset_id=10,20&learnpack_package_id=1000,2000&status=PENDING,DONE
+```
+
+**Response example**
+```json
+{
+  "count": 2,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "id": 9011,
+      "is_streaming": true,
+      "event": "batch",
+      "asset_id": 10,
+      "learnpack_package_id": 1000,
+      "payload": {
+        "event": "batch",
+        "user_id": 123,
+        "asset_id": 10,
+        "package_id": 1000
+      },
+      "status": "DONE",
+      "status_text": "OK",
+      "student": {
+        "id": 123,
+        "first_name": "Ada",
+        "last_name": "Lovelace"
+      },
+      "created_at": "2026-04-15T10:30:00Z",
+      "updated_at": "2026-04-15T10:30:03Z"
+    },
+    {
+      "id": 9012,
+      "is_streaming": true,
+      "event": "open_step",
+      "asset_id": 20,
+      "learnpack_package_id": 2000,
+      "payload": {
+        "event": "open_step",
+        "user_id": 456,
+        "asset_id": 20,
+        "package_id": 2000
+      },
+      "status": "ERROR",
+      "status_text": "Learnpack telemetry event `open_step` is not implemented",
+      "student": {
+        "id": 456,
+        "first_name": "Grace",
+        "last_name": "Hopper"
+      },
+      "created_at": "2026-04-15T10:35:00Z",
+      "updated_at": "2026-04-15T10:35:01Z"
+    }
+  ]
+}
 ```
 
 ### Upsert telemetry for a user and asset (academy staff)
@@ -272,7 +349,7 @@ Use this skill when you need to confirm if telemetry exists for an asset, user, 
 
 5. **Telemetry accepted but not immediately retrievable**  
    Observation: ingestion returns `ok` but task retrieval still shows `assignment_telemetry: null`.  
-   Action: wait for async processing window, then re-check.
+   Action: check webhook list endpoint and inspect `status`/`status_text`, then re-check after processing.
 
 6. **Canonical slug mismatch**  
    Observation: telemetry appears missing for translated slug while existing for canonical slug.  
@@ -286,6 +363,10 @@ Use this skill when you need to confirm if telemetry exists for an asset, user, 
    Observation: `PUT .../action/sync_telemetry_stats` returns `200` but `telemetry_stats.last_sync_at` or today's `days` entry is unchanged.  
    Action: wait for Celery, then `GET` the asset again from registry; avoid tight retry loops.
 
+9. **Invalid numeric filter token on webhook list**  
+   Observation: `400` with slug `invalid-filter` when sending non-numeric ids in `student`, `asset_id`, or `learnpack_package_id`.  
+   Action: send only comma-separated numeric ids on these filters.
+
 ## Checklist
 
 1. Confirmed which telemetry path applies: ingestion, staff upsert/update, or task retrieval.
@@ -296,3 +377,4 @@ Use this skill when you need to confirm if telemetry exists for an asset, user, 
 6. Accounted for async delay before concluding telemetry is missing.
 7. If asset-level trend is needed, confirmed data should be read from `Asset.telemetry_stats` (precomputed aggregate), not from a multi-user telemetry list endpoint.
 8. If stats are stale or missing, used `PUT /v1/registry/academy/asset/{asset_slug}/action/sync_telemetry_stats` and re-fetched the asset after the background job had time to complete.
+9. If ingestion accepted but telemetry is missing, checked `GET /v1/assignment/academy/learnpack/webhook` with filters to confirm webhook `status` and `status_text`.

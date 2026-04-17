@@ -37,9 +37,10 @@ from breathecode.utils.multi_status_response import MultiStatusResponse
 from .actions import deliver_task, sync_cohort_tasks
 from .caches import TaskCache
 from .forms import DeliverAssigntmentForm
-from .models import AssignmentTelemetry, FinalProject, Task, UserAttachment, RepositoryDeletionOrder
+from .models import AssignmentTelemetry, FinalProject, LearnPackWebhook, Task, UserAttachment, RepositoryDeletionOrder
 from .serializers import (
     FinalProjectGETSerializer,
+    LearnPackWebhookSerializer,
     PostFinalProjectSerializer,
     PostTaskSerializer,
     POSTAssignmentTelemetrySerializer,
@@ -263,6 +264,66 @@ class AssignmentTelemetryView(APIView, GenerateLookupsMixin):
             )
 
         return Response("ok", content_type="text/plain")
+
+
+class AcademyLearnPackWebhookView(APIView):
+    extensions = APIViewExtensions(sort="-created_at", paginate=True)
+
+    @staticmethod
+    def _parse_numeric_filter(raw: str, field: str) -> list[int]:
+        values = [x.strip() for x in raw.split(",") if x.strip()]
+        if not values:
+            return []
+
+        invalid = [x for x in values if not x.isnumeric()]
+        if invalid:
+            raise ValidationException(f"Invalid `{field}` value(s): {','.join(invalid)}", code=400, slug="invalid-filter")
+
+        return [int(x) for x in values]
+
+    @staticmethod
+    def _parse_text_filter(raw: str) -> list[str]:
+        return [x.strip() for x in raw.split(",") if x.strip()]
+
+    @capable_of("read_assignment")
+    def get(self, request, academy_id=None):
+        handler = self.extensions(request)
+
+        items = LearnPackWebhook.objects.filter(student__profileacademy__academy__id=academy_id).distinct()
+
+        student = request.GET.get("student")
+        if student:
+            ids = self._parse_numeric_filter(student, "student")
+            if ids:
+                items = items.filter(student__id__in=ids)
+
+        event = request.GET.get("event")
+        if event:
+            event_slugs = self._parse_text_filter(event)
+            if event_slugs:
+                items = items.filter(event__in=event_slugs)
+
+        asset_id = request.GET.get("asset_id")
+        if asset_id:
+            ids = self._parse_numeric_filter(asset_id, "asset_id")
+            if ids:
+                items = items.filter(asset_id__in=ids)
+
+        learnpack_package_id = request.GET.get("learnpack_package_id")
+        if learnpack_package_id:
+            ids = self._parse_numeric_filter(learnpack_package_id, "learnpack_package_id")
+            if ids:
+                items = items.filter(learnpack_package_id__in=ids)
+
+        status_filter = request.GET.get("status")
+        if status_filter:
+            statuses = self._parse_text_filter(status_filter)
+            if statuses:
+                items = items.filter(status__in=statuses)
+
+        items = handler.queryset(items)
+        serializer = LearnPackWebhookSerializer(items, many=True)
+        return handler.response(serializer.data)
 
 
 class AcademyAssignmentTelemetryView(APIView, GenerateLookupsMixin):

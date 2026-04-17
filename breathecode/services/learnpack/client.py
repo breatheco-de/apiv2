@@ -102,6 +102,18 @@ class LearnPack:
 
         webhook.is_streaming = is_streaming
         webhook.payload = payload
+        try:
+            webhook.asset_id = int(payload.get("asset_id")) if payload.get("asset_id") is not None else None
+        except (TypeError, ValueError):
+            webhook.asset_id = None
+
+        try:
+            webhook.learnpack_package_id = (
+                int(payload.get("package_id")) if payload.get("package_id") is not None else None
+            )
+        except (TypeError, ValueError):
+            webhook.learnpack_package_id = None
+
         webhook.status = "PENDING"
         webhook.save()
 

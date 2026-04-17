@@ -76,6 +76,7 @@ Some user requests touch multiple domains. Load ALL listed skills before proceed
 | Cancel a user subscription and optionally issue a refund | `bc-payments-cancel-subscription-and-refund` + [`docs/llm-docs/BC_REFUNDS.md`](../../BC_REFUNDS.md) (use the skill for actor-specific flow and endpoint order, then use BC_REFUNDS for refund payload semantics and validations) |
 | Diagnose why an asset telemetry is missing for users/tasks | `bc-assignment-diagnose-asset-telemetry` + `bc-registry-*` (validate asset slug and translation/canonical context when telemetry appears split by locale) |
 | Queue or interpret asset-level telemetry_stats (`telemetry_stats` JSON on assets) | `bc-assignment-diagnose-asset-telemetry` + `bc-registry-*` (registry asset action `sync_telemetry_stats` queues Celery recompute; read updated stats from asset) |
+| Inspect incoming LearnPack telemetry webhook logs by student/event/asset/package filters | `bc-assignment-diagnose-asset-telemetry` + `bc-authenticate-*` (academy capability/header scope and identity checks) |
 
 ---
 
