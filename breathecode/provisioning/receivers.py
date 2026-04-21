@@ -48,6 +48,13 @@ def deprovision_service_receiver(sender: Type[Service], instance: Service, user_
 
     service_slug = instance.slug
 
+    # Targeted VPS teardown (e.g. excess machines while user still has credits) — skip global consumable guard.
+    if isinstance(context, dict) and context.get("provisioning_vps_ids"):
+        deprovisioner = get_service_deprovisioner(service_slug)
+        if deprovisioner:
+            return deprovisioner(user_id=user_id, context=context or {})
+        return
+
     academy_id = None
     if isinstance(context, dict):
         academy_id = context.get("academy_id") or context.get("academy")

@@ -16,7 +16,7 @@ from task_manager.core.exceptions import AbortTask, RetryTask
 from task_manager.django.decorators import task
 
 from breathecode.authenticate.models import User
-from breathecode.payments.models import Consumable
+from breathecode.payments.models import Consumable, Service
 from breathecode.payments.services.stripe import Stripe
 from breathecode.payments.signals import consume_service, reimburse_service_units
 from breathecode.provisioning import actions
@@ -493,6 +493,9 @@ def provision_vps_task(provisioning_vps_id: int, vendor_selection: dict | None =
         ]
     )
 
+    vps.refresh_from_db(fields=None)
+    actions.apply_early_vps_billing_alignment(vps)
+
     try:
         from breathecode.notify.actions import send_email_message
 
@@ -535,8 +538,11 @@ def renew_or_deprovision_vps_task(provisioning_vps_id: int, **_: Any):
     )
     if not vps:
         return
-    consumables = Consumable.list(user=vps.user, service="vps_server", include_zero_balance=False)
-    consumables = consumables.filter(how_many__gt=0)
+    consumables = Consumable.list(
+        user=vps.user,
+        include_zero_balance=False,
+        extra={"service_item__service__consumer": Service.Consumer.VPS_SERVER},
+    ).filter(how_many__gt=0)
     if consumables.exists():
         consumable = consumables.first()
         consume_service.send(sender=Consumable, instance=consumable, how_many=1)

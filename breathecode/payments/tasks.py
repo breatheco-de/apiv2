@@ -8,7 +8,7 @@ from urllib.parse import urlencode
 from capyc.core.i18n import translation
 from dateutil.relativedelta import relativedelta
 from django.core.cache import cache
-from django.db.models import F
+from django.db.models import F, Sum
 from django.utils import timezone
 from django_redis import get_redis_connection
 from redis.exceptions import LockError
@@ -270,6 +270,9 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
     consumable.save()
 
     scheduler.consumables.add(consumable)
+
+    if service_item.service.consumer == Service.Consumer.VPS_SERVER and service_item.how_many > 0:
+        actions.align_consumer_vps_stock_with_active_machines(consumable)
 
     if selected_lookup:
 
