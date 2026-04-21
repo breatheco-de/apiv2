@@ -29,6 +29,14 @@ def batch(self, webhook: LearnPackWebhook):
         if _slug is not None:
             asset = Asset.get_by_slug(_slug)
 
+    # Final fallback: try resolving by LearnPack package_id if available.
+    if asset is None and "package_id" in webhook.payload:
+        try:
+            package_id = int(webhook.payload["package_id"])
+            asset = Asset.objects.filter(learnpack_id=package_id).first()
+        except (TypeError, ValueError):
+            asset = None
+
     if asset is None:
         raise Exception(
             "Asset specified by learnpack telemetry was not found using either the payload 'asset_id' or 'slug'"

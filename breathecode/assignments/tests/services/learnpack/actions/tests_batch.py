@@ -68,3 +68,34 @@ def test_batch_merges_telemetry_updates_from_translation_ids(database: capy.Data
     assert rows.count() == 1
     assert telemetry.asset_slug == canonical_asset.slug
     assert telemetry.telemetry["step"] == 2
+
+
+def test_batch_falls_back_to_package_id_when_asset_and_slug_are_missing(database: capy.Database):
+    model = database.create(
+        user=1,
+        asset={"slug": "exercise-package", "lang": "us", "asset_type": "EXERCISE", "learnpack_id": 555},
+        task={"associated_slug": "exercise-package", "task_type": "EXERCISE", "user": 1, "title": "Exercise"},
+        learn_pack_webhook=1,
+    )
+
+    asset = model.asset
+    webhook = model.learn_pack_webhook
+    webhook.student = model.user
+    webhook.payload = {
+        "asset_id": 999999,
+        "slug": "does-not-exist",
+        "package_slug": "also-missing",
+        "package_id": 555,
+        "user_id": model.user.id,
+        "event": "batch",
+    }
+    webhook.save()
+
+    batch(None, webhook)
+
+    telemetry = AssignmentTelemetry.objects.filter(user=model.user).first()
+    task = Task.objects.get(id=model.task.id)
+
+    assert telemetry is not None
+    assert telemetry.asset_slug == asset.slug
+    assert task.telemetry_id == telemetry.id
