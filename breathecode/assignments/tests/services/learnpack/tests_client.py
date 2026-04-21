@@ -8,6 +8,7 @@ def test_add_webhook_to_log_sets_nullable_ids_when_values_are_numeric(database: 
         "event": "batch",
         "user_id": 1,
         "slug": "my-asset",
+        "package_slug": "my-package",
         "asset_id": "1234",
         "package_id": "9876543210",
     }
@@ -17,6 +18,7 @@ def test_add_webhook_to_log_sets_nullable_ids_when_values_are_numeric(database: 
     assert webhook is not None
     assert webhook.asset_id == 1234
     assert webhook.learnpack_package_id == 9876543210
+    assert webhook.package_slug == "my-package"
 
 
 def test_add_webhook_to_log_sets_null_ids_when_values_are_invalid(database: capy.Database):
@@ -33,3 +35,4 @@ def test_add_webhook_to_log_sets_null_ids_when_values_are_invalid(database: capy
     assert webhook is not None
     assert webhook.asset_id is None
     assert webhook.learnpack_package_id is None
+    assert webhook.package_slug == "my-asset"

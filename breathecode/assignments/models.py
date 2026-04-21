@@ -279,6 +279,7 @@ class LearnPackWebhook(models.Model):
     event = models.CharField(max_length=15)
     asset_id = models.BigIntegerField(null=True, blank=True, db_index=True)
     learnpack_package_id = models.BigIntegerField(null=True, blank=True, db_index=True)
+    package_slug = models.SlugField(max_length=200, null=True, blank=True, db_index=True)
     payload = models.JSONField(blank=True, null=True, default=None, help_text="Will be set by learnpack")
     student = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True, default=None)
     telemetry = models.ForeignKey(AssignmentTelemetry, on_delete=models.CASCADE, blank=True, null=True, default=None)
