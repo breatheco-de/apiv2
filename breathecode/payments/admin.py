@@ -575,6 +575,10 @@ class PlanFinancingAdmin(admin.ModelAdmin):
         "selected_cohort_set",
         "selected_mentorship_service_set",
         "selected_event_type_set",
+        "plans",
+        "joined_cohorts",
+        "invoices",
+        "coupons"
     ]
     actions = [renew_plan_financing_consumables, charge_plan_financing, regenerate_service_stock_schedulers]
 
