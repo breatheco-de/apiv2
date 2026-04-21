@@ -367,6 +367,16 @@ class ServiceItem(AbstractServiceItem):
     # NEW: team settings
     is_team_allowed = models.BooleanField(default=False, db_index=True, help_text="Allow team seats for this item")
 
+    third_party_billing_cycle = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text=(
+            "If true, consumables for this item depend on a third-party billing period (e.g. VPS vendor). "
+            "When the consumable is used (e.g. VPS provisioned) within 12h of that consumable's creation, "
+            "internal next_payment_at may be pulled forward so we charge before that vendor cycle."
+        ),
+    )
+
     # the below fields are useless when is_renewable=False
     renew_at = models.IntegerField(
         default=1, help_text="Renew at (e.g. 1, 2, 3, ...) it going to be used to build the balance of " "customer"
@@ -2265,6 +2275,16 @@ class PlanFinancing(AbstractIOweYou):
     # in this day the financing needs being paid again
     next_payment_at = models.DateTimeField(help_text="Next payment date")
 
+    next_charge_pull_applied = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text=(
+            "True once next_payment_at was pulled earlier due to a consumable that depends on a "
+            "third-party billing (e.g. VPS); "
+            "atomic update limits this to once per plan financing even with parallel activations."
+        ),
+    )
+
     # in this moment the subscription will be expired
     valid_until = models.DateTimeField(
         help_text="Valid until, before this date each month the customer must pay, after this "
@@ -2419,8 +2439,13 @@ class PlanFinancing(AbstractIOweYou):
             elif self.status in revoke_statuses:
                 signals.revoke_plan_permissions.send_robust(instance=self, sender=self.__class__)
 
-            if self.status in [self.Status.EXPIRED, self.Status.DEPRECATED]:
-                # Deprovision external services when the financing is fully expired/deprecated.
+            if self.status in (
+                self.Status.EXPIRED,
+                self.Status.DEPRECATED,
+                self.Status.PAYMENT_ISSUE,
+                self.Status.ERROR,
+            ):
+                # Deprovision external services (e.g. GitHub Copilot) on payment failure, not only when expired.
                 service_ids: set[int] = set()
                 for plan in self.plans.all():
                     for plan_service_item in PlanServiceItem.objects.select_related("service_item__service").filter(
@@ -2550,6 +2575,16 @@ class Subscription(AbstractIOweYou):
     # in this day the subscription needs being paid again
     next_payment_at = models.DateTimeField(help_text="Next payment date")
 
+    next_charge_pull_applied = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text=(
+            "True once next_payment_at was pulled earlier due to a consumable that depends on a "
+            "third-party billing (e.g. VPS); "
+            "atomic update limits this to once per subscription even with parallel activations."
+        ),
+    )
+
     # in this moment the subscription will be expired
     valid_until = models.DateTimeField(
         default=None,
@@ -2631,7 +2666,12 @@ class Subscription(AbstractIOweYou):
                     signals.revoke_plan_permissions.send_robust(instance=self, sender=self.__class__)
             elif self.status in revoke_statuses:
                 signals.revoke_plan_permissions.send_robust(instance=self, sender=self.__class__)
-            if self.status in [self.Status.EXPIRED, self.Status.DEPRECATED]:
+            if self.status in (
+                self.Status.EXPIRED,
+                self.Status.DEPRECATED,
+                self.Status.PAYMENT_ISSUE,
+                self.Status.ERROR,
+            ):
                 service_ids: set[int] = set()
                 for service_item in self.service_items.select_related("service").all():
                     service = service_item.service
@@ -3180,6 +3220,8 @@ class Consumable(AbstractServiceItem):
         invalid_statuses = [
             Subscription.Status.EXPIRED,
             Subscription.Status.DEPRECATED,
+            Subscription.Status.PAYMENT_ISSUE,
+            Subscription.Status.ERROR,
         ]
 
         queryset = cls.objects.filter(*args, Q(valid_until__gte=utc_now) | Q(valid_until=None), **{**param, **extra})

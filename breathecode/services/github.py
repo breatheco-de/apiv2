@@ -83,7 +83,7 @@ class Github:
             data = resp.json()
             return data
         else:
-            logger.debug(f"Error call {method_name}: /{action_name}")
+            logger.debug("Error call %s: %s", method_name, action_name)
             if resp.status_code == 401:
                 raise GithubAuthException("Invalid credentials when calling the Github API")
 

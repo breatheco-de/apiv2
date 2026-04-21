@@ -68,8 +68,21 @@ def _get_github_academy_user_for_copilot_log(user_id: int, academy_id: int | Non
     return qs.order_by("-updated_at").first()
 
 
-def _append_copilot_storage_log(user_id: int, academy_id: int | None, message: str) -> None:
-    row = _get_github_academy_user_for_copilot_log(user_id=user_id, academy_id=academy_id)
+def _append_copilot_storage_log(
+    user_id: int,
+    academy_id: int | None,
+    message: str,
+    *,
+    sibling_academy_ids: list[int] | None = None,
+) -> None:
+    if sibling_academy_ids:
+        row = (
+            GithubAcademyUser.objects.filter(user_id=user_id, academy_id__in=sibling_academy_ids)
+            .order_by("-updated_at")
+            .first()
+        )
+    else:
+        row = _get_github_academy_user_for_copilot_log(user_id=user_id, academy_id=academy_id)
     if not row:
         return
     try:
@@ -77,9 +90,10 @@ def _append_copilot_storage_log(user_id: int, academy_id: int | None, message: s
         row.save(update_fields=["storage_log", "updated_at"])
     except Exception:
         logger.exception(
-            "[COPILOT storage_log] failed user_id=%s academy_id=%s message=%s",
+            "[COPILOT storage_log] failed user_id=%s academy_id=%s sibling_academy_ids=%s message=%s",
             user_id,
             academy_id,
+            sibling_academy_ids,
             message[:250],
         )
 
@@ -94,7 +108,39 @@ def github_academy_user_allows_copilot(user: User, academy_id: int | None = None
     return qs.exists()
 
 
+def github_academy_user_allows_copilot_in_sibling_academies(user: User, sibling_academy_ids: list[int]) -> bool:
+    """SYNCHED+ADD in at least one academy in sibling_academy_ids (same GitHub org)."""
+    if not user or not user.id or not sibling_academy_ids:
+        return False
+    return GithubAcademyUser.objects.filter(
+        user_id=user.id,
+        academy_id__in=sibling_academy_ids,
+        storage_status=SYNCHED,
+        storage_action=ADD,
+    ).exists()
+
+
+def _github_org_sibling_academy_ids_for_academy(academy_id: int) -> list[int]:
+    """All academy ids with the same AcademyAuthSettings.github_username; else [academy_id]."""
+    settings = (
+        AcademyAuthSettings.objects.filter(academy_id=academy_id)
+        .exclude(github_username="")
+        .exclude(github_username__isnull=True)
+        .first()
+    )
+    if not settings:
+        return [academy_id]
+    org = (settings.github_username or "").strip()
+    if not org:
+        return [academy_id]
+    ids = list(
+        AcademyAuthSettings.objects.filter(github_username__iexact=org).values_list("academy_id", flat=True)
+    )
+    return ids if ids else [academy_id]
+
+
 def _user_has_copilot_entitlement(user: User, academy_id: int | None = None) -> bool:
+    """Active github-copilot consumable via Consumable.list; None = any subscription/plan (any academy)."""
     # Local import: payments.models imports get_user_settings from this module at load time.
     from breathecode.payments.models import Consumable, Service
 
@@ -111,9 +157,25 @@ def _user_has_copilot_entitlement(user: User, academy_id: int | None = None) -> 
     return Consumable.list(user=user, service=consumer).exists()
 
 
+def _user_has_copilot_entitlement_in_sibling_academies(user: User, sibling_academy_ids: list[int]) -> bool:
+    """github-copilot consumible for at least one academy_id in sibling_academy_ids."""
+    for aid in sibling_academy_ids:
+        if _user_has_copilot_entitlement(user, aid):
+            return True
+    return False
+
+
+def _copilot_entitlement_ok_for_provision(
+    user: User, academy_id: int | None, *, sibling_academy_ids: list[int] | None
+) -> bool:
+    if sibling_academy_ids is not None:
+        return _user_has_copilot_entitlement_in_sibling_academies(user, sibling_academy_ids)
+    return _user_has_copilot_entitlement(user, academy_id)
+
+
 def _get_copilot_client_for_user(user: User, academy_id: int | None = None) -> tuple[Github | None, str | None]:
     settings_qs = AcademyAuthSettings.objects.select_related("github_owner")
-    
+
     if academy_id:
         settings_qs = settings_qs.filter(academy_id=academy_id)
 
@@ -129,7 +191,14 @@ def _get_copilot_client_for_user(user: User, academy_id: int | None = None) -> t
     return Github(org=settings.github_username, token=owner_creds.token), user_creds.username
 
 
-def provision_github_copilot_for_user(user_id: int, academy_id: int | None = None) -> bool:
+def provision_github_copilot_for_user(
+    user_id: int,
+    academy_id: int | None = None,
+    *,
+    source: str | None = None,
+    sibling_academy_ids: list[int] | None = None,
+) -> bool:
+    """Grant Copilot seat: consumible + GithubAcademyUser SYNCHED+ADD (and GitHub creds)."""
     user = User.objects.filter(id=user_id).first()
     if not user:
         logger.info(
@@ -139,11 +208,18 @@ def provision_github_copilot_for_user(user_id: int, academy_id: int | None = Non
         )
         return False
 
-    if not _user_has_copilot_entitlement(user, academy_id):
+    resolved_academy_id = academy_id
+    if sibling_academy_ids is not None and resolved_academy_id is None and sibling_academy_ids:
+        resolved_academy_id = sibling_academy_ids[0]
+
+    _log_sibling = {"sibling_academy_ids": sibling_academy_ids} if sibling_academy_ids is not None else {}
+
+    if not _copilot_entitlement_ok_for_provision(user, academy_id, sibling_academy_ids=sibling_academy_ids):
         _append_copilot_storage_log(
             user_id=user_id,
-            academy_id=academy_id,
+            academy_id=resolved_academy_id,
             message="Copilot add skipped: no github-copilot entitlement",
+            **_log_sibling,
         )
         logger.info(
             "[COPILOT provision] user_id=%s academy_id=%s ok=False skipped reason=no_copilot_entitlement",
@@ -152,11 +228,16 @@ def provision_github_copilot_for_user(user_id: int, academy_id: int | None = Non
         )
         return False
 
-    if not github_academy_user_allows_copilot(user, academy_id):
+    if sibling_academy_ids is not None:
+        ghou_ok = github_academy_user_allows_copilot_in_sibling_academies(user, sibling_academy_ids)
+    else:
+        ghou_ok = github_academy_user_allows_copilot(user, academy_id)
+    if not ghou_ok:
         _append_copilot_storage_log(
             user_id=user_id,
-            academy_id=academy_id,
+            academy_id=resolved_academy_id,
             message="Copilot add skipped: GithubAcademyUser is not SYNCHED+ADD",
+            **_log_sibling,
         )
         logger.info(
             "[COPILOT provision] user_id=%s academy_id=%s ok=False skipped reason=github_academy_not_eligible",
@@ -165,12 +246,13 @@ def provision_github_copilot_for_user(user_id: int, academy_id: int | None = Non
         )
         return False
 
-    gh, github_username = _get_copilot_client_for_user(user, academy_id)
+    gh, github_username = _get_copilot_client_for_user(user, resolved_academy_id)
     if not gh or not github_username:
         _append_copilot_storage_log(
             user_id=user_id,
-            academy_id=academy_id,
+            academy_id=resolved_academy_id,
             message="Copilot add skipped: missing GitHub org owner token or user github username",
+            **_log_sibling,
         )
         logger.info(
             "[COPILOT provision] user_id=%s academy_id=%s ok=False skipped reason=no_github_client_or_username",
@@ -180,35 +262,43 @@ def provision_github_copilot_for_user(user_id: int, academy_id: int | None = Non
         return False
 
     org = getattr(gh, "org", None)
+    source_suffix = f"; source={source}" if source else ""
     try:
         response = gh.copilot_add_selected_users([github_username])
         response_for_log = _github_copilot_response_for_log(response)
         _append_copilot_storage_log(
             user_id=user_id,
-            academy_id=academy_id,
-            message=f"Copilot add done for @{github_username} in org {org}; github_response={response_for_log}",
+            academy_id=resolved_academy_id,
+            message=(
+                f"Copilot add done for @{github_username} in org {org}; github_response={response_for_log}"
+                f"{source_suffix}"
+            ),
+            **_log_sibling,
         )
         logger.info(
-            "[COPILOT provision] user_id=%s academy_id=%s org=%s github_username=%s ok=True github_response=%s",
+            "[COPILOT provision] user_id=%s academy_id=%s org=%s github_username=%s ok=True github_response=%s source=%s",
             user_id,
             academy_id,
             org,
             github_username,
             response_for_log,
+            source or "",
         )
         return True
     except Exception as e:
         _append_copilot_storage_log(
             user_id=user_id,
-            academy_id=academy_id,
-            message=f"Copilot add failed for @{github_username} in org {org}; error={str(e)}",
+            academy_id=resolved_academy_id,
+            message=f"Copilot add failed for @{github_username} in org {org}; error={str(e)}{source_suffix}",
+            **_log_sibling,
         )
         logger.exception(
-            "[COPILOT provision] user_id=%s academy_id=%s org=%s github_username=%s ok=False github_api_error",
+            "[COPILOT provision] user_id=%s academy_id=%s org=%s github_username=%s ok=False github_api_error source=%s",
             user_id,
             academy_id,
             org,
             github_username,
+            source or "",
         )
         return False
 
@@ -219,6 +309,7 @@ def deprovision_github_copilot_for_user(
     *,
     ignore_entitlement: bool = False,
 ) -> bool:
+    """Remove Copilot seat. Unless ignore_entitlement, skip when user still has any active github-copilot consumable."""
     user = User.objects.filter(id=user_id).first()
     if not user:
         logger.info(
@@ -229,7 +320,7 @@ def deprovision_github_copilot_for_user(
         )
         return False
 
-    if not ignore_entitlement and _user_has_copilot_entitlement(user, academy_id):
+    if not ignore_entitlement and _user_has_copilot_entitlement(user, None):
         _append_copilot_storage_log(
             user_id=user_id,
             academy_id=academy_id,
@@ -292,18 +383,27 @@ def deprovision_github_copilot_for_user(
 
 
 def deferred_github_copilot_remove_if_still_revoked(user_id: int, academy_id: int) -> bool:
-    """If GithubAcademyUser is back to SYNCHED+ADD, skip; else remove Copilot seat (ignore entitlement)."""
-    row = GithubAcademyUser.objects.filter(user_id=user_id, academy_id=academy_id).first()
-    if row is not None and row.storage_status == SYNCHED and row.storage_action == ADD:
+    """After GHAU loses SYNCHED+ADD: skip remove if sibling org still has ADD or user still has copilot consumable."""
+    user = User.objects.filter(id=user_id).first()
+    if not user:
         logger.info(
-            "[COPILOT deprovision] user_id=%s academy_id=%s ok=False skipped reason=deferred_revoke_user_still_add",
+            "[COPILOT deprovision] user_id=%s academy_id=%s ok=False skipped reason=deferred_revoke_no_user",
             user_id,
             academy_id,
         )
         return False
-    return deprovision_github_copilot_for_user(
-        user_id=user_id, academy_id=academy_id, ignore_entitlement=True
-    )
+
+    sibling_ids = _github_org_sibling_academy_ids_for_academy(academy_id)
+    if github_academy_user_allows_copilot_in_sibling_academies(user, sibling_ids):
+        logger.info(
+            "[COPILOT deprovision] user_id=%s academy_id=%s ok=False skipped reason=deferred_revoke_user_still_add_sibling_org sibling_academy_ids=%s",
+            user_id,
+            academy_id,
+            sibling_ids,
+        )
+        return False
+
+    return deprovision_github_copilot_for_user(user_id=user_id, academy_id=academy_id)
 
 
 @service_deprovisioner("github-copilot")

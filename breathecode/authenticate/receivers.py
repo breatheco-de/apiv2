@@ -344,7 +344,7 @@ def github_academy_user_copilot_react(sender, instance: GithubAcademyUser, creat
     if prev_good and not now_good:
         async_result = tasks.deferred_github_copilot_remove_if_still_revoked.apply_async(
             args=[instance.user_id, instance.academy_id],
-            countdown=120,
+            countdown=7200,
         )
         logger.info(
             "[COPILOT GithubAcademyUser post_save] id=%s user_id=%s academy_id=%s lost_eligibility -> deferred revoke 2h celery_task_id=%s",
