@@ -65,6 +65,10 @@ from .models import (
 
 logger = getLogger(__name__)
 
+# Schedule charge tasks a few seconds after `next_payment_at` so execution time is strictly
+# past the deadline (avoids clock skew and ``next_payment_at > utc_now`` in charge tasks).
+SCHEDULE_CHARGE_LAG_AFTER_NEXT_PAYMENT = timedelta(seconds=3)
+
 
 def _cancel_pending_future_scheduled(task_callable: Any, entity_id: int, *, utc_now: datetime) -> None:
     from task_manager.core.actions import get_fn_desc, parse_payload
@@ -88,9 +92,10 @@ def _eta_for_schedule_at(target: datetime, utc_now: datetime) -> str:
     Build an :mod:`celery_task_manager` eta (``"{n}{unit}"`` with a single unit) so
     that ``utc_now + delta`` ≈ ``target`` (the manager only allows one of ``s|m|h|d|w``).
 
-    Using **seconds** keeps the same clock time as ``next_payment_at``, which is required
-    because :func:`breathecode.payments.tasks.charge_subscription` aborts if
-    ``next_payment_at`` is still in the future.
+    Using **seconds** gives a precise wall-clock ``eta``; callers that schedule charges
+    should pass ``next_payment_at + SCHEDULE_CHARGE_LAG_AFTER_NEXT_PAYMENT`` as ``target``
+    so :func:`breathecode.payments.tasks.charge_subscription` does not abort with
+    ``next_payment_at`` still in the future.
     """
     if target <= utc_now:
         return "60s"
@@ -221,8 +226,8 @@ def reschedule_billing_after_vps_next_payment_pull_forward(
     """
     After `next_payment_at` is pulled forward (VPS / third-party billing alignment), cancel future
     PENDING ScheduledTask rows for charge and renewal notify, then recreate them with an ETA that
-    matches the subscription/plan ``next_payment_at`` clock time (via second-precision etas, since
-    ``charge_*`` must not run while ``next_payment_at`` is still in the future).
+    aligns charge ``eta`` with ``next_payment_at`` plus a short lag (seconds), so charges
+    do not run before the subscription/plan payment instant.
     """
     from task_manager.django.actions import schedule_task
 
@@ -236,7 +241,8 @@ def reschedule_billing_after_vps_next_payment_pull_forward(
         for fn in (tasks.charge_subscription, tasks.notify_subscription_renewal):
             _cancel_pending_future_scheduled(fn, subscription_id, utc_now=utc_now)
 
-        charge_eta = _eta_for_schedule_at(subscription.next_payment_at, utc_now)
+        charge_at = subscription.next_payment_at + SCHEDULE_CHARGE_LAG_AFTER_NEXT_PAYMENT
+        charge_eta = _eta_for_schedule_at(charge_at, utc_now)
         manager = schedule_task(tasks.charge_subscription, charge_eta)
         manager.call(subscription_id)
 
@@ -261,7 +267,8 @@ def reschedule_billing_after_vps_next_payment_pull_forward(
     for fn in (tasks.charge_plan_financing, tasks.notify_plan_financing_renewal):
         _cancel_pending_future_scheduled(fn, plan_financing_id, utc_now=utc_now)
 
-    pf_charge_eta = _eta_for_schedule_at(plan_financing.next_payment_at, utc_now)
+    pf_charge_at = plan_financing.next_payment_at + SCHEDULE_CHARGE_LAG_AFTER_NEXT_PAYMENT
+    pf_charge_eta = _eta_for_schedule_at(pf_charge_at, utc_now)
     schedule_task(tasks.charge_plan_financing, pf_charge_eta).call(plan_financing_id)
 
     if (plan_financing.next_payment_at - utc_now) > timedelta(days=2):
