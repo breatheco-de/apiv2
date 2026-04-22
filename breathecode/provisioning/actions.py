@@ -1273,7 +1273,8 @@ def apply_early_vps_billing_alignment(vps: ProvisioningVPS) -> None:
     Pull next_payment_at earlier only when all apply:
     - ServiceItem.third_party_billing_cycle is True (third-party billing e.g. Hostinger).
     - The VPS is provisioned (consumable used) within EARLY_USE_AFTER_CONSUMABLE_CREATION after the
-      consumable was created (activation / grant of that consumable row).
+      consumable became available. We prefer consumable.created_at when present; otherwise we fallback
+      to VPS.requested_at (current schema does not persist Consumable.created_at).
 
     At most one pull-forward per subscription or plan financing: idempotency is enforced with a single
     atomic UPDATE on Subscription/PlanFinancing (filter flag False, then set flag True with F() on
@@ -1287,7 +1288,6 @@ def apply_early_vps_billing_alignment(vps: ProvisioningVPS) -> None:
         .select_related("service_item")
         .only(
             "id",
-            "created_at",
             "subscription_id",
             "plan_financing_id",
             "service_item_id",
@@ -1301,7 +1301,11 @@ def apply_early_vps_billing_alignment(vps: ProvisioningVPS) -> None:
     if not getattr(consumable.service_item, "third_party_billing_cycle", False):
         return
 
-    if vps.provisioned_at - consumable.created_at > EARLY_USE_AFTER_CONSUMABLE_CREATION:
+    consumable_available_at = getattr(consumable, "created_at", None) or vps.requested_at
+    if not consumable_available_at:
+        return
+
+    if vps.provisioned_at - consumable_available_at > EARLY_USE_AFTER_CONSUMABLE_CREATION:
         return
 
     sub_id = consumable.subscription_id
