@@ -83,6 +83,23 @@ def _cancel_pending_future_scheduled(task_callable: Any, entity_id: int, *, utc_
     ).update(status="CANCELLED")
 
 
+def _eta_for_schedule_at(target: datetime, utc_now: datetime) -> str:
+    """
+    Build an :mod:`celery_task_manager` eta (``"{n}{unit}"`` with a single unit) so
+    that ``utc_now + delta`` ≈ ``target`` (the manager only allows one of ``s|m|h|d|w``).
+
+    Using **seconds** keeps the same clock time as ``next_payment_at``, which is required
+    because :func:`breathecode.payments.tasks.charge_subscription` aborts if
+    ``next_payment_at`` is still in the future.
+    """
+    if target <= utc_now:
+        return "60s"
+    total_seconds = int((target - utc_now).total_seconds())
+    if total_seconds < 1:
+        return "1s"
+    return f"{total_seconds}s"
+
+
 def _vps_alignment_billing_scope(consumable: Consumable) -> dict | None:
     """
     Misma suscripción/plan/asiento (o team) que el consumible renovado.
@@ -203,8 +220,9 @@ def reschedule_billing_after_vps_next_payment_pull_forward(
 ) -> None:
     """
     After `next_payment_at` is pulled forward (VPS / third-party billing alignment), cancel future
-    PENDING ScheduledTask rows for charge and renewal notify, then recreate them from the current
-    `next_payment_at` so the worker does not fire ~12h late on the old ETA.
+    PENDING ScheduledTask rows for charge and renewal notify, then recreate them with an ETA that
+    matches the subscription/plan ``next_payment_at`` clock time (via second-precision etas, since
+    ``charge_*`` must not run while ``next_payment_at`` is still in the future).
     """
     from task_manager.django.actions import schedule_task
 
@@ -218,8 +236,8 @@ def reschedule_billing_after_vps_next_payment_pull_forward(
         for fn in (tasks.charge_subscription, tasks.notify_subscription_renewal):
             _cancel_pending_future_scheduled(fn, subscription_id, utc_now=utc_now)
 
-        days_until_next_payment = max(0, (subscription.next_payment_at - utc_now).days)
-        manager = schedule_task(tasks.charge_subscription, f"{days_until_next_payment}d")
+        charge_eta = _eta_for_schedule_at(subscription.next_payment_at, utc_now)
+        manager = schedule_task(tasks.charge_subscription, charge_eta)
         manager.call(subscription_id)
 
         payment_settings = AcademyPaymentSettings.objects.filter(academy=subscription.academy).first()
@@ -229,8 +247,8 @@ def reschedule_billing_after_vps_next_payment_pull_forward(
             notify_at = subscription.next_payment_at - timedelta(days=early_renewal_window_days)
             
             if notify_at > utc_now:
-                notification_day = max(0, (notify_at - utc_now).days)
-                schedule_task(tasks.notify_subscription_renewal, f"{notification_day}d").call(subscription_id)
+                notify_eta = _eta_for_schedule_at(notify_at, utc_now)
+                schedule_task(tasks.notify_subscription_renewal, notify_eta).call(subscription_id)
         return
 
     if plan_financing_id is None:
@@ -243,14 +261,14 @@ def reschedule_billing_after_vps_next_payment_pull_forward(
     for fn in (tasks.charge_plan_financing, tasks.notify_plan_financing_renewal):
         _cancel_pending_future_scheduled(fn, plan_financing_id, utc_now=utc_now)
 
-    days_until_next_payment = max(0, (plan_financing.next_payment_at - utc_now).days)
-    schedule_task(tasks.charge_plan_financing, f"{days_until_next_payment}d").call(plan_financing_id)
+    pf_charge_eta = _eta_for_schedule_at(plan_financing.next_payment_at, utc_now)
+    schedule_task(tasks.charge_plan_financing, pf_charge_eta).call(plan_financing_id)
 
-    if days_until_next_payment > 2:
+    if (plan_financing.next_payment_at - utc_now) > timedelta(days=2):
         notify_at = plan_financing.next_payment_at - timedelta(days=2)
         if notify_at > utc_now:
-            notification_day = max(0, (notify_at - utc_now).days)
-            schedule_task(tasks.notify_plan_financing_renewal, f"{notification_day}d").call(plan_financing_id)
+            pf_notify_eta = _eta_for_schedule_at(notify_at, utc_now)
+            schedule_task(tasks.notify_plan_financing_renewal, pf_notify_eta).call(plan_financing_id)
 
 
 def _raise_if_task_manager_failed(task_handler: Any) -> None:
