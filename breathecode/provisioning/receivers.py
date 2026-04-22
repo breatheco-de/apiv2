@@ -47,26 +47,63 @@ def deprovision_service_receiver(sender: Type[Service], instance: Service, user_
         return
 
     service_slug = instance.slug
+    ctx: dict = context if isinstance(context, dict) else {}
+
+    def _as_int(value) -> int | None:
+        if value is None:
+            return None
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
 
     # Targeted VPS teardown (e.g. excess machines while user still has credits) — skip global consumable guard.
-    if isinstance(context, dict) and context.get("provisioning_vps_ids"):
+    if ctx.get("provisioning_vps_ids"):
         deprovisioner = get_service_deprovisioner(service_slug)
         if deprovisioner:
-            return deprovisioner(user_id=user_id, context=context or {})
+            return deprovisioner(user_id=user_id, context=ctx)
         return
 
-    academy_id = None
-    if isinstance(context, dict):
-        academy_id = context.get("academy_id") or context.get("academy")
-    if academy_id is not None:
-        try:
-            academy_id = int(academy_id)
-        except Exception:
-            academy_id = None
+    subscription_id = _as_int(ctx.get("subscription_id"))
+    plan_financing_id = _as_int(ctx.get("plan_financing_id"))
 
-    # When academy_id is provided, only skip deprovision if the user still has
-    # this service entitlement within that academy context.
-    if academy_id:
+    academy_id = ctx.get("academy_id") or ctx.get("academy")
+    if academy_id is not None:
+        academy_id = _as_int(academy_id)
+    else:
+        academy_id = None
+
+    # When deprovision is driven by a specific subscription or plan financing, only skip
+    # if that billing context still has this service (aligns with VPS pool, not the whole academy).
+    if subscription_id is not None:
+        has_consumables = Consumable.list(
+            user=user,
+            service=instance,
+            extra={"subscription_id": subscription_id},
+        ).exists()
+        if has_consumables:
+            logger.info(
+                "User %s still has consumables for service %s on subscription %s, skipping deprovisioning.",
+                user_id,
+                service_slug,
+                subscription_id,
+            )
+            return
+    elif plan_financing_id is not None:
+        has_consumables = Consumable.list(
+            user=user,
+            service=instance,
+            extra={"plan_financing_id": plan_financing_id},
+        ).exists()
+        if has_consumables:
+            logger.info(
+                "User %s still has consumables for service %s on plan financing %s, skipping deprovisioning.",
+                user_id,
+                service_slug,
+                plan_financing_id,
+            )
+            return
+    elif academy_id is not None:
         has_consumables = (
             Consumable.list(
                 user=user,
@@ -95,5 +132,5 @@ def deprovision_service_receiver(sender: Type[Service], instance: Service, user_
 
     deprovisioner = get_service_deprovisioner(service_slug)
     if deprovisioner:
-        return deprovisioner(user_id=user_id, context=context or {})
+        return deprovisioner(user_id=user_id, context=ctx)
     logger.info(f"No deprovisioner found for service {service_slug}")

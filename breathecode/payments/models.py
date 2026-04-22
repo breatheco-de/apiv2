@@ -2459,7 +2459,10 @@ class PlanFinancing(AbstractIOweYou):
                             sender=Service,
                             instance=service,
                             user_id=self.user.id,
-                            context={"academy_id": getattr(self, "academy_id", None)},
+                            context={
+                                "academy_id": getattr(self, "academy_id", None),
+                                "plan_financing_id": self.id,
+                            },
                         )
 
 
@@ -2682,7 +2685,10 @@ class Subscription(AbstractIOweYou):
                         sender=Service,
                         instance=service,
                         user_id=self.user.id,
-                        context={"academy_id": getattr(self, "academy_id", None)},
+                        context={
+                            "academy_id": getattr(self, "academy_id", None),
+                            "subscription_id": self.id,
+                        },
                     )
                 for plan in self.plans.all():
                     for plan_service_item in PlanServiceItem.objects.select_related("service_item__service").filter(
@@ -2696,7 +2702,10 @@ class Subscription(AbstractIOweYou):
                             sender=Service,
                             instance=service,
                             user_id=self.user.id,
-                            context={"academy_id": getattr(self, "academy_id", None)},
+                            context={
+                                "academy_id": getattr(self, "academy_id", None),
+                                "subscription_id": self.id,
+                            },
                         )
 
 

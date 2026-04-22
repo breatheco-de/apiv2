@@ -1378,8 +1378,20 @@ def deprovision_vps_server(user_id: int, context: dict | None = None, **_: Any):
         return
 
     academy_id = None
+    subscription_id: int | None = None
+    plan_financing_id: int | None = None
     if isinstance(context, dict):
         academy_id = context.get("academy_id") or context.get("academy")
+        if context.get("subscription_id") is not None:
+            try:
+                subscription_id = int(context["subscription_id"])
+            except (TypeError, ValueError):
+                subscription_id = None
+        if context.get("plan_financing_id") is not None:
+            try:
+                plan_financing_id = int(context["plan_financing_id"])
+            except (TypeError, ValueError):
+                plan_financing_id = None
     if academy_id is not None:
         try:
             academy_id = int(academy_id)
@@ -1394,6 +1406,10 @@ def deprovision_vps_server(user_id: int, context: dict | None = None, **_: Any):
     vps_qs = ProvisioningVPS.objects.filter(user_id=user_id, status__in=statuses)
     if academy_id:
         vps_qs = vps_qs.filter(academy_id=academy_id)
+    if subscription_id is not None:
+        vps_qs = vps_qs.filter(consumed_consumable__subscription_id=subscription_id)
+    elif plan_financing_id is not None:
+        vps_qs = vps_qs.filter(consumed_consumable__plan_financing_id=plan_financing_id)
 
     for vps_id in vps_qs.values_list("id", flat=True):
         deprovision_vps_task.delay(vps_id)
