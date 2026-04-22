@@ -1277,7 +1277,7 @@ class AssetPUTSerializer(serializers.ModelSerializer):
                     "solution_url", "preview", "title", "description", "template_url",
                     "difficulty", "duration", "gitpod", "agent", "solution_video_url",
                     "intro_video_url", "delivery_instructions", "delivery_formats",
-                    "delivery_regex_url", "technologies"
+                    "delivery_regex_url", "technologies", "interactive"
                 ]
             }
             
