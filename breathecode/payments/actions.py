@@ -220,8 +220,7 @@ def reschedule_billing_after_vps_next_payment_pull_forward(
 
         days_until_next_payment = max(0, (subscription.next_payment_at - utc_now).days)
         manager = schedule_task(tasks.charge_subscription, f"{days_until_next_payment}d")
-        if not manager.exists(subscription_id):
-            manager.call(subscription_id)
+        manager.call(subscription_id)
 
         payment_settings = AcademyPaymentSettings.objects.filter(academy=subscription.academy).first()
         early_renewal_window_days = payment_settings.early_renewal_window_days if payment_settings else 0
