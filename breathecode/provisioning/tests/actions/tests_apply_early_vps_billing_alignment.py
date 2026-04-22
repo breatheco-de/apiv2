@@ -340,3 +340,54 @@ def test_apply_early_subscription_pull_at_most_once(bc):
     sub.refresh_from_db()
     assert sub.next_payment_at == future - NEXT_CHARGE_PULL_FORWARD
     assert mock_reschedule.call_count == 1
+
+
+@pytest.mark.django_db
+def test_apply_early_uses_vps_requested_at_when_consumable_has_no_created_at(bc):
+    utc = timezone.now()
+    future = utc + relativedelta(months=1)
+    model = bc.database.create(
+        country=1,
+        city=1,
+        academy=1,
+        user=1,
+        provisioning_vendor=1,
+        subscription={
+            "valid_until": future,
+            "next_payment_at": future,
+            "seat_service_item_id": None,
+            "next_charge_pull_applied": False,
+        },
+        service={"type": "VOID"},
+        service_item={"service_id": 1, "how_many": 1, "third_party_billing_cycle": True},
+        subscription_service_item={"subscription_id": 1, "service_item_id": 1},
+    )
+    si = model.service_item
+    sub = model.subscription
+    c = Consumable.objects.create(
+        user=model.user,
+        service_item=si,
+        unit_type=UNIT,
+        how_many=1,
+        subscription=sub,
+        valid_until=future,
+    )
+
+    requested_at = utc - timedelta(hours=3)
+    provisioned_at = requested_at + timedelta(hours=1)
+    vps = ProvisioningVPS.objects.create(
+        user=model.user,
+        academy=model.academy,
+        vendor=model.provisioning_vendor,
+        consumed_consumable=c,
+        status=ProvisioningVPS.VPS_STATUS_ACTIVE,
+        requested_at=requested_at,
+        provisioned_at=provisioned_at,
+    )
+
+    with _patch_reschedule():
+        apply_early_vps_billing_alignment(vps)
+
+    sub.refresh_from_db()
+    assert sub.next_charge_pull_applied is True
+    assert sub.next_payment_at == future - NEXT_CHARGE_PULL_FORWARD
