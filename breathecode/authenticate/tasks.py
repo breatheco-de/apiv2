@@ -20,7 +20,10 @@ from breathecode.utils.decorators import TaskPriority
 
 from .actions import (
     add_to_organization,
+    deferred_github_copilot_remove_if_still_revoked as run_deferred_github_copilot_remove_if_still_revoked,
+    deprovision_github_copilot_for_user,
     get_user_settings,
+    provision_github_copilot_for_user,
     remove_from_organization,
     revoke_user_discord_permissions,
     set_gitpod_user_expiration,
@@ -438,3 +441,29 @@ def process_bulk_student_upload(job_id: str, **_kwargs: Any) -> None:
 
     update_bulk_job_state(job_id, status="completed", processed=processed, results=results)
     logger.info("Completed process_bulk_student_upload for job_id=%s processed=%s", job_id, processed)
+
+
+@task(priority=TaskPriority.ACADEMY.value)
+def provision_github_copilot_task(user_id: int, academy_id: int | None = None, **_):
+    return provision_github_copilot_for_user(user_id=user_id, academy_id=academy_id)
+
+
+@task(priority=TaskPriority.ACADEMY.value)
+def deprovision_github_copilot_task(user_id: int, academy_id: int | None = None, ignore_entitlement: bool = False, **_):
+    return deprovision_github_copilot_for_user(
+        user_id=user_id, academy_id=academy_id, ignore_entitlement=ignore_entitlement
+    )
+
+
+@task(priority=TaskPriority.ACADEMY.value)
+def deferred_github_copilot_remove_if_still_revoked(user_id: int, academy_id: int, **_):
+    return run_deferred_github_copilot_remove_if_still_revoked(user_id, academy_id)
+
+
+@task(priority=TaskPriority.BACKGROUND.value)
+def reconcile_github_copilot_seats_nightly(**_):
+    from breathecode.authenticate.management.commands.reconcile_github_copilot_seats import (
+        run_reconcile_github_copilot_seats,
+    )
+
+    return run_reconcile_github_copilot_seats()

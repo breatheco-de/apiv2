@@ -272,6 +272,7 @@ class Service(AbstractAsset):
         AI_INTERACTION = ("AI_INTERACTION", "AI Interaction")
         VPS_SERVER = ("VPS_SERVER", "VPS server")
         MONTHLY_LLM_BUDGET = ("MONTHLY_LLM_BUDGET", "Monthly LLM budget")
+        GITHUB_COPILOT = ("GITHUB_COPILOT", "GitHub Copilot")
         NO_SET = ("NO_SET", "No set")
 
     groups = models.ManyToManyField(
@@ -365,6 +366,16 @@ class ServiceItem(AbstractServiceItem):
 
     # NEW: team settings
     is_team_allowed = models.BooleanField(default=False, db_index=True, help_text="Allow team seats for this item")
+
+    third_party_billing_cycle = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text=(
+            "If true, consumables for this item depend on a third-party billing period (e.g. VPS vendor). "
+            "When the consumable is used (e.g. VPS provisioned) within 12h of that consumable's creation, "
+            "internal next_payment_at may be pulled forward so we charge before that vendor cycle."
+        ),
+    )
 
     # the below fields are useless when is_renewable=False
     renew_at = models.IntegerField(
@@ -2264,6 +2275,16 @@ class PlanFinancing(AbstractIOweYou):
     # in this day the financing needs being paid again
     next_payment_at = models.DateTimeField(help_text="Next payment date")
 
+    next_charge_pull_applied = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text=(
+            "True once next_payment_at was pulled earlier due to a consumable that depends on a "
+            "third-party billing (e.g. VPS); "
+            "atomic update limits this to once per plan financing even with parallel activations."
+        ),
+    )
+
     # in this moment the subscription will be expired
     valid_until = models.DateTimeField(
         help_text="Valid until, before this date each month the customer must pay, after this "
@@ -2308,6 +2329,17 @@ class PlanFinancing(AbstractIOweYou):
                     es="Plan financing no puede ser descontinuado",
                 )
             )
+
+        if self.pk:
+            prior = PlanFinancing.objects.filter(pk=self.pk).only("status").first()
+            if prior and prior.status == self.Status.FULLY_PAID and self.status == self.Status.CANCELLED:
+                raise forms.ValidationError(
+                    translation(
+                        settings.lang,
+                        en="A fully paid plan financing cannot be cancelled",
+                        es="Un plan financiado totalmente pagado no puede cancelarse",
+                    )
+                )
 
         return super().clean()
 
@@ -2378,7 +2410,6 @@ class PlanFinancing(AbstractIOweYou):
         self._sync_team()
 
         revoke_statuses = [
-            self.Status.CANCELLED,
             self.Status.DEPRECATED,
             self.Status.PAYMENT_ISSUE,
             self.Status.ERROR,
@@ -2398,11 +2429,23 @@ class PlanFinancing(AbstractIOweYou):
             if self.status == self.Status.ACTIVE and is_paid:
                 signals.grant_plan_permissions.send_robust(instance=self, sender=self.__class__)
 
-            if self.status in revoke_statuses:
+            if self.status == self.Status.CANCELLED:
+                # Revoke when the billing tick runs (charge_plan_financing) after next_payment_at.
+                # If that moment already passed, revoke immediately.
+                cutoff = self.next_payment_at
+                if not cutoff or cutoff <= timezone.now():
+                    signals.revoke_plan_permissions.send_robust(instance=self, sender=self.__class__)
+
+            elif self.status in revoke_statuses:
                 signals.revoke_plan_permissions.send_robust(instance=self, sender=self.__class__)
 
-            if self.status in [self.Status.EXPIRED, self.Status.DEPRECATED]:
-                # Deprovision external services when the financing is fully expired/deprecated.
+            if self.status in (
+                self.Status.EXPIRED,
+                self.Status.DEPRECATED,
+                self.Status.PAYMENT_ISSUE,
+                self.Status.ERROR,
+            ):
+                # Deprovision external services (e.g. GitHub Copilot) on payment failure, not only when expired.
                 service_ids: set[int] = set()
                 for plan in self.plans.all():
                     for plan_service_item in PlanServiceItem.objects.select_related("service_item__service").filter(
@@ -2416,7 +2459,10 @@ class PlanFinancing(AbstractIOweYou):
                             sender=Service,
                             instance=service,
                             user_id=self.user.id,
-                            context={"academy_id": getattr(self, "academy_id", None)},
+                            context={
+                                "academy_id": getattr(self, "academy_id", None),
+                                "plan_financing_id": self.id,
+                            },
                         )
 
 
@@ -2532,6 +2578,16 @@ class Subscription(AbstractIOweYou):
     # in this day the subscription needs being paid again
     next_payment_at = models.DateTimeField(help_text="Next payment date")
 
+    next_charge_pull_applied = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text=(
+            "True once next_payment_at was pulled earlier due to a consumable that depends on a "
+            "third-party billing (e.g. VPS); "
+            "atomic update limits this to once per subscription even with parallel activations."
+        ),
+    )
+
     # in this moment the subscription will be expired
     valid_until = models.DateTimeField(
         default=None,
@@ -2589,7 +2645,6 @@ class Subscription(AbstractIOweYou):
         super().save(*args, **kwargs)
 
         revoke_statuses = [
-            self.Status.CANCELLED,
             self.Status.DEPRECATED,
             self.Status.PAYMENT_ISSUE,
             self.Status.ERROR,
@@ -2608,9 +2663,18 @@ class Subscription(AbstractIOweYou):
         if old_instance and old_instance.status != self.status:
             if self.status == self.Status.ACTIVE and is_paid:
                 signals.grant_plan_permissions.send_robust(instance=self, sender=self.__class__)
-            if self.status in revoke_statuses:
+            if self.status == self.Status.CANCELLED:
+                cutoff = self.next_payment_at
+                if not cutoff or cutoff <= timezone.now():
+                    signals.revoke_plan_permissions.send_robust(instance=self, sender=self.__class__)
+            elif self.status in revoke_statuses:
                 signals.revoke_plan_permissions.send_robust(instance=self, sender=self.__class__)
-            if self.status in [self.Status.EXPIRED, self.Status.DEPRECATED]:
+            if self.status in (
+                self.Status.EXPIRED,
+                self.Status.DEPRECATED,
+                self.Status.PAYMENT_ISSUE,
+                self.Status.ERROR,
+            ):
                 service_ids: set[int] = set()
                 for service_item in self.service_items.select_related("service").all():
                     service = service_item.service
@@ -2621,7 +2685,10 @@ class Subscription(AbstractIOweYou):
                         sender=Service,
                         instance=service,
                         user_id=self.user.id,
-                        context={"academy_id": getattr(self, "academy_id", None)},
+                        context={
+                            "academy_id": getattr(self, "academy_id", None),
+                            "subscription_id": self.id,
+                        },
                     )
                 for plan in self.plans.all():
                     for plan_service_item in PlanServiceItem.objects.select_related("service_item__service").filter(
@@ -2635,7 +2702,10 @@ class Subscription(AbstractIOweYou):
                             sender=Service,
                             instance=service,
                             user_id=self.user.id,
-                            context={"academy_id": getattr(self, "academy_id", None)},
+                            context={
+                                "academy_id": getattr(self, "academy_id", None),
+                                "subscription_id": self.id,
+                            },
                         )
 
 
@@ -3159,6 +3229,8 @@ class Consumable(AbstractServiceItem):
         invalid_statuses = [
             Subscription.Status.EXPIRED,
             Subscription.Status.DEPRECATED,
+            Subscription.Status.PAYMENT_ISSUE,
+            Subscription.Status.ERROR,
         ]
 
         queryset = cls.objects.filter(*args, Q(valid_until__gte=utc_now) | Q(valid_until=None), **{**param, **extra})

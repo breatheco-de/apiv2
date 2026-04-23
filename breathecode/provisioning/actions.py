@@ -2,14 +2,14 @@ import math
 import os
 import random
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal, localcontext
 from typing import Any, Optional, TypedDict
 
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from dateutil.relativedelta import relativedelta
-from django.db.models import Q, QuerySet
+from django.db.models import F, Q, QuerySet
 from django.utils import timezone
 from linked_services.django.actions import get_user
 
@@ -23,7 +23,7 @@ from breathecode.authenticate.models import (
     GithubAcademyUserLog,
     ProfileAcademy,
 )
-from breathecode.payments.models import Consumable, Currency
+from breathecode.payments.models import Consumable, Currency, PlanFinancing, Subscription
 from breathecode.payments.signals import consume_service
 from breathecode.registry.models import Asset
 from breathecode.services.github import Github
@@ -1275,6 +1275,92 @@ def add_rigobot_activity(context: ActivityContext, field: dict, position: int) -
     pa.events.add(item)
 
 
+NEXT_CHARGE_PULL_FORWARD = timedelta(hours=12)
+EARLY_USE_AFTER_CONSUMABLE_CREATION = timedelta(hours=12)
+
+
+def apply_early_vps_billing_alignment(vps: ProvisioningVPS) -> None:
+    """
+    Pull next_payment_at earlier only when all apply:
+    - ServiceItem.third_party_billing_cycle is True (third-party billing e.g. Hostinger).
+    - The VPS is provisioned (consumable used) within EARLY_USE_AFTER_CONSUMABLE_CREATION after the
+      consumable became available. We prefer consumable.created_at when present; otherwise we fallback
+      to VPS.requested_at (current schema does not persist Consumable.created_at).
+
+    At most one pull-forward per subscription or plan financing: idempotency is enforced with a single
+    atomic UPDATE on Subscription/PlanFinancing (filter flag False, then set flag True with F() on
+    next_payment_at), so many VPS becoming ACTIVE in parallel (e.g. up to 5) cannot double-apply -12h.
+    """
+    if not vps.consumed_consumable_id or not vps.provisioned_at:
+        return
+
+    consumable = (
+        Consumable.objects.filter(id=vps.consumed_consumable_id)
+        .select_related("service_item")
+        .only(
+            "id",
+            "subscription_id",
+            "plan_financing_id",
+            "service_item_id",
+            "service_item__third_party_billing_cycle",
+        )
+        .first()
+    )
+    if not consumable or not consumable.service_item_id:
+        return
+
+    if not getattr(consumable.service_item, "third_party_billing_cycle", False):
+        return
+
+    consumable_available_at = getattr(consumable, "created_at", None) or vps.requested_at
+    if not consumable_available_at:
+        return
+
+    if vps.provisioned_at - consumable_available_at > EARLY_USE_AFTER_CONSUMABLE_CREATION:
+        return
+
+    sub_id = consumable.subscription_id
+    pf_id = consumable.plan_financing_id
+    if not sub_id and not pf_id:
+        return
+
+    from breathecode.payments.actions import reschedule_billing_after_vps_next_payment_pull_forward
+
+    if sub_id:
+        updated = Subscription.objects.filter(
+            pk=sub_id,
+            next_charge_pull_applied=False,
+        ).update(
+            next_payment_at=F("next_payment_at") - NEXT_CHARGE_PULL_FORWARD,
+            next_charge_pull_applied=True,
+        )
+        if updated:
+            logger.info(
+                "VPS %s third_party_billing_cycle: pulled Subscription %s next_payment_at back by %s",
+                vps.pk,
+                sub_id,
+                NEXT_CHARGE_PULL_FORWARD,
+            )
+            reschedule_billing_after_vps_next_payment_pull_forward(subscription_id=sub_id)
+        return
+
+    updated = PlanFinancing.objects.filter(
+        pk=pf_id,
+        next_charge_pull_applied=False,
+    ).update(
+        next_payment_at=F("next_payment_at") - NEXT_CHARGE_PULL_FORWARD,
+        next_charge_pull_applied=True,
+    )
+    if updated:
+        logger.info(
+            "VPS %s third_party_billing_cycle: pulled PlanFinancing %s next_payment_at back by %s",
+            vps.pk,
+            pf_id,
+            NEXT_CHARGE_PULL_FORWARD,
+        )
+        reschedule_billing_after_vps_next_payment_pull_forward(plan_financing_id=pf_id)
+
+
 @service_deprovisioner("free-monthly-llm-budget")
 def deprovision_free_monthly_llm_budget(user_id: int, context: dict | None = None, **_: Any):
     """
@@ -1287,3 +1373,54 @@ def deprovision_free_monthly_llm_budget(user_id: int, context: dict | None = Non
     if isinstance(context, dict):
         academy_id = context.get("academy_id") or context.get("academy")
     deprovision_litellm_user_task.delay(user_id=user_id, academy_id=academy_id)
+
+
+@service_deprovisioner("vps_server")
+def deprovision_vps_server(user_id: int, context: dict | None = None, **_: Any):
+    """
+    Deprovision VPS instances for a user when vps_server entitlement is lost.
+    """
+    # Keep receiver fast: enqueue one task per VPS instead of destroying synchronously.
+    from breathecode.provisioning.tasks import deprovision_vps_task
+
+    if isinstance(context, dict) and context.get("provisioning_vps_ids"):
+        for raw_id in context["provisioning_vps_ids"]:
+            deprovision_vps_task.delay(int(raw_id))
+        return
+
+    academy_id = None
+    subscription_id: int | None = None
+    plan_financing_id: int | None = None
+    if isinstance(context, dict):
+        academy_id = context.get("academy_id") or context.get("academy")
+        if context.get("subscription_id") is not None:
+            try:
+                subscription_id = int(context["subscription_id"])
+            except (TypeError, ValueError):
+                subscription_id = None
+        if context.get("plan_financing_id") is not None:
+            try:
+                plan_financing_id = int(context["plan_financing_id"])
+            except (TypeError, ValueError):
+                plan_financing_id = None
+    if academy_id is not None:
+        try:
+            academy_id = int(academy_id)
+        except Exception:
+            academy_id = None
+
+    statuses = [
+        ProvisioningVPS.VPS_STATUS_PENDING,
+        ProvisioningVPS.VPS_STATUS_PROVISIONING,
+        ProvisioningVPS.VPS_STATUS_ACTIVE,
+    ]
+    vps_qs = ProvisioningVPS.objects.filter(user_id=user_id, status__in=statuses)
+    if academy_id:
+        vps_qs = vps_qs.filter(academy_id=academy_id)
+    if subscription_id is not None:
+        vps_qs = vps_qs.filter(consumed_consumable__subscription_id=subscription_id)
+    elif plan_financing_id is not None:
+        vps_qs = vps_qs.filter(consumed_consumable__plan_financing_id=plan_financing_id)
+
+    for vps_id in vps_qs.values_list("id", flat=True):
+        deprovision_vps_task.delay(vps_id)
