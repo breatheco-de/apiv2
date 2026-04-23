@@ -31,12 +31,14 @@ from breathecode.marketing.actions import validate_email_local
 from breathecode.media.models import File
 from breathecode.notify import actions as notify_actions
 from breathecode.payments import tasks
+from breathecode.payments.signals import consume_service, deprovision_service
 from breathecode.utils import getLogger
 from breathecode.utils.validate_conversion_info import validate_conversion_info
 from settings import GENERAL_PRICING_RATIOS
 
 from .models import (
     SERVICE_UNITS,
+    AcademyPaymentSettings,
     AcademyService,
     Bag,
     CohortSet,
@@ -62,6 +64,218 @@ from .models import (
 )
 
 logger = getLogger(__name__)
+
+# Schedule charge tasks a few seconds after `next_payment_at` so execution time is strictly
+# past the deadline (avoids clock skew and ``next_payment_at > utc_now`` in charge tasks).
+SCHEDULE_CHARGE_LAG_AFTER_NEXT_PAYMENT = timedelta(seconds=3)
+
+
+def _cancel_pending_future_scheduled(task_callable: Any, entity_id: int, *, utc_now: datetime) -> None:
+    from task_manager.core.actions import get_fn_desc, parse_payload
+    from task_manager.django.models import ScheduledTask
+
+    module_name, function_name = get_fn_desc(task_callable)
+    if not module_name or not function_name:
+        return
+    arguments = parse_payload({"args": [entity_id], "kwargs": {}})
+    ScheduledTask.objects.filter(
+        task_module=module_name,
+        task_name=function_name,
+        arguments=arguments,
+        status="PENDING",
+        eta__gte=utc_now,
+    ).update(status="CANCELLED")
+
+
+def _eta_for_schedule_at(target: datetime, utc_now: datetime) -> str:
+    """
+    Build an :mod:`celery_task_manager` eta (``"{n}{unit}"`` with a single unit) so
+    that ``utc_now + delta`` ≈ ``target`` (the manager only allows one of ``s|m|h|d|w``).
+
+    Using **seconds** gives a precise wall-clock ``eta``; callers that schedule charges
+    should pass ``next_payment_at + SCHEDULE_CHARGE_LAG_AFTER_NEXT_PAYMENT`` as ``target``
+    so :func:`breathecode.payments.tasks.charge_subscription` does not abort with
+    ``next_payment_at`` still in the future.
+    """
+    if target <= utc_now:
+        return "60s"
+    total_seconds = int((target - utc_now).total_seconds())
+    if total_seconds < 1:
+        return "1s"
+    return f"{total_seconds}s"
+
+
+def _vps_alignment_billing_scope(consumable: Consumable) -> dict | None:
+    """
+    Misma suscripción/plan/asiento (o team) que el consumible renovado.
+
+    Evita alinear créditos y máquinas a nivel usuario entero: si el plan A renueva
+    y el plan B sigue sin filas con saldo, no debemos deprovisionar VPS cargados
+    al consumible del plan B.
+    """
+    if consumable.subscription_id:
+        scope: dict[str, bool | int] = {"subscription_id": consumable.subscription_id}
+        if consumable.subscription_seat_id:
+            scope["subscription_seat_id"] = consumable.subscription_seat_id
+        else:
+            scope["subscription_seat__isnull"] = True
+        return scope
+
+    if consumable.plan_financing_id:
+        scope_pf: dict[str, bool | int] = {"plan_financing_id": consumable.plan_financing_id}
+        if consumable.plan_financing_seat_id:
+            scope_pf["plan_financing_seat_id"] = consumable.plan_financing_seat_id
+        else:
+            scope_pf["plan_financing_seat__isnull"] = True
+        return scope_pf
+
+    if consumable.subscription_billing_team_id:
+        return {"subscription_billing_team_id": consumable.subscription_billing_team_id}
+
+    if consumable.plan_financing_team_id:
+        return {"plan_financing_team_id": consumable.plan_financing_team_id}
+
+    return None
+
+
+def align_consumer_vps_stock_with_active_machines(consumable: Consumable) -> None:
+    """VPS consumer: equilibrar máquinas ACTIVE vs créditos del mismo contexto de facturación; señales de deprovision/pre-consume."""
+    from breathecode.provisioning.models import ProvisioningVPS
+
+    current_consumable = (
+        Consumable.objects.filter(pk=consumable.pk)
+        .select_related("service_item__service", "user", "subscription_seat__user", "plan_financing_seat__user")
+        .first()
+    )
+    if (
+        not current_consumable
+        or current_consumable.service_item.service.consumer != Service.Consumer.VPS_SERVER
+        or current_consumable.service_item.how_many <= 0
+    ):
+        return
+
+    user = current_consumable.user or (
+        current_consumable.subscription_seat.user
+        if current_consumable.subscription_seat_id and current_consumable.subscription_seat.user_id
+        else None
+    ) or (
+        current_consumable.plan_financing_seat.user
+        if current_consumable.plan_financing_seat_id and current_consumable.plan_financing_seat.user_id
+        else None
+    )
+    if not user:
+        return
+
+    user_id = user.id
+    active_vps_status = ProvisioningVPS.VPS_STATUS_ACTIVE
+    billing_scope = _vps_alignment_billing_scope(current_consumable)
+    consumer_extra = {"service_item__service__consumer": Service.Consumer.VPS_SERVER}
+
+    if billing_scope:
+        consumer_extra.update(billing_scope)
+
+    vps_scope_kwargs = (
+        {f"consumed_consumable__{key}": value for key, value in billing_scope.items()}
+        if billing_scope
+        else {}
+    )
+
+    credit_sum = Consumable.list(
+        user=user_id,
+        include_zero_balance=False,
+        extra=consumer_extra,
+    ).aggregate(total_units=Sum("how_many"))["total_units"]
+
+    total_credits = int(credit_sum or 0)
+    active_machine_count = ProvisioningVPS.objects.filter(
+        user_id=user_id,
+        status=active_vps_status,
+        **vps_scope_kwargs,
+    ).count()
+
+    if active_machine_count > total_credits:
+        excess = active_machine_count - total_credits
+        vps_ids_to_deprovision = list(
+            ProvisioningVPS.objects.filter(user_id=user_id, status=active_vps_status, **vps_scope_kwargs)
+            .order_by("-provisioned_at", "-id")
+            .values_list("id", flat=True)[:excess]
+        )
+        if vps_ids_to_deprovision:
+            deprovision_service.send_robust(
+                sender=Service,
+                instance=current_consumable.service_item.service,
+                user_id=user_id,
+                context={"provisioning_vps_ids": vps_ids_to_deprovision},
+            )
+
+    current_consumable.refresh_from_db()
+    active_after = ProvisioningVPS.objects.filter(
+        user_id=user_id,
+        status=active_vps_status,
+        **vps_scope_kwargs,
+    ).count()
+
+    pre_consume_units = min(active_after, current_consumable.how_many)
+    if pre_consume_units > 0:
+        consume_service.send_robust(sender=Consumable, instance=current_consumable, how_many=pre_consume_units)
+
+
+def reschedule_billing_after_vps_next_payment_pull_forward(
+    *, subscription_id: int | None = None, plan_financing_id: int | None = None
+) -> None:
+    """
+    After `next_payment_at` is pulled forward (VPS / third-party billing alignment), cancel future
+    PENDING ScheduledTask rows for charge and renewal notify, then recreate them with an ETA that
+    aligns charge ``eta`` with ``next_payment_at`` plus a short lag (seconds), so charges
+    do not run before the subscription/plan payment instant.
+    """
+    from task_manager.django.actions import schedule_task
+
+    utc_now = timezone.now()
+
+    if subscription_id is not None:
+        subscription = Subscription.objects.filter(pk=subscription_id).first()
+        if not subscription:
+            return
+
+        for fn in (tasks.charge_subscription, tasks.notify_subscription_renewal):
+            _cancel_pending_future_scheduled(fn, subscription_id, utc_now=utc_now)
+
+        charge_at = subscription.next_payment_at + SCHEDULE_CHARGE_LAG_AFTER_NEXT_PAYMENT
+        charge_eta = _eta_for_schedule_at(charge_at, utc_now)
+        manager = schedule_task(tasks.charge_subscription, charge_eta)
+        manager.call(subscription_id)
+
+        payment_settings = AcademyPaymentSettings.objects.filter(academy=subscription.academy).first()
+        early_renewal_window_days = payment_settings.early_renewal_window_days if payment_settings else 0
+
+        if early_renewal_window_days > 0:
+            notify_at = subscription.next_payment_at - timedelta(days=early_renewal_window_days)
+            
+            if notify_at > utc_now:
+                notify_eta = _eta_for_schedule_at(notify_at, utc_now)
+                schedule_task(tasks.notify_subscription_renewal, notify_eta).call(subscription_id)
+        return
+
+    if plan_financing_id is None:
+        return
+
+    plan_financing = PlanFinancing.objects.filter(pk=plan_financing_id).first()
+    if not plan_financing:
+        return
+
+    for fn in (tasks.charge_plan_financing, tasks.notify_plan_financing_renewal):
+        _cancel_pending_future_scheduled(fn, plan_financing_id, utc_now=utc_now)
+
+    pf_charge_at = plan_financing.next_payment_at + SCHEDULE_CHARGE_LAG_AFTER_NEXT_PAYMENT
+    pf_charge_eta = _eta_for_schedule_at(pf_charge_at, utc_now)
+    schedule_task(tasks.charge_plan_financing, pf_charge_eta).call(plan_financing_id)
+
+    if (plan_financing.next_payment_at - utc_now) > timedelta(days=2):
+        notify_at = plan_financing.next_payment_at - timedelta(days=2)
+        if notify_at > utc_now:
+            pf_notify_eta = _eta_for_schedule_at(notify_at, utc_now)
+            schedule_task(tasks.notify_plan_financing_renewal, pf_notify_eta).call(plan_financing_id)
 
 
 def _raise_if_task_manager_failed(task_handler: Any) -> None:

@@ -44,31 +44,46 @@ class Github:
 
         return self._call("POST", action_name, json=request_data)
 
-    def delete(self, action_name, request_data=None):
-
+    def delete(self, action_name, request_data=None, json=None):
+        """
+        DELETE: `request_data` are query-string params (default behavior).
+        Pass `json=dict` to send a JSON body instead; params stay in `request_data`.
+        """
         if request_data is None:
             request_data = {}
 
-        return self._call("DELETE", action_name, params=request_data)
+        return self._call("DELETE", action_name, params=request_data, json=json)
 
     def _call(self, method_name, action_name, params=None, json=None):
 
         self.headers = {
             "Authorization": "Bearer " + self.token,
             "Content-type": "application/json",
+            "Accept": "application/vnd.github+json",
         }
 
         url = self.HOST + action_name
         resp = requests.request(method=method_name, url=url, headers=self.headers, params=params, json=json, timeout=20)
 
         if resp.status_code >= 200 and resp.status_code < 300:
-            if method_name in ["DELETE", "HEAD"]:
+            if method_name == "HEAD":
+                return resp
+
+            if method_name == "DELETE":
+                # Body was sent: API returns JSON; legacy DELETE has no body → raw response.
+                if json is not None:
+                    if not resp.content:
+                        return {}
+                    try:
+                        return resp.json()
+                    except Exception:
+                        return {}
                 return resp
 
             data = resp.json()
             return data
         else:
-            logger.debug(f"Error call {method_name}: /{action_name}")
+            logger.debug("Error call %s: %s", method_name, action_name)
             if resp.status_code == 401:
                 raise GithubAuthException("Invalid credentials when calling the Github API")
 
@@ -362,8 +377,52 @@ class Github:
             team_ids = []
 
         return self.post(
-            f"/orgs/{self.org}/invitations", request_data={"email": email, "role": role, "team_ids": [12, 26]}
+            f"/orgs/{self.org}/invitations", request_data={"email": email, "role": role, "team_ids": team_ids}
         )
+
+    def copilot_add_selected_users(self, usernames: list):
+        """Assign Copilot seats to organization members."""
+        return self.post(
+            f"/orgs/{self.org}/copilot/billing/selected_users",
+            request_data={"selected_usernames": usernames},
+        )
+
+    def copilot_remove_selected_users(self, usernames: list):
+        """Remove Copilot seats from organization members."""
+        return self.delete(
+            f"/orgs/{self.org}/copilot/billing/selected_users",
+            json={"selected_usernames": usernames},
+        )
+
+    def copilot_list_seat_usernames(self) -> list[str]:
+        """GitHub org members currently assigned a Copilot seat (paginated billing API)."""
+        usernames: list[str] = []
+        page = 1
+        while True:
+            data = self.get(
+                f"/orgs/{self.org}/copilot/billing/seats",
+                request_data={"page": page, "per_page": self.page_size},
+            )
+            if not isinstance(data, dict):
+                break
+            batch = data.get("seats") or []
+            if not batch:
+                break
+            for seat in batch:
+                if not isinstance(seat, dict):
+                    continue
+                assignee = seat.get("assignee") or seat.get("user") or {}
+                if isinstance(assignee, dict):
+                    login = assignee.get("login")
+                    if login:
+                        usernames.append(str(login))
+            if len(batch) < self.page_size:
+                break
+            page += 1
+            if page > 500:
+                logger.warning("Copilot seats pagination stopped at page 500 for org %s", self.org)
+                break
+        return list(dict.fromkeys(usernames))
 
     def delete_org_member(self, username):
         return self.delete(f"/orgs/{self.org}/members/{username}")

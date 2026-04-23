@@ -580,6 +580,9 @@ STORAGE_ACTION = (
 
 
 class GithubAcademyUser(models.Model):
+    """Rolling audit log for sync messages; newest first, max ``STORAGE_LOG_MAX_ENTRIES``."""
+
+    STORAGE_LOG_MAX_ENTRIES = 5
 
     def __init__(self, *args, **kwargs):
         super(GithubAcademyUser, self).__init__(*args, **kwargs)
@@ -614,12 +617,21 @@ class GithubAcademyUser(models.Model):
     def create_log(msg):
         return {"msg": msg, "at": str(timezone.now())}
 
-    def log(self, msg, reset=True):
+    def log(self, msg, reset=False):
+        """
+        Prepend ``msg`` with timestamp. Keeps the first ``STORAGE_LOG_MAX_ENTRIES`` entries (newest first).
 
-        if self.storage_log is None or reset:
+        :param reset: If True, discard previous entries and only store this message.
+        """
+        if reset:
+            self.storage_log = []
+        elif self.storage_log is None or not isinstance(self.storage_log, list):
             self.storage_log = []
 
-        self.storage_log.append(GithubAcademyUser.create_log(msg))
+        self.storage_log.insert(0, GithubAcademyUser.create_log(msg))
+        cap = GithubAcademyUser.STORAGE_LOG_MAX_ENTRIES
+        if len(self.storage_log) > cap:
+            self.storage_log = self.storage_log[:cap]
 
     def save(self, *args, **kwargs):
         has_mutated = False
