@@ -6,6 +6,7 @@ from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
 
 from breathecode.authenticate.actions import (
+    github_academy_user_allows_copilot_in_sibling_academies,
     _user_has_copilot_entitlement_in_sibling_academies,
     provision_github_copilot_for_user,
 )
@@ -21,6 +22,58 @@ from breathecode.authenticate.models import (
 from breathecode.services.github import Github
 
 logger = logging.getLogger(__name__)
+
+
+def _candidate_user_ids_with_copilot_consumable(sibling_academy_ids: list[int]) -> set[int]:
+    """
+    Candidate users are sourced from github-copilot consumables first,
+    then later filtered by GithubAcademyUser SYNCHED + ADD.
+    """
+    from breathecode.payments.models import Consumable, PlanFinancingTeam, Service, SubscriptionBillingTeam
+
+    if not sibling_academy_ids:
+        return set()
+
+    base_qs = Consumable.objects.filter(
+        service_item__service__consumer=Service.Consumer.GITHUB_COPILOT,
+    ).filter(
+        subscription__academy_id__in=sibling_academy_ids,
+    ) | Consumable.objects.filter(
+        service_item__service__consumer=Service.Consumer.GITHUB_COPILOT,
+        plan_financing__academy_id__in=sibling_academy_ids,
+    )
+
+    user_ids: set[int] = set(base_qs.exclude(user_id__isnull=True).values_list("user_id", flat=True))
+    user_ids.update(
+        base_qs.filter(subscription_seat__is_active=True)
+        .exclude(subscription_seat__user_id__isnull=True)
+        .values_list("subscription_seat__user_id", flat=True)
+    )
+    user_ids.update(
+        base_qs.filter(plan_financing_seat__is_active=True)
+        .exclude(plan_financing_seat__user_id__isnull=True)
+        .values_list("plan_financing_seat__user_id", flat=True)
+    )
+    user_ids.update(
+        base_qs.filter(
+            user_id__isnull=True,
+            subscription_billing_team__consumption_strategy=SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM,
+            subscription_billing_team__seats__is_active=True,
+        )
+        .exclude(subscription_billing_team__seats__user_id__isnull=True)
+        .values_list("subscription_billing_team__seats__user_id", flat=True)
+    )
+    user_ids.update(
+        base_qs.filter(
+            user_id__isnull=True,
+            plan_financing_team__consumption_strategy=PlanFinancingTeam.ConsumptionStrategy.PER_TEAM,
+            plan_financing_team__seats__is_active=True,
+        )
+        .exclude(plan_financing_team__seats__user_id__isnull=True)
+        .values_list("plan_financing_team__seats__user_id", flat=True)
+    )
+
+    return user_ids
 
 
 def _copilot_seat_should_be_removed(
@@ -69,19 +122,19 @@ def _reconcile_copilot_seats_for_academy_settings(
     *,
     dry_run: bool = False,
     stdout: Any | None = None,
-) -> tuple[int, int, list[dict], list[dict], str | None]:
+) -> tuple[int, int, list[dict], list[dict], list[dict], str | None]:
     empty: list[dict] = []
 
     if not settings.github_owner_id:
-        return 0, 0, empty, empty, None
+        return 0, 0, empty, empty, empty, None
 
     owner_creds = CredentialsGithub.objects.filter(user_id=settings.github_owner_id).first()
     if not owner_creds or not owner_creds.token:
-        return 0, 0, empty, empty, None
+        return 0, 0, empty, empty, empty, None
 
     org = (settings.github_username or "").strip()
     if not org:
-        return 0, 0, empty, empty, None
+        return 0, 0, empty, empty, empty, None
 
     gb = Github(org=org, token=owner_creds.token)
     if stdout:
@@ -98,13 +151,13 @@ def _reconcile_copilot_seats_for_academy_settings(
         if stdout:
             stdout.write(f"    [{org}] SKIP: {hint}\n")
             stdout.flush()
-        return 0, 0, empty, empty, hint
+        return 0, 0, empty, empty, empty, hint
 
     sibling_academy_ids = list(
         AcademyAuthSettings.objects.filter(github_username__iexact=org).values_list("academy_id", flat=True)
     )
     if not sibling_academy_ids:
-        return 0, 0, empty, empty, None
+        return 0, 0, empty, empty, empty, None
 
     seat_set = {u.lower() for u in seat_usernames}
 
@@ -149,27 +202,34 @@ def _reconcile_copilot_seats_for_academy_settings(
 
     added = 0
     would_add: list[dict] = []
-    candidate_user_ids = (
-        GithubAcademyUser.objects.filter(
-            academy_id__in=sibling_academy_ids,
-            storage_status=SYNCHED,
-            storage_action=ADD,
-        )
-        .values_list("user_id", flat=True)
-        .distinct()
-    )
+    would_skip_add: list[dict] = []
+    candidate_user_ids = sorted(_candidate_user_ids_with_copilot_consumable(sibling_academy_ids))
     first_sibling_id = sibling_academy_ids[0]
     for user_id in candidate_user_ids:
         user = User.objects.filter(id=user_id).first()
         if not user:
+            if dry_run:
+                would_skip_add.append({"org": org, "user_id": user_id, "reason": "user_not_found"})
+            continue
+        if not github_academy_user_allows_copilot_in_sibling_academies(user, sibling_academy_ids):
+            if dry_run:
+                would_skip_add.append({"org": org, "user_id": user_id, "reason": "no_synched_add_github_academy_user"})
             continue
         if not _user_has_copilot_entitlement_in_sibling_academies(user, sibling_academy_ids):
+            if dry_run:
+                would_skip_add.append({"org": org, "user_id": user_id, "reason": "no_copilot_entitlement"})
             continue
         cred = CredentialsGithub.objects.filter(user_id=user_id).first()
         gh_username = (cred.username or "").strip() if cred else ""
         if not gh_username:
+            if dry_run:
+                would_skip_add.append({"org": org, "user_id": user_id, "reason": "missing_github_username"})
             continue
         if gh_username.lower() in effective_seat_set:
+            if dry_run:
+                would_skip_add.append(
+                    {"org": org, "user_id": user_id, "github_username": gh_username, "reason": "already_has_seat"}
+                )
             continue
         entry = {"org": org, "github_username": gh_username, "user_id": user_id}
         if dry_run:
@@ -186,8 +246,8 @@ def _reconcile_copilot_seats_for_academy_settings(
             effective_seat_set.add(gh_username.lower())
 
     if dry_run:
-        return 0, 0, would_remove, would_add, None
-    return removed, added, empty, empty, None
+        return 0, 0, would_remove, would_add, would_skip_add, None
+    return removed, added, empty, empty, empty, None
 
 
 def run_reconcile_github_copilot_seats(
@@ -200,6 +260,7 @@ def run_reconcile_github_copilot_seats(
     seats_added = 0
     would_remove_all: list[dict] = []
     would_add_all: list[dict] = []
+    would_skip_add_all: list[dict] = []
     list_errors: list[dict] = []
     for settings in AcademyAuthSettings.objects.filter(github_owner_id__isnull=False):
         org = (settings.github_username or "").strip().lower()
@@ -209,7 +270,7 @@ def run_reconcile_github_copilot_seats(
         if stdout:
             stdout.write(f"  org {org}\n")
             stdout.flush()
-        removed, added, wr, wa, list_err = _reconcile_copilot_seats_for_academy_settings(
+        removed, added, wr, wa, ws, list_err = _reconcile_copilot_seats_for_academy_settings(
             settings,
             dry_run=dry_run,
             stdout=stdout,
@@ -218,6 +279,7 @@ def run_reconcile_github_copilot_seats(
         seats_added += added
         would_remove_all.extend(wr)
         would_add_all.extend(wa)
+        would_skip_add_all.extend(ws)
         if list_err:
             list_errors.append({"org": org, "error": list_err})
     result: dict = {
@@ -231,6 +293,7 @@ def run_reconcile_github_copilot_seats(
         result["dry_run"] = True
         result["would_remove"] = would_remove_all
         result["would_add"] = would_add_all
+        result["would_skip_add"] = would_skip_add_all
     return result
 
 
