@@ -57,22 +57,41 @@ class TestGetEligibleAcademyAndVendorForVps(ProvisioningTestCase):
 
 @pytest.mark.django_db
 class TestRequestVps(ProvisioningTestCase):
-    @patch("breathecode.provisioning.actions.get_vps_client")
-    @patch("breathecode.provisioning.actions.get_eligible_academy_and_vendor_for_vps")
-    def test_request_vps_rejects_when_no_consumables(self, mock_eligible, mock_client):
-        model = self.bc.database.create(user=1, academy=1)
-        mock_eligible.return_value = (model.academy, MagicMock())
-        mock_eligible.return_value[1].vendor = MagicMock()
-        with patch("breathecode.provisioning.actions.Consumable") as mock_consumable:
-            qs = MagicMock()
-            qs.filter.return_value = qs
-            qs.exists.return_value = False
-            mock_consumable.list.return_value = qs
-            with pytest.raises(ValidationException) as exc_info:
-                request_vps(model.user)
-            assert "insufficient-vps-server-credits" in str(exc_info.value).lower() or "credits" in str(
-                exc_info.value
-            ).lower()
+    @patch("breathecode.provisioning.actions._get_vps_consumables_for_academy")
+    def test_request_vps_rejects_when_no_consumables(self, mock_get_consumables):
+        model = self.bc.database.create(
+            user=1,
+            academy=1,
+            profile_academy=1,
+            provisioning_vendor=1,
+            provisioning_academy=1,
+            provisioning_profile=1,
+        )
+        pa = model.profile_academy
+        pa.user = model.user
+        pa.academy = model.academy
+        pa.status = PROFILE_ACADEMY_ACTIVE
+        pa.save()
+        model.provisioning_vendor.name = "hostinger"
+        model.provisioning_vendor.save()
+        model.provisioning_academy.academy = model.academy
+        model.provisioning_academy.vendor = model.provisioning_vendor
+        model.provisioning_academy.credentials_token = "tok"
+        model.provisioning_academy.save()
+        model.provisioning_profile.academy = model.academy
+        model.provisioning_profile.vendor = model.provisioning_vendor
+        model.provisioning_profile.save()
+        qs = MagicMock()
+        qs.filter.return_value = qs
+        qs.exists.return_value = False
+        mock_get_consumables.return_value = qs
+        with pytest.raises(ValidationException) as exc_info:
+            request_vps(
+                model.user,
+                provisioning_academy_id=model.provisioning_academy.id,
+                consumable_id=1,
+            )
+        assert "invalid-vps-consumable" in str(exc_info.value).lower() or "consumible" in str(exc_info.value).lower()
 
 
 @pytest.mark.django_db
@@ -83,7 +102,7 @@ class TestRequestVpsForStudent(ProvisioningTestCase):
         student = m_student.user
         academy = m_staff_academy.academy
         with pytest.raises(ValidationException) as exc_info:
-            request_vps_for_student(student, academy, lang="en")
+            request_vps_for_student(student, academy, plan_slug="full-stack", lang="en")
         assert "student-not-in-academy" in str(exc_info.value).lower()
 
     @patch("breathecode.provisioning.actions._request_vps_core")
@@ -122,6 +141,7 @@ class TestRequestVpsForStudent(ProvisioningTestCase):
         out = request_vps_for_student(student, academy, plan_slug="default", lang="en")
         assert out.id == 42
         mock_core.assert_called_once()
-        _, call_kwargs = mock_core.call_args
+        call_args, call_kwargs = mock_core.call_args
+        assert call_args[3] == "default"
         assert call_kwargs["lang"] == "en"
         assert call_kwargs["for_staff"] is True

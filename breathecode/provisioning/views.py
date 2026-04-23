@@ -55,11 +55,11 @@ from breathecode.utils.io.file import count_csv_rows
 from breathecode.utils.views import private_view, render_message
 
 from .actions import (
+    can_request_vps,
     get_provisioning_vendor,
     request_vps,
     resolve_llm_client_and_external_id,
     resolve_provisioning_academy_for_llm,
-    get_eligible_academy_and_vendor_for_vps,
     get_vps_provisioning_academy_for_academy,
     request_vps_for_student,
 )
@@ -1398,7 +1398,7 @@ class ProvisioningAcademyByIdView(APIView):
 class ProvisioningAcademyVendorOptionsView(APIView):
     """GET vendor options for one provisioning academy (unfiltered universe)."""
 
-    @capable_of("crud_provisioning_activity")
+    @capable_of("read_provisioning_activity")
     def get(self, request, academy_id=None, provisioning_academy_id=None):
         lang = get_user_language(request)
         pa = (
@@ -1552,7 +1552,7 @@ class MeVPSView(APIView):
         items = ProvisioningVPS.objects.filter(user=request.user).order_by("-created_at")
         items = handler.queryset(items)
         serializer = VPSListSerializer(items, many=True)
-        return handler.response(serializer.data)
+        return handler.response({"can_request_vps": can_request_vps(request.user), "results": serializer.data})
 
     def post(self, request):
         lang = get_user_language(request)
@@ -1560,8 +1560,29 @@ class MeVPSView(APIView):
         serializer = VPSRequestSerializer(data=data, context={"request": request, "lang": lang})
         if not serializer.is_valid():
             raise ValidationException(serializer.errors, code=400)
+        provisioning_academy_id = serializer.validated_data["provisioning_academy"]
+        consumable_id = serializer.validated_data.get("consumable_id")
         plan_slug = (serializer.validated_data.get("plan_slug") or "").strip() or None
-        _, provisioning_academy = get_eligible_academy_and_vendor_for_vps(request.user)
+        provisioning_academy = (
+            ProvisioningAcademy.objects.select_related("academy", "vendor").filter(id=provisioning_academy_id).first()
+        )
+        if not provisioning_academy:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Provisioning academy config not found.",
+                    es="Configuración de aprovisionamiento de academia no encontrada.",
+                    slug="provisioning-academy-not-found",
+                ),
+                code=404,
+            )
+        academy = provisioning_academy.academy
+        vendor = provisioning_academy.vendor
+        if not academy or not vendor:
+            raise ValidationException(
+                translation(lang, en="Vendor not found.", es="Vendor no encontrado.", slug="vendor-not-found"),
+                code=404,
+            )
         vendor_selection = _build_vendor_selection(
             provisioning_academy.vendor.name,
             provisioning_academy.vendor_settings or {},
@@ -1569,7 +1590,13 @@ class MeVPSView(APIView):
             lang,
         )
         try:
-            vps = request_vps(request.user, plan_slug=plan_slug, vendor_selection=vendor_selection)
+            vps = request_vps(
+                request.user,
+                plan_slug=plan_slug,
+                vendor_selection=vendor_selection,
+                provisioning_academy_id=provisioning_academy_id,
+                consumable_id=consumable_id,
+            )
         except ValidationException:
             raise
         out_serializer = VPSListSerializer(vps)
@@ -1652,7 +1679,11 @@ class AcademyVPSView(APIView):
                 lang,
             )
             vps = request_vps_for_student(
-                student, academy, plan_slug=plan_slug, vendor_selection=vendor_selection, lang=lang
+                student,
+                academy,
+                plan_slug=plan_slug,
+                vendor_selection=vendor_selection,
+                lang=lang,
             )
         except ValidationException:
             raise

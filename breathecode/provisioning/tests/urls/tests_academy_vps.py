@@ -59,14 +59,14 @@ class AcademyVPSViewTestSuite(ProvisioningTestCase):
             self.client.force_authenticate(staff_model.user)
             self.headers(academy=staff_model.academy.id)
             url = reverse_lazy("provisioning:academy_vps")
-            response = self.client.post(url, {"user_id": student.id}, format="json")
+            response = self.client.post(url, {"user_id": student.id, "plan_slug": "full-stack"}, format="json")
             self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
             self.assertEqual(response.json()["id"], 1)
             self.assertEqual(response.json()["status"], ProvisioningVPS.VPS_STATUS_PENDING)
             mock_request.assert_called_once_with(
                 student,
                 staff_model.academy,
-                plan_slug=None,
+                plan_slug="full-stack",
                 vendor_selection={"item_id": "100", "template_id": 10, "data_center_id": 5},
                 lang="en",
             )
@@ -110,6 +110,7 @@ class AcademyVPSViewTestSuite(ProvisioningTestCase):
                 url,
                 {
                     "user_id": student.id,
+                    "plan_slug": "backend",
                     "vendor_selection": {
                         "region_slug": "nyc1",
                         "size_slug": "s-1vcpu-1gb",
@@ -122,7 +123,7 @@ class AcademyVPSViewTestSuite(ProvisioningTestCase):
             mock_request.assert_called_once_with(
                 student,
                 staff_model.academy,
-                plan_slug=None,
+                plan_slug="backend",
                 vendor_selection={
                     "region_slug": "nyc1",
                     "size_slug": "s-1vcpu-1gb",
@@ -142,6 +143,6 @@ class AcademyVPSViewTestSuite(ProvisioningTestCase):
         self.client.force_authenticate(model.user)
         self.headers(academy=model.academy.id)
         url = reverse_lazy("provisioning:academy_vps")
-        response = self.client.post(url, {"user_id": 99999}, format="json")
+        response = self.client.post(url, {"user_id": 99999, "plan_slug": "full-stack"}, format="json")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertIn("user-not-found", response.content.decode())
