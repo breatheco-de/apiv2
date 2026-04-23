@@ -45,14 +45,18 @@ def batch(self, webhook: LearnPackWebhook):
 
     canonical_asset = asset.get_canonical_translation_asset()
     canonical_slug = canonical_asset.slug
+    translation_slugs = {canonical_slug, asset.slug}
+    translation_slugs.update(elem.slug for elem in canonical_asset.all_translations.all() if elem and elem.slug)
 
     telemetry = AssignmentTelemetry.objects.filter(
         asset_slug=canonical_slug, user__id=webhook.payload["user_id"]
     ).first()
 
-    asset_tasks = Task.objects.filter(associated_slug=canonical_slug, user__id=webhook.student.id)
+    asset_tasks = Task.objects.filter(associated_slug__in=translation_slugs, user__id=webhook.student.id)
     if asset_tasks.count() == 0:
-        raise Exception(f"Student with id {webhook.student.id} has not tasks with associated slug {canonical_slug}")
+        raise Exception(
+            f"Student with id {webhook.student.id} has not tasks with associated slug in any of the asset translations: {sorted(translation_slugs)}"
+        )
 
     if telemetry is None:
         telemetry = AssignmentTelemetry(user=webhook.student, asset_slug=canonical_slug, telemetry=webhook.payload)

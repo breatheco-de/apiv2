@@ -100,6 +100,68 @@ def test_batch_resolves_comma_separated_asset_id_to_english_candidate(database: 
     assert telemetry.asset_slug == us_asset.slug
 
 
+def test_batch_links_telemetry_when_task_is_on_translated_slug(database: capy.Database):
+    model = database.create(
+        user=1,
+        asset=[
+            {"slug": "translated-task-us", "lang": "us", "asset_type": "EXERCISE"},
+            {"slug": "translated-task-es", "lang": "es", "asset_type": "EXERCISE"},
+        ],
+        task={"associated_slug": "translated-task-es", "task_type": "EXERCISE", "user": 1, "title": "Exercise"},
+        learn_pack_webhook=1,
+    )
+
+    canonical_asset, translated_asset = model.asset
+    translated_asset.all_translations.add(canonical_asset)
+
+    webhook = model.learn_pack_webhook
+    webhook.student = model.user
+    webhook.payload = {"asset_id": translated_asset.id, "user_id": model.user.id, "event": "batch", "step": 1}
+    webhook.save()
+
+    batch(None, webhook)
+
+    telemetry = AssignmentTelemetry.objects.filter(user=model.user).first()
+    task = Task.objects.get(id=model.task.id)
+
+    assert telemetry is not None
+    assert telemetry.asset_slug == canonical_asset.slug
+    assert task.telemetry_id == telemetry.id
+
+
+def test_batch_links_mixed_translation_slug_tasks_to_same_telemetry(database: capy.Database):
+    model = database.create(
+        user=1,
+        asset=[
+            {"slug": "mixed-task-us", "lang": "us", "asset_type": "EXERCISE"},
+            {"slug": "mixed-task-es", "lang": "es", "asset_type": "EXERCISE"},
+        ],
+        task=[
+            {"associated_slug": "mixed-task-us", "task_type": "EXERCISE", "user": 1, "title": "Exercise US"},
+            {"associated_slug": "mixed-task-es", "task_type": "EXERCISE", "user": 1, "title": "Exercise ES"},
+        ],
+        learn_pack_webhook=1,
+    )
+
+    canonical_asset, translated_asset = model.asset
+    translated_asset.all_translations.add(canonical_asset)
+
+    webhook = model.learn_pack_webhook
+    webhook.student = model.user
+    webhook.payload = {"asset_id": translated_asset.id, "user_id": model.user.id, "event": "batch", "step": 1}
+    webhook.save()
+
+    batch(None, webhook)
+
+    telemetry = AssignmentTelemetry.objects.filter(user=model.user).first()
+    tasks = Task.objects.filter(id__in=[task.id for task in model.task]).order_by("id")
+
+    assert telemetry is not None
+    assert telemetry.asset_slug == canonical_asset.slug
+    assert tasks.count() == 2
+    assert all(task.telemetry_id == telemetry.id for task in tasks)
+
+
 def test_batch_falls_back_to_package_id_when_asset_and_slug_are_missing(database: capy.Database):
     model = database.create(
         user=1,
