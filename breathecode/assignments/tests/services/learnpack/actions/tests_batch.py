@@ -70,6 +70,36 @@ def test_batch_merges_telemetry_updates_from_translation_ids(database: capy.Data
     assert telemetry.telemetry["step"] == 2
 
 
+def test_batch_resolves_comma_separated_asset_id_to_english_candidate(database: capy.Database):
+    model = database.create(
+        user=1,
+        asset=[
+            {"slug": "batch-csv-us", "lang": "us", "asset_type": "EXERCISE"},
+            {"slug": "batch-csv-es", "lang": "es", "asset_type": "EXERCISE"},
+        ],
+        task={"associated_slug": "batch-csv-us", "task_type": "EXERCISE", "user": 1, "title": "Exercise"},
+        learn_pack_webhook=1,
+    )
+
+    us_asset, es_asset = model.asset
+    es_asset.all_translations.add(us_asset)
+
+    webhook = model.learn_pack_webhook
+    webhook.student = model.user
+    webhook.payload = {
+        "asset_id": f"{es_asset.id},{us_asset.id}",
+        "user_id": model.user.id,
+        "event": "batch",
+    }
+    webhook.save()
+
+    batch(None, webhook)
+
+    telemetry = AssignmentTelemetry.objects.filter(user=model.user).first()
+    assert telemetry is not None
+    assert telemetry.asset_slug == us_asset.slug
+
+
 def test_batch_falls_back_to_package_id_when_asset_and_slug_are_missing(database: capy.Database):
     model = database.create(
         user=1,

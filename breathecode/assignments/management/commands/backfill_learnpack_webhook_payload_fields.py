@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand
 
 from breathecode.assignments.models import LearnPackWebhook
+from breathecode.services.learnpack.resolve_payload_asset import resolve_asset_id_from_payload_value
 
 
 class Command(BaseCommand):
@@ -31,7 +32,7 @@ class Command(BaseCommand):
             scanned += 1
             payload = webhook.payload or {}
 
-            parsed_asset_id = self._to_int(payload.get("asset_id"))
+            parsed_asset_id = resolve_asset_id_from_payload_value(payload.get("asset_id"))
             parsed_package_id = self._to_int(payload.get("package_id"))
             parsed_package_slug = payload.get("package_slug") or payload.get("slug")
 

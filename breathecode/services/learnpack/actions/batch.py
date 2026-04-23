@@ -10,11 +10,12 @@ def batch(self, webhook: LearnPackWebhook):
     # lazyload to fix circular import
     from breathecode.assignments.models import Task
     from breathecode.registry.models import Asset
+    from breathecode.services.learnpack.resolve_payload_asset import resolve_asset_from_payload_asset_id
 
     asset = None
     if "asset_id" in webhook.payload:
         _id = webhook.payload["asset_id"]
-        asset = Asset.objects.filter(id=int(_id)).first()
+        asset = resolve_asset_from_payload_asset_id(_id)
         if asset is not None and asset.learnpack_id is None and "package_id" in webhook.payload:
             asset.learnpack_id = int(webhook.payload["package_id"])
             asset.save()

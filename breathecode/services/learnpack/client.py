@@ -3,6 +3,7 @@ import traceback
 
 import breathecode.services.learnpack.actions as actions
 from breathecode.assignments.models import LearnPackWebhook
+from breathecode.services.learnpack.resolve_payload_asset import resolve_asset_id_from_payload_value
 
 logger = logging.getLogger(__name__)
 
@@ -103,10 +104,11 @@ class LearnPack:
         webhook.is_streaming = is_streaming
         webhook.payload = payload
         webhook.package_slug = payload.get("package_slug") or payload.get("slug")
-        try:
-            webhook.asset_id = int(payload.get("asset_id")) if payload.get("asset_id") is not None else None
-        except (TypeError, ValueError):
-            webhook.asset_id = None
+        webhook.asset_id = (
+            resolve_asset_id_from_payload_value(payload.get("asset_id"))
+            if payload.get("asset_id") is not None
+            else None
+        )
 
         try:
             webhook.learnpack_package_id = (
