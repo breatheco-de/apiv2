@@ -10,11 +10,12 @@ def batch(self, webhook: LearnPackWebhook):
     # lazyload to fix circular import
     from breathecode.assignments.models import Task
     from breathecode.registry.models import Asset
+    from breathecode.services.learnpack.resolve_payload_asset import resolve_asset_from_payload_asset_id
 
     asset = None
     if "asset_id" in webhook.payload:
         _id = webhook.payload["asset_id"]
-        asset = Asset.objects.filter(id=int(_id)).first()
+        asset = resolve_asset_from_payload_asset_id(_id)
         if asset is not None and asset.learnpack_id is None and "package_id" in webhook.payload:
             asset.learnpack_id = int(webhook.payload["package_id"])
             asset.save()
@@ -29,19 +30,32 @@ def batch(self, webhook: LearnPackWebhook):
         if _slug is not None:
             asset = Asset.get_by_slug(_slug)
 
+    # Final fallback: try resolving by LearnPack package_id if available.
+    if asset is None and "package_id" in webhook.payload:
+        try:
+            package_id = int(webhook.payload["package_id"])
+            asset = Asset.objects.filter(learnpack_id=package_id).first()
+        except (TypeError, ValueError):
+            asset = None
+
     if asset is None:
         raise Exception(
             "Asset specified by learnpack telemetry was not found using either the payload 'asset_id' or 'slug'"
         )
 
-    telemetry = AssignmentTelemetry.objects.filter(asset_slug=asset.slug, user__id=webhook.payload["user_id"]).first()
+    canonical_asset = asset.get_canonical_translation_asset()
+    canonical_slug = canonical_asset.slug
 
-    asset_tasks = Task.objects.filter(associated_slug=asset.slug, user__id=webhook.student.id)
+    telemetry = AssignmentTelemetry.objects.filter(
+        asset_slug=canonical_slug, user__id=webhook.payload["user_id"]
+    ).first()
+
+    asset_tasks = Task.objects.filter(associated_slug=canonical_slug, user__id=webhook.student.id)
     if asset_tasks.count() == 0:
-        raise Exception(f"Student with id {webhook.student.id} has not tasks with associated slug {asset.slug}")
+        raise Exception(f"Student with id {webhook.student.id} has not tasks with associated slug {canonical_slug}")
 
     if telemetry is None:
-        telemetry = AssignmentTelemetry(user=webhook.student, asset_slug=asset.slug, telemetry=webhook.payload)
+        telemetry = AssignmentTelemetry(user=webhook.student, asset_slug=canonical_slug, telemetry=webhook.payload)
         telemetry.save()
         # All assets with the same associated slug should share the same telemetry
         for a in asset_tasks:

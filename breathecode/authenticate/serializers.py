@@ -17,7 +17,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 import breathecode.notify.actions as notify_actions
-from breathecode.admissions.models import Academy, City, Cohort, CohortUser, Country
+from breathecode.admissions.models import Academy, City, Cohort, CohortUser, Country, Syllabus
 from breathecode.authenticate.actions import convert_youtube_to_embed, get_app_url, get_invite_url, get_user_settings, sync_with_rigobot
 from breathecode.authenticate.tasks import verify_user_invite_email
 from breathecode.events.models import Event
@@ -1046,6 +1046,10 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
     user = serializers.IntegerField(write_only=True, required=False)
     status = serializers.CharField(read_only=True)
     welcome_video = serializers.JSONField(write_only=True, required=False)
+    conversion_info = serializers.JSONField(write_only=True, required=False, allow_null=True)
+    country = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    city = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    syllabus_slug = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=False)
 
     id = serializers.IntegerField(read_only=True)
 
@@ -1065,10 +1069,18 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
             "payment_method",
             "id",
             "welcome_video",
+            "conversion_info",
+            "country",
+            "city",
+            "syllabus_slug",
         )
         list_serializer_class = StudentPOSTListSerializer
 
     def validate(self, data):
+        request = self.context.get("request")
+        lang = getattr(request, "LANG", None) if request else None
+        lang = lang or self.context.get("lang", "en") if isinstance(self.context.get("lang"), str) else "en"
+
         if "email" in data and data["email"]:
             data["email"] = data["email"].lower()
             user = User.objects.filter(email=data["email"]).first()
@@ -1079,6 +1091,33 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
         # Clean phone number (strip whitespace)
         if "phone" in data and data["phone"]:
             data["phone"] = data["phone"].strip()
+
+        # Clean location fields
+        if "country" in data and isinstance(data["country"], str):
+            data["country"] = data["country"].strip()
+
+        if "city" in data and isinstance(data["city"], str):
+            data["city"] = data["city"].strip()
+
+        conversion_info = data.get("conversion_info", None)
+        validate_conversion_info(conversion_info, lang)
+
+        syllabus_slug = data.get("syllabus_slug", None)
+        if syllabus_slug:
+            syllabus = Syllabus.objects.filter(slug=syllabus_slug).first()
+            if syllabus is None:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Syllabus not found",
+                        es="Syllabus no encontrado",
+                    ),
+                    slug="syllabus-not-found",
+                    code=400,
+                )
+
+            data["syllabus"] = syllabus
+            data.pop("syllabus_slug", None)
 
         # Validate payment_method if provided
         if "payment_method" in data and data["payment_method"] is not None:
@@ -1146,6 +1185,10 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
         user = None
         email = None
         status = "INVITED"
+        conversion_info = validated_data.pop("conversion_info", None)
+        country = validated_data.pop("country", None)
+        city = validated_data.pop("city", None)
+        syllabus = validated_data.pop("syllabus", None)
         if "user" in validated_data:
             user = User.objects.filter(id=validated_data["user"]).first()
             if user is None:
@@ -1310,6 +1353,10 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                     expires_at=now + relativedelta(months=6),
                     payment_method=payment_method,
                     welcome_video=welcome_video,
+                    conversion_info=conversion_info,
+                    country=country,
+                    city=city,
+                    syllabus=syllabus,
                 )
                 invite.save()
                 invites_created.append(invite)

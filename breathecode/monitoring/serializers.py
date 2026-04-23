@@ -213,6 +213,61 @@ class MonitorScriptSmallSerializer(serpy.Serializer):
     updated_at = serpy.Field()
 
 
+class ChurnRiskReportListSerializer(serpy.Serializer):
+    id = serpy.Field()
+    user_id = serpy.Field(attr="user.id")
+    user_email = serpy.Field(attr="user.email")
+    academy_id = serpy.Field(attr="academy.id", required=False)
+    report_date = serpy.Field()
+    churn_risk_score = serpy.Field()
+    risk_level = serpy.Field()
+    days_since_last_activity = serpy.Field()
+    login_count_7d = serpy.Field()
+    assignments_completed_7d = serpy.Field()
+    has_payment_issues = serpy.Field()
+    subscription_status = serpy.Field()
+
+
+class ChurnRiskReportDetailSerializer(serpy.Serializer):
+    id = serpy.Field()
+    user_id = serpy.Field(attr="user.id")
+    user_email = serpy.Field(attr="user.email")
+    academy_id = serpy.Field(attr="academy.id", required=False)
+    report_date = serpy.Field()
+    churn_risk_score = serpy.Field()
+    risk_level = serpy.Field()
+    days_since_last_activity = serpy.Field()
+    login_count_7d = serpy.Field()
+    login_trend = serpy.Field()
+    assignments_completed_7d = serpy.Field()
+    assignment_trend = serpy.Field()
+    avg_frustration_score = serpy.Field()
+    avg_engagement_score = serpy.Field()
+    has_payment_issues = serpy.Field()
+    subscription_status = serpy.Field()
+    days_until_renewal = serpy.Field()
+    details = serpy.Field()
+    created_at = serpy.Field()
+
+
+class ChurnReportSummarySerializer(serpy.Serializer):
+    total = serpy.Field()
+    average_score = serpy.Field()
+    payment_risk_count = serpy.Field()
+    unresolved_alert_count = serpy.Field()
+    risk_levels = serpy.Field()
+
+
+class MonitoringReportTypeSerializer(serpy.Serializer):
+    slug = serpy.Field()
+    label = serpy.Field()
+    description = serpy.Field()
+    filters = serpy.Field()
+    sort_fields = serpy.Field()
+    supports_detail = serpy.Field()
+    supports_summary = serpy.Field()
+
+
 class MonitorScriptSmallSerializer(serpy.Serializer):
     """Basic MonitorScript serializer."""
     

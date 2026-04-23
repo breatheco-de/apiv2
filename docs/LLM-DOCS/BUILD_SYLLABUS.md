@@ -529,13 +529,15 @@ All endpoints are prefixed with `/v1/admissions` for syllabus operations and `/v
 {
   "title": "Updated Title",
   "readme": "# Updated content...",
-  "status": "PUBLISHED"
+  "status": "PUBLISHED",
+  "academy_id": 1
 }
 ```
 
 **Notes:**
 - Can update single asset or multiple assets (send array)
 - User must be the author or owner of the asset
+- Optional `academy_id`: if the asset has no academy (`academy` is null), the owner may set it once to an academy they belong to (`ProfileAcademy`). Cannot change or clear the academy after it is set via this field.
 
 **Response:** Updated asset object (HTTP 200)
 

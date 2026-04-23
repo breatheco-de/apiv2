@@ -97,8 +97,29 @@ def mock_user():
 @pytest.mark.asyncio
 async def test_update_asset_action_invalid_slug(view_instance, mock_asset, mock_user):
     with pytest.raises(ValidationException) as exc_info:
-        await view_instance.update_asset_action(mock_asset, mock_user, {"action_slug": "invalid-action"})
+        await view_instance.update_asset_action(
+            mock_asset, mock_user, {"action_slug": "invalid-action"}, academy_id=1
+        )
     assert str(exc_info.value) == "Invalid action invalid-action"
+
+
+@pytest.mark.asyncio
+async def test_update_asset_action_sync_telemetry_stats_queues_task(
+    setup_mocks, view_instance, mock_asset, mock_user, monkeypatch
+):
+    """sync_telemetry_stats queues sync_asset_telemetry_stats Celery task for the asset id."""
+    mock_delay = MagicMock()
+    mock_task = MagicMock()
+    mock_task.delay = mock_delay
+    monkeypatch.setattr(registry_views, "sync_asset_telemetry_stats", mock_task)
+    mock_asset.id = 901
+
+    result = await view_instance.update_asset_action(
+        mock_asset, mock_user, {"action_slug": "sync_telemetry_stats"}, academy_id=1
+    )
+
+    assert result == {"serialized": "data"}
+    mock_delay.assert_called_once_with(901)
 
 
 @pytest.mark.asyncio
@@ -137,7 +158,7 @@ async def test_update_asset_action_success(
     # We might need to mock the serializer creation within the view method if it's not patched globally
     # monkeypatch.setattr(registry_views, "AcademyAssetSerializer", MagicMock(return_value=setup_mocks["AcademyAssetSerializer"]))
 
-    result = await view_instance.update_asset_action(mock_asset, mock_user, data)
+    result = await view_instance.update_asset_action(mock_asset, mock_user, data, academy_id=1)
 
     assert result == {"serialized": "data"}  # Checks if serializer was called
 
@@ -169,7 +190,9 @@ async def test_update_asset_action_push_invalid_type(view_instance, mock_asset, 
     """PROJECT and EXERCISE are now valid for push; only VIDEO (and other non-supported types) raise."""
     mock_asset.asset_type = asset_type
     with pytest.raises(ValidationException) as exc_info:
-        await view_instance.update_asset_action(mock_asset, mock_user, {"action_slug": "push"})
+        await view_instance.update_asset_action(
+            mock_asset, mock_user, {"action_slug": "push"}, academy_id=1
+        )
     assert "cannot be pushed to GitHub" in str(exc_info.value)
 
 
@@ -178,7 +201,9 @@ async def test_update_asset_action_push_invalid_type(view_instance, mock_asset, 
 async def test_update_asset_action_originality_invalid_type(view_instance, mock_asset, mock_user, asset_type):
     mock_asset.asset_type = asset_type
     with pytest.raises(ValidationException) as exc_info:
-        await view_instance.update_asset_action(mock_asset, mock_user, {"action_slug": "originality"})
+        await view_instance.update_asset_action(
+            mock_asset, mock_user, {"action_slug": "originality"}, academy_id=1
+        )
     assert "Only lessons and articles can be scanned for originality" in str(exc_info.value)
 
 
@@ -205,7 +230,9 @@ async def test_update_asset_action_exception_in_action(
         mock_asset.asset_type = "LESSON"  # Valid type for push
 
     with pytest.raises(ValidationException) as exc_info:
-        await view_instance.update_asset_action(mock_asset, mock_user, {"action_slug": action_slug})
+        await view_instance.update_asset_action(
+            mock_asset, mock_user, {"action_slug": action_slug}, academy_id=1
+        )
     assert error_message in str(exc_info.value)
 
 
@@ -240,7 +267,7 @@ async def test_create_asset_action_success(
     if action_slug == "pull":
         data["override_meta"] = False  # Test override_meta flag
 
-    result = await view_instance.create_asset_action(action_slug, mock_asset, mock_user, data)
+    result = await view_instance.create_asset_action(action_slug, mock_asset, mock_user, data, academy_id=1)
 
     assert result is True
 
@@ -278,7 +305,7 @@ async def test_create_asset_action_failure_exception_in_action(
     if action_slug == "push":
         mock_asset.asset_type = "LESSON"  # Use a valid type to ensure exception is the cause
 
-    result = await view_instance.create_asset_action(action_slug, mock_asset, mock_user, {})
+    result = await view_instance.create_asset_action(action_slug, mock_asset, mock_user, {}, academy_id=1)
 
     assert result is False
     action_mock.assert_called_once()  # Check it was still called
@@ -289,5 +316,5 @@ async def test_create_asset_action_failure_exception_in_action(
 async def test_create_asset_action_push_invalid_type_returns_false(view_instance, mock_asset, mock_user, asset_type):
     """Only VIDEO (and other non-supported types) are invalid for push; PROJECT/EXERCISE/ARTICLE/LESSON/QUIZ are valid."""
     mock_asset.asset_type = asset_type
-    result = await view_instance.create_asset_action("push", mock_asset, mock_user, {})
+    result = await view_instance.create_asset_action("push", mock_asset, mock_user, {}, academy_id=1)
     assert result is False

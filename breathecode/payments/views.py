@@ -2583,6 +2583,7 @@ class AcademyPlanFinancingView(APIView):
             "monthly_price",
             "how_many_installments",
             "status",
+            "selected_cohort_set"
         ]
 
         def update_financing(financing, data):

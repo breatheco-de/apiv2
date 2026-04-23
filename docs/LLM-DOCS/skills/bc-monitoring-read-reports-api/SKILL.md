@@ -1,0 +1,254 @@
+---
+name: bc-monitoring-read-reports-api
+description: Use when retrieving monitoring report data for dashboards or frontend report screens via `/v1/monitoring/report*`; do NOT use for creating new report generators or running `generate_report`.
+requires: []
+---
+
+# Skill: Read Monitoring Reports API
+
+## When to Use
+
+Use this skill when the task is to fetch monitoring report metadata, list rows, row detail, or summary metrics from the monitoring report endpoints.
+Use it when frontend code needs filter/sort/pagination behavior for monitoring reports.
+Do NOT use this skill to build a new report type or modify report generation logic.
+Do NOT use this skill for non-monitoring report domains such as admissions, commission, or marketing report endpoints.
+
+## Concepts
+
+- Monitoring report retrieval is registry-driven: the client calls one route pattern with `report_type` instead of one endpoint per report.
+- Access is academy-scoped and requires capability `read_monitoring_report`.
+- List retrieval defaults to the latest report date when `date` is not provided (for report types that define a date field).
+
+## Workflow
+
+1. Resolve scope and auth before calling any endpoint.
+   - Send `Authorization: Token <token>`.
+   - Send `Academy: <academy_id>` because these endpoints enforce academy capability scope.
+
+2. Discover available report types.
+   - Call `GET /v1/monitoring/report`.
+   - Use returned `filters` and `sort_fields` for dynamic UI query builders.
+
+3. Fetch report rows for a selected type.
+   - Call `GET /v1/monitoring/report/{report_type}`.
+   - Apply only allowed filters and sort values to avoid validation errors.
+
+4. Fetch summary metrics when needed by widgets/cards.
+   - Call `GET /v1/monitoring/report/{report_type}/summary`.
+   - Keep list and summary filters consistent so numbers match the table scope.
+
+5. Fetch one row detail for drill-down panels.
+   - Call `GET /v1/monitoring/report/{report_type}/{report_id}`.
+   - Use `report_id` returned from Step 3.
+
+6. Handle validation failures predictably.
+   - If filters/sort are rejected, rebuild query using only discovery metadata from Step 2.
+   - If report type is unknown, refresh type list from Step 2 before retrying.
+
+## Endpoints
+
+### 1) Discover report types
+
+- **Method:** `GET`
+- **Path:** `/v1/monitoring/report`
+- **Required headers:** `Authorization`, `Academy`
+- **Required capability:** `read_monitoring_report`
+- **Required body fields:** none
+- **Pagination:** Not paginated
+- **Translated errors:** optional `Accept-Language: en|es`
+- **Response that matters:** `slug`, `filters`, `sort_fields`, `supports_detail`, `supports_summary`
+
+**Request context example**
+```json
+{
+  "headers": {
+    "Authorization": "Token 4f8f5b2d8e4a",
+    "Academy": "1",
+    "Accept-Language": "en"
+  },
+  "query": {}
+}
+```
+
+**Response example**
+```json
+[
+  {
+    "slug": "churn",
+    "label": "Churn Risk Report",
+    "description": "Daily user churn risk scores and alert signals",
+    "filters": ["academy", "date", "risk_level", "user", "min_score", "max_score"],
+    "sort_fields": ["report_date", "-report_date", "churn_risk_score", "-churn_risk_score", "risk_level", "-risk_level", "created_at", "-created_at", "user_id", "-user_id"],
+    "supports_detail": true,
+    "supports_summary": true
+  }
+]
+```
+
+### 2) List report rows
+
+- **Method:** `GET`
+- **Path:** `/v1/monitoring/report/{report_type}`
+- **Required headers:** `Authorization`, `Academy`
+- **Required capability:** `read_monitoring_report`
+- **Required body fields:** none
+- **Pagination:** Paginated (supports `limit`, `offset`)
+- **Current filters for `churn`:** `academy`, `date`, `risk_level`, `user`, `min_score`, `max_score`
+- **Sort:** use only values declared in discovery response `sort_fields`
+- **Translated errors:** optional `Accept-Language: en|es`
+
+**Request context example**
+```json
+{
+  "path_params": {
+    "report_type": "churn"
+  },
+  "headers": {
+    "Authorization": "Token 4f8f5b2d8e4a",
+    "Academy": "1"
+  },
+  "query": {
+    "risk_level": "CRITICAL",
+    "min_score": "70",
+    "sort": "-churn_risk_score",
+    "limit": "20",
+    "offset": "0"
+  }
+}
+```
+
+**Response example**
+```json
+[
+  {
+    "id": 118,
+    "user_id": 2033,
+    "user_email": "student@example.com",
+    "academy_id": 1,
+    "report_date": "2026-04-13",
+    "churn_risk_score": 82.5,
+    "risk_level": "CRITICAL",
+    "days_since_last_activity": 11,
+    "login_count_7d": 1,
+    "assignments_completed_7d": 0,
+    "has_payment_issues": true,
+    "subscription_status": "PAYMENT_ISSUE"
+  }
+]
+```
+
+### 3) Get report summary
+
+- **Method:** `GET`
+- **Path:** `/v1/monitoring/report/{report_type}/summary`
+- **Required headers:** `Authorization`, `Academy`
+- **Required capability:** `read_monitoring_report`
+- **Required body fields:** none
+- **Pagination:** Not paginated
+- **Filters:** same filter set as list endpoint for that report type
+- **Translated errors:** optional `Accept-Language: en|es`
+
+**Request context example**
+```json
+{
+  "path_params": {
+    "report_type": "churn"
+  },
+  "headers": {
+    "Authorization": "Token 4f8f5b2d8e4a",
+    "Academy": "1"
+  },
+  "query": {
+    "date": "2026-04-13"
+  }
+}
+```
+
+**Response example**
+```json
+{
+  "total": 142,
+  "average_score": 38.4,
+  "payment_risk_count": 9,
+  "unresolved_alert_count": 16,
+  "risk_levels": {
+    "LOW": 74,
+    "MEDIUM": 41,
+    "HIGH": 19,
+    "CRITICAL": 8
+  }
+}
+```
+
+### 4) Get one report row detail
+
+- **Method:** `GET`
+- **Path:** `/v1/monitoring/report/{report_type}/{report_id}`
+- **Required headers:** `Authorization`, `Academy`
+- **Required capability:** `read_monitoring_report`
+- **Required body fields:** none
+- **Pagination:** Not paginated
+- **Translated errors:** optional `Accept-Language: en|es`
+- **Response that matters:** full row detail including report-specific payloads like `details`
+
+**Request context example**
+```json
+{
+  "path_params": {
+    "report_type": "churn",
+    "report_id": 118
+  },
+  "headers": {
+    "Authorization": "Token 4f8f5b2d8e4a",
+    "Academy": "1"
+  },
+  "query": {}
+}
+```
+
+**Response example**
+```json
+{
+  "id": 118,
+  "user_id": 2033,
+  "user_email": "student@example.com",
+  "academy_id": 1,
+  "report_date": "2026-04-13",
+  "churn_risk_score": 82.5,
+  "risk_level": "CRITICAL",
+  "days_since_last_activity": 11,
+  "login_count_7d": 1,
+  "login_trend": -75.0,
+  "assignments_completed_7d": 0,
+  "assignment_trend": -100.0,
+  "avg_frustration_score": 72.0,
+  "avg_engagement_score": 21.0,
+  "has_payment_issues": true,
+  "subscription_status": "PAYMENT_ISSUE",
+  "days_until_renewal": 2,
+  "details": {
+    "academy_id": 1,
+    "subscription_status": "PAYMENT_ISSUE",
+    "days_since_last_activity": 11
+  },
+  "created_at": "2026-04-14T08:15:21Z"
+}
+```
+
+## Edge Cases
+
+- **Missing academy scope header:** API returns `403` with missing academy message. Send `Academy` header and retry.
+- **Missing capability:** API returns `403` capability error. Use a user/role with `read_monitoring_report`.
+- **Unknown report type:** API returns `404` with `report-type-not-found`. Re-run discovery endpoint and use a supported `slug`.
+- **Unsupported filters:** API returns `400` with `unsupported-filter`. Remove unknown query params and retry with allowed keys only.
+- **Invalid sort value:** API returns `400` with `invalid-sort-field`. Use one of `sort_fields` from discovery response.
+- **Academy filter mismatch:** API returns `400` with `academy-filter-mismatch` if query `academy` differs from scoped academy. Keep them aligned.
+
+## Checklist
+
+1. [ ] Called `GET /v1/monitoring/report` and selected a valid `report_type`.
+2. [ ] Sent `Authorization` and `Academy` headers on every request.
+3. [ ] Used only allowed filters and sort fields from discovery metadata.
+4. [ ] Queried list and summary with the same filter scope when showing one dashboard view.
+5. [ ] Used detail endpoint only after obtaining `report_id` from list results.
+6. [ ] Handled 400/403/404 errors with explicit retry behavior.

@@ -1,5 +1,6 @@
 import logging
 import os
+from datetime import date
 
 import stripe
 from capyc.core.i18n import translation
@@ -17,6 +18,7 @@ from rest_framework.views import APIView
 from breathecode.admissions.models import Academy
 from breathecode.authenticate.actions import get_user_language
 from breathecode.monitoring import signals
+from breathecode.monitoring.reports.api_registry import get_report_api_config, get_report_type_metadata, resolve_default_date
 from breathecode.utils import GenerateLookupsMixin, capable_of
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 
@@ -34,6 +36,141 @@ from .signals import github_webhook
 from .tasks import async_unsubscribe_repo
 
 logger = logging.getLogger(__name__)
+
+
+QUERY_PARAM_ALLOWLIST = {"limit", "offset", "sort"}
+
+
+def _get_report_api_config_or_404(report_type: str, lang: str):
+    config = get_report_api_config(report_type)
+    if config is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Report type {report_type} is not supported",
+                es=f"El tipo de reporte {report_type} no está soportado",
+                slug="report-type-not-found",
+            ),
+            code=status.HTTP_404_NOT_FOUND,
+        )
+
+    return config
+
+
+def _parse_filter_value(key: str, raw_value: str, filter_config: dict, lang: str):
+    filter_type = filter_config.get("type")
+
+    try:
+        if filter_type == "int":
+            return int(raw_value)
+
+        if filter_type == "float":
+            return float(raw_value)
+
+        if filter_type == "date":
+            return date.fromisoformat(raw_value)
+
+        return raw_value
+
+    except (TypeError, ValueError):
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Invalid value for filter {key}",
+                es=f"Valor inválido para el filtro {key}",
+                slug="invalid-filter-value",
+            ),
+        )
+
+
+def _validate_filter_query_params(request, config, lang: str):
+    allowed_query_params = set(config.filters.keys()) | QUERY_PARAM_ALLOWLIST
+    unexpected_query_params = [key for key in request.GET.keys() if key not in allowed_query_params]
+    if unexpected_query_params:
+        formatted = ", ".join(sorted(unexpected_query_params))
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Unsupported filters: {formatted}",
+                es=f"Filtros no soportados: {formatted}",
+                slug="unsupported-filter",
+            ),
+        )
+
+
+def _validate_sort_fields(request, config, lang: str):
+    if "sort" not in request.GET:
+        return
+
+    sort_values = []
+    for value in request.GET.getlist("sort"):
+        sort_values += [v.strip() for v in value.split(",") if v.strip()]
+
+    for sort_field in sort_values:
+        if sort_field not in config.sort_fields:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Sort field {sort_field} is not allowed for report {config.slug}",
+                    es=f"El campo de ordenamiento {sort_field} no está permitido para el reporte {config.slug}",
+                    slug="invalid-sort-field",
+                ),
+            )
+
+
+def _apply_report_filters(request, queryset, config, academy_id: int, lang: str):
+    queryset = queryset.filter(academy_id=academy_id)
+
+    if request.GET.get("academy"):
+        academy_filter = _parse_filter_value("academy", request.GET.get("academy"), {"type": "int"}, lang)
+        if academy_filter != academy_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="The academy query param must match the authenticated academy scope",
+                    es="El parámetro academy debe coincidir con el alcance de academia autenticado",
+                    slug="academy-filter-mismatch",
+                ),
+            )
+
+    for key, filter_config in config.filters.items():
+        if key == "academy":
+            continue
+
+        if key not in request.GET:
+            continue
+
+        value = _parse_filter_value(key, request.GET.get(key), filter_config, lang)
+        if "choices" in filter_config and value not in filter_config["choices"]:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Invalid value for {key}, expected one of: {', '.join(filter_config['choices'])}",
+                    es=f"Valor inválido para {key}, se esperaba uno de: {', '.join(filter_config['choices'])}",
+                    slug="invalid-filter-choice",
+                ),
+            )
+
+        queryset = queryset.filter(**{filter_config["lookup"]: value})
+
+    if "date" not in request.GET and config.date_field:
+        latest_date = resolve_default_date(queryset, config.date_field)
+        if latest_date:
+            queryset = queryset.filter(**{config.date_field: latest_date})
+
+    return queryset
+
+
+def _get_filtered_report_queryset(request, report_type: str, academy_id: int, lang: str):
+    config = _get_report_api_config_or_404(report_type, lang)
+    queryset = config.model.objects.all()
+
+    _validate_filter_query_params(request, config, lang)
+    _validate_sort_fields(request, config, lang)
+
+    queryset = _apply_report_filters(request, queryset, config, academy_id, lang)
+    return queryset, config
+
 
 async def _async_iter_from_list(items):
     """Convert a list to an async generator for StreamingHttpResponse in ASGI mode"""
@@ -573,3 +710,74 @@ class AcademyScriptView(APIView):
         }
 
         return Response(response_data, status=status.HTTP_200_OK)
+
+
+class MonitoringReportView(APIView):
+    @capable_of("read_monitoring_report")
+    def get(self, request, academy_id=None, report_type=None):
+        if not report_type:
+            metadata = get_report_type_metadata()
+            return Response(metadata, status=status.HTTP_200_OK)
+
+        lang = get_user_language(request)
+        queryset, config = _get_filtered_report_queryset(request, report_type, academy_id, lang)
+
+        handler = APIViewExtensions(sort=config.default_sort, paginate=True)(request)
+        queryset = handler.queryset(queryset)
+
+        serializer = config.list_serializer(queryset, many=True)
+        return handler.response(serializer.data)
+
+
+class MonitoringReportDetailView(APIView):
+    @capable_of("read_monitoring_report")
+    def get(self, request, report_type=None, report_id=None, academy_id=None):
+        lang = get_user_language(request)
+        config = _get_report_api_config_or_404(report_type, lang)
+
+        if not config.supports_detail:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Report {report_type} does not support detail view",
+                    es=f"El reporte {report_type} no soporta vista de detalle",
+                    slug="report-detail-not-supported",
+                ),
+                code=status.HTTP_404_NOT_FOUND,
+            )
+
+        instance = config.model.objects.filter(id=report_id, academy_id=academy_id).first()
+        if instance is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Report record {report_id} not found",
+                    es=f"Registro de reporte {report_id} no encontrado",
+                    slug="report-record-not-found",
+                ),
+                code=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = config.detail_serializer(instance, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class MonitoringReportSummaryView(APIView):
+    @capable_of("read_monitoring_report")
+    def get(self, request, report_type=None, academy_id=None):
+        lang = get_user_language(request)
+        queryset, config = _get_filtered_report_queryset(request, report_type, academy_id, lang)
+
+        if config.supports_summary is False or config.summary_builder is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Report {report_type} does not support summary view",
+                    es=f"El reporte {report_type} no soporta vista de resumen",
+                    slug="report-summary-not-supported",
+                ),
+                code=status.HTTP_404_NOT_FOUND,
+            )
+
+        payload = config.summary_builder(queryset, academy_id)
+        return Response(payload, status=status.HTTP_200_OK)
