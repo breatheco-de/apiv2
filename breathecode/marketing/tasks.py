@@ -110,7 +110,7 @@ def async_update_deal_custom_fields(formentry_id: str, **_: Any):
     logger.debug("async_update_deal_custom_fields: ok")
 
 
-@task(priority=TaskPriority.REALTIME.value)
+@task(priority=TaskPriority.DEFAULT.value)
 def async_activecampaign_webhook(webhook_id, **_: Any):
     logger.info("Starting async_activecampaign_webhook")
 

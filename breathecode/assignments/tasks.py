@@ -62,7 +62,7 @@ def student_task_notification(self, task_id, **_: Any):
     )
 
 
-@task(bind=True, priority=TaskPriority.ACTIVITY.value)
+@task(bind=True, priority=TaskPriority.REALTIME.value)
 def async_learnpack_webhook(self, webhook_id, **_: Any):
     logger.info(f"Starting async_learnpack_webhook for webhook {webhook_id}")
 
