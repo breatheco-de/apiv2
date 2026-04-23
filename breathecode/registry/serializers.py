@@ -1,6 +1,7 @@
 import re
 from urllib.parse import urlparse
 
+from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from django.utils import timezone
 from rest_framework import serializers, status
@@ -1343,6 +1344,8 @@ class AssetPUTMeSerializer(serializers.ModelSerializer):
     visibility = serializers.CharField(required=False)
     asset_type = serializers.CharField(required=False)
     feature = serializers.BooleanField(required=False)
+    # Claim a global asset for an academy (only while asset.academy is null). Owner must belong to that academy.
+    academy_id = serializers.IntegerField(required=False, allow_null=True)
 
     class Meta:
         model = Asset
@@ -1350,6 +1353,42 @@ class AssetPUTMeSerializer(serializers.ModelSerializer):
         list_serializer_class = AssetListSerializer
 
     def validate(self, data):
+
+        session_user = self.context.get("request").user
+        payload_academy_id = data.get("academy_id")
+
+        if "academy_id" in data and payload_academy_id is not None:
+            if self.instance.academy_id is not None:
+                if int(payload_academy_id) != self.instance.academy_id:
+                    raise ValidationException(
+                        translation(
+                            en="You cannot change the academy of an asset that already belongs to an academy.",
+                            es="No puedes cambiar la academia de un asset que ya pertenece a una academia.",
+                        ),
+                        slug="asset-academy-locked",
+                    )
+                data.pop("academy_id", None)
+            else:
+                aid = int(payload_academy_id)
+                if not Academy.objects.filter(id=aid).exists():
+                    raise ValidationException(
+                        translation(
+                            en="The specified academy does not exist.",
+                            es="La academia especificada no existe.",
+                        ),
+                        slug="academy-not-found",
+                    )
+                member = ProfileAcademy.objects.filter(user=session_user, academy__id=aid).first()
+                if member is None:
+                    raise ValidationException(
+                        translation(
+                            en="You must belong to the academy you are assigning to this asset.",
+                            es="Debes pertenecer a la academia que asignas a este asset.",
+                        ),
+                        slug="not-member-of-academy",
+                    )
+        elif "academy_id" in data and payload_academy_id is None:
+            data.pop("academy_id", None)
 
         if "status" in data and data["status"] == "PUBLISHED":
             if self.instance.test_status not in ["OK", "WARNING"]:
@@ -1420,6 +1459,10 @@ class AssetPUTMeSerializer(serializers.ModelSerializer):
         return validated_data
 
     def update(self, instance, validated_data):
+
+        claim_academy_id = validated_data.pop("academy_id", None)
+        if instance.academy_id is None and claim_academy_id is not None:
+            instance.academy_id = int(claim_academy_id)
 
         data = {}
 

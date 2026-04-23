@@ -636,6 +636,8 @@ def clean_asset_readme(asset: Asset, silent=True):
         asset = clean_content_variables(asset)
         logger.debug(f"Replacing asset references for {asset.slug}")
         asset = clean_readme_asset_references(asset)
+        logger.debug(f"Cleaning config for {asset.slug}")
+        asset = clean_asset_config(asset)
 
         readme = asset.get_readme(parse=True, silent=silent)
         if "html" in readme:
@@ -658,6 +660,40 @@ def clean_asset_readme(asset: Asset, silent=True):
 @sync_to_async
 def aclean_asset_readme(asset: Asset, silent=True):
     return clean_asset_readme(asset)
+
+
+def clean_asset_config(asset: Asset):
+    """
+    Normalize asset.config for interactive assets.
+
+    Current behavior:
+    - Non-interactive assets: no-op.
+    - Interactive assets: ensure config.telemetry.batch exists and points to canonical
+      translation asset id (lowest id in translation group).
+    """
+    if not asset.interactive:
+        return asset
+
+    canonical_asset = asset.get_canonical_translation_asset()
+    telemetry_batch_url = (
+        "https://breathecode.herokuapp.com/v1/assignment/me/telemetry"
+        f"?asset_id={canonical_asset.id}"
+    )
+
+    config = asset.config.copy() if isinstance(asset.config, dict) else {}
+    telemetry = config.get("telemetry")
+    if not isinstance(telemetry, dict):
+        telemetry = {}
+
+    previous_batch = telemetry.get("batch")
+    telemetry["batch"] = telemetry_batch_url
+    config["telemetry"] = telemetry
+
+    if asset.config != config or previous_batch != telemetry_batch_url:
+        asset.config = config
+        asset.save()
+
+    return asset
 
 
 def clean_content_variables(asset: Asset):

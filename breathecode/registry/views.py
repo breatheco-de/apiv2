@@ -109,7 +109,12 @@ from .serializers import (
     TechnologyPUTSerializer,
     VariableSmallSerializer,
 )
-from .tasks import async_build_asset_context, async_pull_from_github, async_regenerate_asset_readme
+from .tasks import (
+    async_build_asset_context,
+    async_pull_from_github,
+    async_regenerate_asset_readme,
+    sync_asset_telemetry_stats,
+)
 from .utils import (
     AssetErrorLogType,
     build_request_url_for_activity_log,
@@ -1447,7 +1452,17 @@ class AcademyAssetActionView(APIView):
 
         action_slug = data.get("action_slug")
 
-        possible_actions = ["test", "pull", "push", "analyze_seo", "clean", "originality", "claim_asset", "create_repo"]
+        possible_actions = [
+            "test",
+            "pull",
+            "push",
+            "analyze_seo",
+            "clean",
+            "originality",
+            "claim_asset",
+            "create_repo",
+            "sync_telemetry_stats",
+        ]
         if action_slug not in possible_actions:
             raise ValidationException(f"Invalid action {action_slug}")
         try:
@@ -1501,6 +1516,12 @@ class AcademyAssetActionView(APIView):
                 if asset.asset_type not in ["ARTICLE", "LESSON"]:
                     raise ValidationException("Only lessons and articles can be scanned for originality")
                 await ascan_asset_originality(asset)
+            elif action_slug == "sync_telemetry_stats":
+
+                def _queue_asset_telemetry_stats_sync():
+                    sync_asset_telemetry_stats.delay(asset.id)
+
+                await sync_to_async(_queue_asset_telemetry_stats_sync)()
             elif action_slug == "claim_asset":
 
                 if asset.academy is not None:

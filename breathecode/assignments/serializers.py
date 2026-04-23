@@ -56,6 +56,20 @@ class RepositoryDeletionOrderSerializer(serpy.Serializer):
     starts_transferring_at = serpy.Field()
 
 
+class LearnPackWebhookSerializer(serpy.Serializer):
+    id = serpy.Field()
+    is_streaming = serpy.Field()
+    event = serpy.Field()
+    asset_id = serpy.Field()
+    learnpack_package_id = serpy.Field()
+    payload = serpy.Field()
+    status = serpy.Field()
+    status_text = serpy.Field()
+    student = UserSmallSerializer(required=False)
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+
+
 class TaskGETSerializer(serpy.Serializer):
     """The serializer schema definition."""
 
