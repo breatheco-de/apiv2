@@ -1265,13 +1265,13 @@ class Asset(models.Model):
                 if not silent:
                     raise Exception("Readme file was not found")
 
-                AssetErrorLog(
+                AssetErrorLog.log_once(
                     slug=AssetErrorLogType.EMPTY_README,
                     path=self.slug,
                     asset_type=self.asset_type,
                     asset=self,
                     status_text="Readme file was not found",
-                ).save()
+                )
             self.set_readme(
                 get_template("empty.md").render(
                     {
@@ -1309,13 +1309,13 @@ class Asset(models.Model):
                 if not silent:
                     raise Exception(f"Invalid Readme URL with extension: {extension if extension else 'no extension'}")
 
-                AssetErrorLog(
+                AssetErrorLog.log_once(
                     slug=AssetErrorLogType.INVALID_README_URL,
                     path=self.slug,
                     asset_type=self.asset_type,
                     asset=self,
                     status_text=f"Invalid Readme URL with extension {extension}",
-                ).save()
+                )
         return readme
 
     def parse(self, readme, format="markdown", remove_frontmatter=False):
@@ -1367,11 +1367,13 @@ class Asset(models.Model):
         return self
 
     def log_error(self, error_slug, status_text=None):
-        error = AssetErrorLog(
-            slug=error_slug, asset=self, asset_type=self.asset_type, status_text=status_text, path=self.slug
+        return AssetErrorLog.log_once(
+            slug=error_slug,
+            path=self.slug,
+            asset=self,
+            asset_type=self.asset_type,
+            status_text=status_text,
         )
-        error.save()
-        return error
 
     def generate_quiz_json(self):
 
@@ -1437,18 +1439,16 @@ class Asset(models.Model):
             is_alias = False
 
         if alias is None:
-            AssetErrorLog(
-                slug=AssetErrorLogType.SLUG_NOT_FOUND, path=asset_slug, asset_type=asset_type, user=user
-            ).save()
+            AssetErrorLog.log_once(slug=AssetErrorLogType.SLUG_NOT_FOUND, path=asset_slug, asset_type=asset_type, user=user)
             return None
         elif asset_type is not None and alias.asset.asset_type.lower() == asset_type.lower():
-            AssetErrorLog(
+            AssetErrorLog.log_once(
                 slug=AssetErrorLogType.DIFFERENT_TYPE,
                 path=asset_slug,
                 asset=alias.asset,
                 asset_type=asset_type,
                 user=user,
-            ).save()
+            )
 
         elif is_alias:
             return alias.asset
@@ -1652,6 +1652,35 @@ class AssetErrorLog(models.Model):
     )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["slug", "asset_type", "path", "asset"],
+                condition=Q(asset__isnull=False),
+                name="uniq_asset_error_log_with_asset",
+            ),
+            models.UniqueConstraint(
+                fields=["slug", "asset_type", "path"],
+                condition=Q(asset__isnull=True),
+                name="uniq_asset_error_log_without_asset",
+            ),
+        ]
+
+    @classmethod
+    def log_once(cls, *, slug, path, asset=None, asset_type=None, user=None, status_text=None):
+        instance, _ = cls.objects.update_or_create(
+            slug=slug,
+            asset_type=asset_type,
+            path=path,
+            asset=asset,
+            defaults={
+                "status": ERROR,
+                "status_text": status_text,
+                "user": user,
+            },
+        )
+        return instance
 
     def __str__(self):
         return f"Error {self.status} with {self.slug}"

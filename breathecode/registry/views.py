@@ -164,13 +164,13 @@ def forward_asset_url(request, asset_slug=None):
     except Exception as e:
         logger.error(e)
         msg = f"The url for the {asset.asset_type.lower()} your are trying to open ({asset_slug}) was not found, this error has been reported and will be fixed soon."
-        AssetErrorLog(
+        AssetErrorLog.log_once(
             slug=AssetErrorLogType.INVALID_URL,
             path=asset_slug,
             asset=asset,
             asset_type=asset.asset_type,
             status_text=msg,
-        ).save()
+        )
 
         return render_message(request, msg, academy=asset.academy)
 
