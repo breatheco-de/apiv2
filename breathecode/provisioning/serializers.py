@@ -8,13 +8,9 @@ from rest_framework import serializers
 from breathecode.utils import serpy
 
 from .models import (
-    ProvisioningAcademy,
     ProvisioningBill,
     ProvisioningContainer,
     ProvisioningMachineTypes,
-    ProvisioningProfile,
-    ProvisioningVPS,
-    ProvisioningVendor,
 )
 
 
@@ -144,9 +140,7 @@ class GetProvisioningBillDetailSerializer(serpy.Serializer):
         from task_manager.models import TaskManager
 
         # Filter by task module, name, and check if first argument matches hash
-        tasks = TaskManager.objects.filter(
-            task_module="breathecode.provisioning.tasks", task_name="upload"
-        )
+        tasks = TaskManager.objects.filter(task_module="breathecode.provisioning.tasks", task_name="upload")
 
         # Check each task's arguments to find matching hash
         for task in tasks:
@@ -397,6 +391,7 @@ class VPSDetailSerializer(serpy.Serializer):
         if not (self.context or {}).get("show_password"):
             return None
         from breathecode.utils.encryption import decrypt
+
         if not obj.root_password_encrypted:
             return None
         try:
@@ -428,9 +423,7 @@ class VPSRequestSerializer(serializers.Serializer):
         consumable_id = attrs.get("consumable_id")
         plan_slug = (attrs.get("plan_slug") or "").strip()
         if not consumable_id and not plan_slug:
-            raise serializers.ValidationError(
-                {"non_field_errors": ["Either consumable_id or plan_slug is required."]}
-            )
+            raise serializers.ValidationError({"non_field_errors": ["Either consumable_id or plan_slug is required."]})
         return attrs
 
 
@@ -580,7 +573,7 @@ def get_vendor_settings_schema(vendor_name: str) -> Dict[str, Any]:
                     "settings_key": "item_ids",
                     "selection_key": "item_id",
                     "label_en": "Allowed catalog items",
-                    "label_es": "Items de catalogo permitidos",
+                    "label_es": "Items de catálogo disponibles",
                     "type": "list[string]",
                     "required": True,
                     "help_text": "Allowed Hostinger VPS catalog items for this academy.",
@@ -589,8 +582,8 @@ def get_vendor_settings_schema(vendor_name: str) -> Dict[str, Any]:
                     "options_key": "templates",
                     "settings_key": "template_ids",
                     "selection_key": "template_id",
-                    "label_en": "Allowed templates",
-                    "label_es": "Plantillas permitidas",
+                    "label_en": "Allowed OS templates",
+                    "label_es": "Plantillas de SO disponibles",
                     "type": "list[integer]",
                     "required": True,
                     "help_text": "Allowed Hostinger OS template IDs for this academy.",
@@ -600,7 +593,7 @@ def get_vendor_settings_schema(vendor_name: str) -> Dict[str, Any]:
                     "settings_key": "data_center_ids",
                     "selection_key": "data_center_id",
                     "label_en": "Allowed data centers",
-                    "label_es": "Centros de datos permitidos",
+                    "label_es": "Centros de datos disponibles",
                     "type": "list[integer]",
                     "required": True,
                     "help_text": "Allowed Hostinger data center IDs for this academy.",
@@ -614,8 +607,8 @@ def get_vendor_settings_schema(vendor_name: str) -> Dict[str, Any]:
                     "options_key": "regions",
                     "settings_key": "region_slugs",
                     "selection_key": "region_slug",
-                    "label_en": "Allowed region slugs",
-                    "label_es": "Slugs de regiones permitidas",
+                    "label_en": "Allowed regions",
+                    "label_es": "Regiones disponibles",
                     "type": "list[string]",
                     "required": True,
                     "help_text": "Allowed DigitalOcean region slugs for this academy.",
@@ -624,8 +617,8 @@ def get_vendor_settings_schema(vendor_name: str) -> Dict[str, Any]:
                     "options_key": "sizes",
                     "settings_key": "size_slugs",
                     "selection_key": "size_slug",
-                    "label_en": "Allowed size slugs",
-                    "label_es": "Slugs de tamanos permitidos",
+                    "label_en": "Allowed VPS size",
+                    "label_es": "Capacidades de VPS disponibles",
                     "type": "list[string]",
                     "required": True,
                     "help_text": "Allowed DigitalOcean droplet size slugs for this academy.",
@@ -634,8 +627,8 @@ def get_vendor_settings_schema(vendor_name: str) -> Dict[str, Any]:
                     "options_key": "images",
                     "settings_key": "image_slugs",
                     "selection_key": "image_slug",
-                    "label_en": "Allowed image slugs",
-                    "label_es": "Slugs de imagenes permitidas",
+                    "label_en": "Allowed distribution images",
+                    "label_es": "Imágenes de distribución disponibles",
                     "type": "list[string]",
                     "required": True,
                     "help_text": "Allowed DigitalOcean distribution image slugs for this academy.",
