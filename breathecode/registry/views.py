@@ -55,7 +55,7 @@ from .actions import (
     atest_asset,
     test_asset,
 )
-from .caches import AssetCache, AssetCommentCache, CategoryCache, ContentVariableCache, KeywordCache, TechnologyCache
+from .caches import AssetCache, CategoryCache, ContentVariableCache, KeywordCache, TechnologyCache
 from .models import (
     Asset,
     AssetAlias,
@@ -2291,15 +2291,12 @@ class AcademyAssetCommentView(APIView, GenerateLookupsMixin):
     List all snippets, or create a new snippet.
     """
 
-    extensions = APIViewExtensions(cache=AssetCommentCache, sort="-created_at", paginate=True)
+    extensions = APIViewExtensions(paginate=True)
 
     @capable_of("read_asset")
     def get(self, request, academy_id=None):
 
         handler = self.extensions(request)
-        cache = handler.cache.get()
-        if cache is not None:
-            return cache
 
         academy_ids = [int(academy_id)]
         if academies_param := request.GET.get("academies"):
@@ -2346,6 +2343,11 @@ class AcademyAssetCommentView(APIView, GenerateLookupsMixin):
             lookup["author__email"] = param
 
         items = items.filter(**lookup)
+        sort = request.GET.get("sort")
+        if sort in ["priority", "-priority", "created_at", "-created_at"]:
+            items = items.order_by(sort)
+        else:
+            items = items.order_by("-created_at")
         items = handler.queryset(items)
 
         serializer = AcademyCommentSerializer(items, many=True)
@@ -2407,7 +2409,7 @@ class AcademyAssetErrorView(APIView, GenerateLookupsMixin):
     List all snippets, or create a new snippet.
     """
 
-    extensions = APIViewExtensions(sort="-created_at", paginate=True)
+    extensions = APIViewExtensions(paginate=True)
 
     @capable_of("read_asset_error")
     def get(self, request, academy_id=None):
@@ -2442,6 +2444,11 @@ class AcademyAssetErrorView(APIView, GenerateLookupsMixin):
         if like is not None and like != "undefined" and like != "":
             items = items.filter(Q(slug__icontains=slugify(like)) | Q(path__icontains=like))
 
+        sort = request.GET.get("sort")
+        if sort in ["priority", "-priority", "created_at", "-created_at"]:
+            items = items.order_by(sort)
+        else:
+            items = items.order_by("-created_at")
         items = handler.queryset(items)
 
         serializer = AcademyErrorSerializer(items, many=True)

@@ -51,6 +51,7 @@ flowchart LR
    - `GET /v1/registry/academy/asset/comment` with filters such as `asset`, `resolved`, `delivered`, `owner`, `author`, and `academies`.
    - The `Academy` header is required (single academy). For read aggregation, send `academies=<id1,id2,...>` in querystring; the API applies only academies where the user has `read_asset`, and partial application returns `academy_scope` metadata.
    - This list is paginated and sorted by newest (`-created_at`) by default.
+   - Optional sort overrides are supported, including `sort=priority` and `sort=-priority`.
 
 5. Manage comment lifecycle:
    - Use `PUT /v1/registry/academy/asset/comment/<comment_id>` to update assignment/flags.
@@ -73,7 +74,7 @@ flowchart LR
 
 | Action | Method | Path | Required headers | Required body fields | Response notes |
 |---|---|---|---|---|---|
-| List comments | GET | `/v1/registry/academy/asset/comment` | `Authorization`, `Academy` | None | Paginated list (default sort: newest first). Use querystring `academies=<id1,id2,...>` for multi-academy read aggregation. |
+| List comments | GET | `/v1/registry/academy/asset/comment` | `Authorization`, `Academy` | None | Paginated list (default sort: newest first). Supports `sort=priority` and `sort=-priority`. Use querystring `academies=<id1,id2,...>` for multi-academy read aggregation. |
 | Create comment | POST | `/v1/registry/academy/asset/comment` | `Authorization`, `Academy` | `asset`, `text` | `201` comment object; `author` set from session user. |
 | Update comment | PUT | `/v1/registry/academy/asset/comment/<comment_id>` | `Authorization`, `Academy` | None globally required; send fields to change | `200` updated comment object. |
 | Delete comment | DELETE | `/v1/registry/academy/asset/comment/<comment_id>` | `Authorization`, `Academy` | None | `204` no content. |
@@ -89,6 +90,7 @@ flowchart LR
 - `delivered=true|false`
 - `owner=<owner_email>`
 - `author=<author_email>`
+- `sort=priority|-priority` (optional; default remains `-created_at`)
 
 **Create comment request**
 ```json
@@ -110,6 +112,7 @@ flowchart LR
   },
   "resolved": false,
   "delivered": false,
+  "priority": 0,
   "author": {
     "id": 17,
     "email": "reviewer@academy.io"
@@ -142,6 +145,7 @@ flowchart LR
   },
   "resolved": true,
   "delivered": true,
+  "priority": 2,
   "author": {
     "id": 17,
     "email": "reviewer@academy.io"
@@ -158,7 +162,7 @@ flowchart LR
 
 | Action | Method | Path | Required headers | Required body fields | Response notes |
 |---|---|---|---|---|---|
-| List issues | GET | `/v1/registry/academy/asset/error` | `Authorization`, `Academy` | None | Paginated list; supports issue filters. |
+| List issues | GET | `/v1/registry/academy/asset/error` | `Authorization`, `Academy` | None | Paginated list; supports issue filters and `sort=priority|-priority`. |
 | Get issue catalog (legend) | GET | `/v1/registry/academy/asset/error/catalog` | `Authorization`, `Academy` | None | Returns dynamic catalog from `AssetErrorLogType` with descriptions and trigger hints. |
 | Update issues (single or bulk) | PUT | `/v1/registry/academy/asset/error` | `Authorization`, `Academy` | `id` per object, plus fields to update | `200` list of updated issue objects. |
 | Delete one issue | DELETE | `/v1/registry/academy/asset/error/<error_id>` | `Authorization`, `Academy` | None | `204` no content. |
@@ -188,6 +192,7 @@ flowchart LR
 - `status=ERROR,FIXED,IGNORED`: exact status match (`status__in`), uppercased server-side.
 - `asset_type=<type1,type2>`: exact type match (`asset_type__in`), uppercased server-side.
 - `like=<search_text>`: fuzzy match over error `slug` or `path` (`icontains`).
+- `sort=priority|-priority`: optional ordering override (default remains newest first).
 
 **Filtering examples**
 - `GET /v1/registry/academy/asset/error?status=ERROR&asset_type=PROJECT`
@@ -223,6 +228,7 @@ flowchart LR
   {
     "id": 911,
     "slug": "readme-syntax",
+    "priority": 0,
     "status": "FIXED",
     "path": "README.md",
     "asset_type": "LESSON",
@@ -243,7 +249,7 @@ flowchart LR
    If the current session user is the same as `owner`, changing `resolved` raises a validation error.
 
 4. **Comment response does not expose all stored fields**  
-   `urgent` and `priority` exist on the model, but the comment response serializer does not return them.
+   `urgent` exists on the model, but the comment response serializer does not return it.
 
 5. **Comment PUT `status` is not a supported lifecycle field**  
    The view checks `status=NOT_STARTED`, but comment serializer logic excludes `author`; do not rely on `status` when updating comments.

@@ -1627,6 +1627,7 @@ class AssetErrorLog(models.Model):
 
     asset_type = models.CharField(max_length=20, choices=TYPE, default=None, null=True, blank=True)
     slug = models.SlugField(max_length=200)
+    priority = models.SmallIntegerField(default=False)
     status = models.CharField(max_length=20, choices=ERROR_STATUS, default=ERROR)
     path = models.CharField(max_length=200)
     status_text = models.TextField(
