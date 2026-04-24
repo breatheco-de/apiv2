@@ -119,6 +119,7 @@ from .tasks import (
 from .utils import (
     AssetErrorLogType,
     build_request_url_for_activity_log,
+    compute_asset_error_log_dedupe_merge,
     get_asset_error_log_catalog,
     is_url,
     log_outbound_push_from_db,
@@ -2509,6 +2510,68 @@ class AcademyAssetErrorView(APIView, GenerateLookupsMixin):
             items.delete()
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademyAssetErrorDedupeView(APIView):
+    """
+    Collapse duplicate AssetErrorLog rows for the same logical issue key.
+
+    The canonical grouping matches the rest of the registry tooling:
+    (slug, asset_type, path, asset).
+    """
+
+    @capable_of("crud_asset_error")
+    def post(self, request, error_id=None, academy_id=None):
+
+        if not error_id:
+            raise ValidationException("Missing error ID on the URL", 404)
+
+        keeper = AssetErrorLog.objects.filter(
+            Q(id=error_id) & (Q(asset__academy__id=academy_id) | Q(asset__isnull=True))
+        ).first()
+        if keeper is None:
+            raise ValidationException("This error does not exist", 404)
+
+        duplicates = AssetErrorLog.objects.filter(
+            slug=keeper.slug,
+            asset_type=keeper.asset_type,
+            path=keeper.path,
+            asset=keeper.asset,
+        ).exclude(id=keeper.id)
+
+        duplicate_rows = list(duplicates.order_by("id"))
+        deleted_ids = [row.id for row in duplicate_rows]
+
+        if not duplicate_rows:
+            serializer = AcademyErrorSerializer(keeper)
+            return Response({"kept": serializer.data, "deleted_ids": [], "deleted_count": 0}, status=status.HTTP_200_OK)
+
+        merged = compute_asset_error_log_dedupe_merge(keeper, duplicate_rows)
+
+        update_fields = merged["update_fields"]
+        if "status" in update_fields:
+            keeper.status = merged["status"]
+
+        if "status_text" in update_fields:
+            keeper.status_text = merged["status_text"]
+
+        if "user" in update_fields:
+            keeper.user_id = merged["user_id"]
+
+        if "priority" in update_fields:
+            keeper.priority = merged["priority"]
+
+        if update_fields:
+            keeper.save(update_fields=update_fields)
+
+        duplicates.delete()
+
+        keeper.refresh_from_db()
+        serializer = AcademyErrorSerializer(keeper)
+        return Response(
+            {"kept": serializer.data, "deleted_ids": deleted_ids, "deleted_count": len(deleted_ids)},
+            status=status.HTTP_200_OK,
+        )
 
 
 class AcademyAssetErrorCatalogView(APIView):

@@ -274,6 +274,58 @@ def get_asset_error_log_catalog():
     return catalog
 
 
+def compute_asset_error_log_dedupe_merge(keeper, duplicate_rows):
+    """
+    Merge duplicate AssetErrorLog rows into a single keeper row.
+
+    This is intentionally pure (no DB access) so it can be unit-tested without
+    relying on being able to insert duplicate rows in environments that enforce
+    uniqueness constraints at the database layer.
+    """
+
+    status_rank = {"ERROR": 3, "FIXED": 2, "IGNORED": 1}
+    merged_status = max([keeper.status] + [row.status for row in duplicate_rows], key=lambda s: status_rank.get(s, 0))
+
+    merged_status_text = keeper.status_text
+    if not merged_status_text:
+        for row in reversed(duplicate_rows):
+            if getattr(row, "status_text", None):
+                merged_status_text = row.status_text
+                break
+
+    merged_user_id = keeper.user_id
+    if not merged_user_id:
+        for row in reversed(duplicate_rows):
+            if getattr(row, "user_id", None):
+                merged_user_id = row.user_id
+                break
+
+    merged_priority = keeper.priority
+    for row in duplicate_rows:
+        merged_priority = max(merged_priority, row.priority)
+
+    update_fields = []
+    if keeper.status != merged_status:
+        update_fields.append("status")
+
+    if keeper.status_text != merged_status_text:
+        update_fields.append("status_text")
+
+    if keeper.user_id != merged_user_id:
+        update_fields.append("user")
+
+    if keeper.priority != merged_priority:
+        update_fields.append("priority")
+
+    return {
+        "status": merged_status,
+        "status_text": merged_status_text,
+        "user_id": merged_user_id,
+        "priority": merged_priority,
+        "update_fields": update_fields,
+    }
+
+
 def get_base_path_from_readme_url(readme_url):
     """
     Extract the base path (subdirectory) from a GitHub readme_url.
