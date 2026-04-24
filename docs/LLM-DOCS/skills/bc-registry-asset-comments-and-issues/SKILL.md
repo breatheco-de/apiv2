@@ -59,6 +59,7 @@ flowchart LR
 
 6. Manage asset error issues:
    - List with `GET /v1/registry/academy/asset/error`.
+   - Fetch error legend/catalog with `GET /v1/registry/academy/asset/error/catalog`.
    - Update one or many with `PUT /v1/registry/academy/asset/error` (single object or list).
    - Delete one by URL ID or bulk-delete via query lookups.
 
@@ -158,6 +159,7 @@ flowchart LR
 | Action | Method | Path | Required headers | Required body fields | Response notes |
 |---|---|---|---|---|---|
 | List issues | GET | `/v1/registry/academy/asset/error` | `Authorization`, `Academy` | None | Paginated list; supports issue filters. |
+| Get issue catalog (legend) | GET | `/v1/registry/academy/asset/error/catalog` | `Authorization`, `Academy` | None | Returns dynamic catalog from `AssetErrorLogType` with descriptions and trigger hints. |
 | Update issues (single or bulk) | PUT | `/v1/registry/academy/asset/error` | `Authorization`, `Academy` | `id` per object, plus fields to update | `200` list of updated issue objects. |
 | Delete one issue | DELETE | `/v1/registry/academy/asset/error/<error_id>` | `Authorization`, `Academy` | None | `204` no content. |
 | Delete many issues | DELETE | `/v1/registry/academy/asset/error?<lookups>` | `Authorization`, `Academy` | Query lookups | `204` no content. |
@@ -166,12 +168,32 @@ flowchart LR
 - GET requires `read_asset_error`.
 - PUT/DELETE require `crud_asset_error`.
 
-**List filters**
-- `asset=<slug1,slug2>`
-- `slug=<slug1,slug2>`
-- `status=ERROR,FIXED,IGNORED`
-- `asset_type=<type1,type2>`
-- `like=<search_text>`
+**Catalog (legend) response fields**
+- `slug`: canonical error slug.
+- `label`: short human-readable name.
+- `description`: what the error means.
+- `common_trigger_situations`: common scenarios where it is generated.
+- `severity_hint`: triage hint (`high`, `medium`, `low`, `unknown`).
+- `status_notes`: practical guidance for `ERROR` -> `FIXED`/`IGNORED`.
+
+**Catalog behavior**
+- The endpoint is dynamic and auto-discovers values from `AssetErrorLogType`.
+- If a new error type is added in code, it appears automatically in the catalog.
+- If a slug has no custom metadata yet, fallback defaults are returned so the endpoint remains stable.
+- Supports multi-academy read aggregation through `Academy` header (for example, `Academy: 1,2`) with partial-scope metadata when some academies are not allowed.
+
+**List filters (`GET /v1/registry/academy/asset/error`)**
+- `asset=<slug1,slug2>`: exact asset slug match (`asset__slug__in`), lowercased server-side.
+- `slug=<slug1,slug2>`: exact error slug match (`slug__in`), lowercased server-side.
+- `status=ERROR,FIXED,IGNORED`: exact status match (`status__in`), uppercased server-side.
+- `asset_type=<type1,type2>`: exact type match (`asset_type__in`), uppercased server-side.
+- `like=<search_text>`: fuzzy match over error `slug` or `path` (`icontains`).
+
+**Filtering examples**
+- `GET /v1/registry/academy/asset/error?status=ERROR&asset_type=PROJECT`
+- `GET /v1/registry/academy/asset/error?slug=invalid-url,empty-readme`
+- `GET /v1/registry/academy/asset/error?asset=javascript-arrays-intro,python-loops`
+- `GET /v1/registry/academy/asset/error?like=telemetry`
 
 **Update issue request (single)**
 ```json

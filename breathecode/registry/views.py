@@ -39,6 +39,7 @@ from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExt
 from breathecode.utils.decorators import has_permission
 from breathecode.utils.decorators.capable_of import (
     acapable_of,
+    capable_of_many,
     academy_scope_response_meta,
     get_academy_ids_from_capability,
 )
@@ -118,6 +119,7 @@ from .tasks import (
 from .utils import (
     AssetErrorLogType,
     build_request_url_for_activity_log,
+    get_asset_error_log_catalog,
     is_url,
     log_outbound_push_from_db,
     log_pull_outcome_from_db,
@@ -2500,6 +2502,18 @@ class AcademyAssetErrorView(APIView, GenerateLookupsMixin):
             items.delete()
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademyAssetErrorCatalogView(APIView):
+    @capable_of_many("read_asset_error", scope="read_aggregate")
+    def get(self, request, academy_ids=None):
+        catalog = get_asset_error_log_catalog()
+        meta = academy_scope_response_meta(request)
+
+        if meta:
+            return Response({"results": catalog, **meta}, status=status.HTTP_200_OK)
+
+        return Response(catalog, status=status.HTTP_200_OK)
 
 
 class AcademyAssetAliasView(APIView, GenerateLookupsMixin):

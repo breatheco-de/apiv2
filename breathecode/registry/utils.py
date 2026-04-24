@@ -67,6 +67,213 @@ class AssetErrorLogType:
     MISSING_PREVIEW = "missing-preview"
 
 
+ASSET_ERROR_LOG_CATALOG_METADATA = {
+    AssetErrorLogType.SLUG_NOT_FOUND: {
+        "label": "Slug not found",
+        "description": "The requested asset slug does not exist as an asset or alias.",
+        "common_trigger_situations": [
+            "A request uses a slug that does not exist in registry.",
+            "A link points to an outdated or mistyped slug.",
+        ],
+        "severity_hint": "high",
+        "status_notes": "Set FIXED after creating a valid alias or correcting the source slug.",
+    },
+    AssetErrorLogType.DIFFERENT_TYPE: {
+        "label": "Different asset type",
+        "description": "The requested slug exists but does not match the expected asset_type.",
+        "common_trigger_situations": [
+            "A consumer expects LESSON but slug points to PROJECT.",
+            "An integration hardcodes the wrong asset_type for a valid slug.",
+        ],
+        "severity_hint": "medium",
+        "status_notes": "Set FIXED after correcting requested type or canonicalizing route usage.",
+    },
+    AssetErrorLogType.EMPTY_README: {
+        "label": "Empty readme",
+        "description": "The asset readme content is missing or empty.",
+        "common_trigger_situations": [
+            "Readme was not found during readme loading.",
+            "Asset was created without a readme file configured.",
+        ],
+        "severity_hint": "high",
+        "status_notes": "Set FIXED after uploading/syncing a valid readme.",
+    },
+    AssetErrorLogType.EMPTY_CATEGORY: {
+        "label": "Empty category",
+        "description": "The asset or referenced asset is missing category association.",
+        "common_trigger_situations": [
+            "Readme reference rewrite resolves an asset without category.",
+            "Validation runs on assets with null category.",
+        ],
+        "severity_hint": "medium",
+        "status_notes": "Set FIXED after assigning a valid category.",
+    },
+    AssetErrorLogType.INVALID_OWNER: {
+        "label": "Invalid owner",
+        "description": "Owner requirements failed for GitHub/readme operations.",
+        "common_trigger_situations": [
+            "Asset has no owner when readme validation requires one.",
+            "Owner exists but has no GitHub credentials.",
+        ],
+        "severity_hint": "high",
+        "status_notes": "Set FIXED after assigning owner and valid GitHub credentials.",
+    },
+    AssetErrorLogType.MISSING_TECHNOLOGIES: {
+        "label": "Missing technologies",
+        "description": "Asset is missing required technology tags.",
+        "common_trigger_situations": [
+            "Validation finds less than minimum required technologies.",
+        ],
+        "severity_hint": "low",
+        "status_notes": "Set FIXED after adding the required technology tags.",
+    },
+    AssetErrorLogType.MISSING_DIFFICULTY: {
+        "label": "Missing difficulty",
+        "description": "Asset has no difficulty value configured.",
+        "common_trigger_situations": [
+            "Validation runs on assets missing difficulty metadata.",
+        ],
+        "severity_hint": "low",
+        "status_notes": "Set FIXED after assigning a valid difficulty level.",
+    },
+    AssetErrorLogType.MISSING_TRANSLATIONS: {
+        "label": "Missing translations",
+        "description": "Asset has no translations where expected.",
+        "common_trigger_situations": [
+            "Validation checks translation coverage and finds none.",
+        ],
+        "severity_hint": "low",
+        "status_notes": "Can remain IGNORED for intentionally single-language content.",
+    },
+    AssetErrorLogType.POOR_DESCRIPTION: {
+        "label": "Poor description",
+        "description": "Asset description is empty or too short.",
+        "common_trigger_situations": [
+            "Validation checks description quality and minimum length.",
+        ],
+        "severity_hint": "low",
+        "status_notes": "Set FIXED after improving description content.",
+    },
+    AssetErrorLogType.EMPTY_HTML: {
+        "label": "Empty HTML",
+        "description": "Rendered asset HTML response was empty.",
+        "common_trigger_situations": [
+            "A request asks for rendered HTML but result is empty.",
+        ],
+        "severity_hint": "medium",
+        "status_notes": "Set FIXED after restoring valid readme rendering/output.",
+    },
+    AssetErrorLogType.INVALID_URL: {
+        "label": "Invalid URL",
+        "description": "A URL required by asset delivery or validation is invalid or unreachable.",
+        "common_trigger_situations": [
+            "Asset redirect URL validation fails in forward routes.",
+            "URL testing fails during validation.",
+        ],
+        "severity_hint": "high",
+        "status_notes": "Set FIXED after correcting broken URL and confirming accessibility.",
+    },
+    AssetErrorLogType.INVALID_SLUG_REFERENCE: {
+        "label": "Invalid slug reference",
+        "description": "A readme asset reference points to an unknown slug.",
+        "common_trigger_situations": [
+            'Readme link pattern `[text]{ref="slug"}` references missing asset/alias.',
+        ],
+        "severity_hint": "medium",
+        "status_notes": "Set FIXED after updating readme reference or creating alias.",
+    },
+    AssetErrorLogType.INVALID_LANGUAGE: {
+        "label": "Invalid language",
+        "description": "Asset language is missing or invalid.",
+        "common_trigger_situations": [
+            "Validation runs with null/unsupported language code.",
+        ],
+        "severity_hint": "medium",
+        "status_notes": "Set FIXED after assigning a supported language.",
+    },
+    AssetErrorLogType.INVALID_README_URL: {
+        "label": "Invalid readme URL",
+        "description": "Readme URL extension or format is not supported.",
+        "common_trigger_situations": [
+            "Readme URL does not end in supported extension (.md, .mdx, .txt, .ipynb).",
+            "Readme URL parsing fails during readme processing.",
+        ],
+        "severity_hint": "high",
+        "status_notes": "Set FIXED after pointing readme_url to a supported file.",
+    },
+    AssetErrorLogType.INVALID_IMAGE: {
+        "label": "Invalid image",
+        "description": "Image URL in asset content is invalid or not accessible.",
+        "common_trigger_situations": [
+            "Validation of image resources fails URL checks or request tests.",
+        ],
+        "severity_hint": "low",
+        "status_notes": "Set FIXED after replacing broken image URLs.",
+    },
+    AssetErrorLogType.README_SYNTAX: {
+        "label": "Readme syntax error",
+        "description": "Readme contains malformed hide-comment markers.",
+        "common_trigger_situations": [
+            "Odd number of `<!-- hide -->` / `<!-- endhide -->` markers.",
+        ],
+        "severity_hint": "medium",
+        "status_notes": "Set FIXED after correcting hide comment pairs.",
+    },
+    AssetErrorLogType.INVALID_TELEMETRY: {
+        "label": "Invalid telemetry",
+        "description": "Asset telemetry configuration is malformed or inconsistent.",
+        "common_trigger_situations": [
+            "Telemetry JSON/schema checks fail during validation.",
+        ],
+        "severity_hint": "medium",
+        "status_notes": "Set FIXED after aligning telemetry config with expected schema.",
+    },
+    AssetErrorLogType.INVALID_TEMPLATE_SUBDIRECTORY: {
+        "label": "Invalid template subdirectory",
+        "description": "Template subdirectory points to a missing or invalid location.",
+        "common_trigger_situations": [
+            "Template subdirectory validation fails for project/exercise setup.",
+        ],
+        "severity_hint": "medium",
+        "status_notes": "Set FIXED after correcting template subdirectory path.",
+    },
+    AssetErrorLogType.MISSING_PREVIEW: {
+        "label": "Missing preview",
+        "description": "Asset preview image/URL is missing where expected.",
+        "common_trigger_situations": [
+            "Asset sync or preview generation step detects absent preview.",
+        ],
+        "severity_hint": "low",
+        "status_notes": "Set FIXED after setting preview and revalidating asset.",
+    },
+}
+
+
+def get_asset_error_log_catalog():
+    catalog = []
+    default_metadata = {
+        "label": "Unknown error",
+        "description": "No description documented yet for this error type.",
+        "common_trigger_situations": [],
+        "severity_hint": "unknown",
+        "status_notes": "Use FIXED when resolved, or IGNORED if accepted as known condition.",
+    }
+
+    for attr_name in dir(AssetErrorLogType):
+        if attr_name.startswith("_"):
+            continue
+
+        slug = getattr(AssetErrorLogType, attr_name)
+        if not isinstance(slug, str):
+            continue
+
+        metadata = {**default_metadata, **ASSET_ERROR_LOG_CATALOG_METADATA.get(slug, {})}
+        catalog.append({"slug": slug, **metadata})
+
+    catalog.sort(key=lambda item: item["slug"])
+    return catalog
+
+
 def get_base_path_from_readme_url(readme_url):
     """
     Extract the base path (subdirectory) from a GitHub readme_url.
