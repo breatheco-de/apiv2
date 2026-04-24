@@ -29,7 +29,7 @@ class AcademyVendorViewTestSuite(ProvisioningTestCase):
         payload = response.json()
         self.assertTrue(len(payload) > 0)
         self.assertIn("settings_schema", payload[0])
-        self.assertEqual(payload[0]["settings_schema"]["fields"][0]["key"], "item_ids")
+        self.assertEqual(payload[0]["settings_schema"]["fields"][0]["settings_key"], "item_ids")
 
     def test_get_vendor_filter_by_vendor_type(self):
         model = self.bc.database.create(

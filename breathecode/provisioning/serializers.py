@@ -8,13 +8,9 @@ from rest_framework import serializers
 from breathecode.utils import serpy
 
 from .models import (
-    ProvisioningAcademy,
     ProvisioningBill,
     ProvisioningContainer,
     ProvisioningMachineTypes,
-    ProvisioningProfile,
-    ProvisioningVPS,
-    ProvisioningVendor,
 )
 
 
@@ -144,9 +140,7 @@ class GetProvisioningBillDetailSerializer(serpy.Serializer):
         from task_manager.models import TaskManager
 
         # Filter by task module, name, and check if first argument matches hash
-        tasks = TaskManager.objects.filter(
-            task_module="breathecode.provisioning.tasks", task_name="upload"
-        )
+        tasks = TaskManager.objects.filter(task_module="breathecode.provisioning.tasks", task_name="upload")
 
         # Check each task's arguments to find matching hash
         for task in tasks:
@@ -354,6 +348,7 @@ class VPSListSerializer(serpy.Serializer):
     """VPS list item (no root_password)."""
 
     id = serpy.Field()
+    vendor = serpy.MethodField()
     status = serpy.Field()
     hostname = serpy.Field()
     ip_address = serpy.Field()
@@ -366,6 +361,12 @@ class VPSListSerializer(serpy.Serializer):
     deleted_at = serpy.Field()
     created_at = serpy.Field()
     updated_at = serpy.Field()
+
+    def get_vendor(self, obj):
+        vendor = getattr(obj, "vendor", None)
+        if not vendor:
+            return None
+        return {"id": vendor.id, "name": vendor.name}
 
 
 class VPSDetailSerializer(serpy.Serializer):
@@ -390,6 +391,7 @@ class VPSDetailSerializer(serpy.Serializer):
         if not (self.context or {}).get("show_password"):
             return None
         from breathecode.utils.encryption import decrypt
+
         if not obj.root_password_encrypted:
             return None
         try:
@@ -410,17 +412,26 @@ class VendorSelectionSerializer(serializers.Serializer):
 
 
 class VPSRequestSerializer(serializers.Serializer):
-    """Request body for POST me/vps (optional plan_slug)."""
+    """Request body for POST me/vps."""
 
+    provisioning_academy = serializers.IntegerField(required=True, min_value=1)
+    consumable_id = serializers.IntegerField(required=False, min_value=1)
     plan_slug = serializers.CharField(required=False, allow_blank=True, max_length=100)
     vendor_selection = VendorSelectionSerializer(required=False)
+
+    def validate(self, attrs):
+        consumable_id = attrs.get("consumable_id")
+        plan_slug = (attrs.get("plan_slug") or "").strip()
+        if not consumable_id and not plan_slug:
+            raise serializers.ValidationError({"non_field_errors": ["Either consumable_id or plan_slug is required."]})
+        return attrs
 
 
 class AcademyVPSCreateSerializer(serializers.Serializer):
     """Request body for POST academy/vps (staff provisions VPS for a student)."""
 
     user_id = serializers.IntegerField(required=True, min_value=1)
-    plan_slug = serializers.CharField(required=False, allow_blank=True, max_length=100)
+    plan_slug = serializers.CharField(required=True, allow_blank=False, max_length=100)
     vendor_selection = VendorSelectionSerializer(required=False)
 
 
@@ -558,22 +569,31 @@ def get_vendor_settings_schema(vendor_name: str) -> Dict[str, Any]:
         return {
             "fields": [
                 {
-                    "key": "item_ids",
-                    "label": "Allowed catalog item IDs",
+                    "options_key": "catalog_items",
+                    "settings_key": "item_ids",
+                    "selection_key": "item_id",
+                    "label_en": "Allowed catalog items",
+                    "label_es": "Items de catálogo disponibles",
                     "type": "list[string]",
                     "required": True,
                     "help_text": "Allowed Hostinger VPS catalog items for this academy.",
                 },
                 {
-                    "key": "template_ids",
-                    "label": "Allowed template IDs",
+                    "options_key": "templates",
+                    "settings_key": "template_ids",
+                    "selection_key": "template_id",
+                    "label_en": "Allowed OS templates",
+                    "label_es": "Plantillas de SO disponibles",
                     "type": "list[integer]",
                     "required": True,
                     "help_text": "Allowed Hostinger OS template IDs for this academy.",
                 },
                 {
-                    "key": "data_center_ids",
-                    "label": "Allowed data center IDs",
+                    "options_key": "data_centers",
+                    "settings_key": "data_center_ids",
+                    "selection_key": "data_center_id",
+                    "label_en": "Allowed data centers",
+                    "label_es": "Centros de datos disponibles",
                     "type": "list[integer]",
                     "required": True,
                     "help_text": "Allowed Hostinger data center IDs for this academy.",
@@ -584,22 +604,31 @@ def get_vendor_settings_schema(vendor_name: str) -> Dict[str, Any]:
         return {
             "fields": [
                 {
-                    "key": "region_slugs",
-                    "label": "Allowed region slugs",
+                    "options_key": "regions",
+                    "settings_key": "region_slugs",
+                    "selection_key": "region_slug",
+                    "label_en": "Allowed regions",
+                    "label_es": "Regiones disponibles",
                     "type": "list[string]",
                     "required": True,
                     "help_text": "Allowed DigitalOcean region slugs for this academy.",
                 },
                 {
-                    "key": "size_slugs",
-                    "label": "Allowed size slugs",
+                    "options_key": "sizes",
+                    "settings_key": "size_slugs",
+                    "selection_key": "size_slug",
+                    "label_en": "Allowed VPS size",
+                    "label_es": "Capacidades de VPS disponibles",
                     "type": "list[string]",
                     "required": True,
                     "help_text": "Allowed DigitalOcean droplet size slugs for this academy.",
                 },
                 {
-                    "key": "image_slugs",
-                    "label": "Allowed image slugs",
+                    "options_key": "images",
+                    "settings_key": "image_slugs",
+                    "selection_key": "image_slug",
+                    "label_en": "Allowed distribution images",
+                    "label_es": "Imágenes de distribución disponibles",
                     "type": "list[string]",
                     "required": True,
                     "help_text": "Allowed DigitalOcean distribution image slugs for this academy.",
