@@ -659,22 +659,6 @@ def _request_vps_core(
         ProvisioningVPS.VPS_STATUS_PROVISIONING,
         ProvisioningVPS.VPS_STATUS_ACTIVE,
     ]
-    if ProvisioningVPS.objects.filter(user=user, academy=academy, status__in=active_statuses).exists():
-        if for_staff:
-            msg = translation(
-                lang,
-                en="This student already has an active or pending VPS for this academy.",
-                es="Este estudiante ya tiene un VPS activo o pendiente para esta academia.",
-                slug="duplicate-vps",
-            )
-        else:
-            msg = translation(
-                lang,
-                en="You already have an active or pending VPS for this academy.",
-                es="Ya tienes un VPS activo o pendiente para esta academia.",
-                slug="duplicate-vps",
-            )
-        raise ValidationException(msg)
     if consumable_id is not None:
         consumable = (
             Consumable.list(user=user, service="vps_server", include_zero_balance=False)
@@ -712,6 +696,53 @@ def _request_vps_core(
             ),
             code=400,
         )
+
+    incoming_plan_slug = None
+    if getattr(consumable, "subscription_id", None):
+        _plan = consumable.subscription.plans.order_by("id").first()
+        if _plan:
+            incoming_plan_slug = _plan.slug or None
+    if incoming_plan_slug is None and getattr(consumable, "plan_financing_id", None):
+        _plan = consumable.plan_financing.plans.order_by("id").first()
+        if _plan:
+            incoming_plan_slug = _plan.slug or None
+
+    conflicts_with_existing_vps = ProvisioningVPS.objects.filter(user=user, academy=academy, status__in=active_statuses)
+    if incoming_plan_slug:
+        conflicts_with_existing_vps = conflicts_with_existing_vps.filter(
+            Q(consumed_consumable__subscription__plans__slug=incoming_plan_slug)
+            | Q(consumed_consumable__plan_financing__plans__slug=incoming_plan_slug)
+        )
+    if conflicts_with_existing_vps.exists():
+        if incoming_plan_slug and for_staff:
+            msg = translation(
+                lang,
+                en="This student already has an active or pending VPS for this academy under the same plan.",
+                es="Este estudiante ya tiene un VPS activo o pendiente para esta academia bajo el mismo plan.",
+                slug="duplicate-vps-same-plan",
+            )
+        elif for_staff:
+            msg = translation(
+                lang,
+                en="This student already has an active or pending VPS for this academy.",
+                es="Este estudiante ya tiene un VPS activo o pendiente para esta academia.",
+                slug="duplicate-vps",
+            )
+        elif incoming_plan_slug:
+            msg = translation(
+                lang,
+                en="You already have an active or pending VPS for this academy under the same plan.",
+                es="Ya tienes un VPS activo o pendiente para esta academia bajo el mismo plan.",
+                slug="duplicate-vps-same-plan",
+            )
+        else:
+            msg = translation(
+                lang,
+                en="You already have an active or pending VPS for this academy.",
+                es="Ya tienes un VPS activo o pendiente para esta academia.",
+                slug="duplicate-vps",
+            )
+        raise ValidationException(msg)
 
     consume_service.send(sender=Consumable, instance=consumable, how_many=1)
     requested_at = timezone.now()
@@ -773,12 +804,6 @@ def can_request_vps(user) -> bool:
     )
     if not consumables.exists():
         return False
-
-    active_statuses = [
-        ProvisioningVPS.VPS_STATUS_PENDING,
-        ProvisioningVPS.VPS_STATUS_PROVISIONING,
-        ProvisioningVPS.VPS_STATUS_ACTIVE,
-    ]
 
     for consumable in consumables:
         try:
