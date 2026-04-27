@@ -79,6 +79,7 @@ Some user requests touch multiple domains. Load ALL listed skills before proceed
 | Diagnose why an asset telemetry is missing for users/tasks | `bc-assignment-diagnose-asset-telemetry` + `bc-registry-*` (validate asset slug and translation/canonical context when telemetry appears split by locale) |
 | Queue or interpret asset-level telemetry_stats (`telemetry_stats` JSON on assets) | `bc-assignment-diagnose-asset-telemetry` + `bc-registry-*` (registry asset action `sync_telemetry_stats` queues Celery recompute; read updated stats from asset) |
 | Inspect incoming LearnPack telemetry webhook logs by student/event/asset/package filters | `bc-assignment-diagnose-asset-telemetry` + `bc-authenticate-*` (academy capability/header scope and identity checks) |
+| Configure per-academy LearnPack telemetry webhook ignore rules (by user, package, asset slug, or event) | `bc-assignment-diagnose-asset-telemetry` — use `GET`/`PUT /v1/assignment/academy/learnpack/telemetry-webhook-ignore` (rules are stored under `learnpack_features.telemetry_webhook_ignore` on academy auth settings) |
 
 ---
 

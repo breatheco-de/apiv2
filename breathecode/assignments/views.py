@@ -25,9 +25,15 @@ import breathecode.assignments.tasks as tasks
 from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.assignments.permissions.consumers import code_revision_service
 from breathecode.authenticate.actions import aget_user_language, get_user_language
-from breathecode.authenticate.models import ProfileAcademy, Token
+from breathecode.authenticate.models import AcademyAuthSettings, ProfileAcademy, Token
 from breathecode.registry.models import Asset
 from breathecode.services.learnpack import LearnPack
+from breathecode.services.learnpack.webhook_ignore import (
+    get_telemetry_webhook_ignore_from_settings,
+    set_telemetry_webhook_ignore_on_settings,
+    should_ignore_learnpack_webhook,
+    validate_telemetry_webhook_ignore_body,
+)
 from breathecode.utils import GenerateLookupsMixin, capable_of, num_to_roman, response_207
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import consume, has_permission
@@ -37,7 +43,15 @@ from breathecode.utils.multi_status_response import MultiStatusResponse
 from .actions import deliver_task, sync_cohort_tasks
 from .caches import TaskCache
 from .forms import DeliverAssigntmentForm
-from .models import AssignmentTelemetry, FinalProject, LearnPackWebhook, Task, UserAttachment, RepositoryDeletionOrder
+from .models import (
+    IGNORED,
+    AssignmentTelemetry,
+    FinalProject,
+    LearnPackWebhook,
+    Task,
+    UserAttachment,
+    RepositoryDeletionOrder,
+)
 from .serializers import (
     FinalProjectGETSerializer,
     LearnPackWebhookSerializer,
@@ -229,6 +243,18 @@ def sync_cohort_tasks_view(request, cohort_id=None):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+def _academy_id_from_telemetry_request(request) -> int | None:
+    """Resolve academy id from header or query (same sources as ``capable_of``) without raising."""
+    for header in ("Academy", "academy"):
+        raw = request.headers.get(header)
+        if raw is not None and str(raw).strip().isdigit():
+            return int(str(raw).strip())
+    raw = request.GET.get("academy")
+    if raw is not None and str(raw).strip().isdigit():
+        return int(str(raw).strip())
+    return None
+
+
 class AssignmentTelemetryView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
@@ -252,10 +278,21 @@ class AssignmentTelemetryView(APIView, GenerateLookupsMixin):
             for key, value in request.query_params.items():
                 merged_data[key] = value
 
+        scope_academy_id = academy_id if academy_id is not None else _academy_id_from_telemetry_request(request)
+        ignore = False
+        ignore_reason: str | None = None
+        if scope_academy_id is not None:
+            ignore, ignore_reason = should_ignore_learnpack_webhook(scope_academy_id, merged_data)
+
         webhook = LearnPack.add_webhook_to_log(merged_data)
 
         if webhook:
-            tasks.async_learnpack_webhook.delay(webhook.id)
+            if ignore and ignore_reason:
+                webhook.status = IGNORED
+                webhook.status_text = ignore_reason
+                webhook.save(update_fields=["status", "status_text", "updated_at"])
+            else:
+                tasks.async_learnpack_webhook.delay(webhook.id)
         else:
             logger.debug("A request cannot be parsed, maybe you should update `LearnPack" ".add_webhook_to_log`")
             logger.debug(request.data)
@@ -324,6 +361,22 @@ class AcademyLearnPackWebhookView(APIView):
         items = handler.queryset(items)
         serializer = LearnPackWebhookSerializer(items, many=True)
         return handler.response(serializer.data)
+
+
+class AcademyLearnPackTelemetryWebhookIgnoreView(APIView):
+    """Read or replace ``learnpack_features['telemetry_webhook_ignore']`` for the academy."""
+
+    @capable_of("read_assignment")
+    def get(self, request, academy_id=None):
+        settings, _ = AcademyAuthSettings.objects.get_or_create(academy_id=academy_id)
+        return Response(get_telemetry_webhook_ignore_from_settings(settings))
+
+    @capable_of("crud_telemetry")
+    def put(self, request, academy_id=None):
+        cleaned = validate_telemetry_webhook_ignore_body(request.data)
+        settings, _ = AcademyAuthSettings.objects.get_or_create(academy_id=academy_id)
+        set_telemetry_webhook_ignore_on_settings(settings, cleaned)
+        return Response(cleaned)
 
 
 class AcademyAssignmentTelemetryView(APIView, GenerateLookupsMixin):

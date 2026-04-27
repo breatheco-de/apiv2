@@ -67,6 +67,7 @@ from .views import (
     deliver_assignment_view,
     sync_cohort_tasks_view,
     AssignmentTelemetryView,
+    AcademyLearnPackTelemetryWebhookIgnoreView,
     AcademyLearnPackWebhookView,
     FinalProjectCohortView,
     CompletionJobView,
@@ -135,6 +136,11 @@ urlpatterns = [
     path("academy/flag", FlagView.as_view(), name="flag"),
     path("academy/asset/flag", AssetFlagView.as_view(), name="flag_asset"),
     path("academy/learnpack/webhook", AcademyLearnPackWebhookView.as_view(), name="academy_learnpack_webhook"),
+    path(
+        "academy/learnpack/telemetry-webhook-ignore",
+        AcademyLearnPackTelemetryWebhookIgnoreView.as_view(),
+        name="academy_learnpack_telemetry_webhook_ignore",
+    ),
     path("academy/asset/<str:asset_id>/flag/legacy", LegacyFlagAssetView.as_view(), name="flag_asset_legacy"),
     path(
         "academy/asset/<str:asset_slug>/user/<int:user_id>/telemetry",

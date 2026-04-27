@@ -22,6 +22,7 @@ from breathecode.authenticate.actions import convert_youtube_to_embed, get_app_u
 from breathecode.authenticate.tasks import verify_user_invite_email
 from breathecode.events.models import Event
 from breathecode.registry.models import Asset
+from breathecode.services.learnpack.webhook_ignore import LEARNPACK_FEATURES_TELEMETRY_WEBHOOK_IGNORE_KEY
 from breathecode.utils import serpy, validate_conversion_info
 
 from .models import (
@@ -662,6 +663,26 @@ class AcademyAuthSettingsSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
 
         return super().create({**validated_data, "academy": Academy.filter(id=self.context["academy_id"]).first()})
+
+    def update(self, instance, validated_data):
+        # Preserve LearnPack telemetry ignore rules when PUT omits `telemetry_webhook_ignore` under learnpack_features.
+        if "learnpack_features" in validated_data:
+            incoming = validated_data["learnpack_features"]
+            if not isinstance(incoming, dict):
+                incoming = {}
+            merged = {**(instance.learnpack_features or {}), **incoming}
+
+            prev = instance.learnpack_features or {}
+            if (
+                isinstance(prev, dict)
+                and LEARNPACK_FEATURES_TELEMETRY_WEBHOOK_IGNORE_KEY in prev
+                and LEARNPACK_FEATURES_TELEMETRY_WEBHOOK_IGNORE_KEY not in incoming
+            ):
+                merged[LEARNPACK_FEATURES_TELEMETRY_WEBHOOK_IGNORE_KEY] = prev[
+                    LEARNPACK_FEATURES_TELEMETRY_WEBHOOK_IGNORE_KEY
+                ]
+            validated_data["learnpack_features"] = merged
+        return super().update(instance, validated_data)
 
 
 class StaffSerializer(serializers.ModelSerializer):

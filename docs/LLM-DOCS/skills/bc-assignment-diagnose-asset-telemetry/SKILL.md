@@ -14,7 +14,7 @@ Use this skill when you need to confirm if telemetry exists for an asset, user, 
 
 - **AssignmentTelemetry** is stored per `user + asset_slug`, not as one row per event.
 - **Task telemetry retrieval** is per task/user via `GET /v1/assignment/task/{task_id}` and returns `assignment_telemetry`.
-- **Ingestion** (`POST /v1/assignment/me/telemetry`) is accepted first, then processed asynchronously.
+- **Ingestion** (`POST /v1/assignment/me/telemetry`) is accepted first, then processed asynchronously. When the request is scoped with `Academy: <academy_id>` (or `?academy=`), the academy may apply **ignore rules** from `learnpack_features.telemetry_webhook_ignore`: matching webhooks are stored as `IGNORED` and **not** queued for async processing.
 - **Asset-level aggregation** is stored in `Asset.telemetry_stats` (daily bucket under `days` plus `last_sync_at`). Staff can **queue** a recalculation via registry asset action `sync_telemetry_stats` (Celery); the HTTP response may still show pre-sync stats until the worker finishes.
 
 ## Workflow
@@ -37,7 +37,7 @@ Use this skill when you need to confirm if telemetry exists for an asset, user, 
 4. Inspect LearnPack webhook processing state (academy staff):
    - Call `GET /v1/assignment/academy/learnpack/webhook` to confirm webhook records are present after ingestion.
    - Filter by `student`, `event`, `asset_id`, and `learnpack_package_id` to narrow the queue.
-   - Use webhook `status` (`PENDING`, `DONE`, `ERROR`) and `status_text` to explain why telemetry is delayed or failing.
+   - Use webhook `status` (`PENDING`, `DONE`, `ERROR`, `IGNORED`) and `status_text` to explain outcomes. For `IGNORED`, read `status_text`: academy **telemetry_webhook_ignore** policy (contains `learnpack_features.telemetry_webhook_ignore`) vs. processing errors vs. dedupe from management commands (different wording).
 
 5. Validate persistence for a specific user+asset:
    - Use `POST /v1/assignment/academy/asset/{asset_slug}/user/{user_id}/telemetry` for upsert.
@@ -95,7 +95,7 @@ Use this skill when you need to confirm if telemetry exists for an asset, user, 
 - **Required headers:** `Authorization`, `Academy`
 - **Required capability:** `read_assignment`
 - **Required body fields:** none
-- **Supported filters:** comma-separated values for `student`, `event`, `asset_id`, `learnpack_package_id`; optional `status`
+- **Supported filters:** comma-separated values for `student`, `event`, `asset_id`, `learnpack_package_id`; optional `status` (include `IGNORED` when checking academy ignore policy)
 - **Response that matters:** paginated webhook list with processing fields (`status`, `status_text`) and normalized ids (`asset_id`, `learnpack_package_id`)
 - **Pagination:** Paginated
 - **Translated errors:** optional `Accept-Language: en|es`
@@ -159,6 +159,28 @@ GET /v1/assignment/academy/learnpack/webhook?student=123,456&event=batch,open_st
   ]
 }
 ```
+
+### Get / replace LearnPack telemetry webhook ignore rules (academy staff)
+
+- **Method:** `GET` (read) and `PUT` (replace entire rule object)
+- **Path:** `/v1/assignment/academy/learnpack/telemetry-webhook-ignore`
+- **Required headers:** `Authorization`, `Academy`
+- **Capabilities:** `read_assignment` for `GET`; `crud_telemetry` for `PUT`
+- **Storage:** Rules are persisted on the academy as `learnpack_features.telemetry_webhook_ignore` (a JSON object with optional list keys). The dedicated `PUT` only updates that subtree and leaves other `learnpack_features` keys intact. `PUT /v1/auth/academy/settings` merges `learnpack_features` in a way that preserves `telemetry_webhook_ignore` when that key is omitted from the payload.
+
+**Request body (`PUT`)** — replace the whole ignore config (omit a key to clear that dimension):
+
+```json
+{
+  "user_ids": [123],
+  "learnpack_package_ids": [456],
+  "package_slugs": ["my-pack"],
+  "asset_ids": [789],
+  "events": ["open_step"]
+}
+```
+
+**Response (`GET` / `PUT`):** the same object shape (possibly empty `{}`).
 
 ### Upsert telemetry for a user and asset (academy staff)
 
