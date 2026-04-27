@@ -166,9 +166,30 @@ GET /v1/assignment/academy/learnpack/webhook?student=123,456&event=batch,open_st
 - **Path:** `/v1/assignment/academy/learnpack/telemetry-webhook-ignore`
 - **Required headers:** `Authorization`, `Academy`
 - **Capabilities:** `read_assignment` for `GET`; `crud_telemetry` for `PUT`
-- **Storage:** Rules are persisted on the academy as `learnpack_features.telemetry_webhook_ignore` (a JSON object with optional list keys). The dedicated `PUT` only updates that subtree and leaves other `learnpack_features` keys intact. `PUT /v1/auth/academy/settings` merges `learnpack_features` in a way that preserves `telemetry_webhook_ignore` when that key is omitted from the payload.
+- **Storage:** Rules are persisted on the academy as `learnpack_features.telemetry_webhook_ignore`. The dedicated `PUT` only updates that subtree and leaves other `learnpack_features` keys intact. `PUT /v1/auth/academy/settings` merges `learnpack_features` in a way that preserves `telemetry_webhook_ignore` when that key is omitted from the payload.
 
-**Request body (`PUT`)** — replace the whole ignore config (omit a key to clear that dimension):
+**Matching behavior:**
+- Preferred shape uses `rules` for combinations: **AND** across fields in each rule; **OR** across rules.
+- Inside each field list, matching is **OR**.
+- Legacy top-level keys (`user_ids`, `learnpack_package_ids`, `package_slugs`, `asset_ids`, `events`) are still accepted and keep legacy **OR** behavior across fields.
+
+**Request body (`PUT`)** — combination-aware shape (recommended):
+
+```json
+{
+  "rules": [
+    {
+      "events": ["batch"],
+      "learnpack_package_ids": [13190]
+    },
+    {
+      "user_ids": [123]
+    }
+  ]
+}
+```
+
+**Legacy body shape (still valid):**
 
 ```json
 {

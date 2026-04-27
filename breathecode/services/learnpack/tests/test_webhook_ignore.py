@@ -56,6 +56,40 @@ def test_should_ignore_package_id(database: capy.Database):
     assert reason and "learnpack_package_ids" in reason
 
 
+def test_should_ignore_combined_rule_requires_all_fields(database: capy.Database):
+    model = database.create(country=1, city=1, academy=1, academy_auth_settings=1)
+    settings = model.academy_auth_settings
+    settings.learnpack_features = {
+        LEARNPACK_FEATURES_TELEMETRY_WEBHOOK_IGNORE_KEY: {
+            "rules": [
+                {"events": ["batch"], "learnpack_package_ids": [13190]},
+            ]
+        }
+    }
+    settings.save(update_fields=["learnpack_features"])
+
+    ok, _ = should_ignore_learnpack_webhook(
+        model.academy.id,
+        {"user_id": 1, "slug": "x", "event": "batch", "package_id": 22},
+    )
+    assert ok is False
+
+    ok, reason = should_ignore_learnpack_webhook(
+        model.academy.id,
+        {"user_id": 1, "slug": "x", "event": "batch", "package_id": 13190},
+    )
+    assert ok is True
+    assert reason and "rule" in reason
+
+
+def test_validate_body_accepts_rules(database: capy.Database):
+    cleaned = validate_telemetry_webhook_ignore_body(
+        {"rules": [{"events": ["batch"], "learnpack_package_ids": [13190]}]}
+    )
+    assert "rules" in cleaned
+    assert cleaned["rules"][0]["events"] == ["batch"]
+
+
 def test_validate_body_rejects_non_list_field():
     with pytest.raises(ValidationException) as exc:
         validate_telemetry_webhook_ignore_body({"user_ids": "not-a-list"})
