@@ -37,7 +37,11 @@ from breathecode.utils.validate_conversion_info import validate_conversion_info
 from settings import GENERAL_PRICING_RATIOS
 
 from .models import (
+    DAY,
+    MONTH,
     SERVICE_UNITS,
+    WEEK,
+    YEAR,
     AcademyPaymentSettings,
     AcademyService,
     Bag,
@@ -2306,7 +2310,95 @@ def validate_and_create_subscriptions(
         settings = get_user_settings(staff_user.id)
         lang = settings.lang
 
-    how_many_installments = 1
+    allowed_grace_period_units = {DAY, WEEK, MONTH, YEAR}
+
+    try:
+        how_many_installments = int(data.get("how_many_installments", 1))
+    except (TypeError, ValueError):
+        raise ValidationException(
+            translation(
+                lang,
+                en="how_many_installments must be a positive integer",
+                es="how_many_installments debe ser un entero positivo",
+                slug="invalid-how-many-installments",
+            ),
+            code=400,
+        )
+
+    if how_many_installments <= 0:
+        raise ValidationException(
+            translation(
+                lang,
+                en="how_many_installments must be a positive integer",
+                es="how_many_installments debe ser un entero positivo",
+                slug="invalid-how-many-installments",
+            ),
+            code=400,
+        )
+
+    initial_payment_amount = data.get("initial_payment_amount", None)
+    if initial_payment_amount is not None:
+        try:
+            initial_payment_amount = float(initial_payment_amount)
+        except (TypeError, ValueError):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="initial_payment_amount must be a number",
+                    es="initial_payment_amount debe ser un número",
+                    slug="invalid-initial-payment-amount",
+                ),
+                code=400,
+            )
+
+        if initial_payment_amount < 0:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="initial_payment_amount must be zero or greater",
+                    es="initial_payment_amount debe ser cero o mayor",
+                    slug="invalid-initial-payment-amount",
+                ),
+                code=400,
+            )
+
+    initial_payment_notes = data.get("initial_payment_notes", None)
+
+    try:
+        grace_period_duration = int(data.get("grace_period_duration", 0) or 0)
+    except (TypeError, ValueError):
+        raise ValidationException(
+            translation(
+                lang,
+                en="grace_period_duration must be zero or a positive integer",
+                es="grace_period_duration debe ser cero o un entero positivo",
+                slug="invalid-grace-period-duration",
+            ),
+            code=400,
+        )
+
+    if grace_period_duration < 0:
+        raise ValidationException(
+            translation(
+                lang,
+                en="grace_period_duration must be zero or a positive integer",
+                es="grace_period_duration debe ser cero o un entero positivo",
+                slug="invalid-grace-period-duration",
+            ),
+            code=400,
+        )
+
+    grace_period_duration_unit = data.get("grace_period_duration_unit", MONTH)
+    if grace_period_duration_unit not in allowed_grace_period_units:
+        raise ValidationException(
+            translation(
+                lang,
+                en="grace_period_duration_unit must be DAY, WEEK, MONTH or YEAR",
+                es="grace_period_duration_unit debe ser DAY, WEEK, MONTH o YEAR",
+                slug="invalid-grace-period-duration-unit",
+            ),
+            code=400,
+        )
 
     cohort = data.get("cohorts", [])
     cohort_found = []
@@ -2413,7 +2505,8 @@ def validate_and_create_subscriptions(
     currency = resolve_currency_for_staff_payment(payment_method, academy, lang)
 
     original_price = option.monthly_price
-    amount = get_discounted_price(original_price, coupons)
+    installment_amount = get_discounted_price(original_price, coupons)
+    amount = initial_payment_amount if initial_payment_amount is not None else installment_amount
 
     bag, invoice = create_externally_managed_bag_and_invoice(
         user=user,
@@ -2432,7 +2525,27 @@ def validate_and_create_subscriptions(
     if coupons and original_price > 0:
         create_seller_reward_coupons(coupons, original_price, user)
 
-    tasks.build_plan_financing.delay(bag.id, invoice.id, conversion_info=conversion_info, cohorts=cohort)
+    build_kwargs = {
+        "conversion_info": conversion_info,
+        "cohorts": cohort,
+    }
+    if (
+        initial_payment_amount is not None
+        or initial_payment_notes is not None
+        or grace_period_duration > 0
+        or "how_many_installments" in data
+    ):
+        build_kwargs.update(
+            {
+                "principal_amount": installment_amount,
+                "initial_payment_amount": amount,
+                "initial_payment_notes": initial_payment_notes,
+                "grace_period_duration": grace_period_duration,
+                "grace_period_duration_unit": grace_period_duration_unit,
+            }
+        )
+
+    tasks.build_plan_financing.delay(bag.id, invoice.id, **build_kwargs)
 
     return invoice, coupons
 

@@ -1150,6 +1150,10 @@ class GetPlanFinancingSerializer(GetAbstractIOweYouSerializer):
     plan_expires_at = serpy.Field()
     monthly_price = serpy.Field()
     how_many_installments = serpy.Field()
+    initial_payment_amount = serpy.Field()
+    initial_payment_notes = serpy.Field()
+    grace_period_duration = serpy.Field()
+    grace_period_duration_unit = serpy.Field()
 
 
 class GetSubscriptionHookSerializer(GetAbstractIOweYouSerializer):

@@ -2307,6 +2307,30 @@ class PlanFinancing(AbstractIOweYou):
         default=0, help_text="How many installments to collect and build the plan financing"
     )
 
+    initial_payment_amount = models.FloatField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Amount paid when this plan financing was created by staff.",
+    )
+    initial_payment_notes = models.CharField(
+        max_length=250,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Optional staff notes about the initial payment.",
+    )
+    grace_period_duration = models.PositiveIntegerField(
+        default=0,
+        help_text="Duration to defer the first future installment after the initial payment.",
+    )
+    grace_period_duration_unit = models.CharField(
+        max_length=10,
+        choices=PAY_EVERY_UNIT,
+        default=MONTH,
+        help_text="Unit used by grace_period_duration.",
+    )
+
     def __str__(self) -> str:
         return f"{self.user.email} ({self.valid_until})"
 

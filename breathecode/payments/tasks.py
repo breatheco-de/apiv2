@@ -1161,32 +1161,41 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
                 raise AbortTask(msg)
 
-            # Derive the display price per installment from the first invoice amount, but exclude reward coupons
-            amount = first_invoice.amount
-            coupons = first_invoice.bag.coupons.all() if first_invoice.bag else []
+            if plan_financing.initial_payment_amount is not None:
+                amount = plan_financing.monthly_price
+            else:
+                # Derive the display price per installment from the first invoice amount, but exclude reward coupons.
+                amount = first_invoice.amount
+                coupons = first_invoice.bag.coupons.all() if first_invoice.bag else []
 
-            reward_coupons = [
-                coupon
-                for coupon in coupons
-                if coupon and coupon.allowed_user_id is not None and coupon.referral_type == Coupon.Referral.NO_REFERRAL
-            ]
+                reward_coupons = [
+                    coupon
+                    for coupon in coupons
+                    if coupon
+                    and coupon.allowed_user_id is not None
+                    and coupon.referral_type == Coupon.Referral.NO_REFERRAL
+                ]
 
-            for coupon in reward_coupons:
-                v = coupon.discount_value or 0
+                for coupon in reward_coupons:
+                    v = coupon.discount_value or 0
 
-                if coupon.discount_type == Coupon.Discount.PERCENT_OFF:
-                    factor = 1 - v
-                    if factor > 0:
-                        amount /= factor
-                elif coupon.discount_type == Coupon.Discount.FIXED_PRICE:
-                    amount += v
+                    if coupon.discount_type == Coupon.Discount.PERCENT_OFF:
+                        factor = 1 - v
+                        if factor > 0:
+                            amount /= factor
+                    elif coupon.discount_type == Coupon.Discount.FIXED_PRICE:
+                        amount += v
 
-            installments = first_invoice.bag.how_many_installments
+            installments = plan_financing.how_many_installments
 
             if utc_now - last_invoice.paid_at < timedelta(days=cooldown_days):
                 raise AbortTask(f"PlanFinancing with id {plan_financing_id} was paid earlier")
 
-            remaining_installments = installments - invoices.count()
+            if plan_financing.initial_payment_amount is not None:
+                paid_future_installments = max(invoices.count() - 1, 0)
+                remaining_installments = installments - paid_future_installments
+            else:
+                remaining_installments = installments - invoices.count()
 
             if remaining_installments > 0:
                 # Look for existing payment that hasn't been delivered yet
@@ -1772,6 +1781,10 @@ def build_plan_financing(
     cohorts: Optional[list[str]] = None,
     externally_managed: bool = False,
     principal_amount: Optional[float] = None,
+    initial_payment_amount: Optional[float] = None,
+    initial_payment_notes: Optional[str] = None,
+    grace_period_duration: int = 0,
+    grace_period_duration_unit: str = "MONTH",
     **_: Any,
 ):
     logger.info(f"Starting build_plan_financing for bag {bag_id}")
@@ -1819,7 +1832,12 @@ def build_plan_financing(
     if cohorts:
         cohorts = Cohort.objects.filter(slug__in=cohorts)
 
-    next_payment_at = invoice.paid_at + relativedelta(months=1)
+    grace_delta = (
+        actions.calculate_relative_delta(grace_period_duration, grace_period_duration_unit)
+        if grace_period_duration
+        else relativedelta(0)
+    )
+    next_payment_at = invoice.paid_at + grace_delta if grace_period_duration else invoice.paid_at + relativedelta(months=1)
 
     parsed_conversion_info = ast.literal_eval(conversion_info) if conversion_info not in [None, ""] else None
     # principal_amount allows separating the recurring amount (plan base)
@@ -1827,6 +1845,11 @@ def build_plan_financing(
     # in the first invoice. When provided, it is used as the monthly_price
     # instead of the invoice.amount.
     monthly_price = principal_amount if principal_amount is not None else invoice.amount
+    valid_until = (
+        next_payment_at + relativedelta(months=max(months - 1, 0))
+        if initial_payment_amount is not None
+        else invoice.paid_at + relativedelta(months=months - 1)
+    )
 
     financing = PlanFinancing.objects.create(
         user=bag.user,
@@ -1836,9 +1859,13 @@ def build_plan_financing(
         selected_cohort_set=cohort_set,
         selected_event_type_set=event_type_set,
         selected_mentorship_service_set=mentorship_service_set,
-        valid_until=invoice.paid_at + relativedelta(months=months - 1),
+        valid_until=valid_until,
         plan_expires_at=invoice.paid_at + delta,
         monthly_price=monthly_price,
+        initial_payment_amount=initial_payment_amount,
+        initial_payment_notes=initial_payment_notes,
+        grace_period_duration=grace_period_duration,
+        grace_period_duration_unit=grace_period_duration_unit,
         status="ACTIVE",
         conversion_info=parsed_conversion_info,
         currency=bag.currency or bag.academy.main_currency,  # Ensure currency is passed from bag
@@ -1875,7 +1902,7 @@ def build_plan_financing(
     build_service_stock_scheduler_from_plan_financing.delay(financing.id)
 
     # Schedule monthly charges based on days until next payment
-    days_until_next_payment = (invoice.paid_at + relativedelta(months=1) - invoice.paid_at).days
+    days_until_next_payment = (next_payment_at - invoice.paid_at).days
     manager = schedule_task(charge_plan_financing, f"{days_until_next_payment}d")
     if not manager.exists(financing.id):
         manager.call(financing.id)

@@ -39,10 +39,15 @@ def plan_financing_item(data={}):
         "selected_event_type_set_id": None,
         "selected_mentorship_service_set_id": None,
         "externally_managed": False,
+        "next_charge_pull_applied": False,
         "how_many_installments": 0,
         "country_code": "",
         "currency_id": 1,
         "conversion_info": None,
+        "initial_payment_amount": None,
+        "initial_payment_notes": None,
+        "grace_period_duration": 0,
+        "grace_period_duration_unit": "MONTH",
         "auto_recharge_enabled": False,
         "recharge_threshold_amount": Decimal("10.00"),
         "recharge_amount": Decimal("10.00"),
@@ -295,6 +300,48 @@ class PaymentsTestSuite(PaymentsTestCase):
                 "id": 1,
             },
         ]
+
+    @patch("logging.Logger.info", MagicMock())
+    @patch("logging.Logger.error", MagicMock())
+    @patch.object(timezone, "now", MagicMock(return_value=UTC_NOW))
+    @patch("breathecode.payments.tasks.build_service_stock_scheduler_from_plan_financing.delay", MagicMock())
+    def test_subscription_was_created__with_initial_payment_and_grace_period(self):
+        bag = {
+            "status": "PAID",
+            "was_delivered": False,
+            "chosen_period": "NO_SET",
+            "how_many_installments": 4,
+        }
+        invoice = {"status": "FULFILLED", "amount": 5000}
+        plan = {"is_renewable": False}
+
+        model = self.bc.database.create(bag=bag, invoice=invoice, plan=plan)
+
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
+        build_plan_financing.delay(
+            1,
+            1,
+            principal_amount=1200,
+            initial_payment_amount=5000,
+            initial_payment_notes="Staff discount approved",
+            grace_period_duration=4,
+            grace_period_duration_unit="MONTH",
+        )
+
+        financing = self.bc.database.list_of("payments.PlanFinancing")[0]
+        next_payment_at = model.invoice.paid_at + relativedelta(months=4)
+        assert financing["how_many_installments"] == 4
+        assert financing["monthly_price"] == 1200
+        assert financing["initial_payment_amount"] == 5000
+        assert financing["initial_payment_notes"] == "Staff discount approved"
+        assert financing["grace_period_duration"] == 4
+        assert financing["grace_period_duration_unit"] == "MONTH"
+        assert financing["next_payment_at"].replace(tzinfo=None) == next_payment_at.replace(tzinfo=None)
+        assert financing["valid_until"].replace(tzinfo=None) == (next_payment_at + relativedelta(months=3)).replace(
+            tzinfo=None
+        )
 
     """
     🔽🔽🔽 With Bag with Cohort and Invoice with amount
