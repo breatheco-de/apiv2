@@ -30,6 +30,7 @@ from breathecode.utils.decorators import service_deprovisioner
 
 from .models import (
     ADD,
+    PENDING,
     SYNCHED,
     AcademyAuthSettings,
     CredentialsGithub,
@@ -1172,12 +1173,21 @@ def delete_from_github(github_user: GithubAcademyUser):
         return False
 
 
-def sync_organization_members(academy_id, only_status=None):
+def sync_organization_members(
+    academy_id, only_status=None, github_academy_user_id: Optional[int] = None, force_requeue: bool = False
+):
+    """
+    Synchronize GithubAcademyUser rows for an academy with the GitHub org.
 
+    :param github_academy_user_id: If set, only this GithubAcademyUser is processed
+        (and the "unknown org members" pass is skipped).
+    :param force_requeue: If True with ``github_academy_user_id``, set storage to PENDING+ADD before syncing.
+    """
     if only_status is None:
         only_status = []
 
     now = timezone.now()
+    single_gau = github_academy_user_id is not None
 
     settings = AcademyAuthSettings.objects.filter(academy__id=academy_id).first()
     if settings is None or not settings.github_is_sync:
@@ -1205,18 +1215,36 @@ def sync_organization_members(academy_id, only_status=None):
             slug="invalid-owner",
         )
 
-    # retry errored users only from this academy being synched
-    GithubAcademyUser.objects.filter(academy=settings.academy, storage_status="ERROR").update(
-        storage_status="PENDING", storage_synch_at=None
-    )
-
-    # users without github credentials are marked as error
-    no_github_credentials = GithubAcademyUser.objects.filter(
-        academy=settings.academy, user__credentialsgithub__isnull=True
-    )
-    no_github_credentials.update(
-        storage_status="ERROR", storage_log=[GithubAcademyUser.create_log("This user needs connect to github")]
-    )
+    if single_gau:
+        gau = GithubAcademyUser.objects.filter(id=github_academy_user_id, academy=settings.academy).first()
+        if gau is None:
+            raise ValidationException(
+                translation(
+                    en=f"GithubAcademyUser id {github_academy_user_id} not found for this academy",
+                    es=f"No existe GithubAcademyUser id {github_academy_user_id} en esta academia",
+                ),
+                slug="gau-not-found",
+            )
+        if force_requeue:
+            gau.storage_status = PENDING
+            gau.storage_action = ADD
+            gau.save()
+        if gau.user is None or not CredentialsGithub.objects.filter(user=gau.user).exists():
+            gau.storage_status = "ERROR"
+            gau.log("This user needs connect to github", reset=True)
+            gau.save()
+    else:
+        # retry errored users only from this academy being synched
+        GithubAcademyUser.objects.filter(academy=settings.academy, storage_status="ERROR").update(
+            storage_status="PENDING", storage_synch_at=None
+        )
+        # users without github credentials are marked as error
+        no_github_credentials = GithubAcademyUser.objects.filter(
+            academy=settings.academy, user__credentialsgithub__isnull=True
+        )
+        no_github_credentials.update(
+            storage_status="ERROR", storage_log=[GithubAcademyUser.create_log("This user needs connect to github")]
+        )
 
     gb = Github(org=settings.github_username, token=settings.github_owner.credentialsgithub.token)
 
@@ -1235,8 +1263,13 @@ def sync_organization_members(academy_id, only_status=None):
     if len(only_status) > 0:
         org_users = org_users.filter(storage_action__in=only_status)
 
+    if single_gau:
+        org_users = org_users.filter(id=github_academy_user_id)
+
     for _member in org_users:
         github = CredentialsGithub.objects.filter(user=_member.user).first()
+        if github is None:
+            continue
         if _member.storage_status in ["PENDING"] and _member.storage_action in ["ADD", "INVITE"]:
             if github.username in remaining_usernames:
                 _member.log("User was already added to github")
@@ -1299,39 +1332,40 @@ def sync_organization_members(academy_id, only_status=None):
         remaining_usernames = set([username for username in remaining_usernames if username != github_username])
 
     # there are some users from github we could not find in THIS academy cohorts
-    for u in remaining_usernames:
-        _user = CredentialsGithub.objects.filter(username=u).first()
-        if _user is not None:
-            _user = _user.user
+    if not single_gau:
+        for u in remaining_usernames:
+            _user = CredentialsGithub.objects.filter(username=u).first()
+            if _user is not None:
+                _user = _user.user
 
-        # we look if the user is present in this particular academy, not from academy_slugs because we do want
-        # to duplicate this users per academy, that way each academy can decide if wants to delete or not
-        # you should see in the code for deletion that users will only be deleted if all the academies for
-        # the same organization delete it
-        _query = GithubAcademyUser.objects.filter(academy=settings.academy).filter(username=u)
-        if _user is not None:
-            _query = _query.filter(user=_user)
-        unknown_user = _query.first()
+            # we look if the user is present in this particular academy, not from academy_slugs because we do want
+            # to duplicate this users per academy, that way each academy can decide if wants to delete or not
+            # you should see in the code for deletion that users will only be deleted if all the academies for
+            # the same organization delete it
+            _query = GithubAcademyUser.objects.filter(academy=settings.academy).filter(username=u)
+            if _user is not None:
+                _query = _query.filter(user=_user)
+            unknown_user = _query.first()
 
-        if unknown_user is None:
-            unknown_user = GithubAcademyUser(
-                academy=settings.academy,
-                user=_user,
-                username=u,
-                storage_status="UNKNOWN",
-                storage_action="IGNORE",
-                storage_synch_at=now,
+            if unknown_user is None:
+                unknown_user = GithubAcademyUser(
+                    academy=settings.academy,
+                    user=_user,
+                    username=u,
+                    storage_status="UNKNOWN",
+                    storage_action="IGNORE",
+                    storage_synch_at=now,
+                )
+                unknown_user.save()
+
+            unknown_user.storage_status = "UNKNOWN"
+            unknown_user.storage_action = "IGNORE"
+            unknown_user.storage_synch_at = now
+            unknown_user.log(
+                "This user is coming from github, we don't know if its a student from your academy or if it should be added or deleted, keep it as IGNORED to avoid deletion",
+                reset=True,
             )
             unknown_user.save()
-
-        unknown_user.storage_status = "UNKNOWN"
-        unknown_user.storage_action = "IGNORE"
-        unknown_user.storage_synch_at = now
-        unknown_user.log(
-            "This user is coming from github, we don't know if its a student from your academy or if it should be added or deleted, keep it as IGNORED to avoid deletion",
-            reset=True,
-        )
-        unknown_user.save()
 
     return True
 
