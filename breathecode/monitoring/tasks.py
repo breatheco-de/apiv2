@@ -1,8 +1,10 @@
 import importlib
 import logging
+from datetime import timedelta
 from typing import Any
 
 from celery import shared_task
+from django.db import transaction
 from django.utils import timezone
 from task_manager.core.exceptions import AbortTask, RetryTask
 from task_manager.django.decorators import task
@@ -11,10 +13,26 @@ from breathecode.notify.actions import send_email_message, send_slack_raw
 from breathecode.utils import TaskPriority
 
 from .actions import download_csv, run_endpoint_diagnostic, run_script, subscribe_repository, unsubscribe_repository
-from .models import Endpoint, MonitorScript, Supervisor, SupervisorIssue
+from .models import Endpoint, MonitorScript, ReportGenerationJob, Supervisor, SupervisorIssue
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
+
+
+REPORT_GENERATOR_REGISTRY = {
+    ReportGenerationJob.ReportType.ACQUISITION: "breathecode.monitoring.reports.acquisition.actions.AcquisitionReportGenerator",
+    ReportGenerationJob.ReportType.CHURN: "breathecode.monitoring.reports.churn.actions.ChurnReport",
+}
+
+
+def _resolve_generator(report_type: str):
+    dotted_path = REPORT_GENERATOR_REGISTRY.get(report_type)
+    if not dotted_path:
+        raise ValueError(f"Unsupported report type {report_type}")
+
+    module_path, class_name = dotted_path.rsplit(".", 1)
+    module = importlib.import_module(module_path)
+    return getattr(module, class_name)
 
 
 @shared_task(bind=True, priority=TaskPriority.MONITORING.value)
@@ -212,3 +230,93 @@ def fix_issue(issue_id: int, **_: Any):
 
     issue.fixed = res
     issue.save()
+
+
+@shared_task(bind=True, priority=TaskPriority.MONITORING.value)
+def generate_report_job(self, job_id: int):
+    job = ReportGenerationJob.objects.filter(id=job_id).first()
+    if not job:
+        logger.error(f"Report generation job {job_id} not found")
+        return False
+
+    try:
+        generator_class = _resolve_generator(job.report_type)
+    except Exception as e:
+        job.status = ReportGenerationJob.Status.ERROR
+        job.status_message = str(e)
+        job.error_log = str(e)
+        job.finished_at = timezone.now()
+        job.save(update_fields=["status", "status_message", "error_log", "finished_at", "updated_at"])
+        return False
+
+    date_range = []
+    current = job.date_start
+    while current <= job.date_end:
+        date_range.append(current)
+        current += timedelta(days=1)
+
+    job.status = ReportGenerationJob.Status.RUNNING
+    job.status_message = "Running report generation"
+    job.started_at = timezone.now()
+    job.progress_total = len(date_range)
+    job.progress_current = 0
+    job.generated_rows = 0
+    job.error_log = ""
+    job.result = {"dates": []}
+    job.save(
+        update_fields=[
+            "status",
+            "status_message",
+            "started_at",
+            "progress_total",
+            "progress_current",
+            "generated_rows",
+            "error_log",
+            "result",
+            "updated_at",
+        ]
+    )
+
+    errors = []
+    generated_rows = 0
+    processed = 0
+
+    for report_date in date_range:
+        try:
+            generator = generator_class(report_date=report_date, academy_id=job.academy_id)
+            count = generator.generate()
+            generated_rows += count
+            job.result["dates"].append({"date": report_date.isoformat(), "generated_rows": count, "status": "done"})
+        except Exception as e:
+            message = f"{report_date.isoformat()}: {e}"
+            errors.append(message)
+            job.result["dates"].append({"date": report_date.isoformat(), "generated_rows": 0, "status": "error", "error": str(e)})
+
+        processed += 1
+        with transaction.atomic():
+            refreshed = ReportGenerationJob.objects.select_for_update().filter(id=job.id).first()
+            if refreshed and refreshed.status == ReportGenerationJob.Status.CANCELLED:
+                return False
+
+            job.progress_current = processed
+            job.generated_rows = generated_rows
+            job.status_message = f"Processed {processed}/{len(date_range)} days"
+            job.save(update_fields=["progress_current", "generated_rows", "status_message", "result", "updated_at"])
+
+    if errors and processed == len(date_range):
+        job.status = ReportGenerationJob.Status.PARTIAL if generated_rows > 0 else ReportGenerationJob.Status.ERROR
+    else:
+        job.status = ReportGenerationJob.Status.DONE
+
+    job.finished_at = timezone.now()
+    job.error_log = "\n".join(errors) if errors else None
+    job.status_message = "Report generation completed"
+    job.result = {
+        **job.result,
+        "generated_rows": generated_rows,
+        "processed_days": processed,
+        "total_days": len(date_range),
+        "errors": errors,
+    }
+    job.save(update_fields=["status", "finished_at", "error_log", "status_message", "result", "updated_at"])
+    return True

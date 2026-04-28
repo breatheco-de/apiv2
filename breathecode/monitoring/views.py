@@ -1,5 +1,7 @@
 import logging
 import os
+from hashlib import sha256
+import json
 from datetime import date
 
 import stripe
@@ -23,17 +25,20 @@ from breathecode.utils import GenerateLookupsMixin, capable_of
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 
 from .actions import add_github_webhook, add_stripe_webhook, add_stripe_webhook_error, get_admin_actions, run_script
-from .models import CSVDownload, CSVUpload, MonitorScript, RepositorySubscription, RepositoryWebhook
+from .models import CSVDownload, CSVUpload, MonitorScript, ReportGenerationJob, RepositorySubscription, RepositoryWebhook
 from .serializers import (
     CSVDownloadSmallSerializer,
     CSVUploadSmallSerializer,
     MonitoringErrorSerializer,
+    ReportGenerationJobListSerializer,
+    ReportGenerationJobSerializer,
+    ReportGenerationTriggerSerializer,
     MonitorScriptSmallSerializer,
     RepositorySubscriptionSerializer,
     RepoSubscriptionSmallSerializer,
 )
 from .signals import github_webhook
-from .tasks import async_unsubscribe_repo
+from .tasks import async_unsubscribe_repo, generate_report_job
 
 logger = logging.getLogger(__name__)
 
@@ -782,3 +787,126 @@ class MonitoringReportSummaryView(APIView):
 
         payload = config.summary_builder(queryset, academy_id)
         return Response(payload, status=status.HTTP_200_OK)
+
+
+def _job_fingerprint(report_type: str, academy_id: int, date_start: date, date_end: date, params: dict) -> str:
+    payload = {
+        "report_type": report_type,
+        "academy_id": academy_id,
+        "date_start": date_start.isoformat(),
+        "date_end": date_end.isoformat(),
+        "params": params,
+    }
+    return sha256(json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()
+
+
+class MonitoringReportGenerationView(APIView):
+    @capable_of("read_monitoring_report")
+    def post(self, request, report_type=None, academy_id=None):
+        lang = get_user_language(request)
+        data = {**request.data, "report_type": report_type}
+        serializer = ReportGenerationTriggerSerializer(data=data, context={"lang": lang, "academy_id": academy_id})
+        serializer.is_valid(raise_exception=True)
+        payload = serializer.validated_data
+
+        params = {}
+        for key in ["date", "date_start", "date_end", "days_back"]:
+            if key in request.data:
+                params[key] = request.data.get(key)
+
+        fingerprint = _job_fingerprint(
+            report_type=payload["report_type"],
+            academy_id=academy_id,
+            date_start=payload["date_start"],
+            date_end=payload["date_end"],
+            params=params,
+        )
+
+        if not payload.get("force", False):
+            existing = ReportGenerationJob.objects.filter(
+                academy_id=academy_id,
+                report_type=payload["report_type"],
+                fingerprint=fingerprint,
+                status__in=[ReportGenerationJob.Status.PENDING, ReportGenerationJob.Status.RUNNING],
+            ).first()
+            if existing:
+                return Response(ReportGenerationJobSerializer(existing, many=False).data, status=status.HTTP_200_OK)
+
+        job = ReportGenerationJob.objects.create(
+            report_type=payload["report_type"],
+            status=ReportGenerationJob.Status.PENDING,
+            status_message="Queued",
+            academy_id=academy_id,
+            requested_by=request.user,
+            date_start=payload["date_start"],
+            date_end=payload["date_end"],
+            params=params,
+            fingerprint=fingerprint,
+        )
+
+        task_result = generate_report_job.delay(job.id)
+        job.celery_task_id = task_result.id
+        job.save(update_fields=["celery_task_id", "updated_at"])
+
+        return Response(ReportGenerationJobSerializer(job, many=False).data, status=status.HTTP_202_ACCEPTED)
+
+
+class MonitoringReportGenerationDetailView(APIView):
+    @capable_of("read_monitoring_report")
+    def get(self, request, report_type=None, job_id=None, academy_id=None):
+        lang = get_user_language(request)
+        job = ReportGenerationJob.objects.filter(id=job_id, academy_id=academy_id, report_type=report_type).first()
+        if not job:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Report generation job {job_id} not found",
+                    es=f"Trabajo de generación de reporte {job_id} no encontrado",
+                    slug="report-generation-job-not-found",
+                ),
+                code=status.HTTP_404_NOT_FOUND,
+            )
+
+        return Response(ReportGenerationJobSerializer(job, many=False).data, status=status.HTTP_200_OK)
+
+
+class MonitoringReportGenerationListView(APIView):
+    @capable_of("read_monitoring_report")
+    def get(self, request, academy_id=None):
+        lang = get_user_language(request)
+        queryset = ReportGenerationJob.objects.filter(academy_id=academy_id).order_by("-created_at")
+
+        status_filter = request.GET.get("status")
+        if status_filter:
+            statuses = [x.strip().upper() for x in status_filter.split(",") if x.strip()]
+            allowed = {x[0] for x in ReportGenerationJob.Status.choices}
+            unexpected = [x for x in statuses if x not in allowed]
+            if unexpected:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Invalid status filter: {', '.join(unexpected)}",
+                        es=f"Filtro status inválido: {', '.join(unexpected)}",
+                        slug="invalid-status-filter",
+                    )
+                )
+            queryset = queryset.filter(status__in=statuses)
+
+        report_type = request.GET.get("report_type")
+        if report_type:
+            allowed = {x[0] for x in ReportGenerationJob.ReportType.choices}
+            if report_type not in allowed:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Invalid report_type filter: {report_type}",
+                        es=f"Filtro report_type inválido: {report_type}",
+                        slug="invalid-report-type-filter",
+                    )
+                )
+            queryset = queryset.filter(report_type=report_type)
+
+        handler = APIViewExtensions(sort="-created_at", paginate=True)(request)
+        queryset = handler.queryset(queryset)
+        serialized = ReportGenerationJobListSerializer(queryset, many=True).data
+        return handler.response(serialized)

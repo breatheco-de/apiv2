@@ -1,13 +1,15 @@
 import logging
+from datetime import timedelta
 
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from django.core.validators import URLValidator
+from django.utils import timezone
 from rest_framework import serializers
 
 from breathecode.authenticate.models import AcademyAuthSettings
 from breathecode.monitoring.actions import subscribe_repository
-from breathecode.monitoring.models import MonitorScript, MonitoringError, RepositorySubscription
+from breathecode.monitoring.models import MonitorScript, MonitoringError, ReportGenerationJob, RepositorySubscription
 from breathecode.monitoring.tasks import async_subscribe_repo, async_unsubscribe_repo
 from breathecode.utils import serpy
 
@@ -336,6 +338,130 @@ class MonitoringReportTypeSerializer(serpy.Serializer):
     sort_fields = serpy.Field()
     supports_detail = serpy.Field()
     supports_summary = serpy.Field()
+
+
+class ReportGenerationJobSerializer(serpy.Serializer):
+    id = serpy.Field()
+    report_type = serpy.Field()
+    status = serpy.Field()
+    status_message = serpy.Field(required=False)
+    academy_id = serpy.Field(attr="academy.id")
+    requested_by_id = serpy.Field(attr="requested_by.id", required=False)
+    date_start = serpy.Field()
+    date_end = serpy.Field()
+    params = serpy.Field()
+    progress_current = serpy.Field()
+    progress_total = serpy.Field()
+    generated_rows = serpy.Field()
+    result = serpy.Field()
+    error_log = serpy.Field(required=False)
+    celery_task_id = serpy.Field(required=False)
+    started_at = serpy.Field(required=False)
+    finished_at = serpy.Field(required=False)
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+
+
+class ReportGenerationJobListSerializer(serpy.Serializer):
+    id = serpy.Field()
+    report_type = serpy.Field()
+    status = serpy.Field()
+    status_message = serpy.Field(required=False)
+    academy_id = serpy.Field(attr="academy.id")
+    date_start = serpy.Field()
+    date_end = serpy.Field()
+    progress_current = serpy.Field()
+    progress_total = serpy.Field()
+    generated_rows = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+
+
+class ReportGenerationTriggerSerializer(serializers.Serializer):
+    report_type = serializers.ChoiceField(choices=[x[0] for x in ReportGenerationJob.ReportType.choices])
+    date = serializers.DateField(required=False)
+    date_start = serializers.DateField(required=False)
+    date_end = serializers.DateField(required=False)
+    days_back = serializers.IntegerField(required=False, min_value=1)
+    academy = serializers.IntegerField(required=False)
+    force = serializers.BooleanField(required=False, default=False)
+
+    def validate(self, attrs):
+        lang = self.context.get("lang", "en")
+        academy_id = self.context.get("academy_id")
+
+        date = attrs.get("date")
+        date_start = attrs.get("date_start")
+        date_end = attrs.get("date_end")
+        days_back = attrs.get("days_back")
+        academy = attrs.get("academy")
+
+        provided = {
+            "date": date is not None,
+            "range": date_start is not None or date_end is not None,
+            "days_back": days_back is not None,
+        }
+        count = sum(1 for _, v in provided.items() if v)
+        if count != 1:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Provide exactly one of date, date_start/date_end, or days_back",
+                    es="Debes proveer exactamente uno: date, date_start/date_end, o days_back",
+                    slug="invalid-date-combination",
+                )
+            )
+
+        if date_start and not date_end or date_end and not date_start:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="date_start and date_end must be provided together",
+                    es="date_start y date_end deben enviarse juntos",
+                    slug="invalid-date-range",
+                )
+            )
+
+        if date_start and date_end and date_start > date_end:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="date_start must be lower than or equal to date_end",
+                    es="date_start debe ser menor o igual a date_end",
+                    slug="invalid-date-range-order",
+                )
+            )
+
+        if date_start and date_end and (date_end - date_start).days + 1 > 90:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Date range is too large, max 90 days",
+                    es="El rango de fechas es demasiado grande, máximo 90 días",
+                    slug="date-range-too-large",
+                )
+            )
+
+        if academy and academy_id and academy != academy_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="The academy query param must match the authenticated academy scope",
+                    es="El parámetro academy debe coincidir con el alcance de academia autenticado",
+                    slug="academy-filter-mismatch",
+                )
+            )
+
+        if date:
+            attrs["date_start"] = date
+            attrs["date_end"] = date
+        elif days_back:
+            today = timezone.now().date()
+            attrs["date_end"] = today - timedelta(days=1)
+            attrs["date_start"] = attrs["date_end"] - timedelta(days=days_back - 1)
+
+        attrs["academy"] = academy_id
+        return attrs
 
 
 class MonitorScriptSmallSerializer(serpy.Serializer):

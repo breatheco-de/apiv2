@@ -12,6 +12,7 @@ Use this skill when the task is to query, interpret, or explain acquisition repo
 Use it for list/detail/summary reads of `report_type=acquisition`.
 Do NOT use this skill to implement report models, generators, serializers, registry entries, or `generate_report` command behavior.
 Do NOT use this skill for non-monitoring report domains.
+If you need to trigger regeneration jobs, use `bc-monitoring-read-reports-api` generation endpoints (`POST /v1/monitoring/report/acquisition/generate` + polling).
 
 ## Core Concepts
 

@@ -42,7 +42,16 @@ Do NOT use this skill for non-monitoring report domains such as admissions, comm
    - Call `GET /v1/monitoring/report/{report_type}/{report_id}`.
    - Use `report_id` returned from Step 3.
 
-6. Handle validation failures predictably.
+6. Trigger async generation only when explicitly requested.
+   - Call `POST /v1/monitoring/report/{report_type}/generate`.
+   - Use one date strategy per request (`date`, range, or `days_back`).
+   - Requests are deduplicated by report/date scope unless `force=true`.
+
+7. Poll generation job state and queue health.
+   - Call `GET /v1/monitoring/report/{report_type}/generate/{job_id}` for one job.
+   - Call `GET /v1/monitoring/report/generate-jobs` for pending/running/completed lists.
+
+8. Handle validation failures predictably.
    - If filters/sort are rejected, rebuild query using only discovery metadata from Step 2.
    - If report type is unknown, refresh type list from Step 2 before retrying.
 
@@ -247,6 +256,69 @@ Do NOT use this skill for non-monitoring report domains such as admissions, comm
 }
 ```
 
+### 5) Trigger report generation job
+
+- **Method:** `POST`
+- **Path:** `/v1/monitoring/report/{report_type}/generate`
+- **Required headers:** `Authorization`, `Academy`
+- **Required capability:** `read_monitoring_report`
+- **Body rules:** send exactly one strategy:
+  - `date`
+  - `date_start` + `date_end`
+  - `days_back`
+- **Optional body field:** `force` (bool) to bypass dedup and create a new job.
+- **Behavior:** returns queued job payload with progress fields.
+
+**Request context example**
+```json
+{
+  "path_params": {
+    "report_type": "acquisition"
+  },
+  "headers": {
+    "Authorization": "Token 4f8f5b2d8e4a",
+    "Academy": "1"
+  },
+  "body": {
+    "date_start": "2026-04-01",
+    "date_end": "2026-04-30"
+  }
+}
+```
+
+**Response example**
+```json
+{
+  "id": 42,
+  "report_type": "acquisition",
+  "status": "PENDING",
+  "status_message": "Queued",
+  "academy_id": 1,
+  "date_start": "2026-04-01",
+  "date_end": "2026-04-30",
+  "progress_current": 0,
+  "progress_total": 0,
+  "generated_rows": 0
+}
+```
+
+### 6) Poll one generation job
+
+- **Method:** `GET`
+- **Path:** `/v1/monitoring/report/{report_type}/generate/{job_id}`
+- **Required headers:** `Authorization`, `Academy`
+- **Required capability:** `read_monitoring_report`
+- **Status values:** `PENDING`, `RUNNING`, `DONE`, `PARTIAL`, `ERROR`, `CANCELLED`
+
+### 7) List generation jobs queue
+
+- **Method:** `GET`
+- **Path:** `/v1/monitoring/report/generate-jobs`
+- **Required headers:** `Authorization`, `Academy`
+- **Required capability:** `read_monitoring_report`
+- **Supported filters:** `status` (comma-separated), `report_type`
+- **Primary use case:** list pending/running generation jobs in dashboards.
+
 **Response example**
 ```json
 {
@@ -284,6 +356,7 @@ Do NOT use this skill for non-monitoring report domains such as admissions, comm
 - **Unsupported filters:** API returns `400` with `unsupported-filter`. Remove unknown query params and retry with allowed keys only.
 - **Invalid sort value:** API returns `400` with `invalid-sort-field`. Use one of `sort_fields` from discovery response.
 - **Academy filter mismatch:** API returns `400` with `academy-filter-mismatch` if query `academy` differs from scoped academy. Keep them aligned.
+- **Invalid date strategy on generation:** API returns `400` with date-combination/range slugs. Send only one strategy and valid ranges.
 
 ## Checklist
 
@@ -293,3 +366,5 @@ Do NOT use this skill for non-monitoring report domains such as admissions, comm
 4. [ ] Queried list and summary with the same filter scope when showing one dashboard view.
 5. [ ] Used detail endpoint only after obtaining `report_id` from list results.
 6. [ ] Handled 400/403/404 errors with explicit retry behavior.
+7. [ ] For generation, used exactly one strategy (`date`, range, or `days_back`).
+8. [ ] Used `force=true` only when intentionally creating a duplicate regeneration job.

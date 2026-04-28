@@ -1,4 +1,5 @@
 from datetime import date
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.urls.base import reverse_lazy
@@ -6,6 +7,7 @@ from rest_framework import status
 
 from breathecode.monitoring.reports.acquisition.models import AcquisitionReport
 from breathecode.monitoring.reports.churn.models import ChurnAlert, ChurnRiskReport
+from breathecode.monitoring.models import ReportGenerationJob
 
 from ..mixins import MonitoringTestCase
 
@@ -360,3 +362,121 @@ class MonitoringReportTestSuite(MonitoringTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(payload), 2)
         self.assertEqual(set([x["report_date"] for x in payload]), {"2026-04-10", "2026-04-11"})
+
+    @patch("breathecode.monitoring.views.generate_report_job.delay")
+    def test_post_generate_report_job(self, delay_mock):
+        delay_mock.return_value.id = "task-1"
+        self.headers(academy=1)
+        self.generate_models(authenticate=True, profile_academy=True, role=1, capability="read_monitoring_report")
+
+        url = reverse_lazy("monitoring:report_type_generate", kwargs={"report_type": "acquisition"})
+        response = self.client.post(url, data={"date": "2026-04-11"}, format="json")
+        payload = response.json()
+
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(payload["report_type"], "acquisition")
+        self.assertEqual(payload["status"], ReportGenerationJob.Status.PENDING)
+        self.assertEqual(payload["date_start"], "2026-04-11")
+        self.assertEqual(payload["date_end"], "2026-04-11")
+        self.assertEqual(ReportGenerationJob.objects.count(), 1)
+        delay_mock.assert_called_once()
+
+    @patch("breathecode.monitoring.views.generate_report_job.delay")
+    def test_post_generate_report_job_dedup(self, delay_mock):
+        delay_mock.return_value.id = "task-1"
+        self.headers(academy=1)
+        self.generate_models(authenticate=True, profile_academy=True, role=1, capability="read_monitoring_report")
+        url = reverse_lazy("monitoring:report_type_generate", kwargs={"report_type": "acquisition"})
+
+        first = self.client.post(url, data={"date_start": "2026-04-01", "date_end": "2026-04-05"}, format="json")
+        second = self.client.post(url, data={"date_start": "2026-04-01", "date_end": "2026-04-05"}, format="json")
+
+        first_payload = first.json()
+        second_payload = second.json()
+        self.assertEqual(first.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(second.status_code, status.HTTP_200_OK)
+        self.assertEqual(first_payload["id"], second_payload["id"])
+        self.assertEqual(ReportGenerationJob.objects.count(), 1)
+        delay_mock.assert_called_once()
+
+    @patch("breathecode.monitoring.views.generate_report_job.delay")
+    def test_post_generate_report_job_force(self, delay_mock):
+        delay_mock.return_value.id = "task-1"
+        self.headers(academy=1)
+        self.generate_models(authenticate=True, profile_academy=True, role=1, capability="read_monitoring_report")
+        url = reverse_lazy("monitoring:report_type_generate", kwargs={"report_type": "acquisition"})
+
+        first = self.client.post(url, data={"date": "2026-04-11"}, format="json")
+        second = self.client.post(url, data={"date": "2026-04-11", "force": True}, format="json")
+
+        self.assertEqual(first.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(second.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(ReportGenerationJob.objects.count(), 2)
+        self.assertNotEqual(first.json()["id"], second.json()["id"])
+        self.assertEqual(delay_mock.call_count, 2)
+
+    def test_get_report_generation_job_by_id(self):
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True, profile_academy=True, role=1, capability="read_monitoring_report")
+        job = ReportGenerationJob.objects.create(
+            academy=model.academy,
+            report_type=ReportGenerationJob.ReportType.ACQUISITION,
+            status=ReportGenerationJob.Status.RUNNING,
+            status_message="Working",
+            date_start=date(2026, 4, 1),
+            date_end=date(2026, 4, 2),
+            params={"date_start": "2026-04-01", "date_end": "2026-04-02"},
+            fingerprint="f-1",
+            progress_total=2,
+            progress_current=1,
+        )
+
+        url = reverse_lazy("monitoring:report_type_generate_id", kwargs={"report_type": "acquisition", "job_id": job.id})
+        response = self.client.get(url)
+        payload = response.json()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(payload["id"], job.id)
+        self.assertEqual(payload["status"], ReportGenerationJob.Status.RUNNING)
+
+    def test_get_report_generation_jobs_list_filters(self):
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True, profile_academy=True, role=1, capability="read_monitoring_report")
+        other_academy_model = self.generate_models(academy=1, city=1, country=1)
+
+        ReportGenerationJob.objects.create(
+            academy=model.academy,
+            report_type=ReportGenerationJob.ReportType.ACQUISITION,
+            status=ReportGenerationJob.Status.PENDING,
+            date_start=date(2026, 4, 1),
+            date_end=date(2026, 4, 1),
+            params={"date": "2026-04-01"},
+            fingerprint="f-1",
+        )
+        ReportGenerationJob.objects.create(
+            academy=model.academy,
+            report_type=ReportGenerationJob.ReportType.CHURN,
+            status=ReportGenerationJob.Status.RUNNING,
+            date_start=date(2026, 4, 2),
+            date_end=date(2026, 4, 2),
+            params={"date": "2026-04-02"},
+            fingerprint="f-2",
+        )
+        ReportGenerationJob.objects.create(
+            academy=other_academy_model.academy,
+            report_type=ReportGenerationJob.ReportType.ACQUISITION,
+            status=ReportGenerationJob.Status.PENDING,
+            date_start=date(2026, 4, 3),
+            date_end=date(2026, 4, 3),
+            params={"date": "2026-04-03"},
+            fingerprint="f-3",
+        )
+
+        url = reverse_lazy("monitoring:report_generate_jobs")
+        response = self.client.get(url, data={"status": "PENDING,RUNNING", "report_type": "acquisition"})
+        payload = response.json()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(payload), 1)
+        self.assertEqual(payload[0]["report_type"], "acquisition")
+        self.assertEqual(payload[0]["status"], ReportGenerationJob.Status.PENDING)
