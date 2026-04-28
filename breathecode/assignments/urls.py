@@ -137,6 +137,11 @@ urlpatterns = [
     path("academy/asset/flag", AssetFlagView.as_view(), name="flag_asset"),
     path("academy/learnpack/webhook", AcademyLearnPackWebhookView.as_view(), name="academy_learnpack_webhook"),
     path(
+        "academy/learnpack/webhook/<int:webhook_id>",
+        AcademyLearnPackWebhookView.as_view(),
+        name="academy_learnpack_webhook_id",
+    ),
+    path(
         "academy/learnpack/telemetry-webhook-ignore",
         AcademyLearnPackTelemetryWebhookIgnoreView.as_view(),
         name="academy_learnpack_telemetry_webhook_ignore",

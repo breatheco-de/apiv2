@@ -14,9 +14,18 @@ from breathecode.admissions.models import Academy
 from breathecode.monitoring import signals
 from breathecode.notify.models import SlackChannel
 
+from breathecode.monitoring.reports.acquisition.models import AcquisitionReport
 from breathecode.monitoring.reports.churn.models import ChurnAlert, ChurnRiskReport
 
-__all__ = ["Application", "Endpoint", "MonitorScript", "MonitoringError", "ChurnRiskReport", "ChurnAlert"]
+__all__ = [
+    "Application",
+    "Endpoint",
+    "MonitorScript",
+    "MonitoringError",
+    "ChurnRiskReport",
+    "ChurnAlert",
+    "AcquisitionReport",
+]
 
 GITHUB_URL_PATTERN = re.compile(r"https:\/\/github\.com\/(?P<user>[^\/]+)\/(?P<repo>[^\/]+)\/?")
 

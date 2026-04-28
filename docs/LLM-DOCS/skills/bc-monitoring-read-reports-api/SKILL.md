@@ -10,6 +10,7 @@ requires: []
 
 Use this skill when the task is to fetch monitoring report metadata, list rows, row detail, or summary metrics from the monitoring report endpoints.
 Use it when frontend code needs filter/sort/pagination behavior for monitoring reports.
+If the request is specifically about acquisition report interpretation (funnel tiers, top assets/workshops, attribution patterns), prefer `bc-monitoring-read-report-acquisition`.
 Do NOT use this skill to build a new report type or modify report generation logic.
 Do NOT use this skill for non-monitoring report domains such as admissions, commission, or marketing report endpoints.
 
@@ -81,6 +82,15 @@ Do NOT use this skill for non-monitoring report domains such as admissions, comm
     "sort_fields": ["report_date", "-report_date", "churn_risk_score", "-churn_risk_score", "risk_level", "-risk_level", "created_at", "-created_at", "user_id", "-user_id"],
     "supports_detail": true,
     "supports_summary": true
+  },
+  {
+    "slug": "acquisition",
+    "label": "Acquisition Report",
+    "description": "Daily lead and invite acquisition snapshots with funnel tiers",
+    "filters": ["academy", "date", "date_start", "date_end", "source_type", "user", "utm_source", "utm_campaign", "deal_status", "asset_slug", "event_slug", "funnel_tier"],
+    "sort_fields": ["report_date", "-report_date", "created_at", "-created_at", "source_type", "-source_type", "funnel_tier", "-funnel_tier", "user_id", "-user_id"],
+    "supports_detail": true,
+    "supports_summary": true
   }
 ]
 ```
@@ -94,6 +104,7 @@ Do NOT use this skill for non-monitoring report domains such as admissions, comm
 - **Required body fields:** none
 - **Pagination:** Paginated (supports `limit`, `offset`)
 - **Current filters for `churn`:** `academy`, `date`, `risk_level`, `user`, `min_score`, `max_score`
+- **Current filters for `acquisition`:** `academy`, `date`, `date_start`, `date_end`, `source_type`, `user`, `utm_source`, `utm_campaign`, `deal_status`, `asset_slug`, `event_slug`, `funnel_tier`
 - **Sort:** use only values declared in discovery response `sort_fields`
 - **Translated errors:** optional `Accept-Language: en|es`
 
@@ -177,6 +188,36 @@ Do NOT use this skill for non-monitoring report domains such as admissions, comm
     "HIGH": 19,
     "CRITICAL": 8
   }
+}
+```
+
+**Acquisition summary example**
+```json
+{
+  "total": 72,
+  "by_source_type": {
+    "FORM_ENTRY": 18,
+    "USER_INVITE": 54
+  },
+  "by_funnel_tier": {
+    "1": 6,
+    "2": 14,
+    "3": 10,
+    "4": 42
+  },
+  "by_funnel_tier_label": {
+    "won_or_sale": 6,
+    "strong_lead": 14,
+    "soft_lead": 10,
+    "nurture_invite": 42
+  },
+  "top_asset_slugs": [{"asset_slug": "interactive-python", "count": 19}],
+  "top_event_slugs": [{"event_slug": "full-stack-with-ai-workshop-part-2-copy", "count": 12}],
+  "top_utm_sources": [{"utm_source": "an", "count": 17}],
+  "top_utm_campaigns": [{"utm_campaign": "120239918684820575", "count": 11}],
+  "top_conversion_urls": [{"conversion_url": "/es/bootcamp/change-your-career-in-15-days-self-paced", "count": 8}],
+  "by_deal_status": {"WON": 4},
+  "team_seat_invite_count": 3
 }
 ```
 

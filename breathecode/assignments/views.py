@@ -44,6 +44,7 @@ from .actions import deliver_task, sync_cohort_tasks
 from .caches import TaskCache
 from .forms import DeliverAssigntmentForm
 from .models import (
+    ERROR,
     IGNORED,
     AssignmentTelemetry,
     FinalProject,
@@ -322,10 +323,7 @@ class AcademyLearnPackWebhookView(APIView):
     def _parse_text_filter(raw: str) -> list[str]:
         return [x.strip() for x in raw.split(",") if x.strip()]
 
-    @capable_of("read_assignment")
-    def get(self, request, academy_id=None):
-        handler = self.extensions(request)
-
+    def _filtered_queryset(self, request, academy_id=None):
         items = LearnPackWebhook.objects.filter(student__profileacademy__academy__id=academy_id).distinct()
 
         student = request.GET.get("student")
@@ -358,9 +356,54 @@ class AcademyLearnPackWebhookView(APIView):
             if statuses:
                 items = items.filter(status__in=statuses)
 
+        return items
+
+    @capable_of("read_assignment")
+    def get(self, request, academy_id=None):
+        handler = self.extensions(request)
+        items = self._filtered_queryset(request, academy_id=academy_id)
+
         items = handler.queryset(items)
         serializer = LearnPackWebhookSerializer(items, many=True)
         return handler.response(serializer.data)
+
+    @capable_of("crud_telemetry")
+    def delete(self, request, webhook_id=None, academy_id=None):
+        items = self._filtered_queryset(request, academy_id=academy_id)
+
+        if webhook_id is not None:
+            item = items.filter(id=webhook_id).first()
+            if item is None:
+                raise ValidationException("Webhook not found", code=404, slug="webhook-not-found")
+
+            if item.status != ERROR:
+                raise ValidationException(
+                    "Only webhook logs with status ERROR can be deleted",
+                    code=400,
+                    slug="invalid-webhook-status",
+                )
+
+            item.delete()
+            return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+        status_filter = request.GET.get("status")
+        if not status_filter:
+            raise ValidationException(
+                "Missing querystring property `status=ERROR` for bulk delete webhooks",
+                code=400,
+                slug="missing-status",
+            )
+
+        statuses = self._parse_text_filter(status_filter)
+        if set(statuses) != {ERROR}:
+            raise ValidationException(
+                "Bulk delete only supports `status=ERROR`",
+                code=400,
+                slug="invalid-status",
+            )
+
+        items.delete()
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
 class AcademyLearnPackTelemetryWebhookIgnoreView(APIView):

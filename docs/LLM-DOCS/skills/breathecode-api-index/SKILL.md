@@ -74,11 +74,13 @@ Some user requests touch multiple domains. Load ALL listed skills before proceed
 | Create or edit an academy event with tags and workshop asset selection | `bc-events-create-and-edit-event` + `bc-marketing-*` (fetch valid `DISCOVERY` tags) + `bc-registry-*` (search and validate workshop assets by type) |
 | Configure academy Slack integration and manage sync health | `bc-notify-manage-academy-slackintegration` + `bc-admissions-*` (students/cohorts drive Slack mappings) + `bc-authenticate-*` (Slack OAuth endpoints live in auth) |
 | Build or debug a frontend dashboard that reads monitoring reports | `bc-monitoring-read-reports-api` + `bc-authenticate-*` (academy-scoped capability and header requirements drive access outcomes) |
+| Read acquisition monitoring insights (funnel tiers, top assets, top workshops, attribution mix) | `bc-monitoring-read-report-acquisition` + `bc-authenticate-*` (academy-scoped capability and `Academy` header drive access and scope) |
 | Align or extend syllabus design with the school skills framework (job role stages, skills on the go) | `bc-admissions-*` (syllabus, cohorts) + `bc-talentdevelopment-manage-skills` (career path, stages, `stage_skill`, domains) |
 | Cancel a user subscription and optionally issue a refund | `bc-payments-cancel-subscription-and-refund` + [`docs/llm-docs/BC_REFUNDS.md`](../../BC_REFUNDS.md) (use the skill for actor-specific flow and endpoint order, then use BC_REFUNDS for refund payload semantics and validations) |
 | Diagnose why an asset telemetry is missing for users/tasks | `bc-assignment-diagnose-asset-telemetry` + `bc-registry-*` (validate asset slug and translation/canonical context when telemetry appears split by locale) |
 | Queue or interpret asset-level telemetry_stats (`telemetry_stats` JSON on assets) | `bc-assignment-diagnose-asset-telemetry` + `bc-registry-*` (registry asset action `sync_telemetry_stats` queues Celery recompute; read updated stats from asset) |
 | Inspect incoming LearnPack telemetry webhook logs by student/event/asset/package filters | `bc-assignment-diagnose-asset-telemetry` + `bc-authenticate-*` (academy capability/header scope and identity checks) |
+| Delete LearnPack webhook logs (single or bulk cleanup) | `bc-assignment-diagnose-asset-telemetry` + `bc-authenticate-*` (cleanup is academy-scoped and restricted to `ERROR` webhooks; bulk delete requires `status=ERROR`) |
 | Configure per-academy LearnPack telemetry webhook ignore rules (by user, package, asset slug, or event) | `bc-assignment-diagnose-asset-telemetry` — use `GET`/`PUT /v1/assignment/academy/learnpack/telemetry-webhook-ignore` (rules are stored under `learnpack_features.telemetry_webhook_ignore` on academy auth settings) |
 
 ---

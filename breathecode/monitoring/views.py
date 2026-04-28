@@ -153,7 +153,8 @@ def _apply_report_filters(request, queryset, config, academy_id: int, lang: str)
 
         queryset = queryset.filter(**{filter_config["lookup"]: value})
 
-    if "date" not in request.GET and config.date_field:
+    has_date_range = "date_start" in request.GET or "date_end" in request.GET
+    if "date" not in request.GET and not has_date_range and config.date_field:
         latest_date = resolve_default_date(queryset, config.date_field)
         if latest_date:
             queryset = queryset.filter(**{config.date_field: latest_date})
