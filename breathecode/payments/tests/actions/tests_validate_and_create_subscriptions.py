@@ -396,6 +396,16 @@ def test_schedule_plan_financing_with_initial_payment_and_grace_period(
     assert invoices[0]["amount"] == 5000
     assert invoices[0]["paid_at"] == utc_now
     assert invoices[0]["payment_method_id"] == 1
+    assert invoices[0]["amount_breakdown"] == {
+        "plans": {
+            model.plan.slug: {
+                "amount": 5000,
+                "currency": model.currency.code,
+                "type": "INITIAL_PAYMENT",
+            }
+        },
+        "service-items": {},
+    }
 
     assert build_plan_financing.delay.call_args_list == [
         call(

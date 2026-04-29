@@ -2585,6 +2585,55 @@ class PlanFinancingSeat(models.Model):
         return self.team
 
 
+class StudentDeposit(models.Model):
+    """Trace an initial or manual deposit made by a student."""
+
+    if TYPE_CHECKING:
+        objects: TypedManager["StudentDeposit"]
+
+    class Status(models.TextChoices):
+        HELD = "HELD", "Held"
+        APPLIED = "APPLIED", "Applied"
+        REFUNDED = "REFUNDED", "Refunded"
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, help_text="Student who made the deposit")
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, help_text="Academy that received the deposit")
+    invoice = models.OneToOneField(
+        Invoice,
+        on_delete=models.CASCADE,
+        related_name="student_deposit",
+        help_text="Invoice that records this deposit payment",
+    )
+    plan_financing = models.ForeignKey(
+        PlanFinancing,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=None,
+        related_name="student_deposits",
+        help_text="Plan financing where this deposit was applied",
+    )
+    amount = models.FloatField(help_text="Deposit amount")
+    currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Deposit currency")
+    status = models.CharField(
+        max_length=8, choices=Status.choices, default=Status.HELD, db_index=True, help_text="Deposit status"
+    )
+    notes = models.CharField(
+        max_length=250,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Optional staff notes about this deposit",
+    )
+    applied_at = models.DateTimeField(null=True, blank=True, default=None, help_text="When the deposit was applied")
+    refunded_at = models.DateTimeField(null=True, blank=True, default=None, help_text="When the deposit was refunded")
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self) -> str:
+        return f"{self.user.email} - {self.amount} {self.currency.code} ({self.status})"
+
+
 class Subscription(AbstractIOweYou):
     """Allows to create a subscription to a plan and services."""
 

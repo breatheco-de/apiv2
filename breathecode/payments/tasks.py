@@ -48,6 +48,7 @@ from .models import (
     ProofOfPayment,
     Service,
     ServiceStockScheduler,
+    StudentDeposit,
     Subscription,
     SubscriptionBillingTeam,
     SubscriptionSeat,
@@ -1895,6 +1896,21 @@ def build_plan_financing(
 
     financing.save()
     financing.invoices.add(invoice)
+
+    if initial_payment_amount is not None:
+        StudentDeposit.objects.get_or_create(
+            invoice=invoice,
+            defaults={
+                "user": bag.user,
+                "academy": bag.academy,
+                "plan_financing": financing,
+                "amount": initial_payment_amount,
+                "currency": invoice.currency,
+                "status": StudentDeposit.Status.APPLIED,
+                "notes": initial_payment_notes,
+                "applied_at": timezone.now(),
+            },
+        )
 
     bag.was_delivered = True
     bag.save()

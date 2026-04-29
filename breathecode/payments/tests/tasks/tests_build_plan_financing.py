@@ -343,6 +343,18 @@ class PaymentsTestSuite(PaymentsTestCase):
             tzinfo=None
         )
 
+        deposits = self.bc.database.list_of("payments.StudentDeposit")
+        assert len(deposits) == 1
+        assert deposits[0]["user_id"] == model.user.id
+        assert deposits[0]["academy_id"] == model.academy.id
+        assert deposits[0]["invoice_id"] == model.invoice.id
+        assert deposits[0]["plan_financing_id"] == financing["id"]
+        assert deposits[0]["amount"] == 5000
+        assert deposits[0]["currency_id"] == model.invoice.currency.id
+        assert deposits[0]["status"] == "APPLIED"
+        assert deposits[0]["notes"] == "Staff discount approved"
+        assert deposits[0]["applied_at"] == UTC_NOW
+
     """
     🔽🔽🔽 With Bag with Cohort and Invoice with amount
     """
