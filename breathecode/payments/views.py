@@ -102,6 +102,7 @@ from breathecode.payments.serializers import (
     GetPlanSerializer,
     GetServiceItemWithFeaturesSerializer,
     GetServiceSerializer,
+    GetStudentDepositSerializer,
     GetSubscriptionSerializer,
     MentorshipServiceSetSerializer,
     PaymentMethodSerializer,
@@ -6317,6 +6318,25 @@ class AcademyGrantConsumableView(APIView):
             proof.delete()
             raise e
         serializer = GetInvoiceSerializer(invoice, many=False)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class AcademyStudentDepositView(APIView):
+    """
+    Academy-only POST to register a manual deposit and apply it to a plan financing installment.
+    """
+
+    @capable_of("crud_subscription")
+    def post(self, request, academy_id=None):
+        lang = get_user_language(request)
+        proof = actions.validate_and_create_proof_of_payment(request, request.user, academy_id, lang)
+        try:
+            deposit = actions.register_student_deposit(request, proof, academy_id, lang)
+        except Exception as e:
+            proof.delete()
+            raise e
+
+        serializer = GetStudentDepositSerializer(deposit, many=False)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 

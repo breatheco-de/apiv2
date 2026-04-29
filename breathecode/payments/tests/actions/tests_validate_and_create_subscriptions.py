@@ -63,6 +63,7 @@ def serialize_bag(data={}):
         "how_many_installments": 1,
         "id": 1,
         "is_recurrent": True,
+        "plan_addons_amount": 0.0,
         "status": "PAID",
         "token": None,
         "type": "BAG",
@@ -72,6 +73,7 @@ def serialize_bag(data={}):
         "pricing_ratio_explanation": {
             "plans": [],
             "service_items": [],
+            "plan_addons": [],
         },
         **data,
     }
@@ -351,6 +353,75 @@ def test_schedule_plan_financing(
     assert result[0].__class__.__name__ == "Invoice"
     assert result[0].id == 1
 
+    assert result[1] == []
+
+
+@pytest.mark.parametrize("is_request", [True, False])
+def test_schedule_plan_financing_with_initial_payment_and_grace_period(
+    database: capy.Database, format: capy.Format, is_request: bool, utc_now: datetime
+) -> None:
+    model = database.create(
+        user=1,
+        proof_of_payment=1,
+        plan={"time_of_life": None, "time_of_life_unit": None},
+        financing_option={"how_many_months": 4, "monthly_price": 1200},
+        academy=1,
+        city=1,
+        country=1,
+        payment_method=1,
+    )
+    data = {
+        "plans": [model.plan.slug],
+        "user": model.user.id,
+        "payment_method": 1,
+        "how_many_installments": 4,
+        "initial_payment_amount": 5000,
+        "initial_payment_notes": "Staff discount approved",
+        "grace_period_duration": 4,
+        "grace_period_duration_unit": "MONTH",
+    }
+    academy = 1
+
+    if is_request:
+        data = get_request(data, user=model.user)
+
+    result = validate_and_create_subscriptions(data, model.user, model.proof_of_payment, academy, "en")
+
+    assert database.list_of("payments.Bag") == [
+        serialize_bag(data={"how_many_installments": 4}),
+    ]
+    invoices = database.list_of("payments.Invoice")
+    assert len(invoices) == 1
+    assert invoices[0]["id"] == 1
+    assert invoices[0]["amount"] == 5000
+    assert invoices[0]["paid_at"] == utc_now
+    assert invoices[0]["payment_method_id"] == 1
+    assert invoices[0]["amount_breakdown"] == {
+        "plans": {
+            model.plan.slug: {
+                "amount": 5000,
+                "currency": model.currency.code,
+                "type": "INITIAL_PAYMENT",
+            }
+        },
+        "service-items": {},
+    }
+
+    assert build_plan_financing.delay.call_args_list == [
+        call(
+            1,
+            1,
+            conversion_info=None,
+            cohorts=[],
+            principal_amount=1200,
+            initial_payment_amount=5000,
+            initial_payment_notes="Staff discount approved",
+            grace_period_duration=4,
+            grace_period_duration_unit="MONTH",
+        )
+    ]
+
+    assert result[0].id == 1
     assert result[1] == []
 
 
