@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 
 from ...actions import sync_organization_members
-from ...models import AcademyAuthSettings, GithubAcademyUser
+from ...models import AcademyAuthSettings, GithubAcademyUser, INVITE, PENDING, SYNCHED
 
 
 class Command(BaseCommand):
@@ -23,10 +23,16 @@ class Command(BaseCommand):
             action="store_true",
             help="Con --github-academy-user-id: poner storage en PENDING+ADD antes de sincronizar.",
         )
+        parser.add_argument(
+            "--confirm-sync-invite",
+            action="store_true",
+            help="Rechequea usuarios SYNCHED+INVITE reencolándolos como PENDING+INVITE antes de sincronizar.",
+        )
 
     def handle(self, *args, **options):
         gau_id = options["github_academy_user_id"]
         force = options["force"]
+        confirm_sync_invite = options["confirm_sync_invite"]
 
         if gau_id is not None:
             gau = GithubAcademyUser.objects.filter(id=gau_id).select_related("academy").first()
@@ -63,6 +69,13 @@ class Command(BaseCommand):
         aca_settings = AcademyAuthSettings.objects.filter(github_is_sync=True)
         for settings in aca_settings:
             self.stdout.write(f"Syncing academy {settings.academy.name} organization users")
+            if confirm_sync_invite:
+                requeued = GithubAcademyUser.objects.filter(
+                    academy=settings.academy,
+                    storage_status=SYNCHED,
+                    storage_action=INVITE,
+                ).update(storage_status=PENDING, storage_synch_at=None)
+                self.stdout.write(f"Requeued {requeued} SYNCHED+INVITE users for confirmation")
             try:
                 sync_organization_members(settings.academy.id)
             except Exception as e:
