@@ -37,7 +37,11 @@ from breathecode.utils.validate_conversion_info import validate_conversion_info
 from settings import GENERAL_PRICING_RATIOS
 
 from .models import (
+    DAY,
+    MONTH,
     SERVICE_UNITS,
+    WEEK,
+    YEAR,
     AcademyPaymentSettings,
     AcademyService,
     Bag,
@@ -58,6 +62,7 @@ from .models import (
     ProofOfPayment,
     Service,
     ServiceItem,
+    StudentDeposit,
     Subscription,
     SubscriptionBillingTeam,
     SubscriptionSeat,
@@ -2284,7 +2289,8 @@ def create_externally_managed_bag_and_invoice(
         payment_method=payment_method,
         amount_breakdown=amount_breakdown,
     )
-    invoice.amount_breakdown = calculate_invoice_breakdown(bag, invoice, lang)
+    if amount_breakdown is None:
+        invoice.amount_breakdown = calculate_invoice_breakdown(bag, invoice, lang)
     invoice.save()
     return bag, invoice
 
@@ -2306,7 +2312,95 @@ def validate_and_create_subscriptions(
         settings = get_user_settings(staff_user.id)
         lang = settings.lang
 
-    how_many_installments = 1
+    allowed_grace_period_units = {DAY, WEEK, MONTH, YEAR}
+
+    try:
+        how_many_installments = int(data.get("how_many_installments", 1))
+    except (TypeError, ValueError):
+        raise ValidationException(
+            translation(
+                lang,
+                en="how_many_installments must be a positive integer",
+                es="how_many_installments debe ser un entero positivo",
+                slug="invalid-how-many-installments",
+            ),
+            code=400,
+        )
+
+    if how_many_installments <= 0:
+        raise ValidationException(
+            translation(
+                lang,
+                en="how_many_installments must be a positive integer",
+                es="how_many_installments debe ser un entero positivo",
+                slug="invalid-how-many-installments",
+            ),
+            code=400,
+        )
+
+    initial_payment_amount = data.get("initial_payment_amount", None)
+    if initial_payment_amount is not None:
+        try:
+            initial_payment_amount = float(initial_payment_amount)
+        except (TypeError, ValueError):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="initial_payment_amount must be a number",
+                    es="initial_payment_amount debe ser un número",
+                    slug="invalid-initial-payment-amount",
+                ),
+                code=400,
+            )
+
+        if initial_payment_amount < 0:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="initial_payment_amount must be zero or greater",
+                    es="initial_payment_amount debe ser cero o mayor",
+                    slug="invalid-initial-payment-amount",
+                ),
+                code=400,
+            )
+
+    initial_payment_notes = data.get("initial_payment_notes", None)
+
+    try:
+        grace_period_duration = int(data.get("grace_period_duration", 0) or 0)
+    except (TypeError, ValueError):
+        raise ValidationException(
+            translation(
+                lang,
+                en="grace_period_duration must be zero or a positive integer",
+                es="grace_period_duration debe ser cero o un entero positivo",
+                slug="invalid-grace-period-duration",
+            ),
+            code=400,
+        )
+
+    if grace_period_duration < 0:
+        raise ValidationException(
+            translation(
+                lang,
+                en="grace_period_duration must be zero or a positive integer",
+                es="grace_period_duration debe ser cero o un entero positivo",
+                slug="invalid-grace-period-duration",
+            ),
+            code=400,
+        )
+
+    grace_period_duration_unit = data.get("grace_period_duration_unit", MONTH)
+    if grace_period_duration_unit not in allowed_grace_period_units:
+        raise ValidationException(
+            translation(
+                lang,
+                en="grace_period_duration_unit must be DAY, WEEK, MONTH or YEAR",
+                es="grace_period_duration_unit debe ser DAY, WEEK, MONTH o YEAR",
+                slug="invalid-grace-period-duration-unit",
+            ),
+            code=400,
+        )
 
     cohort = data.get("cohorts", [])
     cohort_found = []
@@ -2413,7 +2507,21 @@ def validate_and_create_subscriptions(
     currency = resolve_currency_for_staff_payment(payment_method, academy, lang)
 
     original_price = option.monthly_price
-    amount = get_discounted_price(original_price, coupons)
+    installment_amount = get_discounted_price(original_price, coupons)
+    amount = initial_payment_amount if initial_payment_amount is not None else installment_amount
+
+    amount_breakdown = None
+    if initial_payment_amount is not None:
+        amount_breakdown = {
+            "plans": {
+                plan.slug: {
+                    "amount": amount,
+                    "currency": currency.code,
+                    "type": "INITIAL_PAYMENT",
+                }
+            },
+            "service-items": {},
+        }
 
     bag, invoice = create_externally_managed_bag_and_invoice(
         user=user,
@@ -2426,13 +2534,34 @@ def validate_and_create_subscriptions(
         bag_type=Bag.Type.BAG,
         plans=plans,
         how_many_installments=how_many_installments,
+        amount_breakdown=amount_breakdown,
     )
 
     # Create reward coupons for sellers if coupons were used
     if coupons and original_price > 0:
         create_seller_reward_coupons(coupons, original_price, user)
 
-    tasks.build_plan_financing.delay(bag.id, invoice.id, conversion_info=conversion_info, cohorts=cohort)
+    build_kwargs = {
+        "conversion_info": conversion_info,
+        "cohorts": cohort,
+    }
+    if (
+        initial_payment_amount is not None
+        or initial_payment_notes is not None
+        or grace_period_duration > 0
+        or "how_many_installments" in data
+    ):
+        build_kwargs.update(
+            {
+                "principal_amount": installment_amount,
+                "initial_payment_amount": amount,
+                "initial_payment_notes": initial_payment_notes,
+                "grace_period_duration": grace_period_duration,
+                "grace_period_duration_unit": grace_period_duration_unit,
+            }
+        )
+
+    tasks.build_plan_financing.delay(bag.id, invoice.id, **build_kwargs)
 
     return invoice, coupons
 
@@ -2645,6 +2774,188 @@ def grant_consumables_for_user(
     consumable.save()
 
     return invoice
+
+
+@transaction.atomic
+def register_student_deposit(
+    request: dict | WSGIRequest | AsyncRequest | HttpRequest | Request,
+    proof_of_payment: ProofOfPayment,
+    academy_id: int,
+    lang: Optional[str] = None,
+) -> StudentDeposit:
+    """
+    Register a manual student deposit and apply it to the next installment of a plan financing.
+    """
+    if isinstance(request, (WSGIRequest, AsyncRequest, HttpRequest, Request)):
+        data = request.data
+    else:
+        data = request
+
+    if lang is None:
+        if isinstance(request, (WSGIRequest, AsyncRequest, HttpRequest, Request)) and getattr(request, "user", None):
+            lang = get_user_settings(request.user.id).lang
+        else:
+            lang = "en"
+
+    academy = Academy.objects.filter(id=academy_id).first()
+    if not academy:
+        raise ValidationException(
+            translation(lang, en="Academy not found", es="Academia no encontrada", slug="academy-not-found"),
+            code=404,
+        )
+
+    financing_id = data.get("plan_financing") or data.get("plan_financing_id")
+    if not financing_id:
+        raise ValidationException(
+            translation(
+                lang,
+                en="plan_financing is required",
+                es="plan_financing es requerido",
+                slug="plan-financing-required",
+            ),
+            code=400,
+        )
+
+    plan_financing = (
+        PlanFinancing.objects.filter(id=financing_id, academy_id=academy_id).select_related("user", "currency").first()
+    )
+    if not plan_financing:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Plan financing not found",
+                es="No existe el plan de financiamiento",
+                slug="plan-financing-not-found",
+            ),
+            code=404,
+        )
+
+    if plan_financing.status in [
+        PlanFinancing.Status.CANCELLED,
+        PlanFinancing.Status.DEPRECATED,
+        PlanFinancing.Status.EXPIRED,
+        PlanFinancing.Status.FULLY_PAID,
+    ]:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Plan financing cannot receive deposits in its current status",
+                es="El plan financiado no puede recibir depósitos en su estado actual",
+                slug="invalid-plan-financing-status",
+            ),
+            code=409,
+        )
+
+    if data.get("user") and int(data["user"]) != plan_financing.user_id:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Deposit user does not match the plan financing user",
+                es="El usuario del depósito no coincide con el usuario del plan financiado",
+                slug="user-does-not-match-plan-financing",
+            ),
+            code=400,
+        )
+
+    try:
+        amount = float(data.get("amount"))
+    except (TypeError, ValueError):
+        raise ValidationException(
+            translation(lang, en="amount must be a positive number", es="amount debe ser un número positivo", slug="invalid-amount"),
+            code=400,
+        )
+
+    if amount <= 0:
+        raise ValidationException(
+            translation(lang, en="amount must be greater than zero", es="amount debe ser mayor a cero", slug="invalid-amount"),
+            code=400,
+        )
+
+    notes = data.get("notes") or data.get("deposit_notes")
+    if notes and len(notes) > 250:
+        raise ValidationException(
+            translation(
+                lang,
+                en="notes must be 250 characters or less",
+                es="notes debe tener 250 caracteres o menos",
+                slug="invalid-notes",
+            ),
+            code=400,
+        )
+
+    payment_method = resolve_payment_method_for_staff(data, academy_id, lang, allow_card_and_crypto=False)
+    currency = resolve_currency_for_staff_payment(payment_method, academy, lang)
+    plans = plan_financing.plans.all()
+    amount_breakdown = {
+        "plans": {
+            plan.slug: {
+                "amount": amount,
+                "currency": currency.code,
+                "type": "MANUAL_DEPOSIT",
+            }
+            for plan in plans
+        },
+        "service-items": {},
+    }
+
+    bag, invoice = create_externally_managed_bag_and_invoice(
+        user=plan_financing.user,
+        academy=academy,
+        currency=currency,
+        amount=amount,
+        payment_method=payment_method,
+        proof_of_payment=proof_of_payment,
+        lang=lang,
+        bag_type=Bag.Type.CHARGE,
+        plans=plans,
+        how_many_installments=0,
+        amount_breakdown=amount_breakdown,
+    )
+    bag.was_delivered = True
+    bag.save()
+    plan_financing.invoices.add(invoice)
+
+    utc_now = timezone.now()
+    deposit = StudentDeposit.objects.create(
+        user=plan_financing.user,
+        academy=academy,
+        invoice=invoice,
+        plan_financing=plan_financing,
+        amount=amount,
+        currency=currency,
+        status=StudentDeposit.Status.APPLIED,
+        notes=notes,
+        applied_at=utc_now,
+    )
+
+    fulfilled_invoices = plan_financing.invoices.filter(status=Invoice.Status.FULFILLED, bag__was_delivered=True)
+    if plan_financing.initial_payment_amount is not None:
+        paid_future_installments = max(fulfilled_invoices.count() - 1, 0)
+    else:
+        paid_future_installments = fulfilled_invoices.count()
+
+    remaining_installments = max(plan_financing.how_many_installments - paid_future_installments, 0)
+    delta = relativedelta(months=1)
+    while utc_now >= plan_financing.next_payment_at + delta:
+        delta += relativedelta(months=1)
+
+    plan_financing.next_payment_at += delta
+    if plan_financing.valid_until and utc_now > plan_financing.valid_until:
+        plan_financing.valid_until = utc_now + relativedelta(months=remaining_installments)
+    plan_financing.status = (
+        PlanFinancing.Status.ACTIVE if remaining_installments > 0 else PlanFinancing.Status.FULLY_PAID
+    )
+    plan_financing.status_message = None
+    plan_financing.save()
+
+    tasks.renew_plan_financing_consumables.delay(plan_financing.id)
+    if remaining_installments > 0:
+        reschedule_billing_after_vps_next_payment_pull_forward(plan_financing_id=plan_financing.id)
+    else:
+        for fn in (tasks.charge_plan_financing, tasks.notify_plan_financing_renewal):
+            _cancel_pending_future_scheduled(fn, plan_financing.id, utc_now=utc_now)
+
+    return deposit
 
 
 class UnitBalance(TypedDict):

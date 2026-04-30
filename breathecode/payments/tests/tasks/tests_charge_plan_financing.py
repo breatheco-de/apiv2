@@ -433,6 +433,53 @@ class PaymentsTestSuite(PaymentsTestCase):
             },
         ]
 
+    @patch("logging.Logger.info", MagicMock())
+    @patch("logging.Logger.error", MagicMock())
+    @patch("breathecode.notify.actions.send_email_message", MagicMock())
+    @patch("breathecode.payments.tasks.renew_plan_financing_consumables.delay", MagicMock())
+    @patch("mixer.main.LOGGER.info", MagicMock())
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test_plan_financing_process_to_charge_with_initial_payment_amount(self):
+        plan_financing = {
+            "valid_until": UTC_NOW + relativedelta(months=3),
+            "next_payment_at": UTC_NOW - relativedelta(days=1),
+            "monthly_price": 1200,
+            "initial_payment_amount": 5000,
+            "grace_period_duration": 4,
+            "grace_period_duration_unit": "MONTH",
+            "how_many_installments": 1,
+            "plan_expires_at": UTC_NOW + relativedelta(months=12),
+        }
+        plan = {"is_renewable": False}
+        invoice = {"paid_at": UTC_NOW - relativedelta(days=90), "amount": 5000, "status": "FULFILLED"}
+        bag = {"how_many_installments": 1, "was_delivered": True}
+        model = self.bc.database.create(academy=1, plan_financing=plan_financing, invoice=invoice, plan=plan, bag=bag)
+        model.plan_financing.invoices.add(model.invoice)
+
+        with patch(
+            "breathecode.payments.services.stripe.Stripe.pay",
+            MagicMock(side_effect=fake_stripe_pay(paid_at=UTC_NOW, academy=model.academy)),
+        ):
+            logging.Logger.info.call_args_list = []
+            logging.Logger.error.call_args_list = []
+
+            charge_plan_financing.delay(1)
+
+        invoices = self.bc.database.list_of("payments.Invoice")
+        assert len(invoices) == 2
+        assert invoices[1]["amount"] == 1200
+
+        self.assertEqual(
+            self.bc.database.list_of("payments.PlanFinancing"),
+            [
+                {
+                    **self.bc.format.to_dict(model.plan_financing),
+                    "status": "FULLY_PAID",
+                    "next_payment_at": model.plan_financing.next_payment_at + relativedelta(months=1),
+                },
+            ],
+        )
+
     """
     🔽🔽🔽 PlanFinancing error when try to charge
     """
