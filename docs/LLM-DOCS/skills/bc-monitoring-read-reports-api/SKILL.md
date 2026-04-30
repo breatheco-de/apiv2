@@ -18,13 +18,14 @@ Do NOT use this skill for non-monitoring report domains such as admissions, comm
 
 - Monitoring report retrieval is registry-driven: the client calls one route pattern with `report_type` instead of one endpoint per report.
 - Access is academy-scoped and requires capability `read_monitoring_report`.
+- Multi-academy scope is supported by passing comma-separated academy ids in header/query, e.g. `Academy: 1,2,3`.
 - List retrieval defaults to the latest report date when `date` is not provided (for report types that define a date field).
 
 ## Workflow
 
 1. Resolve scope and auth before calling any endpoint.
    - Send `Authorization: Token <token>`.
-   - Send `Academy: <academy_id>` because these endpoints enforce academy capability scope.
+   - Send `Academy: <academy_id>` or comma-separated ids (`1,2,3`) because these endpoints enforce academy capability scope.
 
 2. Discover available report types.
    - Call `GET /v1/monitoring/report`.
@@ -203,7 +204,10 @@ Do NOT use this skill for non-monitoring report domains such as admissions, comm
 **Acquisition summary example**
 ```json
 {
+  "total_events": 72,
   "total": 72,
+  "unique_identities": 59,
+  "cross_academy_identities": 11,
   "by_source_type": {
     "FORM_ENTRY": 18,
     "USER_INVITE": 54
@@ -219,6 +223,18 @@ Do NOT use this skill for non-monitoring report domains such as admissions, comm
     "strong_lead": 14,
     "soft_lead": 10,
     "nurture_invite": 42
+  },
+  "by_funnel_tier_identities": {
+    "1": 12,
+    "2": 16,
+    "3": 7,
+    "4": 24
+  },
+  "by_funnel_tier_label_identities": {
+    "won_or_sale": 12,
+    "strong_lead": 16,
+    "soft_lead": 7,
+    "nurture_invite": 24
   },
   "top_asset_slugs": [{"asset_slug": "interactive-python", "count": 19}],
   "top_event_slugs": [{"event_slug": "full-stack-with-ai-workshop-part-2-copy", "count": 12}],
@@ -356,6 +372,7 @@ Do NOT use this skill for non-monitoring report domains such as admissions, comm
 - **Unsupported filters:** API returns `400` with `unsupported-filter`. Remove unknown query params and retry with allowed keys only.
 - **Invalid sort value:** API returns `400` with `invalid-sort-field`. Use one of `sort_fields` from discovery response.
 - **Academy filter mismatch:** API returns `400` with `academy-filter-mismatch` if query `academy` differs from scoped academy. Keep them aligned.
+- **Event vs identity counts (acquisition):** use `by_funnel_tier` for event-level analysis and `by_funnel_tier_identities` for deduped person-level funnel views.
 - **Invalid date strategy on generation:** API returns `400` with date-combination/range slugs. Send only one strategy and valid ranges.
 
 ## Checklist

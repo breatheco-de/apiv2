@@ -317,10 +317,15 @@ class AcquisitionReportDetailSerializer(serpy.Serializer):
 
 
 class AcquisitionReportSummarySerializer(serpy.Serializer):
+    total_events = serpy.Field(required=False)
     total = serpy.Field()
+    unique_identities = serpy.Field(required=False)
+    cross_academy_identities = serpy.Field(required=False)
     by_source_type = serpy.Field()
     by_funnel_tier = serpy.Field()
     by_funnel_tier_label = serpy.Field()
+    by_funnel_tier_identities = serpy.Field(required=False)
+    by_funnel_tier_label_identities = serpy.Field(required=False)
     top_asset_slugs = serpy.Field()
     top_event_slugs = serpy.Field()
     top_utm_sources = serpy.Field()
@@ -388,7 +393,7 @@ class ReportGenerationTriggerSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         lang = self.context.get("lang", "en")
-        academy_id = self.context.get("academy_id")
+        academy_ids = self.context.get("academy_ids", [])
 
         date = attrs.get("date")
         date_start = attrs.get("date_start")
@@ -442,7 +447,7 @@ class ReportGenerationTriggerSerializer(serializers.Serializer):
                 )
             )
 
-        if academy and academy_id and academy != academy_id:
+        if academy and academy_ids and academy not in academy_ids:
             raise ValidationException(
                 translation(
                     lang,
@@ -460,7 +465,7 @@ class ReportGenerationTriggerSerializer(serializers.Serializer):
             attrs["date_end"] = today - timedelta(days=1)
             attrs["date_start"] = attrs["date_end"] - timedelta(days=days_back - 1)
 
-        attrs["academy"] = academy_id
+        attrs["academy"] = academy
         return attrs
 
 

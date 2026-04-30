@@ -32,7 +32,7 @@ If you need to trigger regeneration jobs, use `bc-monitoring-read-reports-api` g
 ## Required Scope and Headers
 
 - `Authorization: Token <token>`
-- `Academy: <academy_id>`
+- `Academy: <academy_id>` or comma-separated list for multi-academy scope (`1,2,3`)
 - Capability: `read_monitoring_report`
 
 ## Endpoint Workflow
@@ -73,10 +73,14 @@ GET /v1/monitoring/report/acquisition/summary?date_start=2026-03-23&date_end=202
 
 ## Summary Keys and Meaning
 
-- `total`: total rows in filter scope.
+- `total_events` / `total`: total event rows in filter scope.
+- `unique_identities`: deduped identities in filter scope (`user_id`, fallback normalized `email`).
+- `cross_academy_identities`: deduped identities seen in more than one academy in the same query scope.
 - `by_source_type`: distribution by `FORM_ENTRY` and `USER_INVITE`.
 - `by_funnel_tier`: counts by tier number (`"1"`..`"4"`).
 - `by_funnel_tier_label`: counts by tier label (`won_or_sale`, `strong_lead`, `soft_lead`, `nurture_invite`).
+- `by_funnel_tier_identities`: deduped identity counts by best tier (best tier wins: `1` > `2` > `3` > `4`).
+- `by_funnel_tier_label_identities`: deduped identity counts by label.
 - `top_asset_slugs`: top invite asset slugs.
 - `top_event_slugs`: top invite event/workshop slugs.
 - `top_utm_sources`: top sources.
@@ -90,6 +94,7 @@ GET /v1/monitoring/report/acquisition/summary?date_start=2026-03-23&date_end=202
 For every query below, include:
 - `Authorization` and `Academy` headers.
 - Same date/filter scope between list and summary when comparing widgets.
+- If using multi-academy (`Academy: 1,2,3`), interpret `by_funnel_tier` as event-level and `by_funnel_tier_identities` as deduped person-level.
 
 1. Top assets in a period
    - Endpoint: `summary`

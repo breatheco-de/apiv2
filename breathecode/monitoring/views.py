@@ -21,7 +21,7 @@ from breathecode.admissions.models import Academy
 from breathecode.authenticate.actions import get_user_language
 from breathecode.monitoring import signals
 from breathecode.monitoring.reports.api_registry import get_report_api_config, get_report_type_metadata, resolve_default_date
-from breathecode.utils import GenerateLookupsMixin, capable_of
+from breathecode.utils import GenerateLookupsMixin, capable_of, capable_of_many
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 
 from .actions import add_github_webhook, add_stripe_webhook, add_stripe_webhook_error, get_admin_actions, run_script
@@ -123,12 +123,24 @@ def _validate_sort_fields(request, config, lang: str):
             )
 
 
-def _apply_report_filters(request, queryset, config, academy_id: int, lang: str):
-    queryset = queryset.filter(academy_id=academy_id)
+def _apply_report_filters(request, queryset, config, academy_ids: list[int], lang: str):
+    queryset = queryset.filter(academy_id__in=academy_ids)
 
     if request.GET.get("academy"):
-        academy_filter = _parse_filter_value("academy", request.GET.get("academy"), {"type": "int"}, lang)
-        if academy_filter != academy_id:
+        academy_values = [x.strip() for x in request.GET.get("academy").split(",") if x.strip()]
+        try:
+            academy_filter = [int(x) for x in academy_values]
+        except ValueError:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Invalid value for filter academy",
+                    es="Valor inválido para el filtro academy",
+                    slug="invalid-filter-value",
+                )
+            )
+
+        if sorted(academy_filter) != sorted(academy_ids):
             raise ValidationException(
                 translation(
                     lang,
@@ -167,14 +179,14 @@ def _apply_report_filters(request, queryset, config, academy_id: int, lang: str)
     return queryset
 
 
-def _get_filtered_report_queryset(request, report_type: str, academy_id: int, lang: str):
+def _get_filtered_report_queryset(request, report_type: str, academy_ids: list[int], lang: str):
     config = _get_report_api_config_or_404(report_type, lang)
     queryset = config.model.objects.all()
 
     _validate_filter_query_params(request, config, lang)
     _validate_sort_fields(request, config, lang)
 
-    queryset = _apply_report_filters(request, queryset, config, academy_id, lang)
+    queryset = _apply_report_filters(request, queryset, config, academy_ids, lang)
     return queryset, config
 
 
@@ -719,14 +731,14 @@ class AcademyScriptView(APIView):
 
 
 class MonitoringReportView(APIView):
-    @capable_of("read_monitoring_report")
-    def get(self, request, academy_id=None, report_type=None):
+    @capable_of_many("read_monitoring_report")
+    def get(self, request, academy_ids=None, report_type=None):
         if not report_type:
             metadata = get_report_type_metadata()
             return Response(metadata, status=status.HTTP_200_OK)
 
         lang = get_user_language(request)
-        queryset, config = _get_filtered_report_queryset(request, report_type, academy_id, lang)
+        queryset, config = _get_filtered_report_queryset(request, report_type, academy_ids, lang)
 
         handler = APIViewExtensions(sort=config.default_sort, paginate=True)(request)
         queryset = handler.queryset(queryset)
@@ -736,8 +748,8 @@ class MonitoringReportView(APIView):
 
 
 class MonitoringReportDetailView(APIView):
-    @capable_of("read_monitoring_report")
-    def get(self, request, report_type=None, report_id=None, academy_id=None):
+    @capable_of_many("read_monitoring_report")
+    def get(self, request, report_type=None, report_id=None, academy_ids=None):
         lang = get_user_language(request)
         config = _get_report_api_config_or_404(report_type, lang)
 
@@ -752,7 +764,7 @@ class MonitoringReportDetailView(APIView):
                 code=status.HTTP_404_NOT_FOUND,
             )
 
-        instance = config.model.objects.filter(id=report_id, academy_id=academy_id).first()
+        instance = config.model.objects.filter(id=report_id, academy_id__in=academy_ids).first()
         if instance is None:
             raise ValidationException(
                 translation(
@@ -769,10 +781,10 @@ class MonitoringReportDetailView(APIView):
 
 
 class MonitoringReportSummaryView(APIView):
-    @capable_of("read_monitoring_report")
-    def get(self, request, report_type=None, academy_id=None):
+    @capable_of_many("read_monitoring_report")
+    def get(self, request, report_type=None, academy_ids=None):
         lang = get_user_language(request)
-        queryset, config = _get_filtered_report_queryset(request, report_type, academy_id, lang)
+        queryset, config = _get_filtered_report_queryset(request, report_type, academy_ids, lang)
 
         if config.supports_summary is False or config.summary_builder is None:
             raise ValidationException(
@@ -785,7 +797,7 @@ class MonitoringReportSummaryView(APIView):
                 code=status.HTTP_404_NOT_FOUND,
             )
 
-        payload = config.summary_builder(queryset, academy_id)
+        payload = config.summary_builder(queryset, academy_ids)
         return Response(payload, status=status.HTTP_200_OK)
 
 
@@ -801,11 +813,11 @@ def _job_fingerprint(report_type: str, academy_id: int, date_start: date, date_e
 
 
 class MonitoringReportGenerationView(APIView):
-    @capable_of("read_monitoring_report")
-    def post(self, request, report_type=None, academy_id=None):
+    @capable_of_many("read_monitoring_report")
+    def post(self, request, report_type=None, academy_ids=None):
         lang = get_user_language(request)
         data = {**request.data, "report_type": report_type}
-        serializer = ReportGenerationTriggerSerializer(data=data, context={"lang": lang, "academy_id": academy_id})
+        serializer = ReportGenerationTriggerSerializer(data=data, context={"lang": lang, "academy_ids": academy_ids})
         serializer.is_valid(raise_exception=True)
         payload = serializer.validated_data
 
@@ -814,48 +826,57 @@ class MonitoringReportGenerationView(APIView):
             if key in request.data:
                 params[key] = request.data.get(key)
 
-        fingerprint = _job_fingerprint(
-            report_type=payload["report_type"],
-            academy_id=academy_id,
-            date_start=payload["date_start"],
-            date_end=payload["date_end"],
-            params=params,
-        )
-
-        if not payload.get("force", False):
-            existing = ReportGenerationJob.objects.filter(
-                academy_id=academy_id,
+        jobs = []
+        reused_existing = True
+        for academy_id in academy_ids:
+            fingerprint = _job_fingerprint(
                 report_type=payload["report_type"],
+                academy_id=academy_id,
+                date_start=payload["date_start"],
+                date_end=payload["date_end"],
+                params=params,
+            )
+
+            if not payload.get("force", False):
+                existing = ReportGenerationJob.objects.filter(
+                    academy_id=academy_id,
+                    report_type=payload["report_type"],
+                    fingerprint=fingerprint,
+                    status__in=[ReportGenerationJob.Status.PENDING, ReportGenerationJob.Status.RUNNING],
+                ).first()
+                if existing:
+                    jobs.append(existing)
+                    continue
+
+            reused_existing = False
+            job = ReportGenerationJob.objects.create(
+                report_type=payload["report_type"],
+                status=ReportGenerationJob.Status.PENDING,
+                status_message="Queued",
+                academy_id=academy_id,
+                requested_by=request.user,
+                date_start=payload["date_start"],
+                date_end=payload["date_end"],
+                params=params,
                 fingerprint=fingerprint,
-                status__in=[ReportGenerationJob.Status.PENDING, ReportGenerationJob.Status.RUNNING],
-            ).first()
-            if existing:
-                return Response(ReportGenerationJobSerializer(existing, many=False).data, status=status.HTTP_200_OK)
+            )
 
-        job = ReportGenerationJob.objects.create(
-            report_type=payload["report_type"],
-            status=ReportGenerationJob.Status.PENDING,
-            status_message="Queued",
-            academy_id=academy_id,
-            requested_by=request.user,
-            date_start=payload["date_start"],
-            date_end=payload["date_end"],
-            params=params,
-            fingerprint=fingerprint,
-        )
+            task_result = generate_report_job.delay(job.id)
+            job.celery_task_id = task_result.id
+            job.save(update_fields=["celery_task_id", "updated_at"])
+            jobs.append(job)
 
-        task_result = generate_report_job.delay(job.id)
-        job.celery_task_id = task_result.id
-        job.save(update_fields=["celery_task_id", "updated_at"])
-
-        return Response(ReportGenerationJobSerializer(job, many=False).data, status=status.HTTP_202_ACCEPTED)
+        status_code = status.HTTP_200_OK if reused_existing else status.HTTP_202_ACCEPTED
+        if len(jobs) == 1:
+            return Response(ReportGenerationJobSerializer(jobs[0], many=False).data, status=status_code)
+        return Response(ReportGenerationJobSerializer(jobs, many=True).data, status=status_code)
 
 
 class MonitoringReportGenerationDetailView(APIView):
-    @capable_of("read_monitoring_report")
-    def get(self, request, report_type=None, job_id=None, academy_id=None):
+    @capable_of_many("read_monitoring_report")
+    def get(self, request, report_type=None, job_id=None, academy_ids=None):
         lang = get_user_language(request)
-        job = ReportGenerationJob.objects.filter(id=job_id, academy_id=academy_id, report_type=report_type).first()
+        job = ReportGenerationJob.objects.filter(id=job_id, academy_id__in=academy_ids, report_type=report_type).first()
         if not job:
             raise ValidationException(
                 translation(
@@ -871,10 +892,10 @@ class MonitoringReportGenerationDetailView(APIView):
 
 
 class MonitoringReportGenerationListView(APIView):
-    @capable_of("read_monitoring_report")
-    def get(self, request, academy_id=None):
+    @capable_of_many("read_monitoring_report")
+    def get(self, request, academy_ids=None):
         lang = get_user_language(request)
-        queryset = ReportGenerationJob.objects.filter(academy_id=academy_id).order_by("-created_at")
+        queryset = ReportGenerationJob.objects.filter(academy_id__in=academy_ids).order_by("-created_at")
 
         status_filter = request.GET.get("status")
         if status_filter:

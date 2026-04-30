@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import date
+from collections import defaultdict
 from typing import Any, Callable
 
 from django.db.models import Avg, Count, Model, QuerySet
@@ -13,7 +14,7 @@ from breathecode.monitoring.serializers import (
     ChurnRiskReportListSerializer,
 )
 
-SummaryBuilder = Callable[[QuerySet[Any], int], dict[str, Any]]
+SummaryBuilder = Callable[[QuerySet[Any], list[int]], dict[str, Any]]
 
 
 @dataclass(frozen=True)
@@ -33,7 +34,7 @@ class ReportApiConfig:
     date_field: str | None = None
 
 
-def _build_churn_summary(queryset: QuerySet[Any], academy_id: int) -> dict[str, Any]:
+def _build_churn_summary(queryset: QuerySet[Any], academy_ids: list[int]) -> dict[str, Any]:
     by_level = {
         row["risk_level"]: row["total"] for row in queryset.values("risk_level").annotate(total=Count("id")).order_by("risk_level")
     }
@@ -43,7 +44,7 @@ def _build_churn_summary(queryset: QuerySet[Any], academy_id: int) -> dict[str, 
         "total": aggregates["total"] or 0,
         "average_score": float(aggregates["average_score"] or 0),
         "payment_risk_count": queryset.filter(has_payment_issues=True).count(),
-        "unresolved_alert_count": ChurnAlert.objects.filter(academy_id=academy_id, resolved_at__isnull=True).count(),
+        "unresolved_alert_count": ChurnAlert.objects.filter(academy_id__in=academy_ids, resolved_at__isnull=True).count(),
         "risk_levels": by_level,
     }
 
@@ -59,7 +60,7 @@ def _values_count(queryset: QuerySet[Any], key: str, output_key: str, limit: int
     return [{output_key: row[key], "count": row["count"]} for row in rows]
 
 
-def _build_acquisition_summary(queryset: QuerySet[Any], academy_id: int) -> dict[str, Any]:
+def _build_acquisition_summary(queryset: QuerySet[Any], academy_ids: list[int]) -> dict[str, Any]:
     by_source_type = {row["source_type"]: row["count"] for row in queryset.values("source_type").annotate(count=Count("id"))}
     by_funnel_tier = {
         str(row["funnel_tier"]): row["count"] for row in queryset.values("funnel_tier").annotate(count=Count("id"))
@@ -77,11 +78,47 @@ def _build_acquisition_summary(queryset: QuerySet[Any], academy_id: int) -> dict
         for row in queryset.exclude(deal_status__isnull=True).exclude(deal_status="").values("deal_status").annotate(count=Count("id"))
     }
 
+    # Identity-deduped metrics to reduce cross-academy overlap distortion.
+    # Identity key preference: user_id, fallback to normalized email.
+    by_identity_best_tier: dict[str, int] = {}
+    by_identity_academies: dict[str, set[int]] = defaultdict(set)
+    for row in queryset.values("user_id", "email", "funnel_tier", "academy_id"):
+        identity_key = None
+        if row["user_id"]:
+            identity_key = f"user:{row['user_id']}"
+        else:
+            email = (row.get("email") or "").strip().lower()
+            if email:
+                identity_key = f"email:{email}"
+
+        if not identity_key:
+            continue
+
+        current_tier = int(row["funnel_tier"])
+        if identity_key not in by_identity_best_tier:
+            by_identity_best_tier[identity_key] = current_tier
+        else:
+            by_identity_best_tier[identity_key] = min(by_identity_best_tier[identity_key], current_tier)
+
+        by_identity_academies[identity_key].add(int(row["academy_id"]))
+
+    by_funnel_tier_identities = {str(tier): 0 for tier in [1, 2, 3, 4]}
+    for tier in by_identity_best_tier.values():
+        by_funnel_tier_identities[str(int(tier))] += 1
+
+    by_funnel_tier_label_identities = {label_map[k]: by_funnel_tier_identities.get(k, 0) for k in label_map}
+    cross_academy_identities = sum(1 for academies in by_identity_academies.values() if len(academies) > 1)
+
     return {
+        "total_events": queryset.count(),
         "total": queryset.count(),
+        "unique_identities": len(by_identity_best_tier),
+        "cross_academy_identities": cross_academy_identities,
         "by_source_type": by_source_type,
         "by_funnel_tier": by_funnel_tier,
         "by_funnel_tier_label": by_funnel_tier_label,
+        "by_funnel_tier_identities": by_funnel_tier_identities,
+        "by_funnel_tier_label_identities": by_funnel_tier_label_identities,
         "top_asset_slugs": _values_count(queryset.filter(source_type=AcquisitionReport.SourceType.USER_INVITE), "asset_slug", "asset_slug"),
         "top_event_slugs": _values_count(queryset.filter(source_type=AcquisitionReport.SourceType.USER_INVITE), "event_slug", "event_slug"),
         "top_utm_sources": _values_count(queryset, "utm_source", "utm_source"),

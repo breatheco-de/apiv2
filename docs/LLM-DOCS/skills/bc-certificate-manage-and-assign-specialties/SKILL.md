@@ -144,6 +144,28 @@ Body is optional; omit or use `"layout_slug": "default"` if the academy has a de
 - **no-default-layout / No layout was specified:** The academy has no default certificate layout. Tell the user to pass a valid `layout_slug` in the request body or ensure a default layout is set for the academy.
 - **without-main-teacher:** The cohort has no TEACHER. Tell the user to assign a main teacher to the cohort via the API before issuing.
 
+## Diagnostics
+
+Use diagnostics when certificate issuance does not happen automatically or when staff needs an explicit reason before fixing cohort/student state.
+
+- **Endpoint:** `GET /v1/certificate/diagnostic`
+- **Headers:** `Authorization`, `Academy: <academy_id>`
+- **Capability:** `read_certificate`
+- **Required query:** `kind=graduation` or `kind=certificate`
+
+Targeting options (one mode at a time):
+
+- `cohort_user_id=<id>` (single student-cohort relation)
+- `user_id=<id>` or `user_email=<email>` with optional `cohort_id=<id>`
+- `scope=cohort&cohort_id=<id>` (batch students in cohort; supports `limit`, `offset`)
+- `all_graduated_without_certificate=true` (certificate kind only; supports `limit`)
+
+Response shape:
+
+- Single target: `{ "kind", "academy_id", "result": {...} }`
+- Batch target: `{ "kind", "academy_id", "results": [{...}] }`
+- Each diagnostic object includes `cohort_user_id`, `user_id`, `cohort_id`, `checks`, `issues`, `warnings`, and `summary`.
+
 ## Checklist
 
 1. To create a new specialty: call `POST /v1/certificate/academy/specialty` with name and slug (and optional fields); requires `crud_certificate`.

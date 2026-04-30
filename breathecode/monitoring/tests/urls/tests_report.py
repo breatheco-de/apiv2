@@ -319,6 +319,10 @@ class MonitoringReportTestSuite(MonitoringTestCase):
         self.assertEqual(payload["team_seat_invite_count"], 1)
         self.assertEqual(payload["top_asset_slugs"][0]["asset_slug"], "asset-summary")
         self.assertEqual(payload["top_event_slugs"][0]["event_slug"], "workshop-summary")
+        self.assertEqual(payload["total_events"], 2)
+        self.assertEqual(payload["unique_identities"], 2)
+        self.assertEqual(payload["by_funnel_tier_identities"]["1"], 1)
+        self.assertEqual(payload["by_funnel_tier_identities"]["4"], 1)
 
     def test_get_acquisition_report_date_range(self):
         self.headers(academy=1)
@@ -362,6 +366,82 @@ class MonitoringReportTestSuite(MonitoringTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(payload), 2)
         self.assertEqual(set([x["report_date"] for x in payload]), {"2026-04-10", "2026-04-11"})
+
+    def test_get_acquisition_report_summary_identity_dedup(self):
+        self.headers(academy="1,2")
+        model_a = self.generate_models(authenticate=True, profile_academy=True, role=1, capability="read_monitoring_report")
+        model_b = self.generate_models(academy=1, city=1, country=1)
+        # grant capability in second academy too
+        self.generate_models(user=model_a.user, profile_academy=True, academy=model_b.academy, role=1, capability="read_monitoring_report")
+
+        AcquisitionReport.objects.create(
+            source_type=AcquisitionReport.SourceType.FORM_ENTRY,
+            source_id=201,
+            report_date=date(2026, 4, 11),
+            academy=model_a.academy,
+            email="shared@4geeks.com",
+            funnel_tier=AcquisitionReport.FunnelTier.SOFT_LEAD,
+            team_seat_invite=False,
+            details={},
+        )
+        AcquisitionReport.objects.create(
+            source_type=AcquisitionReport.SourceType.USER_INVITE,
+            source_id=202,
+            report_date=date(2026, 4, 11),
+            academy=model_b.academy,
+            email="shared@4geeks.com",
+            funnel_tier=AcquisitionReport.FunnelTier.WON_OR_SALE,
+            team_seat_invite=False,
+            details={},
+        )
+
+        url = reverse_lazy("monitoring:report_type_summary", kwargs={"report_type": "acquisition"})
+        response = self.client.get(url, data={"academy": f"{model_a.academy.id},{model_b.academy.id}"})
+        payload = response.json()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(payload["total_events"], 2)
+        self.assertEqual(payload["unique_identities"], 1)
+        self.assertEqual(payload["cross_academy_identities"], 1)
+        self.assertEqual(payload["by_funnel_tier"]["1"], 1)
+        self.assertEqual(payload["by_funnel_tier"]["3"], 1)
+        self.assertEqual(payload["by_funnel_tier_identities"]["1"], 1)
+        self.assertEqual(payload["by_funnel_tier_identities"]["3"], 0)
+
+    def test_get_report_multi_academy_scope(self):
+        self.headers(academy="1,2")
+        model_a = self.generate_models(authenticate=True, profile_academy=True, role=1, capability="read_monitoring_report")
+        model_b = self.generate_models(academy=1, city=1, country=1)
+        self.generate_models(user=model_a.user, profile_academy=True, academy=model_b.academy, role=1, capability="read_monitoring_report")
+
+        AcquisitionReport.objects.create(
+            source_type=AcquisitionReport.SourceType.USER_INVITE,
+            source_id=301,
+            report_date=date(2026, 4, 11),
+            academy=model_a.academy,
+            email="a@4geeks.com",
+            funnel_tier=AcquisitionReport.FunnelTier.NURTURE_INVITE,
+            team_seat_invite=False,
+            details={},
+        )
+        AcquisitionReport.objects.create(
+            source_type=AcquisitionReport.SourceType.USER_INVITE,
+            source_id=302,
+            report_date=date(2026, 4, 11),
+            academy=model_b.academy,
+            email="b@4geeks.com",
+            funnel_tier=AcquisitionReport.FunnelTier.NURTURE_INVITE,
+            team_seat_invite=False,
+            details={},
+        )
+
+        url = reverse_lazy("monitoring:report_type", kwargs={"report_type": "acquisition"})
+        response = self.client.get(url, data={"academy": f"{model_a.academy.id},{model_b.academy.id}"})
+        payload = response.json()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(payload), 2)
+        self.assertEqual(set([x["academy_id"] for x in payload]), {model_a.academy.id, model_b.academy.id})
 
     @patch("breathecode.monitoring.views.generate_report_job.delay")
     def test_post_generate_report_job(self, delay_mock):
