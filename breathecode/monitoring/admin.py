@@ -416,3 +416,24 @@ class ReportGenerationJobAdmin(admin.ModelAdmin):
         "started_at",
         "finished_at",
     )
+
+    def has_delete_permission(self, request, obj=None):
+        if obj and obj.status in [ReportGenerationJob.Status.PENDING, ReportGenerationJob.Status.RUNNING]:
+            return False
+
+        return super().has_delete_permission(request, obj)
+
+    def delete_queryset(self, request, queryset):
+        protected = queryset.filter(status__in=[ReportGenerationJob.Status.PENDING, ReportGenerationJob.Status.RUNNING])
+        allowed = queryset.exclude(id__in=protected.values_list("id", flat=True))
+
+        if protected.exists():
+            messages.error(
+                request,
+                f"{protected.count()} job(s) were not deleted because they are pending or running",
+            )
+
+        if allowed.exists():
+            count = allowed.count()
+            super().delete_queryset(request, allowed)
+            messages.success(request, f"{count} job(s) deleted")

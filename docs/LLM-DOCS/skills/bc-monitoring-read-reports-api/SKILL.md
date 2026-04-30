@@ -325,6 +325,7 @@ Do NOT use this skill for non-monitoring report domains such as admissions, comm
 - **Required headers:** `Authorization`, `Academy`
 - **Required capability:** `read_monitoring_report`
 - **Status values:** `PENDING`, `RUNNING`, `DONE`, `PARTIAL`, `ERROR`, `CANCELLED`
+- **Delete behavior:** `DELETE /v1/monitoring/report/{report_type}/generate/{job_id}` is allowed only for terminal jobs (`DONE`, `PARTIAL`, `ERROR`, `CANCELLED`). Active jobs (`PENDING`, `RUNNING`) return validation error.
 
 ### 7) List generation jobs queue
 

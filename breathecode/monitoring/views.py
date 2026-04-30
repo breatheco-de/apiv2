@@ -890,6 +890,35 @@ class MonitoringReportGenerationDetailView(APIView):
 
         return Response(ReportGenerationJobSerializer(job, many=False).data, status=status.HTTP_200_OK)
 
+    @capable_of_many("read_monitoring_report")
+    def delete(self, request, report_type=None, job_id=None, academy_ids=None):
+        lang = get_user_language(request)
+        job = ReportGenerationJob.objects.filter(id=job_id, academy_id__in=academy_ids, report_type=report_type).first()
+        if not job:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Report generation job {job_id} not found",
+                    es=f"Trabajo de generación de reporte {job_id} no encontrado",
+                    slug="report-generation-job-not-found",
+                ),
+                code=status.HTTP_404_NOT_FOUND,
+            )
+
+        if job.status in [ReportGenerationJob.Status.PENDING, ReportGenerationJob.Status.RUNNING]:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Cannot delete report generation jobs while pending or running",
+                    es="No se puede borrar un trabajo de generación mientras está pendiente o en ejecución",
+                    slug="cannot-delete-active-report-generation-job",
+                ),
+                code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        job.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 class MonitoringReportGenerationListView(APIView):
     @capable_of_many("read_monitoring_report")

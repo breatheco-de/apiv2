@@ -519,6 +519,49 @@ class MonitoringReportTestSuite(MonitoringTestCase):
         self.assertEqual(payload["id"], job.id)
         self.assertEqual(payload["status"], ReportGenerationJob.Status.RUNNING)
 
+    def test_delete_report_generation_job(self):
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True, profile_academy=True, role=1, capability="read_monitoring_report")
+        job = ReportGenerationJob.objects.create(
+            academy=model.academy,
+            report_type=ReportGenerationJob.ReportType.ACQUISITION,
+            status=ReportGenerationJob.Status.DONE,
+            date_start=date(2026, 4, 1),
+            date_end=date(2026, 4, 2),
+            params={"date_start": "2026-04-01", "date_end": "2026-04-02"},
+            fingerprint="f-delete-1",
+        )
+
+        url = reverse_lazy("monitoring:report_type_generate_id", kwargs={"report_type": "acquisition", "job_id": job.id})
+        response = self.client.delete(url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(ReportGenerationJob.objects.filter(id=job.id).exists())
+
+    def test_delete_report_generation_job_fails_when_pending_or_running(self):
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True, profile_academy=True, role=1, capability="read_monitoring_report")
+        pending_job = ReportGenerationJob.objects.create(
+            academy=model.academy,
+            report_type=ReportGenerationJob.ReportType.ACQUISITION,
+            status=ReportGenerationJob.Status.PENDING,
+            date_start=date(2026, 4, 1),
+            date_end=date(2026, 4, 2),
+            params={"date_start": "2026-04-01", "date_end": "2026-04-02"},
+            fingerprint="f-delete-2",
+        )
+
+        url = reverse_lazy(
+            "monitoring:report_type_generate_id",
+            kwargs={"report_type": "acquisition", "job_id": pending_job.id},
+        )
+        response = self.client.delete(url)
+        payload = response.json()
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(payload["detail"], "cannot-delete-active-report-generation-job")
+        self.assertTrue(ReportGenerationJob.objects.filter(id=pending_job.id).exists())
+
     def test_get_report_generation_jobs_list_filters(self):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, profile_academy=True, role=1, capability="read_monitoring_report")
