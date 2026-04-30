@@ -1182,6 +1182,9 @@ def sync_organization_members(
     :param github_academy_user_id: If set, only this GithubAcademyUser is processed
         (and the "unknown org members" pass is skipped).
     :param force_requeue: If True with ``github_academy_user_id``, set storage to PENDING+ADD before syncing.
+
+    Per-member failures inviting to or deleting from GitHub are logged on the row (``storage_status=ERROR``)
+    and on ``AcademyAuthSettings``; processing continues with the remaining users.
     """
     if only_status is None:
         only_status = []
@@ -1288,7 +1291,10 @@ def sync_organization_members(
                     gb.invite_org_member(github.email, team_ids=teams)
                 except Exception as e:
                     settings.add_error("Error inviting member " + str(github.email) + " to org: " + str(e))
-                    raise e
+                    _member.log(f"Error inviting to GitHub org: {e}")
+                    _member.storage_status = "ERROR"
+                    _member.save()
+                    continue
                 _member.storage_status = "SYNCHED"
                 _member.log(f"Sent invitation to {github.email}")
                 _member.storage_action = "INVITE"
@@ -1318,7 +1324,10 @@ def sync_organization_members(
                         gb.delete_org_member(github.username)
                     except Exception as e:
                         settings.add_error("Error deleting member from org: " + str(e))
-                        raise e
+                        _member.log(f"Error deleting from GitHub org: {e}")
+                        _member.storage_status = "ERROR"
+                        _member.save()
+                        continue
                     _member.log("Successfully deleted in github organization")
                 else:
                     _member.log(
