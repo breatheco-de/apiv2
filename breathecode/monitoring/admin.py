@@ -18,12 +18,15 @@ from .models import (
     MonitorScript,
     MonitoringError,
     NoPagination,
+    ReportGenerationJob,
     RepositorySubscription,
     RepositoryWebhook,
     Supervisor,
     StripeEvent,
     SupervisorIssue,
 )
+from .reports.acquisition.models import AcquisitionReport
+from .reports.churn.models import ChurnRiskReport
 from .signals import github_webhook
 from .tasks import async_unsubscribe_repo
 
@@ -358,4 +361,58 @@ class MonitoringErrorAdmin(admin.ModelAdmin):
         ("Status", {
             "fields": ("fixed_at", "replicated_at", "created_at")
         }),
+    )
+
+
+@admin.register(AcquisitionReport)
+class AcquisitionReportAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "report_date",
+        "academy",
+        "source_type",
+        "source_id",
+        "email",
+        "funnel_tier",
+        "created_at",
+    )
+    list_filter = ("report_date", "academy", "source_type", "funnel_tier", "team_seat_invite")
+    search_fields = ("email", "source_id", "utm_source", "utm_campaign", "asset_slug", "event_slug")
+    readonly_fields = ("created_at",)
+    date_hierarchy = "report_date"
+
+
+@admin.register(ChurnRiskReport)
+class ChurnRiskReportAdmin(admin.ModelAdmin):
+    list_display = ("id", "report_date", "academy", "user", "churn_risk_score", "risk_level", "created_at")
+    list_filter = ("report_date", "academy", "risk_level", "has_payment_issues")
+    search_fields = ("user__email", "user__username")
+    readonly_fields = ("created_at",)
+    date_hierarchy = "report_date"
+
+
+@admin.register(ReportGenerationJob)
+class ReportGenerationJobAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "report_type",
+        "academy",
+        "status",
+        "date_start",
+        "date_end",
+        "progress_current",
+        "progress_total",
+        "generated_rows",
+        "created_at",
+        "finished_at",
+    )
+    list_filter = ("report_type", "status", "academy")
+    search_fields = ("fingerprint", "celery_task_id")
+    readonly_fields = (
+        "fingerprint",
+        "celery_task_id",
+        "created_at",
+        "updated_at",
+        "started_at",
+        "finished_at",
     )
