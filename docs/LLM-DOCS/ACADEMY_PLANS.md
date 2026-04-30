@@ -847,6 +847,154 @@ Include in plan creation/update:
 
 ---
 
+## Academy Staff: Assign a Plan to an Existing User
+
+Academy staff can deliver a plan to an existing user from the academy side without sending the student through the public checkout. This flow creates the payment records as **externally managed** invoices, meaning the academy is recording a payment that happened outside Stripe checkout, such as cash, bank transfer, POS, or another offline/manual method.
+
+**Endpoint:** `POST /v1/payments/academy/plan/{plan_slug}/subscription`  
+**Capability:** `crud_subscription`  
+**Headers:** `Academy: {academy_id}`, plus auth.
+
+Internally this endpoint runs:
+
+1. `validate_and_create_proof_of_payment(...)`
+2. `validate_and_create_subscriptions(...)`
+3. `create_externally_managed_bag_and_invoice(...)`
+4. `build_plan_financing.delay(...)` for financed plans, or the equivalent subscription builder for renewable plans.
+
+The endpoint creates a paid `Bag`, a fulfilled `Invoice`, and then builds the final billing entity (`Subscription` or `PlanFinancing`) asynchronously.
+
+### Supported Staff Assignment Cases
+
+#### Case A: User Paid the Full Plan Amount
+
+Use this when the student paid the complete plan amount in one external/manual payment.
+
+```json
+{
+  "user": 123,
+  "payment_method": 5,
+  "how_many_installments": 1,
+  "reference": "BANK-TRANSFER-001"
+}
+```
+
+Backend behavior:
+
+- Creates one externally managed `Invoice`.
+- Creates the corresponding billing entity.
+- For a non-renewable financed plan with one installment, this behaves as a one-payment plan.
+
+#### Case B: User Is Paying the First Installment Now
+
+Use this when the plan has a financing option and the first payment is the normal installment amount.
+
+```json
+{
+  "user": 123,
+  "payment_method": 5,
+  "how_many_installments": 4,
+  "reference": "CASH-001"
+}
+```
+
+Backend behavior:
+
+- `how_many_installments` must match one of the plan's linked `FinancingOption.how_many_months`.
+- The first invoice amount is based on the selected financing option monthly price, after coupons/discounts.
+- `PlanFinancing.monthly_price` stores the recurring installment amount.
+- Future charges are counted normally from the invoices already linked to the plan financing.
+
+#### Case C: User Made a Custom Initial Payment, Then Will Pay Future Installments
+
+Use this when the student paid a custom upfront amount that is not the normal installment amount, for example a deposit/down payment, and the remaining balance will be paid in future installments.
+
+```json
+{
+  "user": 123,
+  "payment_method": 5,
+  "how_many_installments": 4,
+  "initial_payment_amount": 5000,
+  "initial_payment_notes": "Student paid an upfront deposit approved by finance.",
+  "grace_period_duration": 2,
+  "grace_period_duration_unit": "MONTH",
+  "reference": "WIRE-5000"
+}
+```
+
+Backend behavior:
+
+- `initial_payment_amount` becomes the first invoice amount.
+- `amount_breakdown` records this as `INITIAL_PAYMENT`, not as the normal monthly installment.
+- `PlanFinancing.initial_payment_amount` and `initial_payment_notes` store the traceability data.
+- `PlanFinancing.monthly_price` stores the future installment amount from the matching financing option.
+- `how_many_installments` is interpreted as **future remaining installments**.
+- `grace_period_duration` and `grace_period_duration_unit` defer the first future installment.
+- `next_payment_at` is calculated from the initial invoice `paid_at` plus the grace period when provided; otherwise it defaults to one month after the initial invoice.
+- A `StudentDeposit` is created with status `APPLIED`, linked one-to-one to the initial `Invoice` and linked to the `PlanFinancing`.
+
+Valid grace period units are:
+
+- `DAY`
+- `WEEK`
+- `MONTH`
+- `YEAR`
+
+### Important Semantics
+
+- `how_many_installments` must always correspond to one financing option linked to the plan.
+- If `initial_payment_amount` is **not** provided, `how_many_installments` represents the installment plan selected and the first invoice counts as the first installment.
+- If `initial_payment_amount` **is** provided, `how_many_installments` represents only the future installments after the initial payment.
+- `initial_payment_amount` is not the same as `monthly_price`. The initial payment can be any approved upfront amount; `monthly_price` is what future installments should charge.
+- The initial payment deposit is already `APPLIED`; this MVP does not create `HELD` deposits waiting to be applied later.
+
+### Register a Later Manual Installment Payment
+
+After a `PlanFinancing` exists, staff can register a later external/manual payment against that financing. This is used when the student pays a later installment in cash, by transfer, or through another offline method.
+
+**Endpoint:** `POST /v1/payments/academy/user/deposit`  
+**Capability:** `crud_subscription`  
+**Headers:** `Academy: {academy_id}`, plus auth.
+
+```json
+{
+  "plan_financing": 123,
+  "amount": 1200,
+  "payment_method": 5,
+  "reference": "CASH-INSTALLMENT-002",
+  "notes": "Second installment paid in cash."
+}
+```
+
+Backend behavior:
+
+- Creates an externally managed `Bag` and fulfilled `Invoice`.
+- Creates a `StudentDeposit` with status `APPLIED`.
+- Links the `Invoice` and `StudentDeposit` to the target `PlanFinancing`.
+- Marks the bag as delivered.
+- Advances `PlanFinancing.next_payment_at` by one monthly billing cycle.
+- Sets `PlanFinancing.status` to `ACTIVE` when installments remain, or `FULLY_PAID` when all future installments are covered.
+- Regenerates plan financing consumables and reschedules the next charge/renewal notification when needed.
+
+Restrictions:
+
+- `plan_financing` is required and must belong to the academy from the request header.
+- `amount` must be greater than zero.
+- The payment method must be a non-card, non-crypto method for manual deposit registration.
+- The financing cannot be `CANCELLED`, `DEPRECATED`, `EXPIRED`, or `FULLY_PAID`.
+- If `user` is included, it must match the user on the `PlanFinancing`.
+
+### Traceability Models
+
+The staff assignment and manual deposit flows use these records for auditability:
+
+- `Bag`: stores the payment context and marks whether the payment was delivered into access/consumables.
+- `Invoice`: stores the fulfilled externally managed payment.
+- `PlanFinancing`: stores installment configuration, current status, next payment date, initial payment amount, notes, and grace period.
+- `StudentDeposit`: stores the deposit/payment trace. It has status `HELD`, `APPLIED`, or `REFUNDED`; current staff assignment flows create `APPLIED` deposits.
+
+---
+
 ## Complete Plan Creation Workflow
 
 ### Step 1: Create or View Service Items
@@ -2596,6 +2744,8 @@ GET /v1/payments/serviceitem?plan=premium-bootcamp
 | Create plan | `crud_subscription` | Full CRUD on plans |
 | Update plan | `crud_subscription` | Modify existing plans |
 | Delete plan | `crud_subscription` | Soft delete plans |
+| Assign plan to existing user | `crud_subscription` | Staff creates externally managed invoice and subscription/plan financing |
+| Register manual plan financing deposit | `crud_subscription` | Staff records a later manual payment against an existing plan financing |
 | Link service items to plans | `crud_plan` | Link/unlink services |
 | Create service items | `crud_service` | Create new service items |
 | Manage cohort sets | `crud_plan` | Configure cohorts |
