@@ -204,12 +204,12 @@ Do NOT use this skill for non-monitoring report domains such as admissions, comm
 **Acquisition summary example**
 ```json
 {
-  "total_events": 72,
-  "total": 72,
+  "report_row_count": 72,
   "unique_identities": 59,
   "cross_academy_identities": 11,
   "by_source_type": {
     "FORM_ENTRY": 18,
+    "FORM_ENTRY_WON": 4,
     "USER_INVITE": 54,
     "EVENT_RSVP": 12,
     "EVENT_ATTENDED": 8

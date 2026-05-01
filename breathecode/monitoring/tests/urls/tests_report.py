@@ -311,7 +311,7 @@ class MonitoringReportTestSuite(MonitoringTestCase):
         payload = response.json()
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(payload["total"], 2)
+        self.assertEqual(payload["report_row_count"], 2)
         self.assertEqual(payload["by_funnel_tier"]["1"], 1)
         self.assertEqual(payload["by_funnel_tier"]["4"], 1)
         self.assertEqual(payload["by_funnel_tier_label"]["won_or_sale"], 1)
@@ -319,7 +319,6 @@ class MonitoringReportTestSuite(MonitoringTestCase):
         self.assertEqual(payload["team_seat_invite_count"], 1)
         self.assertEqual(payload["top_asset_slugs"][0]["asset_slug"], "asset-summary")
         self.assertEqual(payload["top_event_slugs"][0]["event_slug"], "workshop-summary")
-        self.assertEqual(payload["total_events"], 2)
         self.assertEqual(payload["unique_identities"], 2)
         self.assertEqual(payload["by_funnel_tier_identities"]["1"], 1)
         self.assertEqual(payload["by_funnel_tier_identities"]["4"], 1)
@@ -400,7 +399,7 @@ class MonitoringReportTestSuite(MonitoringTestCase):
         payload = response.json()
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(payload["total_events"], 2)
+        self.assertEqual(payload["report_row_count"], 2)
         self.assertEqual(payload["unique_identities"], 1)
         self.assertEqual(payload["cross_academy_identities"], 1)
         self.assertEqual(payload["by_funnel_tier"]["1"], 1)

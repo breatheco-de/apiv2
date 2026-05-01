@@ -337,8 +337,7 @@ class AcquisitionReportDetailSerializer(serpy.Serializer):
 
 
 class AcquisitionReportSummarySerializer(serpy.Serializer):
-    total_events = serpy.Field(required=False)
-    total = serpy.Field()
+    report_row_count = serpy.Field()
     unique_identities = serpy.Field(required=False)
     cross_academy_identities = serpy.Field(required=False)
     by_source_type = serpy.Field()
