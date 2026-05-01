@@ -450,7 +450,8 @@ class MonitoringReportTestSuite(MonitoringTestCase):
         self.generate_models(authenticate=True, profile_academy=True, role=1, capability="read_monitoring_report")
 
         url = reverse_lazy("monitoring:report_type_generate", kwargs={"report_type": "acquisition"})
-        response = self.client.post(url, data={"date": "2026-04-11"}, format="json")
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(url, data={"date": "2026-04-11"}, format="json")
         payload = response.json()
 
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
@@ -468,8 +469,9 @@ class MonitoringReportTestSuite(MonitoringTestCase):
         self.generate_models(authenticate=True, profile_academy=True, role=1, capability="read_monitoring_report")
         url = reverse_lazy("monitoring:report_type_generate", kwargs={"report_type": "acquisition"})
 
-        first = self.client.post(url, data={"date_start": "2026-04-01", "date_end": "2026-04-05"}, format="json")
-        second = self.client.post(url, data={"date_start": "2026-04-01", "date_end": "2026-04-05"}, format="json")
+        with self.captureOnCommitCallbacks(execute=True):
+            first = self.client.post(url, data={"date_start": "2026-04-01", "date_end": "2026-04-05"}, format="json")
+            second = self.client.post(url, data={"date_start": "2026-04-01", "date_end": "2026-04-05"}, format="json")
 
         first_payload = first.json()
         second_payload = second.json()
@@ -486,8 +488,9 @@ class MonitoringReportTestSuite(MonitoringTestCase):
         self.generate_models(authenticate=True, profile_academy=True, role=1, capability="read_monitoring_report")
         url = reverse_lazy("monitoring:report_type_generate", kwargs={"report_type": "acquisition"})
 
-        first = self.client.post(url, data={"date": "2026-04-11"}, format="json")
-        second = self.client.post(url, data={"date": "2026-04-11", "force": True}, format="json")
+        with self.captureOnCommitCallbacks(execute=True):
+            first = self.client.post(url, data={"date": "2026-04-11"}, format="json")
+            second = self.client.post(url, data={"date": "2026-04-11", "force": True}, format="json")
 
         self.assertEqual(first.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(second.status_code, status.HTTP_202_ACCEPTED)
@@ -615,7 +618,8 @@ class MonitoringReportTestSuite(MonitoringTestCase):
         self.headers(academy=f"{model_a.academy.id},{model_b.academy.id}")
 
         url = reverse_lazy("monitoring:report_type_generate", kwargs={"report_type": "acquisition"})
-        response = self.client.post(url, data={"date": "2026-04-11"}, format="json")
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(url, data={"date": "2026-04-11"}, format="json")
         payload = response.json()
 
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)

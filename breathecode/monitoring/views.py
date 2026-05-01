@@ -888,10 +888,17 @@ def _generation_jobs_queryset_for_scope(academy_ids: list[int]):
     return ReportGenerationJob.objects.filter(children_q).order_by("-created_at").distinct()
 
 
-def _enqueue_child_report_job(job: ReportGenerationJob):
-    task_result = generate_report_job.delay(job.id)
-    job.celery_task_id = task_result.id
-    job.save(update_fields=["celery_task_id", "updated_at"])
+def _enqueue_report_job_after_commit(job_id: int):
+    """Schedule Celery after the current DB transaction commits (avoids workers running before rows exist)."""
+
+    def after_commit():
+        task_result = generate_report_job.delay(job_id)
+        ReportGenerationJob.objects.filter(pk=job_id).update(
+            celery_task_id=task_result.id,
+            updated_at=timezone.now(),
+        )
+
+    transaction.on_commit(after_commit)
 
 
 class MonitoringReportGenerationView(APIView):
@@ -939,6 +946,7 @@ class MonitoringReportGenerationView(APIView):
 
             reused_existing = True
             child_jobs: list[ReportGenerationJob] = []
+            scheduled_child_ids: set[int] = set()
             with transaction.atomic():
                 batch_id = uuid4()
                 parent = ReportGenerationJob.objects.create(
@@ -994,14 +1002,17 @@ class MonitoringReportGenerationView(APIView):
                         params=params,
                         fingerprint=fingerprint,
                     )
-                    _enqueue_child_report_job(child)
+                    _enqueue_report_job_after_commit(child.id)
+                    scheduled_child_ids.add(child.id)
                     child_jobs.append(child)
 
             for job in child_jobs:
+                if job.id in scheduled_child_ids:
+                    continue
                 if job.celery_task_id:
                     continue
                 if job.status in [ReportGenerationJob.Status.PENDING, ReportGenerationJob.Status.RUNNING]:
-                    _enqueue_child_report_job(job)
+                    _enqueue_report_job_after_commit(job.id)
 
             status_code = status.HTTP_200_OK if reused_existing else status.HTTP_202_ACCEPTED
             return Response(ReportGenerationJobSerializer(parent, many=False).data, status=status_code)
@@ -1041,7 +1052,7 @@ class MonitoringReportGenerationView(APIView):
                 fingerprint=fingerprint,
             )
 
-            _enqueue_child_report_job(job)
+            _enqueue_report_job_after_commit(job.id)
             jobs.append(job)
 
         status_code = status.HTTP_200_OK if reused_existing else status.HTTP_202_ACCEPTED
