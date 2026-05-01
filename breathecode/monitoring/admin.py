@@ -419,6 +419,37 @@ class ReportGenerationJobAdmin(admin.ModelAdmin):
         "started_at",
         "finished_at",
     )
+    actions = ["cancel_report_generation_jobs"]
+
+    @admin.action(description="Cancel selected report generation jobs")
+    def cancel_report_generation_jobs(self, request, queryset):
+        selected_ids = list(queryset.values_list("id", flat=True))
+        child_ids = list(ReportGenerationJob.objects.filter(parent_id__in=selected_ids).values_list("id", flat=True))
+        target_ids = list(set(selected_ids + child_ids))
+        now = timezone.now()
+
+        cancellable = ReportGenerationJob.objects.filter(id__in=target_ids).filter(
+            status__in=[ReportGenerationJob.Status.PENDING, ReportGenerationJob.Status.RUNNING]
+        )
+        updated = cancellable.update(
+            status=ReportGenerationJob.Status.CANCELLED,
+            status_message="Cancelled from Django admin",
+            finished_at=now,
+            updated_at=now,
+        )
+
+        skipped = ReportGenerationJob.objects.filter(id__in=target_ids).exclude(
+            status__in=[ReportGenerationJob.Status.PENDING, ReportGenerationJob.Status.RUNNING]
+        )
+
+        if updated:
+            self.message_user(request, f"{updated} job(s) cancelled", level=messages.SUCCESS)
+        if skipped.exists():
+            self.message_user(
+                request,
+                f"{skipped.count()} job(s) were skipped because they are already terminal",
+                level=messages.WARNING,
+            )
 
     def has_delete_permission(self, request, obj=None):
         if obj and obj.status in [ReportGenerationJob.Status.PENDING, ReportGenerationJob.Status.RUNNING]:
