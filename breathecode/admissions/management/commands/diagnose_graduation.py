@@ -1,10 +1,8 @@
 from django.core.management.base import BaseCommand, CommandError
 
+from breathecode.admissions.diagnostics import build_graduation_diagnostic
 from breathecode.admissions.models import CohortUser
-from breathecode.admissions.utils.academy_features import has_feature_flag
 from breathecode.authenticate.models import User
-from breathecode.certificate.actions import get_assets_from_syllabus, how_many_pending_tasks
-from breathecode.assignments.models import Task
 
 
 class Command(BaseCommand):
@@ -42,7 +40,6 @@ class Command(BaseCommand):
         user = None
         cohort = None
 
-        # Get CohortUser
         if options.get("cohort_user_id"):
             cohort_user = CohortUser.objects.filter(id=options["cohort_user_id"]).first()
             if not cohort_user:
@@ -72,6 +69,8 @@ class Command(BaseCommand):
         else:
             raise CommandError("You must provide --cohort-user-id, --user-id, or --user-email")
 
+        result = build_graduation_diagnostic(cohort_user)
+
         self.stdout.write("=" * 60)
         self.stdout.write(f"Diagnosing graduation for user: {user.email} (ID: {user.id})")
         self.stdout.write(f"CohortUser ID: {cohort_user.id}")
@@ -81,250 +80,68 @@ class Command(BaseCommand):
         self.stdout.write(f"Cohort: {cohort.name} (ID: {cohort.id})")
         self.stdout.write("-" * 60)
 
-        issues = []
-
-        # Check 1: Current educational status
-        self.stdout.write(f"Current educational_status: {cohort_user.educational_status}")
-        if cohort_user.educational_status == "GRADUATED":
-            self.stdout.write(self.style.SUCCESS("✓ User is already GRADUATED"))
+        if result.get("already_graduated"):
+            self.stdout.write(self.style.SUCCESS(f"✓ User is already GRADUATED"))
             return
-        else:
-            self.stdout.write(
-                self.style.WARNING(f"⚠ User is not GRADUATED (current: {cohort_user.educational_status})")
-            )
 
-        # Check 2: Cohort is SaaS
-        if not cohort.available_as_saas:
-            issues.append("Cohort is not available_as_saas (must be True for automatic graduation)")
-            self.stdout.write(
-                self.style.ERROR(f"❌ Cohort available_as_saas is {cohort.available_as_saas} (must be True)")
-            )
-        else:
-            self.stdout.write(f"✓ Cohort available_as_saas: {cohort.available_as_saas}")
+        self.stdout.write(f"Summary: {result.get('summary', '')}")
+        self.stdout.write("")
+        for ch in result.get("checks", []):
+            sym = "✓" if ch.get("ok") else ("⚠" if ch.get("severity") == "warning" else "❌")
+            self.stdout.write(f"{sym} [{ch.get('slug')}] {ch.get('message')}")
 
-        # Check 3: Cohort has syllabus_version
-        if not cohort.syllabus_version:
-            issues.append("Cohort has no syllabus_version")
-            self.stdout.write(self.style.ERROR("❌ Cohort has no syllabus_version"))
-            return
-        else:
-            self.stdout.write(f"✓ Cohort has syllabus_version: {cohort.syllabus_version.syllabus.name}")
-
-        # Check 4: Syllabus has mandatory projects
-        mandatory_projects = get_assets_from_syllabus(
-            cohort.syllabus_version, task_types=["PROJECT"], only_mandatory=True
-        )
-        if len(mandatory_projects) == 0:
-            issues.append("Syllabus has no mandatory projects (automatic graduation requires mandatory projects)")
-            self.stdout.write(
-                self.style.ERROR(f"❌ Syllabus has no mandatory projects (found {len(mandatory_projects)} projects)")
-            )
-        else:
-            self.stdout.write(f"✓ Syllabus has {len(mandatory_projects)} mandatory projects")
-            if len(mandatory_projects) <= 10:
-                self.stdout.write(f"  Projects: {', '.join(mandatory_projects)}")
+        if result.get("mandatory_projects"):
+            mp = result["mandatory_projects"]
+            if len(mp) <= 10:
+                self.stdout.write(f"  Mandatory projects: {', '.join(mp)}")
             else:
-                self.stdout.write(f"  First 10 projects: {', '.join(mandatory_projects[:10])}...")
+                self.stdout.write(f"  First 10 mandatory projects: {', '.join(mp[:10])}...")
 
-        # Check 5: Feature flag for auto-ignore
-        academy = cohort.academy
-        auto_ignore_enabled = has_feature_flag(
-            academy, "certificate.auto_ignore_projects_on_delivery", default=False
-        )
-        if auto_ignore_enabled:
+        for sample in result.get("pending_task_samples", []):
             self.stdout.write(
-                self.style.SUCCESS(
-                    f"✓ Auto-ignore feature flag is ENABLED for academy {academy.id} ({academy.name})"
-                )
-            )
-        else:
-            self.stdout.write(
-                self.style.WARNING(
-                    f"⚠ Auto-ignore feature flag is DISABLED for academy {academy.id} ({academy.name})"
-                )
-            )
-            self.stdout.write(
-                "  Projects will NOT be auto-ignored when delivered. "
-                "They will need to be manually approved."
+                f"    - {sample.get('associated_slug')}: status={sample.get('task_status')}, "
+                f"revision_status={sample.get('revision_status')}"
             )
 
-        # Check 6: Pending mandatory tasks
-        pending_tasks = how_many_pending_tasks(
-            cohort.syllabus_version,
-            user,
-            task_types=["PROJECT"],
-            only_mandatory=True,
-            cohort_id=cohort.id,
-        )
-        if pending_tasks > 0:
-            issues.append(f"User has {pending_tasks} pending mandatory PROJECT tasks")
-            self.stdout.write(
-                self.style.ERROR(f"❌ User has {pending_tasks} pending mandatory PROJECT tasks")
-            )
+        for w in result.get("warnings", []):
+            self.stdout.write(self.style.WARNING(f"⚠ {w}"))
 
-            # Show which tasks are pending
-            user_tasks = Task.objects.filter(
-                user=user, associated_slug__in=mandatory_projects, cohort=cohort
-            ).exclude(revision_status__in=["APPROVED", "IGNORED"])
-
-            self.stdout.write("  Pending tasks:")
-            for task in user_tasks[:10]:  # Show first 10
-                self.stdout.write(
-                    f"    - {task.associated_slug}: status={task.task_status}, "
-                    f"revision_status={task.revision_status}"
-                )
-            if user_tasks.count() > 10:
-                self.stdout.write(f"    ... and {user_tasks.count() - 10} more")
-        else:
-            self.stdout.write(f"✓ No pending mandatory PROJECT tasks (pending: {pending_tasks})")
-
-        # Check 7: Financial status (blocks manual graduation)
-        if cohort_user.finantial_status == "LATE":
-            issues.append("Financial status is LATE (blocks manual graduation via API)")
-            self.stdout.write(
-                self.style.ERROR("❌ Financial status is LATE (blocks manual graduation via API)")
-            )
-        else:
-            self.stdout.write(f"✓ Financial status: {cohort_user.finantial_status}")
-
-        # Check 8: Task status changes (receiver trigger)
-        # Check if there are any tasks that should have triggered the receiver
-        user_tasks_all = Task.objects.filter(user=user, cohort=cohort, task_type="PROJECT")
-        tasks_with_revision = user_tasks_all.exclude(revision_status__in=["", None])
-        
-        # Get detailed task info for summary
-        approved_tasks = None
-        all_tasks_approved = False
-        
-        if tasks_with_revision.count() == 0:
-            self.stdout.write(
-                self.style.WARNING(
-                    "⚠ No PROJECT tasks with revision_status found (receiver triggers on revision_status_updated)"
-                )
-            )
-        else:
-            self.stdout.write(
-                f"✓ Found {tasks_with_revision.count()} PROJECT tasks with revision_status"
-            )
-            
-            # Show detailed task status
-            approved_tasks = tasks_with_revision.filter(revision_status="APPROVED")
-            ignored_tasks = tasks_with_revision.filter(revision_status="IGNORED")
-            pending_tasks_list = tasks_with_revision.exclude(revision_status__in=["APPROVED", "IGNORED"])
-            
-            self.stdout.write(f"  - Approved: {approved_tasks.count()}")
-            self.stdout.write(f"  - Ignored: {ignored_tasks.count()}")
-            self.stdout.write(f"  - Pending/Other: {pending_tasks_list.count()}")
-            
-            # Check if tasks were auto-ignored or manually approved
-            if ignored_tasks.count() > 0 and auto_ignore_enabled:
-                self.stdout.write(
-                    self.style.SUCCESS(
-                        f"  ✓ {ignored_tasks.count()} task(s) were auto-ignored (feature flag working)"
-                    )
-                )
-            elif approved_tasks.count() > 0 and auto_ignore_enabled:
-                self.stdout.write(
-                    self.style.WARNING(
-                        f"  ⚠ {approved_tasks.count()} task(s) are APPROVED, not IGNORED. "
-                        "This suggests they were manually approved after delivery, "
-                        "or auto-ignore didn't work when they were delivered."
-                    )
-                )
-            
-            # Check if all mandatory tasks are approved
-            mandatory_tasks = user_tasks_all.filter(associated_slug__in=mandatory_projects)
-            all_tasks_approved = (
-                mandatory_tasks.exclude(revision_status__in=["APPROVED", "IGNORED"]).count() == 0
-                and mandatory_tasks.filter(revision_status="APPROVED").count() > 0
-            )
-            
-            # Check when tasks were last updated
-            if approved_tasks.exists():
-                last_updated = approved_tasks.order_by("-updated_at").first()
-                if last_updated:
-                    self.stdout.write(
-                        f"  - Last task updated: {last_updated.updated_at} "
-                        f"(task: {last_updated.associated_slug}, status: {last_updated.revision_status})"
-                    )
-            
-            # IMPORTANT: Explain the issue
-            if pending_tasks == 0 and approved_tasks.count() > 0:
-                self.stdout.write("")
-                self.stdout.write(
-                    self.style.WARNING(
-                        "⚠ IMPORTANT: The receiver 'mark_saas_student_as_graduated' only triggers "
-                        "when a task's revision_status is UPDATED (via signal)."
-                    )
-                )
-                self.stdout.write(
-                    "  If all tasks were already approved before the receiver could check, "
-                    "or if the receiver didn't run when the last task was approved, "
-                    "the user won't be automatically graduated."
-                )
-                self.stdout.write("")
-                self.stdout.write(
-                    "  SOLUTION: You can manually trigger graduation by updating any task's "
-                    "revision_status, or use the admin action to manually set educational_status to GRADUATED."
-                )
-
-        # Summary
+        issues = result.get("issues", [])
         self.stdout.write("")
         self.stdout.write("=" * 60)
         self.stdout.write("SUMMARY")
         self.stdout.write("=" * 60)
 
-        if len(issues) == 0:
-            # Check if all tasks are approved but user is still not GRADUATED
-            if all_tasks_approved and cohort_user.educational_status != "GRADUATED":
-                self.stdout.write(
-                    self.style.WARNING(
-                        "⚠ All conditions are met, but user is NOT GRADUATED. "
-                        "This likely means the receiver didn't trigger when tasks were approved."
-                    )
+        if len(issues) == 0 and result.get("conditions_met_but_not_graduated"):
+            self.stdout.write(
+                self.style.WARNING(
+                    "⚠ All conditions are met, but user is NOT GRADUATED. "
+                    "This likely means the receiver didn't trigger when tasks were approved."
                 )
-                self.stdout.write("")
-                self.stdout.write("POSSIBLE REASONS:")
-                self.stdout.write("  1. Tasks were approved before the receiver was implemented")
-                self.stdout.write("  2. The receiver didn't run when the last task was approved")
-                self.stdout.write("  3. There was an error when the receiver tried to run")
-                self.stdout.write("  4. The signal 'revision_status_updated' wasn't sent")
-                self.stdout.write("")
-                self.stdout.write("SOLUTION:")
-                self.stdout.write("  - Option 1: Use --force-graduate to manually graduate the user")
-                self.stdout.write("  - Option 2: Manually set educational_status to GRADUATED in admin")
-                self.stdout.write(
-                    "  - Option 3: Trigger the receiver by updating any task's revision_status "
-                    "(even if it's already APPROVED, you can save it again)"
-                )
-                
-                # Force graduation if requested
-                if options.get("force_graduate"):
-                    self.stdout.write("")
-                    self.stdout.write("=" * 60)
-                    self.stdout.write("FORCING GRADUATION...")
-                    self.stdout.write("=" * 60)
-                    before_status = cohort_user.educational_status
-                    cohort_user.educational_status = "GRADUATED"
-                    cohort_user.save()
-                    self.stdout.write(
-                        self.style.SUCCESS(
-                            f"✓ GRADUATION FORCED: educational_status changed from {before_status} to GRADUATED"
-                        )
-                    )
-                    self.stdout.write(f"  CohortUser ID: {cohort_user.id}")
-                    self.stdout.write(f"  User: {user.email} (ID: {user.id})")
-                    self.stdout.write(f"  Cohort: {cohort.name} (ID: {cohort.id})")
-            else:
-                self.stdout.write(
-                    self.style.SUCCESS(
-                        "✓ All checks passed! The user should be able to graduate. "
-                        "The receiver should trigger when a task's revision_status is updated."
-                    )
-                )
-        else:
+            )
+            for line in result.get("possible_reasons_if_stuck", []):
+                self.stdout.write(f"  - {line}")
             if options.get("force_graduate"):
                 self.stdout.write("")
+                self.stdout.write("=" * 60)
+                self.stdout.write("FORCING GRADUATION...")
+                self.stdout.write("=" * 60)
+                before_status = cohort_user.educational_status
+                cohort_user.educational_status = "GRADUATED"
+                cohort_user.save()
+                self.stdout.write(
+                    self.style.SUCCESS(
+                        f"✓ GRADUATION FORCED: educational_status changed from {before_status} to GRADUATED"
+                    )
+                )
+        elif len(issues) == 0:
+            self.stdout.write(
+                self.style.SUCCESS(
+                    "✓ All checks passed! The receiver should trigger when a task's revision_status is updated."
+                )
+            )
+        else:
+            if options.get("force_graduate"):
                 self.stdout.write(
                     self.style.ERROR(
                         "❌ Cannot force graduation: There are issues preventing graduation. "
@@ -336,15 +153,8 @@ class Command(BaseCommand):
                 self.stdout.write(f"  {i}. {issue}")
 
         self.stdout.write("")
-        self.stdout.write("Note: The receiver 'mark_saas_student_as_graduated' triggers when:")
-        self.stdout.write("  1. A task's revision_status is updated (via signal)")
-        self.stdout.write("  2. Cohort available_as_saas = True")
-        self.stdout.write("  3. Syllabus has mandatory projects")
-        self.stdout.write("  4. No pending mandatory tasks")
-        self.stdout.write("")
-        self.stdout.write("IMPORTANT: The receiver is EVENT-DRIVEN, not state-driven.")
-        self.stdout.write("  It only runs when a task's revision_status changes, not when you check the state.")
-        self.stdout.write("")
-        self.stdout.write("If all conditions are met but user is not GRADUATED, check the logs for:")
-        self.stdout.write("  '[graduate]' messages to see what the receiver is doing")
-
+        self.stdout.write(
+            "Note: The receiver 'mark_saas_student_as_graduated' triggers when "
+            "revision_status is updated, cohort is SaaS, syllabus has mandatory projects, "
+            "and there are no pending mandatory tasks."
+        )

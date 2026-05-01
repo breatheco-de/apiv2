@@ -317,10 +317,15 @@ class AcquisitionReportDetailSerializer(serpy.Serializer):
 
 
 class AcquisitionReportSummarySerializer(serpy.Serializer):
+    total_events = serpy.Field(required=False)
     total = serpy.Field()
+    unique_identities = serpy.Field(required=False)
+    cross_academy_identities = serpy.Field(required=False)
     by_source_type = serpy.Field()
     by_funnel_tier = serpy.Field()
     by_funnel_tier_label = serpy.Field()
+    by_funnel_tier_identities = serpy.Field(required=False)
+    by_funnel_tier_label_identities = serpy.Field(required=False)
     top_asset_slugs = serpy.Field()
     top_event_slugs = serpy.Field()
     top_utm_sources = serpy.Field()
@@ -345,7 +350,10 @@ class ReportGenerationJobSerializer(serpy.Serializer):
     report_type = serpy.Field()
     status = serpy.Field()
     status_message = serpy.Field(required=False)
-    academy_id = serpy.Field(attr="academy.id")
+    academy_id = serpy.MethodField()
+    parent_id = serpy.Field(required=False)
+    batch_id = serpy.MethodField(required=False)
+    children_count = serpy.MethodField(required=False)
     requested_by_id = serpy.Field(attr="requested_by.id", required=False)
     date_start = serpy.Field()
     date_end = serpy.Field()
@@ -361,13 +369,27 @@ class ReportGenerationJobSerializer(serpy.Serializer):
     created_at = serpy.Field()
     updated_at = serpy.Field()
 
+    def get_academy_id(self, obj):
+        return obj.academy_id
+
+    def get_batch_id(self, obj):
+        return str(obj.batch_id) if obj.batch_id else None
+
+    def get_children_count(self, obj):
+        if hasattr(obj, "children_count"):
+            return int(obj.children_count)
+        return obj.children.count()
+
 
 class ReportGenerationJobListSerializer(serpy.Serializer):
     id = serpy.Field()
     report_type = serpy.Field()
     status = serpy.Field()
     status_message = serpy.Field(required=False)
-    academy_id = serpy.Field(attr="academy.id")
+    academy_id = serpy.MethodField()
+    parent_id = serpy.Field(required=False)
+    batch_id = serpy.MethodField(required=False)
+    children_count = serpy.MethodField(required=False)
     date_start = serpy.Field()
     date_end = serpy.Field()
     progress_current = serpy.Field()
@@ -375,6 +397,17 @@ class ReportGenerationJobListSerializer(serpy.Serializer):
     generated_rows = serpy.Field()
     created_at = serpy.Field()
     updated_at = serpy.Field()
+
+    def get_academy_id(self, obj):
+        return obj.academy_id
+
+    def get_batch_id(self, obj):
+        return str(obj.batch_id) if obj.batch_id else None
+
+    def get_children_count(self, obj):
+        if hasattr(obj, "children_count"):
+            return int(obj.children_count)
+        return obj.children.count()
 
 
 class ReportGenerationTriggerSerializer(serializers.Serializer):
@@ -388,7 +421,7 @@ class ReportGenerationTriggerSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         lang = self.context.get("lang", "en")
-        academy_id = self.context.get("academy_id")
+        academy_ids = self.context.get("academy_ids", [])
 
         date = attrs.get("date")
         date_start = attrs.get("date_start")
@@ -442,7 +475,7 @@ class ReportGenerationTriggerSerializer(serializers.Serializer):
                 )
             )
 
-        if academy and academy_id and academy != academy_id:
+        if academy and academy_ids and academy not in academy_ids:
             raise ValidationException(
                 translation(
                     lang,
@@ -460,7 +493,7 @@ class ReportGenerationTriggerSerializer(serializers.Serializer):
             attrs["date_end"] = today - timedelta(days=1)
             attrs["date_start"] = attrs["date_end"] - timedelta(days=days_back - 1)
 
-        attrs["academy"] = academy_id
+        attrs["academy"] = academy
         return attrs
 
 

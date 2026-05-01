@@ -210,7 +210,17 @@ class ReportGenerationJob(models.Model):
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING, db_index=True)
     status_message = models.TextField(null=True, blank=True, default=None)
 
-    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, related_name="report_generation_jobs")
+    academy = models.ForeignKey(
+        Academy, on_delete=models.CASCADE, related_name="report_generation_jobs", null=True, blank=True, default=None
+    )
+    parent = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="children",
+    )
+    batch_id = models.UUIDField(null=True, blank=True, db_index=True)
     requested_by = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
@@ -243,6 +253,8 @@ class ReportGenerationJob(models.Model):
             models.Index(fields=["academy", "report_type", "-created_at"]),
             models.Index(fields=["status", "-created_at"]),
             models.Index(fields=["fingerprint", "status"]),
+            models.Index(fields=["parent", "-created_at"]),
+            models.Index(fields=["batch_id"]),
         ]
 
 
