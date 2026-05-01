@@ -347,6 +347,71 @@ class SyncGithubUsersTestSuite(AuthTestCase):
         )
 
     @patch("breathecode.services.github.Github.get_org_members", MagicMock(side_effect=get_org_members))
+    @patch("breathecode.services.github.Github.invite_org_member")
+    @patch("breathecode.services.github.Github.delete_org_member", MagicMock())
+    def test_sync_organization_members_invite_failure_continues_with_next_user(
+        self, _mock_delete, invite_org_member_mock, _mock_get_members
+    ):
+        """
+        If inviting one member fails (GitHub API), remaining pending users are still processed.
+        """
+
+        def invite_side_effect(email, role="direct_member", team_ids=None):
+            if email == "bad@mail.com":
+                raise Exception("Validation Failed")
+            return {}
+
+        invite_org_member_mock.side_effect = invite_side_effect
+
+        models = self.bc.database.create(
+            user=True,
+            credentials_github=True,
+            academy=True,
+            academy_auth_settings=True,
+            academy_auth_settings_kwargs={"github_is_sync": True, "github_username": "some-username"},
+        )
+
+        models_bad = self.bc.database.create(
+            user=True,
+            credentials_github=True,
+            credentials_github_kwargs={"email": "bad@mail.com", "username": "not-member-one"},
+            github_academy_user=True,
+            github_academy_user_kwargs={
+                "storage_status": "PENDING",
+                "storage_action": "ADD",
+                "academy": models.academy,
+            },
+        )
+
+        models_good = self.bc.database.create(
+            user=True,
+            credentials_github=True,
+            credentials_github_kwargs={"email": "good@mail.com", "username": "not-member-two"},
+            github_academy_user=True,
+            github_academy_user_kwargs={
+                "storage_status": "PENDING",
+                "storage_action": "ADD",
+                "academy": models.academy,
+            },
+        )
+
+        sync_organization_members(models.academy.id)
+
+        Gau = self.bc.database.get_model("authenticate.GithubAcademyUser")
+        bad_row = Gau.objects.get(id=models_bad.github_academy_user.id)
+        good_row = Gau.objects.get(id=models_good.github_academy_user.id)
+
+        self.assertEqual(bad_row.storage_status, "ERROR")
+        self.assertTrue(any("Error inviting to GitHub org" in l["msg"] for l in bad_row.storage_log))
+
+        self.assertEqual(good_row.storage_status, "SYNCHED")
+        self.assertEqual(good_row.storage_action, "INVITE")
+        self.assertEqual(
+            [l["msg"] for l in good_row.storage_log],
+            [Gau.create_log("Sent invitation to good@mail.com")["msg"]],
+        )
+
+    @patch("breathecode.services.github.Github.get_org_members", MagicMock(side_effect=get_org_members))
     @patch("breathecode.services.github.Github.invite_org_member", MagicMock())
     @patch("breathecode.services.github.Github.delete_org_member", MagicMock())
     def test_sync_organization_members_succesfully_deleted(self):

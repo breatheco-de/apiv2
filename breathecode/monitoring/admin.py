@@ -18,12 +18,15 @@ from .models import (
     MonitorScript,
     MonitoringError,
     NoPagination,
+    ReportGenerationJob,
     RepositorySubscription,
     RepositoryWebhook,
     Supervisor,
     StripeEvent,
     SupervisorIssue,
 )
+from .reports.acquisition.models import AcquisitionReport
+from .reports.churn.models import ChurnRiskReport
 from .signals import github_webhook
 from .tasks import async_unsubscribe_repo
 
@@ -359,3 +362,81 @@ class MonitoringErrorAdmin(admin.ModelAdmin):
             "fields": ("fixed_at", "replicated_at", "created_at")
         }),
     )
+
+
+@admin.register(AcquisitionReport)
+class AcquisitionReportAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "report_date",
+        "academy",
+        "source_type",
+        "source_id",
+        "email",
+        "funnel_tier",
+        "created_at",
+    )
+    list_filter = ("report_date", "academy", "source_type", "funnel_tier", "team_seat_invite")
+    search_fields = ("email", "source_id", "utm_source", "utm_campaign", "asset_slug", "event_slug")
+    readonly_fields = ("created_at",)
+    date_hierarchy = "report_date"
+
+
+@admin.register(ChurnRiskReport)
+class ChurnRiskReportAdmin(admin.ModelAdmin):
+    list_display = ("id", "report_date", "academy", "user", "churn_risk_score", "risk_level", "created_at")
+    list_filter = ("report_date", "academy", "risk_level", "has_payment_issues")
+    search_fields = ("user__email", "user__username")
+    readonly_fields = ("created_at",)
+    date_hierarchy = "report_date"
+
+
+@admin.register(ReportGenerationJob)
+class ReportGenerationJobAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "report_type",
+        "academy",
+        "parent",
+        "batch_id",
+        "status",
+        "date_start",
+        "date_end",
+        "progress_current",
+        "progress_total",
+        "generated_rows",
+        "created_at",
+        "finished_at",
+    )
+    list_filter = ("report_type", "status", "academy")
+    raw_id_fields = ("parent", "academy", "requested_by")
+    search_fields = ("fingerprint", "celery_task_id")
+    readonly_fields = (
+        "fingerprint",
+        "celery_task_id",
+        "created_at",
+        "updated_at",
+        "started_at",
+        "finished_at",
+    )
+
+    def has_delete_permission(self, request, obj=None):
+        if obj and obj.status in [ReportGenerationJob.Status.PENDING, ReportGenerationJob.Status.RUNNING]:
+            return False
+
+        return super().has_delete_permission(request, obj)
+
+    def delete_queryset(self, request, queryset):
+        protected = queryset.filter(status__in=[ReportGenerationJob.Status.PENDING, ReportGenerationJob.Status.RUNNING])
+        allowed = queryset.exclude(id__in=protected.values_list("id", flat=True))
+
+        if protected.exists():
+            messages.error(
+                request,
+                f"{protected.count()} job(s) were not deleted because they are pending or running",
+            )
+
+        if allowed.exists():
+            count = allowed.count()
+            super().delete_queryset(request, allowed)
+            messages.success(request, f"{count} job(s) deleted")

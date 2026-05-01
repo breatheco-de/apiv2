@@ -28,11 +28,13 @@ from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
 # Import all report types
+from breathecode.monitoring.reports.acquisition.actions import AcquisitionReportGenerator
 from breathecode.monitoring.reports.churn.actions import ChurnReport
 
 # Registry of available report types
 REPORT_REGISTRY = {
     "churn": ChurnReport,
+    "acquisition": AcquisitionReportGenerator,
     # Add future reports here:
     # "engagement": EngagementReport,
     # "revenue": RevenueReport,

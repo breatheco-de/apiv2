@@ -1947,6 +1947,47 @@ class AcademyServiceStockConsumableRegenerateView(APIView):
         return Response(data, status=response_status)
 
 
+class AcademyPlanServiceStockSchedulersRegenerateView(APIView):
+    """
+    Academy POST (manage_service_stock_schedulers): for a given plan, enqueue service stock
+    scheduler rebuild for every related subscription or plan financing in this academy with
+    status ACTIVE or FULLY_PAID.
+    """
+
+    @capable_of("manage_service_stock_schedulers")
+    def post(self, request, academy_id=None, plan_id=None, plan_slug=None):
+        lang = get_user_language(request)
+
+        if plan_id is not None:
+            lookup = Q(id=plan_id)
+        elif plan_slug is not None:
+            lookup = Q(slug=plan_slug)
+        else:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Plan id or slug is required",
+                    es="Se requiere id o slug del plan",
+                    slug="missing-plan-key",
+                ),
+                code=400,
+            )
+
+        plan = (
+            Plan.objects.filter(lookup, Q(owner__id=academy_id) | Q(owner__isnull=True))
+            .exclude(status="DELETED")
+            .first()
+        )
+        if not plan:
+            raise ValidationException(
+                translation(lang, en="Plan not found", es="Plan no existe", slug="not-found"),
+                code=404,
+            )
+
+        data = actions.enqueue_service_stock_regeneration_for_plan(academy_id=academy_id, plan_id=plan.id)
+        return Response(data)
+
+
 class MentorshipServiceSetView(APIView):
     permission_classes = [AllowAny]
     extensions = APIViewExtensions(sort="-id", paginate=True)

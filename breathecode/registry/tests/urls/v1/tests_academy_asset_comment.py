@@ -7,6 +7,47 @@ from ...mixins import RegistryTestCase
 
 
 class RegistryTestSuite(RegistryTestCase):
+    def test_get_comments_includes_priority(self):
+        model = self.generate_models(
+            authenticate=True,
+            profile_academy=1,
+            role=1,
+            capability="read_asset",
+            asset_category=1,
+            asset={"slug": "asset-with-priority", "academy_id": 1, "category_id": 1},
+        )
+        self.client.force_authenticate(user=model.user)
+
+        comment = AssetComment.objects.create(asset=model.asset, text="priority-visible", priority=7)
+
+        response = self.client.get("/v1/registry/academy/asset/comment", HTTP_ACADEMY=model.academy.id)
+        data = response.json()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        row = next(x for x in data if x["id"] == comment.id)
+        self.assertEqual(row["priority"], 7)
+
+    def test_get_comments_sort_by_priority(self):
+        model = self.generate_models(
+            authenticate=True,
+            profile_academy=1,
+            role=1,
+            capability="read_asset",
+            asset_category=1,
+            asset={"slug": "sort-comments-priority", "academy_id": 1, "category_id": 1},
+        )
+        self.client.force_authenticate(user=model.user)
+
+        low = AssetComment.objects.create(asset=model.asset, text="low-priority", priority=1)
+        high = AssetComment.objects.create(asset=model.asset, text="high-priority", priority=5)
+
+        response = self.client.get("/v1/registry/academy/asset/comment?sort=-priority", HTTP_ACADEMY=model.academy.id)
+        data = response.json()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        ids = [x["id"] for x in data if x["id"] in [low.id, high.id]]
+        self.assertEqual(ids[:2], [high.id, low.id])
+
     def test_get_comments_filter_by_asset_ids(self):
         model = self.generate_models(
             authenticate=True,

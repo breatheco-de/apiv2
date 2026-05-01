@@ -14,7 +14,7 @@ Use this skill when you need to confirm if telemetry exists for an asset, user, 
 
 - **AssignmentTelemetry** is stored per `user + asset_slug`, not as one row per event.
 - **Task telemetry retrieval** is per task/user via `GET /v1/assignment/task/{task_id}` and returns `assignment_telemetry`.
-- **Ingestion** (`POST /v1/assignment/me/telemetry`) is accepted first, then processed asynchronously.
+- **Ingestion** (`POST /v1/assignment/me/telemetry`) is accepted first, then processed asynchronously. When the request is scoped with `Academy: <academy_id>` (or `?academy=`), the academy may apply **ignore rules** from `learnpack_features.telemetry_webhook_ignore`: matching webhooks are stored as `IGNORED` and **not** queued for async processing.
 - **Asset-level aggregation** is stored in `Asset.telemetry_stats` (daily bucket under `days` plus `last_sync_at`). Staff can **queue** a recalculation via registry asset action `sync_telemetry_stats` (Celery); the HTTP response may still show pre-sync stats until the worker finishes.
 
 ## Workflow
@@ -37,7 +37,10 @@ Use this skill when you need to confirm if telemetry exists for an asset, user, 
 4. Inspect LearnPack webhook processing state (academy staff):
    - Call `GET /v1/assignment/academy/learnpack/webhook` to confirm webhook records are present after ingestion.
    - Filter by `student`, `event`, `asset_id`, and `learnpack_package_id` to narrow the queue.
-   - Use webhook `status` (`PENDING`, `DONE`, `ERROR`) and `status_text` to explain why telemetry is delayed or failing.
+   - Use webhook `status` (`PENDING`, `DONE`, `ERROR`, `IGNORED`) and `status_text` to explain outcomes. For `IGNORED`, read `status_text`: academy **telemetry_webhook_ignore** policy (contains `learnpack_features.telemetry_webhook_ignore`) vs. processing errors vs. dedupe from management commands (different wording).
+   - For cleanup, delete only `ERROR` rows:
+     - single row: `DELETE /v1/assignment/academy/learnpack/webhook/{webhook_id}`
+     - bulk by filters: `DELETE /v1/assignment/academy/learnpack/webhook?status=ERROR&...`
 
 5. Validate persistence for a specific user+asset:
    - Use `POST /v1/assignment/academy/asset/{asset_slug}/user/{user_id}/telemetry` for upsert.
@@ -95,7 +98,7 @@ Use this skill when you need to confirm if telemetry exists for an asset, user, 
 - **Required headers:** `Authorization`, `Academy`
 - **Required capability:** `read_assignment`
 - **Required body fields:** none
-- **Supported filters:** comma-separated values for `student`, `event`, `asset_id`, `learnpack_package_id`; optional `status`
+- **Supported filters:** comma-separated values for `student`, `event`, `asset_id`, `learnpack_package_id`; optional `status` (include `IGNORED` when checking academy ignore policy)
 - **Response that matters:** paginated webhook list with processing fields (`status`, `status_text`) and normalized ids (`asset_id`, `learnpack_package_id`)
 - **Pagination:** Paginated
 - **Translated errors:** optional `Accept-Language: en|es`
@@ -159,6 +162,92 @@ GET /v1/assignment/academy/learnpack/webhook?student=123,456&event=batch,open_st
   ]
 }
 ```
+
+### Delete one LearnPack webhook log (academy staff cleanup)
+
+- **Method:** `DELETE`
+- **Path:** `/v1/assignment/academy/learnpack/webhook/{webhook_id}`
+- **Required headers:** `Authorization`, `Academy`
+- **Required capability:** `crud_telemetry`
+- **Safety rule:** only webhooks with `status=ERROR` can be deleted
+- **Response that matters:** `204 No Content` on success; `404` if not found; `400` for non-`ERROR` status
+- **Pagination:** Not paginated
+
+**Valid request example**
+```json
+DELETE /v1/assignment/academy/learnpack/webhook/9012
+```
+
+**Invalid request example (row is not ERROR)**
+```json
+DELETE /v1/assignment/academy/learnpack/webhook/9011
+```
+
+### Bulk delete LearnPack webhook logs by filters (academy staff cleanup)
+
+- **Method:** `DELETE`
+- **Path:** `/v1/assignment/academy/learnpack/webhook`
+- **Required headers:** `Authorization`, `Academy`
+- **Required capability:** `crud_telemetry`
+- **Required query:** `status=ERROR` (mandatory)
+- **Optional filters:** `student`, `event`, `asset_id`, `learnpack_package_id`
+- **Safety rule:** bulk delete is rejected unless `status=ERROR`
+- **Response that matters:** `204 No Content` on success; `400` for missing/invalid status
+- **Pagination:** Not paginated
+
+**Valid request example**
+```json
+DELETE /v1/assignment/academy/learnpack/webhook?status=ERROR&asset_id=20&learnpack_package_id=3000
+```
+
+**Invalid request examples**
+```json
+DELETE /v1/assignment/academy/learnpack/webhook
+DELETE /v1/assignment/academy/learnpack/webhook?status=DONE
+```
+
+### Get / replace LearnPack telemetry webhook ignore rules (academy staff)
+
+- **Method:** `GET` (read) and `PUT` (replace entire rule object)
+- **Path:** `/v1/assignment/academy/learnpack/telemetry-webhook-ignore`
+- **Required headers:** `Authorization`, `Academy`
+- **Capabilities:** `read_assignment` for `GET`; `crud_telemetry` for `PUT`
+- **Storage:** Rules are persisted on the academy as `learnpack_features.telemetry_webhook_ignore`. The dedicated `PUT` only updates that subtree and leaves other `learnpack_features` keys intact. `PUT /v1/auth/academy/settings` merges `learnpack_features` in a way that preserves `telemetry_webhook_ignore` when that key is omitted from the payload.
+
+**Matching behavior:**
+- Preferred shape uses `rules` for combinations: **AND** across fields in each rule; **OR** across rules.
+- Inside each field list, matching is **OR**.
+- Legacy top-level keys (`user_ids`, `learnpack_package_ids`, `package_slugs`, `asset_ids`, `events`) are still accepted and keep legacy **OR** behavior across fields.
+
+**Request body (`PUT`)** — combination-aware shape (recommended):
+
+```json
+{
+  "rules": [
+    {
+      "events": ["batch"],
+      "learnpack_package_ids": [13190]
+    },
+    {
+      "user_ids": [123]
+    }
+  ]
+}
+```
+
+**Legacy body shape (still valid):**
+
+```json
+{
+  "user_ids": [123],
+  "learnpack_package_ids": [456],
+  "package_slugs": ["my-pack"],
+  "asset_ids": [789],
+  "events": ["open_step"]
+}
+```
+
+**Response (`GET` / `PUT`):** the same object shape (possibly empty `{}`).
 
 ### Upsert telemetry for a user and asset (academy staff)
 
@@ -366,6 +455,14 @@ GET /v1/assignment/academy/learnpack/webhook?student=123,456&event=batch,open_st
 9. **Invalid numeric filter token on webhook list**  
    Observation: `400` with slug `invalid-filter` when sending non-numeric ids in `student`, `asset_id`, or `learnpack_package_id`.  
    Action: send only comma-separated numeric ids on these filters.
+
+10. **Bulk delete without strict ERROR filter**  
+   Observation: `400` with slug `missing-status` (missing status) or `invalid-status` (status other than `ERROR`).  
+   Action: resend bulk delete with `status=ERROR` and optional narrowing filters.
+
+11. **Old webhook logs disappear without manual API delete**  
+   Observation: older `LearnPackWebhook` rows may be removed by maintenance jobs.  
+   Action: account for periodic cleanup via `python manage.py assignments_garbage_collect` (deletes old webhook rows by age). In many deployments this is likely scheduled by infrastructure on a coarse cadence (often around monthly / ~30 days), but the exact trigger frequency is environment-dependent.
 
 ## Checklist
 

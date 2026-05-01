@@ -14,9 +14,19 @@ from breathecode.admissions.models import Academy
 from breathecode.monitoring import signals
 from breathecode.notify.models import SlackChannel
 
+from breathecode.monitoring.reports.acquisition.models import AcquisitionReport
 from breathecode.monitoring.reports.churn.models import ChurnAlert, ChurnRiskReport
 
-__all__ = ["Application", "Endpoint", "MonitorScript", "MonitoringError", "ChurnRiskReport", "ChurnAlert"]
+__all__ = [
+    "Application",
+    "Endpoint",
+    "MonitorScript",
+    "MonitoringError",
+    "ChurnRiskReport",
+    "ChurnAlert",
+    "AcquisitionReport",
+    "ReportGenerationJob",
+]
 
 GITHUB_URL_PATTERN = re.compile(r"https:\/\/github\.com\/(?P<user>[^\/]+)\/(?P<repo>[^\/]+)\/?")
 
@@ -181,6 +191,71 @@ class CSVUpload(models.Model):
     hash = models.CharField(max_length=64)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     finished_at = models.DateTimeField(auto_now=True, editable=False)
+
+
+class ReportGenerationJob(models.Model):
+    class ReportType(models.TextChoices):
+        ACQUISITION = "acquisition", "Acquisition"
+        CHURN = "churn", "Churn"
+
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        RUNNING = "RUNNING", "Running"
+        DONE = "DONE", "Done"
+        PARTIAL = "PARTIAL", "Partial"
+        ERROR = "ERROR", "Error"
+        CANCELLED = "CANCELLED", "Cancelled"
+
+    report_type = models.CharField(max_length=30, choices=ReportType.choices, db_index=True)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING, db_index=True)
+    status_message = models.TextField(null=True, blank=True, default=None)
+
+    academy = models.ForeignKey(
+        Academy, on_delete=models.CASCADE, related_name="report_generation_jobs", null=True, blank=True, default=None
+    )
+    parent = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="children",
+    )
+    batch_id = models.UUIDField(null=True, blank=True, db_index=True)
+    requested_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=None,
+        related_name="requested_report_generation_jobs",
+    )
+
+    date_start = models.DateField()
+    date_end = models.DateField()
+    params = models.JSONField(default=dict, blank=True)
+    fingerprint = models.CharField(max_length=64, db_index=True)
+
+    progress_current = models.PositiveIntegerField(default=0)
+    progress_total = models.PositiveIntegerField(default=0)
+    generated_rows = models.PositiveIntegerField(default=0)
+
+    result = models.JSONField(default=dict, blank=True)
+    error_log = models.TextField(null=True, blank=True, default=None)
+    celery_task_id = models.CharField(max_length=255, null=True, blank=True, default=None)
+
+    started_at = models.DateTimeField(null=True, blank=True, default=None)
+    finished_at = models.DateTimeField(null=True, blank=True, default=None)
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["academy", "report_type", "-created_at"]),
+            models.Index(fields=["status", "-created_at"]),
+            models.Index(fields=["fingerprint", "status"]),
+            models.Index(fields=["parent", "-created_at"]),
+            models.Index(fields=["batch_id"]),
+        ]
 
 
 DISABLED = "DISABLED"
