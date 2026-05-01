@@ -340,6 +340,7 @@ Do NOT use this skill for non-monitoring report domains such as admissions, comm
 - **Supported filters:** `status` (comma-separated), `report_type`
 - **Primary use case:** list pending/running generation jobs in dashboards.
 - **Parent visibility:** if a parent batch has children for academies A and B, a caller whose scope is only **A** sees **only the child row for A** (not the parent). If the caller’s scope includes **every** child academy in that batch, the list returns **only the parent** row for that batch (children are omitted so the batch is not duplicated). Standalone jobs (`parent_id` null, `academy_id` set) behave as before.
+- **`included_academies`:** on **parent-only** batch rows (`academy_id` null, `parent_id` null), each item includes `included_academies`: an array of `{ id, slug, name }` for every academy covered by child jobs in that batch (sorted by id). For child rows or single-academy jobs, `included_academies` is `null`.
 
 **Response example (list item)**
 ```json
@@ -352,6 +353,7 @@ Do NOT use this skill for non-monitoring report domains such as admissions, comm
   "parent_id": null,
   "batch_id": "550e8400-e29b-41d4-a716-446655440000",
   "children_count": 0,
+  "included_academies": null,
   "date_start": "2026-04-01",
   "date_end": "2026-04-30",
   "progress_current": 0,

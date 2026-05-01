@@ -10,7 +10,7 @@ from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from circuitbreaker import CircuitBreakerError
 from django.db import transaction
-from django.db.models import Count, Exists, OuterRef, Q
+from django.db.models import Count, Exists, OuterRef, Prefetch, Q
 from django.http import HttpRequest, StreamingHttpResponse
 from django.utils import timezone
 from rest_framework import status
@@ -1128,7 +1128,12 @@ class MonitoringReportGenerationListView(APIView):
     @capable_of_many("read_monitoring_report", scope="read_aggregate")
     def get(self, request, academy_ids=None):
         lang = get_user_language(request)
-        queryset = _generation_jobs_queryset_for_scope(academy_ids).annotate(children_count=Count("children"))
+        child_jobs_qs = ReportGenerationJob.objects.filter(academy_id__isnull=False).select_related("academy")
+        queryset = (
+            _generation_jobs_queryset_for_scope(academy_ids)
+            .annotate(children_count=Count("children"))
+            .prefetch_related(Prefetch("children", queryset=child_jobs_qs))
+        )
 
         status_filter = request.GET.get("status")
         if status_filter:

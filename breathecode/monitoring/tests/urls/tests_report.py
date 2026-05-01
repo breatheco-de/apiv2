@@ -678,6 +678,10 @@ class MonitoringReportTestSuite(MonitoringTestCase):
         self.assertEqual(payload[0]["id"], parent.id)
         self.assertIsNone(payload[0].get("academy_id"))
         self.assertEqual(payload[0].get("children_count"), 2)
+        included = payload[0].get("included_academies")
+        self.assertIsNotNone(included)
+        self.assertEqual(len(included), 2)
+        self.assertEqual({x["id"] for x in included}, {model_a.academy.id, model_b.academy.id})
 
     def test_list_generation_jobs_children_only_when_partial_academy_scope(self):
         model_a = self.generate_models(authenticate=True, profile_academy=True, role=1, capability="read_monitoring_report")

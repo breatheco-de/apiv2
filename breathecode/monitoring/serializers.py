@@ -22,6 +22,26 @@ class AcademySmallSerializer(serpy.Serializer):
     name = serpy.Field()
 
 
+def serialize_included_academies_for_parent_job(obj):
+    """Parent-only batch rows (aggregate jobs): academy summaries from children. Otherwise None."""
+    if obj.academy_id is not None or obj.parent_id is not None:
+        return None
+    items = []
+    seen: set[int] = set()
+    for child in obj.children.all():
+        aid = child.academy_id
+        if not aid or aid in seen:
+            continue
+        seen.add(aid)
+        academy = getattr(child, "academy", None)
+        if academy is not None:
+            items.append(AcademySmallSerializer(academy).data)
+        else:
+            items.append({"id": aid, "slug": "", "name": ""})
+    items.sort(key=lambda x: x["id"])
+    return items
+
+
 class CSVDownloadSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     name = serpy.Field()
@@ -354,6 +374,7 @@ class ReportGenerationJobSerializer(serpy.Serializer):
     parent_id = serpy.Field(required=False)
     batch_id = serpy.MethodField(required=False)
     children_count = serpy.MethodField(required=False)
+    included_academies = serpy.MethodField(required=False)
     requested_by_id = serpy.Field(attr="requested_by.id", required=False)
     date_start = serpy.Field()
     date_end = serpy.Field()
@@ -380,6 +401,9 @@ class ReportGenerationJobSerializer(serpy.Serializer):
             return int(obj.children_count)
         return obj.children.count()
 
+    def get_included_academies(self, obj):
+        return serialize_included_academies_for_parent_job(obj)
+
 
 class ReportGenerationJobListSerializer(serpy.Serializer):
     id = serpy.Field()
@@ -390,6 +414,7 @@ class ReportGenerationJobListSerializer(serpy.Serializer):
     parent_id = serpy.Field(required=False)
     batch_id = serpy.MethodField(required=False)
     children_count = serpy.MethodField(required=False)
+    included_academies = serpy.MethodField(required=False)
     date_start = serpy.Field()
     date_end = serpy.Field()
     progress_current = serpy.Field()
@@ -408,6 +433,9 @@ class ReportGenerationJobListSerializer(serpy.Serializer):
         if hasattr(obj, "children_count"):
             return int(obj.children_count)
         return obj.children.count()
+
+    def get_included_academies(self, obj):
+        return serialize_included_academies_for_parent_job(obj)
 
 
 class ReportGenerationTriggerSerializer(serializers.Serializer):
