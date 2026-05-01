@@ -7,11 +7,13 @@ from breathecode.admissions.models import Academy
 
 
 class AcquisitionReport(models.Model):
-    """One row per FormEntry/UserInvite acquisition event."""
+    """One row per acquisition signal (form, invite, event RSVP, or event attendance)."""
 
     class SourceType(models.TextChoices):
         FORM_ENTRY = "FORM_ENTRY", "Form entry"
         USER_INVITE = "USER_INVITE", "User invite"
+        EVENT_RSVP = "EVENT_RSVP", "Event RSVP"
+        EVENT_ATTENDED = "EVENT_ATTENDED", "Event attended"
 
     class FunnelTier(models.IntegerChoices):
         WON_OR_SALE = 1, "won_or_sale"

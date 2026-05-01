@@ -19,12 +19,14 @@ If you need to trigger regeneration jobs, use `bc-monitoring-read-reports-api` g
 - `source_type`:
   - `FORM_ENTRY`: Marketing/CRM lead path.
   - `USER_INVITE`: Invite/self-serve onboarding path (not only staff-invited users).
+  - `EVENT_RSVP`: Event/workshop registration from `events.EventCheckin` on the **RSVP day** (`created_at` date). Funnel tier **nurture_invite** (`4`).
+  - `EVENT_ATTENDED`: Same check-in when the person **attended**; row is written on **`attended_at` date** with funnel tier **soft_lead** (`3`). RSVP and attendance are **two rows** (same `source_id`, different `source_type`) when both apply, so stage-flow is visible (same calendar day can have both).
 - `funnel_tier` (required contract):
   - `1 = won_or_sale`
   - `2 = strong_lead`
   - `3 = soft_lead`
   - `4 = nurture_invite`
-- `asset_slug` and `event_slug` are primarily invite-path dimensions.
+- `asset_slug` and `event_slug`: invite path plus **event check-ins** (slug from `Event.slug`). Check-in rows copy UTMs from `EventCheckin` and use `utm_url` as `landing_url`.
 - Attribution fields can come from two shapes:
   - Form entries: first-class `utm_*` and `utm_url`.
   - User invites: `conversion_info` with `utm_*`, `landing_url`, `conversion_url`, and optional `sale`.
@@ -76,13 +78,13 @@ GET /v1/monitoring/report/acquisition/summary?date_start=2026-03-23&date_end=202
 - `total_events` / `total`: total event rows in filter scope.
 - `unique_identities`: deduped identities in filter scope (`user_id`, fallback normalized `email`).
 - `cross_academy_identities`: deduped identities seen in more than one academy in the same query scope.
-- `by_source_type`: distribution by `FORM_ENTRY` and `USER_INVITE`.
+- `by_source_type`: distribution by `FORM_ENTRY`, `USER_INVITE`, `EVENT_RSVP`, and `EVENT_ATTENDED`.
 - `by_funnel_tier`: counts by tier number (`"1"`..`"4"`).
 - `by_funnel_tier_label`: counts by tier label (`won_or_sale`, `strong_lead`, `soft_lead`, `nurture_invite`).
 - `by_funnel_tier_identities`: deduped identity counts by best tier (best tier wins: `1` > `2` > `3` > `4`).
 - `by_funnel_tier_label_identities`: deduped identity counts by label.
 - `top_asset_slugs`: top invite asset slugs.
-- `top_event_slugs`: top invite event/workshop slugs.
+- `top_event_slugs`: top event/workshop slugs from invites **and** event RSVP/attendance rows (`event_slug`).
 - `top_utm_sources`: top sources.
 - `top_utm_campaigns`: top campaigns.
 - `top_conversion_urls`: top invite conversion pages.

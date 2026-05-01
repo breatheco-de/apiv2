@@ -96,7 +96,7 @@ Do NOT use this skill for non-monitoring report domains such as admissions, comm
   {
     "slug": "acquisition",
     "label": "Acquisition Report",
-    "description": "Daily lead and invite acquisition snapshots with funnel tiers",
+    "description": "Daily acquisition snapshots (forms, invites, event RSVP, event attendance) with funnel tiers",
     "filters": ["academy", "date", "date_start", "date_end", "source_type", "user", "utm_source", "utm_campaign", "deal_status", "asset_slug", "event_slug", "funnel_tier"],
     "sort_fields": ["report_date", "-report_date", "created_at", "-created_at", "source_type", "-source_type", "funnel_tier", "-funnel_tier", "user_id", "-user_id"],
     "supports_detail": true,
@@ -114,7 +114,7 @@ Do NOT use this skill for non-monitoring report domains such as admissions, comm
 - **Required body fields:** none
 - **Pagination:** Paginated (supports `limit`, `offset`)
 - **Current filters for `churn`:** `academy`, `date`, `risk_level`, `user`, `min_score`, `max_score`
-- **Current filters for `acquisition`:** `academy`, `date`, `date_start`, `date_end`, `source_type`, `user`, `utm_source`, `utm_campaign`, `deal_status`, `asset_slug`, `event_slug`, `funnel_tier`
+- **Current filters for `acquisition`:** `academy`, `date`, `date_start`, `date_end`, `source_type` (includes `EVENT_RSVP` / `EVENT_ATTENDED`), `user`, `utm_source`, `utm_campaign`, `deal_status`, `asset_slug`, `event_slug`, `funnel_tier`
 - **Sort:** use only values declared in discovery response `sort_fields`
 - **Translated errors:** optional `Accept-Language: en|es`
 
@@ -210,7 +210,9 @@ Do NOT use this skill for non-monitoring report domains such as admissions, comm
   "cross_academy_identities": 11,
   "by_source_type": {
     "FORM_ENTRY": 18,
-    "USER_INVITE": 54
+    "USER_INVITE": 54,
+    "EVENT_RSVP": 12,
+    "EVENT_ATTENDED": 8
   },
   "by_funnel_tier": {
     "1": 6,
@@ -368,7 +370,7 @@ Do NOT use this skill for non-monitoring report domains such as admissions, comm
 - **Unsupported filters:** API returns `400` with `unsupported-filter`. Remove unknown query params and retry with allowed keys only.
 - **Invalid sort value:** API returns `400` with `invalid-sort-field`. Use one of `sort_fields` from discovery response.
 - **Academy filter mismatch:** API returns `400` with `academy-filter-mismatch` if query `academy` differs from scoped academy. Keep them aligned.
-- **Event vs identity counts (acquisition):** use `by_funnel_tier` for event-level analysis and `by_funnel_tier_identities` for deduped person-level funnel views.
+- **Event vs identity counts (acquisition):** use `by_funnel_tier` for event-level analysis and `by_funnel_tier_identities` for deduped person-level funnel views. Same person can appear as both `EVENT_RSVP` and `EVENT_ATTENDED` on different (or same) days; identity dedupe still picks one best tier per identity.
 - **Invalid date strategy on generation:** API returns `400` with date-combination/range slugs. Send only one strategy and valid ranges.
 - **Parent job detail with partial scope:** `GET .../generate/{job_id}` for a parent id returns `404` if the caller’s academy scope does not include every child academy in that batch (use child job ids instead).
 

@@ -3,7 +3,7 @@ from datetime import date
 from collections import defaultdict
 from typing import Any, Callable
 
-from django.db.models import Avg, Count, Model, QuerySet
+from django.db.models import Avg, Count, Model, Q, QuerySet
 
 from breathecode.monitoring.reports.acquisition.models import AcquisitionReport
 from breathecode.monitoring.reports.churn.models import ChurnAlert, ChurnRiskReport
@@ -109,6 +109,12 @@ def _build_acquisition_summary(queryset: QuerySet[Any], academy_ids: list[int]) 
     by_funnel_tier_label_identities = {label_map[k]: by_funnel_tier_identities.get(k, 0) for k in label_map}
     cross_academy_identities = sum(1 for academies in by_identity_academies.values() if len(academies) > 1)
 
+    event_slug_sources = (
+        Q(source_type=AcquisitionReport.SourceType.USER_INVITE)
+        | Q(source_type=AcquisitionReport.SourceType.EVENT_RSVP)
+        | Q(source_type=AcquisitionReport.SourceType.EVENT_ATTENDED)
+    )
+
     return {
         "total_events": queryset.count(),
         "total": queryset.count(),
@@ -120,7 +126,7 @@ def _build_acquisition_summary(queryset: QuerySet[Any], academy_ids: list[int]) 
         "by_funnel_tier_identities": by_funnel_tier_identities,
         "by_funnel_tier_label_identities": by_funnel_tier_label_identities,
         "top_asset_slugs": _values_count(queryset.filter(source_type=AcquisitionReport.SourceType.USER_INVITE), "asset_slug", "asset_slug"),
-        "top_event_slugs": _values_count(queryset.filter(source_type=AcquisitionReport.SourceType.USER_INVITE), "event_slug", "event_slug"),
+        "top_event_slugs": _values_count(queryset.filter(event_slug_sources), "event_slug", "event_slug"),
         "top_utm_sources": _values_count(queryset, "utm_source", "utm_source"),
         "top_utm_campaigns": _values_count(queryset, "utm_campaign", "utm_campaign"),
         "top_conversion_urls": _values_count(queryset, "conversion_url", "conversion_url"),
@@ -166,7 +172,7 @@ REPORT_API_REGISTRY: dict[str, ReportApiConfig] = {
     "acquisition": ReportApiConfig(
         slug="acquisition",
         label="Acquisition Report",
-        description="Daily lead and invite acquisition snapshots with funnel tiers",
+        description="Daily acquisition snapshots (forms, invites, event RSVP, event attendance) with funnel tiers",
         model=AcquisitionReport,
         list_serializer=AcquisitionReportListSerializer,
         detail_serializer=AcquisitionReportDetailSerializer,

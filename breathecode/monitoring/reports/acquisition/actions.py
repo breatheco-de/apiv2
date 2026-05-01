@@ -2,7 +2,10 @@
 
 from typing import Any
 
+from django.db.models import Q
+
 from breathecode.authenticate.models import UserInvite
+from breathecode.events.models import EventCheckin
 from breathecode.marketing.models import FormEntry
 
 from ..base import BaseReport
@@ -64,8 +67,30 @@ def _get_userinvite_funnel_tier(invite: UserInvite) -> int:
     return AcquisitionReport.FunnelTier.NURTURE_INVITE
 
 
+def _event_checkin_base_fields(checkin: EventCheckin) -> dict[str, Any]:
+    event = checkin.event
+    return {
+        "academy_id": event.academy_id,
+        "user_id": checkin.attendee_id,
+        "email": (checkin.email or "").strip().lower(),
+        "utm_source": checkin.utm_source,
+        "utm_medium": checkin.utm_medium,
+        "utm_campaign": checkin.utm_campaign,
+        "utm_term": None,
+        "utm_content": None,
+        "utm_placement": None,
+        "landing_url": checkin.utm_url,
+        "conversion_url": None,
+        "lead_type": None,
+        "deal_status": None,
+        "attribution_id": None,
+        "event_slug": event.slug,
+        "asset_slug": event.asset_slug,
+    }
+
+
 class AcquisitionReportGenerator(BaseReport):
-    """Build daily acquisition snapshots from FormEntry and UserInvite."""
+    """Build daily acquisition snapshots from FormEntry, UserInvite, and EventCheckin."""
 
     report_type = "acquisition"
 
@@ -87,6 +112,11 @@ class AcquisitionReportGenerator(BaseReport):
                 "payment_method",
             )
         )
+        event_checkins = list(
+            EventCheckin.objects.filter(
+                Q(created_at__date=self.report_date) | Q(attended_at__date=self.report_date)
+            ).select_related("event", "event__academy", "attendee")
+        )
 
         locations = {x.location.strip() for x in form_entries if x.location and x.location.strip()}
         alias_lookup = {}
@@ -100,7 +130,8 @@ class AcquisitionReportGenerator(BaseReport):
         return {
             "form_entries": form_entries,
             "invites": invites,
-            "event_ids": [x.id for x in form_entries] + [x.id for x in invites],
+            "event_checkins": event_checkins,
+            "event_ids": [x.id for x in form_entries] + [x.id for x in invites] + [x.id for x in event_checkins],
             "alias_lookup": alias_lookup,
         }
 
@@ -110,7 +141,8 @@ class AcquisitionReportGenerator(BaseReport):
         raw_data = self.fetch_data()
         form_count = len(raw_data.get("form_entries", []))
         invite_count = len(raw_data.get("invites", []))
-        self.log(f"Fetched {form_count} form entries and {invite_count} invites")
+        checkin_count = len(raw_data.get("event_checkins", []))
+        self.log(f"Fetched {form_count} form entries, {invite_count} invites, {checkin_count} event check-ins")
 
         reports = self.process_data(raw_data)
         self.log(f"Processed {len(reports)} reports")
@@ -218,6 +250,61 @@ class AcquisitionReportGenerator(BaseReport):
                     },
                 )
             )
+
+        for checkin in raw_data.get("event_checkins", []):
+            event = checkin.event
+            if not event or not event.academy_id:
+                continue
+
+            academy_id = event.academy_id
+            if self.academy_id and academy_id != self.academy_id:
+                continue
+
+            base = _event_checkin_base_fields(checkin)
+            created_day = checkin.created_at.date()
+            attended_day = checkin.attended_at.date() if checkin.attended_at else None
+
+            if created_day == self.report_date:
+                reports.append(
+                    AcquisitionReport(
+                        source_type=AcquisitionReport.SourceType.EVENT_RSVP,
+                        source_id=checkin.id,
+                        report_date=self.report_date,
+                        funnel_tier=AcquisitionReport.FunnelTier.NURTURE_INVITE,
+                        team_seat_invite=False,
+                        details={
+                            "stage": "rsvp",
+                            "source": "event_checkin",
+                            "event_checkin_id": checkin.id,
+                            "event_id": event.id,
+                            "status": checkin.status,
+                            "created_at": checkin.created_at.isoformat() if checkin.created_at else None,
+                            "attended_at": checkin.attended_at.isoformat() if checkin.attended_at else None,
+                        },
+                        **base,
+                    )
+                )
+
+            if attended_day == self.report_date:
+                reports.append(
+                    AcquisitionReport(
+                        source_type=AcquisitionReport.SourceType.EVENT_ATTENDED,
+                        source_id=checkin.id,
+                        report_date=self.report_date,
+                        funnel_tier=AcquisitionReport.FunnelTier.SOFT_LEAD,
+                        team_seat_invite=False,
+                        details={
+                            "stage": "attended",
+                            "source": "event_checkin",
+                            "event_checkin_id": checkin.id,
+                            "event_id": event.id,
+                            "status": checkin.status,
+                            "created_at": checkin.created_at.isoformat() if checkin.created_at else None,
+                            "attended_at": checkin.attended_at.isoformat() if checkin.attended_at else None,
+                        },
+                        **base,
+                    )
+                )
 
         return reports
 
