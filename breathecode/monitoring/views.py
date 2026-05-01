@@ -3,12 +3,14 @@ import os
 from hashlib import sha256
 import json
 from datetime import date
+from uuid import uuid4
 
 import stripe
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from circuitbreaker import CircuitBreakerError
-from django.db.models import Q
+from django.db import transaction
+from django.db.models import Count, Exists, OuterRef, Q
 from django.http import HttpRequest, StreamingHttpResponse
 from django.utils import timezone
 from rest_framework import status
@@ -812,8 +814,88 @@ def _job_fingerprint(report_type: str, academy_id: int, date_start: date, date_e
     return sha256(json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()
 
 
+def _parent_job_fingerprint(report_type: str, academy_ids: list[int], date_start: date, date_end: date, params: dict) -> str:
+    payload = {
+        "report_type": report_type,
+        "kind": "parent_batch",
+        "academy_ids": sorted(academy_ids),
+        "date_start": date_start.isoformat(),
+        "date_end": date_end.isoformat(),
+        "params": params,
+    }
+    return sha256(json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()
+
+
+def _scope_resolution_full(request: HttpRequest) -> bool:
+    scope = getattr(request, "academy_scope", None)
+    if not scope:
+        return True
+    return scope.get("resolution") == "full"
+
+
+def _params_with_academy_scope(request: HttpRequest, base_params: dict) -> dict:
+    scope = getattr(request, "academy_scope", None)
+    if not scope:
+        return dict(base_params)
+    merged = dict(base_params)
+    merged["requested_academy_ids"] = scope.get("requested_academy_ids")
+    merged["applied_academy_ids"] = scope.get("applied_academy_ids")
+    merged["resolution"] = scope.get("resolution")
+    return merged
+
+
+def _eligible_parent_ids_for_academy_scope(academy_ids: list[int]) -> list[int]:
+    u_set = list(academy_ids)
+    bad_child = ReportGenerationJob.objects.filter(parent_id=OuterRef("pk")).exclude(academy_id__in=u_set)
+    has_child = ReportGenerationJob.objects.filter(parent_id=OuterRef("pk"))
+    return list(
+        ReportGenerationJob.objects.filter(parent_id__isnull=True, academy_id__isnull=True)
+        .annotate(_bad=Exists(bad_child), _has=Exists(has_child))
+        .filter(_bad=False, _has=True)
+        .values_list("id", flat=True)
+    )
+
+
+def _parent_row_visible_for_scope(job: ReportGenerationJob, academy_ids: list[int]) -> bool:
+    if job.academy_id is not None or job.parent_id is not None:
+        return False
+    u_set = set(academy_ids)
+    child_academy_ids = list(job.children.values_list("academy_id", flat=True))
+    if not child_academy_ids:
+        return False
+    return all(cid in u_set for cid in child_academy_ids)
+
+
+def _get_report_generation_job_for_user(job_id: int, report_type: str, academy_ids: list[int]):
+    job = ReportGenerationJob.objects.filter(id=job_id, report_type=report_type).first()
+    if not job:
+        return None
+    if job.academy_id is None and job.parent_id is None:
+        if _parent_row_visible_for_scope(job, academy_ids):
+            return job
+        return None
+    if job.academy_id and job.academy_id in academy_ids:
+        return job
+    return None
+
+
+def _generation_jobs_queryset_for_scope(academy_ids: list[int]):
+    u_set = list(academy_ids)
+    eligible = _eligible_parent_ids_for_academy_scope(u_set)
+    children_q = Q(academy_id__in=u_set) & (Q(parent_id__isnull=True) | ~Q(parent_id__in=eligible))
+    if eligible:
+        return ReportGenerationJob.objects.filter(Q(id__in=eligible) | children_q).order_by("-created_at").distinct()
+    return ReportGenerationJob.objects.filter(children_q).order_by("-created_at").distinct()
+
+
+def _enqueue_child_report_job(job: ReportGenerationJob):
+    task_result = generate_report_job.delay(job.id)
+    job.celery_task_id = task_result.id
+    job.save(update_fields=["celery_task_id", "updated_at"])
+
+
 class MonitoringReportGenerationView(APIView):
-    @capable_of_many("read_monitoring_report")
+    @capable_of_many("read_monitoring_report", scope="read_aggregate")
     def post(self, request, report_type=None, academy_ids=None):
         lang = get_user_language(request)
         data = {**request.data, "report_type": report_type}
@@ -826,9 +908,107 @@ class MonitoringReportGenerationView(APIView):
             if key in request.data:
                 params[key] = request.data.get(key)
 
-        jobs = []
+        params = _params_with_academy_scope(request, params)
+        applied = sorted(set(academy_ids))
+        force = payload.get("force", False)
+        resolution_full = _scope_resolution_full(request)
+        multi_applied = len(applied) > 1
+        use_parent_batch = multi_applied and resolution_full
+
+        if use_parent_batch:
+            parent_fp = _parent_job_fingerprint(
+                report_type=payload["report_type"],
+                academy_ids=applied,
+                date_start=payload["date_start"],
+                date_end=payload["date_end"],
+                params=params,
+            )
+            if not force:
+                existing_parent = ReportGenerationJob.objects.filter(
+                    parent_id__isnull=True,
+                    academy_id__isnull=True,
+                    report_type=payload["report_type"],
+                    fingerprint=parent_fp,
+                    status__in=[ReportGenerationJob.Status.PENDING, ReportGenerationJob.Status.RUNNING],
+                ).first()
+                if existing_parent:
+                    return Response(
+                        ReportGenerationJobSerializer(existing_parent, many=False).data,
+                        status=status.HTTP_200_OK,
+                    )
+
+            reused_existing = True
+            child_jobs: list[ReportGenerationJob] = []
+            with transaction.atomic():
+                batch_id = uuid4()
+                parent = ReportGenerationJob.objects.create(
+                    report_type=payload["report_type"],
+                    status=ReportGenerationJob.Status.PENDING,
+                    status_message="Queued",
+                    academy_id=None,
+                    parent_id=None,
+                    batch_id=batch_id,
+                    requested_by=request.user,
+                    date_start=payload["date_start"],
+                    date_end=payload["date_end"],
+                    params=params,
+                    fingerprint=parent_fp,
+                )
+                for academy_id in applied:
+                    fingerprint = _job_fingerprint(
+                        report_type=payload["report_type"],
+                        academy_id=academy_id,
+                        date_start=payload["date_start"],
+                        date_end=payload["date_end"],
+                        params=params,
+                    )
+                    existing = None
+                    if not force:
+                        existing = ReportGenerationJob.objects.filter(
+                            academy_id=academy_id,
+                            report_type=payload["report_type"],
+                            fingerprint=fingerprint,
+                            parent_id__isnull=True,
+                            status__in=[ReportGenerationJob.Status.PENDING, ReportGenerationJob.Status.RUNNING],
+                        ).first()
+                    if existing:
+                        if existing.parent_id is None:
+                            ReportGenerationJob.objects.filter(pk=existing.pk).update(
+                                parent_id=parent.id, batch_id=batch_id
+                            )
+                            existing.refresh_from_db()
+                        child_jobs.append(existing)
+                        continue
+
+                    reused_existing = False
+                    child = ReportGenerationJob.objects.create(
+                        report_type=payload["report_type"],
+                        status=ReportGenerationJob.Status.PENDING,
+                        status_message="Queued",
+                        academy_id=academy_id,
+                        parent_id=parent.id,
+                        batch_id=batch_id,
+                        requested_by=request.user,
+                        date_start=payload["date_start"],
+                        date_end=payload["date_end"],
+                        params=params,
+                        fingerprint=fingerprint,
+                    )
+                    _enqueue_child_report_job(child)
+                    child_jobs.append(child)
+
+            for job in child_jobs:
+                if job.celery_task_id:
+                    continue
+                if job.status in [ReportGenerationJob.Status.PENDING, ReportGenerationJob.Status.RUNNING]:
+                    _enqueue_child_report_job(job)
+
+            status_code = status.HTTP_200_OK if reused_existing else status.HTTP_202_ACCEPTED
+            return Response(ReportGenerationJobSerializer(parent, many=False).data, status=status_code)
+
+        jobs: list[ReportGenerationJob] = []
         reused_existing = True
-        for academy_id in academy_ids:
+        for academy_id in applied:
             fingerprint = _job_fingerprint(
                 report_type=payload["report_type"],
                 academy_id=academy_id,
@@ -837,7 +1017,7 @@ class MonitoringReportGenerationView(APIView):
                 params=params,
             )
 
-            if not payload.get("force", False):
+            if not force:
                 existing = ReportGenerationJob.objects.filter(
                     academy_id=academy_id,
                     report_type=payload["report_type"],
@@ -861,9 +1041,7 @@ class MonitoringReportGenerationView(APIView):
                 fingerprint=fingerprint,
             )
 
-            task_result = generate_report_job.delay(job.id)
-            job.celery_task_id = task_result.id
-            job.save(update_fields=["celery_task_id", "updated_at"])
+            _enqueue_child_report_job(job)
             jobs.append(job)
 
         status_code = status.HTTP_200_OK if reused_existing else status.HTTP_202_ACCEPTED
@@ -873,10 +1051,10 @@ class MonitoringReportGenerationView(APIView):
 
 
 class MonitoringReportGenerationDetailView(APIView):
-    @capable_of_many("read_monitoring_report")
+    @capable_of_many("read_monitoring_report", scope="read_aggregate")
     def get(self, request, report_type=None, job_id=None, academy_ids=None):
         lang = get_user_language(request)
-        job = ReportGenerationJob.objects.filter(id=job_id, academy_id__in=academy_ids, report_type=report_type).first()
+        job = _get_report_generation_job_for_user(job_id, report_type, academy_ids)
         if not job:
             raise ValidationException(
                 translation(
@@ -890,10 +1068,10 @@ class MonitoringReportGenerationDetailView(APIView):
 
         return Response(ReportGenerationJobSerializer(job, many=False).data, status=status.HTTP_200_OK)
 
-    @capable_of_many("read_monitoring_report")
+    @capable_of_many("read_monitoring_report", scope="read_aggregate")
     def delete(self, request, report_type=None, job_id=None, academy_ids=None):
         lang = get_user_language(request)
-        job = ReportGenerationJob.objects.filter(id=job_id, academy_id__in=academy_ids, report_type=report_type).first()
+        job = _get_report_generation_job_for_user(job_id, report_type, academy_ids)
         if not job:
             raise ValidationException(
                 translation(
@@ -916,15 +1094,30 @@ class MonitoringReportGenerationDetailView(APIView):
                 code=status.HTTP_400_BAD_REQUEST,
             )
 
+        if job.academy_id is None and job.parent_id is None:
+            active_children = job.children.filter(
+                status__in=[ReportGenerationJob.Status.PENDING, ReportGenerationJob.Status.RUNNING]
+            )
+            if active_children.exists():
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Cannot delete parent report generation job while a child is pending or running",
+                        es="No se puede borrar el trabajo padre mientras un hijo esté pendiente o en ejecución",
+                        slug="cannot-delete-parent-with-active-children",
+                    ),
+                    code=status.HTTP_400_BAD_REQUEST,
+                )
+
         job.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class MonitoringReportGenerationListView(APIView):
-    @capable_of_many("read_monitoring_report")
+    @capable_of_many("read_monitoring_report", scope="read_aggregate")
     def get(self, request, academy_ids=None):
         lang = get_user_language(request)
-        queryset = ReportGenerationJob.objects.filter(academy_id__in=academy_ids).order_by("-created_at")
+        queryset = _generation_jobs_queryset_for_scope(academy_ids).annotate(children_count=Count("children"))
 
         status_filter = request.GET.get("status")
         if status_filter:

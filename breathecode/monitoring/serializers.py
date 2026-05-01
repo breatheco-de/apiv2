@@ -350,7 +350,10 @@ class ReportGenerationJobSerializer(serpy.Serializer):
     report_type = serpy.Field()
     status = serpy.Field()
     status_message = serpy.Field(required=False)
-    academy_id = serpy.Field(attr="academy.id")
+    academy_id = serpy.MethodField()
+    parent_id = serpy.Field(required=False)
+    batch_id = serpy.MethodField(required=False)
+    children_count = serpy.MethodField(required=False)
     requested_by_id = serpy.Field(attr="requested_by.id", required=False)
     date_start = serpy.Field()
     date_end = serpy.Field()
@@ -366,13 +369,27 @@ class ReportGenerationJobSerializer(serpy.Serializer):
     created_at = serpy.Field()
     updated_at = serpy.Field()
 
+    def get_academy_id(self, obj):
+        return obj.academy_id
+
+    def get_batch_id(self, obj):
+        return str(obj.batch_id) if obj.batch_id else None
+
+    def get_children_count(self, obj):
+        if hasattr(obj, "children_count"):
+            return int(obj.children_count)
+        return obj.children.count()
+
 
 class ReportGenerationJobListSerializer(serpy.Serializer):
     id = serpy.Field()
     report_type = serpy.Field()
     status = serpy.Field()
     status_message = serpy.Field(required=False)
-    academy_id = serpy.Field(attr="academy.id")
+    academy_id = serpy.MethodField()
+    parent_id = serpy.Field(required=False)
+    batch_id = serpy.MethodField(required=False)
+    children_count = serpy.MethodField(required=False)
     date_start = serpy.Field()
     date_end = serpy.Field()
     progress_current = serpy.Field()
@@ -380,6 +397,17 @@ class ReportGenerationJobListSerializer(serpy.Serializer):
     generated_rows = serpy.Field()
     created_at = serpy.Field()
     updated_at = serpy.Field()
+
+    def get_academy_id(self, obj):
+        return obj.academy_id
+
+    def get_batch_id(self, obj):
+        return str(obj.batch_id) if obj.batch_id else None
+
+    def get_children_count(self, obj):
+        if hasattr(obj, "children_count"):
+            return int(obj.children_count)
+        return obj.children.count()
 
 
 class ReportGenerationTriggerSerializer(serializers.Serializer):

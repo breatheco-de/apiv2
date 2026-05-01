@@ -397,6 +397,8 @@ class ReportGenerationJobAdmin(admin.ModelAdmin):
         "id",
         "report_type",
         "academy",
+        "parent",
+        "batch_id",
         "status",
         "date_start",
         "date_end",
@@ -407,6 +409,7 @@ class ReportGenerationJobAdmin(admin.ModelAdmin):
         "finished_at",
     )
     list_filter = ("report_type", "status", "academy")
+    raw_id_fields = ("parent", "academy", "requested_by")
     search_fields = ("fingerprint", "celery_task_id")
     readonly_fields = (
         "fingerprint",

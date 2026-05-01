@@ -603,3 +603,197 @@ class MonitoringReportTestSuite(MonitoringTestCase):
         self.assertEqual(len(payload), 1)
         self.assertEqual(payload[0]["report_type"], "acquisition")
         self.assertEqual(payload[0]["status"], ReportGenerationJob.Status.PENDING)
+
+    @patch("breathecode.monitoring.views.generate_report_job.delay")
+    def test_post_multi_academy_returns_parent_and_child_jobs(self, delay_mock):
+        delay_mock.return_value.id = "task-1"
+        model_a = self.generate_models(authenticate=True, profile_academy=True, role=1, capability="read_monitoring_report")
+        model_b = self.generate_models(academy=1, city=1, country=1)
+        self.generate_models(
+            user=model_a.user, profile_academy=True, academy=model_b.academy, role=1, capability="read_monitoring_report"
+        )
+        self.headers(academy=f"{model_a.academy.id},{model_b.academy.id}")
+
+        url = reverse_lazy("monitoring:report_type_generate", kwargs={"report_type": "acquisition"})
+        response = self.client.post(url, data={"date": "2026-04-11"}, format="json")
+        payload = response.json()
+
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertIsNone(payload.get("academy_id"))
+        self.assertIsNotNone(payload.get("batch_id"))
+        self.assertIsNone(payload.get("parent_id"))
+        parents = ReportGenerationJob.objects.filter(parent_id__isnull=True, academy_id__isnull=True)
+        self.assertEqual(parents.count(), 1)
+        self.assertEqual(ReportGenerationJob.objects.filter(parent_id=parents.first().id).count(), 2)
+        self.assertEqual(delay_mock.call_count, 2)
+
+    def test_list_generation_jobs_parent_only_when_all_children_in_scope(self):
+        model_a = self.generate_models(authenticate=True, profile_academy=True, role=1, capability="read_monitoring_report")
+        model_b = self.generate_models(academy=1, city=1, country=1)
+        self.generate_models(
+            user=model_a.user, profile_academy=True, academy=model_b.academy, role=1, capability="read_monitoring_report"
+        )
+        self.headers(academy=f"{model_a.academy.id},{model_b.academy.id}")
+
+        parent = ReportGenerationJob.objects.create(
+            report_type=ReportGenerationJob.ReportType.ACQUISITION,
+            status=ReportGenerationJob.Status.PENDING,
+            academy_id=None,
+            parent_id=None,
+            date_start=date(2026, 4, 1),
+            date_end=date(2026, 4, 1),
+            params={},
+            fingerprint="parent-fp-test",
+        )
+        ReportGenerationJob.objects.create(
+            report_type=ReportGenerationJob.ReportType.ACQUISITION,
+            status=ReportGenerationJob.Status.PENDING,
+            academy=model_a.academy,
+            parent_id=parent.id,
+            date_start=date(2026, 4, 1),
+            date_end=date(2026, 4, 1),
+            params={},
+            fingerprint="child-a",
+        )
+        ReportGenerationJob.objects.create(
+            report_type=ReportGenerationJob.ReportType.ACQUISITION,
+            status=ReportGenerationJob.Status.PENDING,
+            academy=model_b.academy,
+            parent_id=parent.id,
+            date_start=date(2026, 4, 1),
+            date_end=date(2026, 4, 1),
+            params={},
+            fingerprint="child-b",
+        )
+
+        url = reverse_lazy("monitoring:report_generate_jobs")
+        response = self.client.get(url)
+        payload = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(payload), 1)
+        self.assertEqual(payload[0]["id"], parent.id)
+        self.assertIsNone(payload[0].get("academy_id"))
+        self.assertEqual(payload[0].get("children_count"), 2)
+
+    def test_list_generation_jobs_children_only_when_partial_academy_scope(self):
+        model_a = self.generate_models(authenticate=True, profile_academy=True, role=1, capability="read_monitoring_report")
+        model_b = self.generate_models(academy=1, city=1, country=1)
+        self.generate_models(
+            user=model_a.user, profile_academy=True, academy=model_b.academy, role=1, capability="read_monitoring_report"
+        )
+
+        parent = ReportGenerationJob.objects.create(
+            report_type=ReportGenerationJob.ReportType.ACQUISITION,
+            status=ReportGenerationJob.Status.PENDING,
+            academy_id=None,
+            parent_id=None,
+            date_start=date(2026, 4, 1),
+            date_end=date(2026, 4, 1),
+            params={},
+            fingerprint="parent-fp-partial",
+        )
+        child_a = ReportGenerationJob.objects.create(
+            report_type=ReportGenerationJob.ReportType.ACQUISITION,
+            status=ReportGenerationJob.Status.PENDING,
+            academy=model_a.academy,
+            parent_id=parent.id,
+            date_start=date(2026, 4, 1),
+            date_end=date(2026, 4, 1),
+            params={},
+            fingerprint="child-a-p",
+        )
+        ReportGenerationJob.objects.create(
+            report_type=ReportGenerationJob.ReportType.ACQUISITION,
+            status=ReportGenerationJob.Status.PENDING,
+            academy=model_b.academy,
+            parent_id=parent.id,
+            date_start=date(2026, 4, 1),
+            date_end=date(2026, 4, 1),
+            params={},
+            fingerprint="child-b-p",
+        )
+
+        self.headers(academy=str(model_a.academy.id))
+        url = reverse_lazy("monitoring:report_generate_jobs")
+        response = self.client.get(url)
+        payload = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(payload), 1)
+        self.assertEqual(payload[0]["id"], child_a.id)
+        self.assertEqual(payload[0]["academy_id"], model_a.academy.id)
+
+    def test_get_parent_job_detail_404_when_not_all_children_in_scope(self):
+        model_a = self.generate_models(authenticate=True, profile_academy=True, role=1, capability="read_monitoring_report")
+        model_b = self.generate_models(academy=1, city=1, country=1)
+        self.generate_models(
+            user=model_a.user, profile_academy=True, academy=model_b.academy, role=1, capability="read_monitoring_report"
+        )
+
+        parent = ReportGenerationJob.objects.create(
+            report_type=ReportGenerationJob.ReportType.ACQUISITION,
+            status=ReportGenerationJob.Status.PENDING,
+            academy_id=None,
+            parent_id=None,
+            date_start=date(2026, 4, 1),
+            date_end=date(2026, 4, 1),
+            params={},
+            fingerprint="parent-fp-detail",
+        )
+        ReportGenerationJob.objects.create(
+            report_type=ReportGenerationJob.ReportType.ACQUISITION,
+            status=ReportGenerationJob.Status.PENDING,
+            academy=model_a.academy,
+            parent_id=parent.id,
+            date_start=date(2026, 4, 1),
+            date_end=date(2026, 4, 1),
+            params={},
+            fingerprint="c1",
+        )
+        ReportGenerationJob.objects.create(
+            report_type=ReportGenerationJob.ReportType.ACQUISITION,
+            status=ReportGenerationJob.Status.PENDING,
+            academy=model_b.academy,
+            parent_id=parent.id,
+            date_start=date(2026, 4, 1),
+            date_end=date(2026, 4, 1),
+            params={},
+            fingerprint="c2",
+        )
+
+        self.headers(academy=str(model_a.academy.id))
+        url = reverse_lazy(
+            "monitoring:report_type_generate_id", kwargs={"report_type": "acquisition", "job_id": parent.id}
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_delete_parent_job_blocked_when_child_pending(self):
+        model = self.generate_models(authenticate=True, profile_academy=True, role=1, capability="read_monitoring_report")
+        self.headers(academy=str(model.academy.id))
+        parent = ReportGenerationJob.objects.create(
+            report_type=ReportGenerationJob.ReportType.ACQUISITION,
+            status=ReportGenerationJob.Status.DONE,
+            academy_id=None,
+            parent_id=None,
+            date_start=date(2026, 4, 1),
+            date_end=date(2026, 4, 1),
+            params={},
+            fingerprint="parent-del",
+        )
+        ReportGenerationJob.objects.create(
+            report_type=ReportGenerationJob.ReportType.ACQUISITION,
+            status=ReportGenerationJob.Status.PENDING,
+            academy=model.academy,
+            parent_id=parent.id,
+            date_start=date(2026, 4, 1),
+            date_end=date(2026, 4, 1),
+            params={},
+            fingerprint="child-del",
+        )
+
+        url = reverse_lazy(
+            "monitoring:report_type_generate_id", kwargs={"report_type": "acquisition", "job_id": parent.id}
+        )
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json()["detail"], "cannot-delete-parent-with-active-children")
