@@ -235,6 +235,10 @@ CAPABILITIES = [
         "description": "View service stock scheduler status for a user to debug consumable issues (sysadmin only)",
     },
     {
+        "slug": "manage_service_stock_schedulers",
+        "description": "Enqueue bulk service stock scheduler rebuilds linked to an academy plan (payments recovery / debugging)",
+    },
+    {
         "slug": "crud_consumable",
         "description": "Create or grant consumables for users (staff-only; requires non-card, non-crypto payment method)",
     },
