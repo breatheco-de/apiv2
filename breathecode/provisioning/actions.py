@@ -1602,7 +1602,7 @@ def apply_early_vps_billing_alignment(vps: ProvisioningVPS) -> None:
     if not sub_id and not pf_id:
         return
 
-    from breathecode.payments.actions import reschedule_billing_after_vps_next_payment_pull_forward
+    from breathecode.payments.actions import reschedule_billing_tasks
 
     if sub_id:
         updated = Subscription.objects.filter(
@@ -1619,7 +1619,7 @@ def apply_early_vps_billing_alignment(vps: ProvisioningVPS) -> None:
                 sub_id,
                 NEXT_CHARGE_PULL_FORWARD,
             )
-            reschedule_billing_after_vps_next_payment_pull_forward(subscription_id=sub_id)
+            reschedule_billing_tasks(subscription_id=sub_id)
         return
 
     updated = PlanFinancing.objects.filter(
@@ -1636,7 +1636,7 @@ def apply_early_vps_billing_alignment(vps: ProvisioningVPS) -> None:
             pf_id,
             NEXT_CHARGE_PULL_FORWARD,
         )
-        reschedule_billing_after_vps_next_payment_pull_forward(plan_financing_id=pf_id)
+        reschedule_billing_tasks(plan_financing_id=pf_id)
 
 
 @service_deprovisioner("free-monthly-llm-budget")

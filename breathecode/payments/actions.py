@@ -226,14 +226,14 @@ def align_consumer_vps_stock_with_active_machines(consumable: Consumable) -> Non
         consume_service.send_robust(sender=Consumable, instance=current_consumable, how_many=pre_consume_units)
 
 
-def reschedule_billing_after_vps_next_payment_pull_forward(
+def reschedule_billing_tasks(
     *, subscription_id: int | None = None, plan_financing_id: int | None = None
 ) -> None:
     """
-    After `next_payment_at` is pulled forward (VPS / third-party billing alignment), cancel future
-    PENDING ScheduledTask rows for charge and renewal notify, then recreate them with an ETA that
-    aligns charge ``eta`` with ``next_payment_at`` plus a short lag (seconds), so charges
-    do not run before the subscription/plan payment instant.
+    After ``Subscription`` or ``PlanFinancing`` ``next_payment_at`` changes (e.g. manual deposit,
+    VPS / third-party billing alignment), cancel future PENDING ``ScheduledTask`` rows for charge
+    and renewal notify, then recreate them with an ETA aligned to the current ``next_payment_at``
+    plus a short lag (seconds), so charges do not run before the payment instant.
     """
     from task_manager.django.actions import schedule_task
 
@@ -2941,8 +2941,13 @@ def register_student_deposit(
         delta += relativedelta(months=1)
 
     plan_financing.next_payment_at += delta
-    if plan_financing.valid_until and utc_now > plan_financing.valid_until:
-        plan_financing.valid_until = utc_now + relativedelta(months=remaining_installments)
+    if plan_financing.valid_until:
+        if utc_now > plan_financing.valid_until:
+            plan_financing.valid_until = utc_now + relativedelta(months=remaining_installments)
+        else:
+            # Keep contract end aligned when paying before due: next_payment_at moved by `delta`
+            # but valid_until was only recomputed when expired, which left valid_until < next_payment_at.
+            plan_financing.valid_until += delta
     plan_financing.status = (
         PlanFinancing.Status.ACTIVE if remaining_installments > 0 else PlanFinancing.Status.FULLY_PAID
     )
@@ -2951,7 +2956,7 @@ def register_student_deposit(
 
     tasks.renew_plan_financing_consumables.delay(plan_financing.id)
     if remaining_installments > 0:
-        reschedule_billing_after_vps_next_payment_pull_forward(plan_financing_id=plan_financing.id)
+        reschedule_billing_tasks(plan_financing_id=plan_financing.id)
     else:
         for fn in (tasks.charge_plan_financing, tasks.notify_plan_financing_renewal):
             _cancel_pending_future_scheduled(fn, plan_financing.id, utc_now=utc_now)
