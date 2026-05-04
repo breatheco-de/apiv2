@@ -255,6 +255,17 @@ class UserInvite(models.Model):
         help_text="Video de bienvenida con preview_image y url. Formato: {'preview_image': 'url', 'url': 'url'}"
     )
 
+    student_plan_access = models.JSONField(
+        default=None,
+        blank=True,
+        null=True,
+        help_text=(
+            "Agreed-on financing when inviting a student (kept separate from conversion_info / UTMs). "
+            "Keys: how_many_installments, initial_payment_amount, initial_payment_notes, "
+            "grace_period_duration, grace_period_duration_unit."
+        ),
+    )
+
     # link to team membership (optional)
     subscription_seat = models.ForeignKey(
         "payments.SubscriptionSeat",

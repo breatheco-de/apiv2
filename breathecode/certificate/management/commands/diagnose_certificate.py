@@ -163,6 +163,19 @@ class Command(BaseCommand):
             sym = "✓" if ch.get("ok") else ("⚠" if ch.get("severity") == "warning" else "❌")
             self.stdout.write(f"{sym} [{ch.get('slug')}] {ch.get('message')}")
 
+        mp = result.get("mandatory_project_slugs") or []
+        if mp:
+            if len(mp) <= 10:
+                self.stdout.write(f"\nMandatory PROJECT slugs: {', '.join(mp)}")
+            else:
+                self.stdout.write(f"\nMandatory PROJECT slugs (first 10): {', '.join(mp[:10])}...")
+
+        for sample in result.get("pending_task_samples") or []:
+            self.stdout.write(
+                f"    • {sample.get('associated_slug')}: task_status={sample.get('task_status')}, "
+                f"revision_status={sample.get('revision_status')}"
+            )
+
         self.stdout.write(f"\n{'─'*80}")
         self.stdout.write(result.get("summary", ""))
         if result.get("issues"):

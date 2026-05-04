@@ -21,7 +21,7 @@ from breathecode.provisioning.models import ProvisioningVPS
 
 def _patch_reschedule():
     return patch(
-        "breathecode.payments.actions.reschedule_billing_after_vps_next_payment_pull_forward",
+        "breathecode.payments.actions.reschedule_billing_tasks",
         MagicMock(),
     )
 

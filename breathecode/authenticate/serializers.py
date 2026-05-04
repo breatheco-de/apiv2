@@ -1071,6 +1071,11 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
     country = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
     city = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
     syllabus_slug = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=False)
+    how_many_installments = serializers.IntegerField(write_only=True, required=False, min_value=1)
+    initial_payment_amount = serializers.FloatField(write_only=True, required=False, allow_null=True)
+    initial_payment_notes = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    grace_period_duration = serializers.IntegerField(write_only=True, required=False, min_value=0)
+    grace_period_duration_unit = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     id = serializers.IntegerField(read_only=True)
 
@@ -1094,6 +1099,11 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
             "country",
             "city",
             "syllabus_slug",
+            "how_many_installments",
+            "initial_payment_amount",
+            "initial_payment_notes",
+            "grace_period_duration",
+            "grace_period_duration_unit",
         )
         list_serializer_class = StudentPOSTListSerializer
 
@@ -1179,10 +1189,82 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                     "This user is already a member of this academy staff", code=400, slug="already-exists"
                 )
 
+        financing_field_names = (
+            "how_many_installments",
+            "initial_payment_amount",
+            "initial_payment_notes",
+            "grace_period_duration",
+            "grace_period_duration_unit",
+        )
+        has_financing_fields = any(k in data for k in financing_field_names)
+        if has_financing_fields and not data.get("plans"):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Financing options require at least one plan in plans",
+                    es="Las opciones de financiamiento requieren al menos un plan en plans",
+                ),
+                slug="plan-access-requires-plans",
+                code=400,
+            )
+
+        student_plan_access = None
+        if data.get("plans"):
+            from breathecode.payments.actions import validate_student_invite_plan_access_config
+            from breathecode.payments.models import Plan
+
+            plans_loaded = []
+            for plan_id in data["plans"]:
+                p = Plan.objects.filter(id=plan_id).first()
+                if p is None:
+                    raise ValidationException("Plan not found", slug="plan-not-found")
+                plans_loaded.append(p)
+
+            how_many = data.get("how_many_installments", 1)
+            initial_amt = data.get("initial_payment_amount", None)
+            if "initial_payment_amount" not in data:
+                initial_amt = None
+            initial_notes = data.get("initial_payment_notes", None)
+            grace_dur = data.get("grace_period_duration", 0)
+            if grace_dur is None:
+                grace_dur = 0
+            grace_unit = data.get("grace_period_duration_unit") or "MONTH"
+            if isinstance(grace_unit, str) and grace_unit.strip() == "":
+                grace_unit = "MONTH"
+
+            student_plan_access = validate_student_invite_plan_access_config(
+                plans=plans_loaded,
+                how_many_installments=how_many,
+                initial_payment_amount=initial_amt,
+                initial_payment_notes=initial_notes,
+                grace_period_duration=int(grace_dur),
+                grace_period_duration_unit=grace_unit,
+                lang=lang,
+            )
+
+            if initial_amt is not None and float(initial_amt) > 0 and not data.get("payment_method"):
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="initial_payment_amount greater than zero requires payment_method",
+                        es="initial_payment_amount mayor que cero requiere payment_method",
+                    ),
+                    slug="initial-payment-requires-payment-method",
+                    code=400,
+                )
+
+        for k in financing_field_names:
+            data.pop(k, None)
+
+        if student_plan_access is not None:
+            data["_student_plan_access_payload"] = student_plan_access
+
         return data
 
     def create(self, validated_data):
         from breathecode.payments.models import Plan
+
+        student_plan_access = validated_data.pop("_student_plan_access_payload", None)
 
         academy = Academy.objects.filter(id=self.context.get("academy_id")).first()
         if academy is None:
@@ -1272,6 +1354,9 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                 lang = getattr(request, "LANG", None) if request else None
                 lang = lang or self.context.get("lang", "en") if isinstance(self.context.get("lang"), str) else "en"
                 single_cohort = cohort[0]
+                financing_kwargs = {}
+                if student_plan_access:
+                    financing_kwargs.update(student_plan_access)
                 for plan in plans_for_user:
                     create_invited_plan_financing_for_user(
                         user=user,
@@ -1281,6 +1366,8 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                         payment_method=payment_method_for_plans,
                         author=author,
                         lang=lang,
+                        conversion_info=conversion_info,
+                        **financing_kwargs,
                     )
 
             notify_actions.send_email_message(
@@ -1378,6 +1465,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                     country=country,
                     city=city,
                     syllabus=syllabus,
+                    student_plan_access=(student_plan_access if plans else None),
                 )
                 invite.save()
                 invites_created.append(invite)
