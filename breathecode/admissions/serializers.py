@@ -1467,7 +1467,15 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
         count_cohort_users = CohortUser.objects.filter(user_id=user.id, cohort_id=cohort.id).count()
 
         if is_post_method and count_cohort_users:
-            raise ValidationException("That user already exists in this cohort")
+            user_pk = user.id if hasattr(user, "id") else user
+            raise ValidationException(
+                f"User {user_pk} already has a CohortUser row for this cohort (id={cohort.id}, "
+                f'name="{cohort.name}", slug={cohort.slug}). The cohort is taken from the URL '
+                f"`POST .../cohort/<cohort_id>/user`, not from a list in the body—if you meant another cohort, "
+                f"change <cohort_id> in the path.",
+                slug="user-already-in-this-cohort",
+                code=400,
+            )
 
         if (
             "role" in data
