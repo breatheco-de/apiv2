@@ -1481,9 +1481,33 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
         role = data.get("role") or (instance.role if instance else None) or "STUDENT"
 
         if is_post_method and role == "STUDENT" and cohort.schedule and self.count_certificates_by_cohort(cohort, user.id) > 0:
+            prior_cohort_user = (
+                CohortUser.objects.filter(
+                    Q(educational_status="ACTIVE") | Q(educational_status__isnull=True),
+                    user_id=user.id,
+                    role="STUDENT",
+                    cohort__schedule=cohort.schedule,
+                )
+                .exclude(cohort_id=cohort.id)
+                .select_related("cohort")
+                .first()
+            )
+            prior = prior_cohort_user.cohort if prior_cohort_user else None
+            if prior:
+                detail = (
+                    f'This student is already ACTIVE in another cohort for the same certificate. Prior cohort: '
+                    f'"{prior.name}" (slug: {prior.slug}, id: {prior.id}). Please set his/her educational status on '
+                    f'that cohort to something other than ACTIVE before adding the student here.'
+                )
+            else:
+                detail = (
+                    "This student is already ACTIVE in another cohort for the same certificate. Please set his/her "
+                    "educational status on the prior cohort to something other than ACTIVE before continuing."
+                )
             raise ValidationException(
-                "This student is already in another cohort for the same certificate, please mark him/her hi "
-                "educational status on this prior cohort different than ACTIVE before cotinuing"
+                detail,
+                slug="student-active-in-prior-cohort-same-certificate",
+                code=400,
             )
 
         role = data.get("role")

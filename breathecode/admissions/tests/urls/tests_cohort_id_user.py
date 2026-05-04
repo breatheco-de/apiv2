@@ -550,19 +550,18 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         data = {
             "user": models[0]["user"].id,
         }
+        prior_cohort = models[0]["cohort"]
         response = self.client.post(url, data, format="json")
         json = response.json()
-        expected = {
-            "detail": (
-                "This student is already in another cohort for the same "
-                "certificate, please mark him/her hi educational status on "
-                "this prior cohort different than ACTIVE before cotinuing"
-            ),
-            "status_code": 400,
-        }
+        expected_detail = (
+            f'This student is already ACTIVE in another cohort for the same certificate. Prior cohort: '
+            f'"{prior_cohort.name}" (slug: {prior_cohort.slug}, id: {prior_cohort.id}). Please set his/her '
+            f"educational status on that cohort to something other than ACTIVE before adding the student here."
+        )
 
-        self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(json.get("status_code"), 400)
+        self.assertEqual(json.get("detail"), expected_detail)
 
     """
     🔽🔽🔽 Post adding the same user twice

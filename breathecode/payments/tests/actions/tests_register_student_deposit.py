@@ -19,7 +19,7 @@ def test_register_student_deposit_applies_payment_to_plan_financing(
 ):
     monkeypatch.setattr(actions.timezone, "now", MagicMock(return_value=utc_now))
     monkeypatch.setattr(tasks.renew_plan_financing_consumables, "delay", MagicMock())
-    monkeypatch.setattr(actions, "reschedule_billing_after_vps_next_payment_pull_forward", MagicMock())
+    monkeypatch.setattr(actions, "reschedule_billing_tasks", MagicMock())
 
     model = database.create(
         country=1,
@@ -94,8 +94,9 @@ def test_register_student_deposit_applies_payment_to_plan_financing(
     assert financing["status"] == "ACTIVE"
     assert financing["status_message"] is None
     assert financing["next_payment_at"] == model.plan_financing.next_payment_at + relativedelta(months=1)
+    assert financing["valid_until"] == model.plan_financing.valid_until + relativedelta(months=1)
     assert tasks.renew_plan_financing_consumables.delay.call_args_list == [call(model.plan_financing.id)]
-    assert actions.reschedule_billing_after_vps_next_payment_pull_forward.call_args_list == [
+    assert actions.reschedule_billing_tasks.call_args_list == [
         call(plan_financing_id=model.plan_financing.id)
     ]
 

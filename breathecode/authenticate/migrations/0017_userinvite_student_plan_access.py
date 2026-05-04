@@ -15,8 +15,8 @@ class Migration(migrations.Migration):
                 blank=True,
                 default=None,
                 help_text=(
-                    "Financiamiento acordado al invitar estudiante (separado de conversion_info / UTMs). "
-                    "Claves: how_many_installments, initial_payment_amount, initial_payment_notes, "
+                    "Agreed-on financing when inviting a student (kept separate from conversion_info / UTMs). "
+                    "Keys: how_many_installments, initial_payment_amount, initial_payment_notes, "
                     "grace_period_duration, grace_period_duration_unit."
                 ),
                 null=True,
