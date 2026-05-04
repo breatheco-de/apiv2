@@ -6324,6 +6324,8 @@ class AcademyGrantConsumableView(APIView):
 class AcademyStudentDepositView(APIView):
     """
     Academy-only POST to register a manual deposit and apply it to a plan financing installment.
+
+    ``amount`` must not exceed ``plan_financing.monthly_price`` when that value is greater than zero.
     """
 
     @capable_of("crud_subscription")

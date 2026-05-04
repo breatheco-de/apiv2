@@ -5,7 +5,13 @@ Certificate issuance diagnostic: explains why a certificate may not have been ge
 from __future__ import annotations
 
 from breathecode.admissions.models import CohortUser, FULLY_PAID, UP_TO_DATE
-from breathecode.certificate.actions import how_many_pending_tasks, resolve_specialty_for_cohort
+from breathecode.admissions.utils.academy_features import has_feature_flag
+from breathecode.assignments.models import Task
+from breathecode.certificate.actions import (
+    get_assets_from_syllabus,
+    how_many_pending_tasks,
+    resolve_specialty_for_cohort,
+)
 from breathecode.certificate.models import LayoutDesign, UserSpecialty
 
 
@@ -40,6 +46,10 @@ def build_certificate_diagnostic(cohort_user: CohortUser) -> dict:
         )
 
     specialty = None
+    mandatory_projects: list[str] = []
+    auto_ignore_enabled = False
+    pending_task_samples: list[dict] = []
+
     if cohort.syllabus_version:
         specialty = resolve_specialty_for_cohort(cohort)
         if not specialty:
@@ -47,6 +57,66 @@ def build_certificate_diagnostic(cohort_user: CohortUser) -> dict:
             checks.append(_check("specialty", False, "Specialty has no Syllabus assigned", "error"))
         else:
             checks.append(_check("specialty", True, f"Specialty exists: {specialty.name}", "ok"))
+
+        mandatory_projects = get_assets_from_syllabus(
+            cohort.syllabus_version, task_types=["PROJECT"], only_mandatory=True
+        )
+        has_mandatory = len(mandatory_projects) > 0
+        checks.append(
+            _check(
+                "syllabus_mandatory_projects",
+                has_mandatory,
+                f"Syllabus has {len(mandatory_projects)} mandatory PROJECT asset(s)",
+                "ok" if has_mandatory else "warning",
+            )
+        )
+        if not has_mandatory:
+            warnings.append(
+                "Syllabus has no mandatory PROJECT entries: SaaS cohorts will not auto-graduate via project "
+                "completion, and academy reports typically treat such cohorts as not certificate-eligible."
+            )
+
+        academy = cohort.academy
+        if academy is not None:
+            auto_ignore_enabled = has_feature_flag(
+                academy, "certificate.auto_ignore_projects_on_delivery", default=False
+            )
+            checks.append(
+                _check(
+                    "certificate_auto_ignore_on_delivery_flag",
+                    auto_ignore_enabled,
+                    (
+                        "Academy feature certificate.auto_ignore_projects_on_delivery is ENABLED "
+                        "(delivered PROJECT tasks get revision_status IGNORED)."
+                        if auto_ignore_enabled
+                        else "Academy feature certificate.auto_ignore_projects_on_delivery is DISABLED "
+                        "(delivered PROJECT tasks remain PENDING until teacher APPROVES or IGNORES)."
+                    ),
+                    "ok" if auto_ignore_enabled else "warning",
+                )
+            )
+            if not auto_ignore_enabled:
+                warnings.append(
+                    "Without certificate.auto_ignore_projects_on_delivery, delivery sets revision_status=PENDING; "
+                    "each mandatory project needs APPROVED or IGNORED for issuance (matches generate_certificate)."
+                )
+            grading_strategy_msg = (
+                "PROJECT grading strategy (academy feature): IGNORE on delivery counts as cleared "
+                "(no instructor revision step)."
+                if auto_ignore_enabled
+                else "PROJECT grading strategy (academy feature): instructor review "
+                "(PENDING until APPROVED or IGNORED; only IGNORED/APPROVED count as cleared for certificates)."
+            )
+            checks.append(
+                _check(
+                    "project_grading_strategy",
+                    True,
+                    grading_strategy_msg,
+                    "ok",
+                )
+            )
+        else:
+            warnings.append("Cohort has no academy set; skipping certificate.auto_ignore_projects_on_delivery check.")
 
     uspe = UserSpecialty.objects.filter(user=user, cohort=cohort).first()
     if uspe is not None and uspe.status == "PERSISTED" and uspe.preview_url:
@@ -108,17 +178,32 @@ def build_certificate_diagnostic(cohort_user: CohortUser) -> dict:
                 only_mandatory=True,
                 cohort_id=cohort.id,
             )
-            ok_pending = not pending_tasks or pending_tasks == 0
+            ok_pending = pending_tasks == 0
             checks.append(
                 _check(
                     "pending_mandatory_projects",
                     ok_pending,
-                    f"Pending mandatory PROJECT tasks: {pending_tasks}",
+                    f"Pending mandatory PROJECT tasks: {pending_tasks} (cleared when revision_status is APPROVED or IGNORED)",
                     "ok" if ok_pending else "error",
                 )
             )
-            if pending_tasks and pending_tasks > 0:
+            if pending_tasks > 0:
                 issues.append(f"User has {pending_tasks} pending mandatory PROJECT tasks")
+                if mandatory_projects:
+                    for task in (
+                        Task.objects.filter(
+                            user=user, associated_slug__in=mandatory_projects, cohort=cohort
+                        )
+                        .exclude(revision_status__in=["APPROVED", "IGNORED"])
+                        .order_by("id")[:10]
+                    ):
+                        pending_task_samples.append(
+                            {
+                                "associated_slug": task.associated_slug,
+                                "task_status": task.task_status,
+                                "revision_status": task.revision_status,
+                            }
+                        )
         except Exception as e:
             warnings.append(f"Could not check pending tasks: {str(e)}")
             checks.append(
@@ -197,6 +282,9 @@ def build_certificate_diagnostic(cohort_user: CohortUser) -> dict:
         "warnings": warnings,
         "checks": checks,
         "pending_mandatory_tasks_count": pending_tasks,
+        "mandatory_project_slugs": list(mandatory_projects),
+        "auto_ignore_projects_on_delivery": auto_ignore_enabled,
+        "pending_task_samples": pending_task_samples,
         "summary": summary,
     }
 
