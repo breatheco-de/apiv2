@@ -6,7 +6,7 @@ from django.db.models import Q
 
 from breathecode.authenticate.models import UserInvite
 from breathecode.events.models import EventCheckin
-from breathecode.marketing.models import FormEntry
+from breathecode.marketing.models import FormEntry, WON
 
 from ..base import BaseReport
 from .models import AcquisitionReport
@@ -98,6 +98,10 @@ class AcquisitionReportGenerator(BaseReport):
         form_entries = list(
             FormEntry.objects.filter(created_at__date=self.report_date).select_related("academy", "user")
         )
+        form_entries_won = list(
+            FormEntry.objects.filter(won_at__date=self.report_date, deal_status=WON, won_at__isnull=False)
+            .select_related("academy", "user")
+        )
         invites = list(
             UserInvite.objects.filter(created_at__date=self.report_date).select_related(
                 "academy",
@@ -118,7 +122,9 @@ class AcquisitionReportGenerator(BaseReport):
             ).select_related("event", "event__academy", "attendee")
         )
 
-        locations = {x.location.strip() for x in form_entries if x.location and x.location.strip()}
+        locations = {x.location.strip() for x in form_entries if x.location and x.location.strip()} | {
+            x.location.strip() for x in form_entries_won if x.location and x.location.strip()
+        }
         alias_lookup = {}
         if locations:
             from breathecode.marketing.models import AcademyAlias
@@ -129,9 +135,13 @@ class AcquisitionReportGenerator(BaseReport):
 
         return {
             "form_entries": form_entries,
+            "form_entries_won": form_entries_won,
             "invites": invites,
             "event_checkins": event_checkins,
-            "event_ids": [x.id for x in form_entries] + [x.id for x in invites] + [x.id for x in event_checkins],
+            "event_ids": [x.id for x in form_entries]
+            + [x.id for x in form_entries_won]
+            + [x.id for x in invites]
+            + [x.id for x in event_checkins],
             "alias_lookup": alias_lookup,
         }
 
@@ -142,7 +152,10 @@ class AcquisitionReportGenerator(BaseReport):
         form_count = len(raw_data.get("form_entries", []))
         invite_count = len(raw_data.get("invites", []))
         checkin_count = len(raw_data.get("event_checkins", []))
-        self.log(f"Fetched {form_count} form entries, {invite_count} invites, {checkin_count} event check-ins")
+        won_count = len(raw_data.get("form_entries_won", []))
+        self.log(
+            f"Fetched {form_count} form entries, {won_count} form wins, {invite_count} invites, {checkin_count} event check-ins"
+        )
 
         reports = self.process_data(raw_data)
         self.log(f"Processed {len(reports)} reports")
@@ -185,6 +198,53 @@ class AcquisitionReportGenerator(BaseReport):
                     user_id=entry.user_id,
                     email=(entry.email or "").strip().lower(),
                     funnel_tier=_get_formentry_funnel_tier(entry),
+                    utm_source=entry.utm_source,
+                    utm_medium=entry.utm_medium,
+                    utm_campaign=entry.utm_campaign,
+                    utm_term=entry.utm_term,
+                    utm_content=entry.utm_content,
+                    utm_placement=entry.utm_placement,
+                    landing_url=entry.utm_url,
+                    conversion_url=conversion_url,
+                    lead_type=entry.lead_type,
+                    deal_status=entry.deal_status,
+                    attribution_id=entry.attribution_id,
+                    details=details,
+                    team_seat_invite=False,
+                )
+            )
+
+        for entry in raw_data.get("form_entries_won", []):
+            academy_id = resolve_academy_for_form_entry(entry, alias_lookup)
+            if academy_id is None:
+                continue
+
+            if self.academy_id and academy_id != self.academy_id:
+                continue
+
+            details = {
+                "source": "form_entry",
+                "stage": "won",
+                "won_at": entry.won_at.isoformat() if entry.won_at else None,
+                "custom_fields": entry.custom_fields or {},
+                "current_download": entry.current_download,
+                "gclid": entry.gclid,
+                "referral_key": entry.referral_key,
+            }
+
+            conversion_url = None
+            if isinstance(entry.custom_fields, dict):
+                conversion_url = entry.custom_fields.get("conversion_url")
+
+            reports.append(
+                AcquisitionReport(
+                    source_type=AcquisitionReport.SourceType.FORM_ENTRY_WON,
+                    source_id=entry.id,
+                    report_date=self.report_date,
+                    academy_id=academy_id,
+                    user_id=entry.user_id,
+                    email=(entry.email or "").strip().lower(),
+                    funnel_tier=AcquisitionReport.FunnelTier.WON_OR_SALE,
                     utm_source=entry.utm_source,
                     utm_medium=entry.utm_medium,
                     utm_campaign=entry.utm_campaign,

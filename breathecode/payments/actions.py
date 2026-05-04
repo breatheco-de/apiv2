@@ -2924,6 +2924,18 @@ def register_student_deposit(
             code=400,
         )
 
+    monthly_price_cap = float(plan_financing.monthly_price or 0)
+    if monthly_price_cap > 0 and amount > monthly_price_cap + 1e-6:
+        raise ValidationException(
+            translation(
+                lang,
+                en="amount cannot exceed plan_financing monthly_price",
+                es="amount no puede superar monthly_price del plan financiado",
+                slug="deposit-amount-exceeds-monthly-price",
+            ),
+            code=400,
+        )
+
     notes = data.get("notes") or data.get("deposit_notes")
     if notes and len(notes) > 250:
         raise ValidationException(

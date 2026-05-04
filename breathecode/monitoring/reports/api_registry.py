@@ -115,9 +115,9 @@ def _build_acquisition_summary(queryset: QuerySet[Any], academy_ids: list[int]) 
         | Q(source_type=AcquisitionReport.SourceType.EVENT_ATTENDED)
     )
 
+    row_count = queryset.count()
     return {
-        "total_events": queryset.count(),
-        "total": queryset.count(),
+        "report_row_count": row_count,
         "unique_identities": len(by_identity_best_tier),
         "cross_academy_identities": cross_academy_identities,
         "by_source_type": by_source_type,
@@ -172,7 +172,7 @@ REPORT_API_REGISTRY: dict[str, ReportApiConfig] = {
     "acquisition": ReportApiConfig(
         slug="acquisition",
         label="Acquisition Report",
-        description="Daily acquisition snapshots (forms, invites, event RSVP, event attendance) with funnel tiers",
+        description="Daily acquisition snapshots (form leads, form wins by won_at, invites, event RSVP/attendance). FORM_ENTRY is keyed to lead creation date; FORM_ENTRY_WON to win date. Use by_source_type for splits; report_row_count is rows matching filters (not deduped identities).",
         model=AcquisitionReport,
         list_serializer=AcquisitionReportListSerializer,
         detail_serializer=AcquisitionReportDetailSerializer,

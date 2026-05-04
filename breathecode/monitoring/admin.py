@@ -4,6 +4,7 @@ import os
 
 from django import forms
 from django.contrib import admin, messages
+from django.db import transaction
 from django.utils import timezone
 from django.utils.html import format_html
 
@@ -28,7 +29,7 @@ from .models import (
 from .reports.acquisition.models import AcquisitionReport
 from .reports.churn.models import ChurnRiskReport
 from .signals import github_webhook
-from .tasks import async_unsubscribe_repo
+from .tasks import async_unsubscribe_repo, generate_report_job, sync_parent_report_job_from_children
 
 
 @admin.display(description="Run Applications Diagnostic")
@@ -419,6 +420,109 @@ class ReportGenerationJobAdmin(admin.ModelAdmin):
         "started_at",
         "finished_at",
     )
+    actions = ["cancel_report_generation_jobs", "retry_report_generation_jobs"]
+
+    def _enqueue_report_generation_retry(self, job_id: int):
+        task_result = generate_report_job.delay(job_id)
+        ReportGenerationJob.objects.filter(pk=job_id).update(
+            celery_task_id=task_result.id,
+            updated_at=timezone.now(),
+        )
+
+    @admin.action(description="Retry selected report generation jobs (non-terminal children only)")
+    def retry_report_generation_jobs(self, request, queryset):
+        selected_ids = list(queryset.values_list("id", flat=True))
+        child_ids = list(ReportGenerationJob.objects.filter(parent_id__in=selected_ids).values_list("id", flat=True))
+        target_ids = list(set(selected_ids + child_ids))
+
+        S = ReportGenerationJob.Status
+        retriable_statuses = [S.PENDING, S.ERROR, S.PARTIAL, S.CANCELLED]
+
+        jobs_qs = ReportGenerationJob.objects.filter(
+            id__in=target_ids,
+            academy_id__isnull=False,
+            status__in=retriable_statuses,
+        )
+
+        non_executable = ReportGenerationJob.objects.filter(id__in=target_ids, academy_id__isnull=True)
+        skipped_wrong_status = ReportGenerationJob.objects.filter(id__in=target_ids, academy_id__isnull=False).exclude(
+            status__in=retriable_statuses
+        )
+
+        parent_ids = set()
+        now = timezone.now()
+
+        with transaction.atomic():
+            jobs = list(jobs_qs.select_for_update(of=("self",)))
+            for job in jobs:
+                if job.parent_id:
+                    parent_ids.add(job.parent_id)
+                ReportGenerationJob.objects.filter(pk=job.pk).update(
+                    status=S.PENDING,
+                    status_message="Queued (admin retry)",
+                    celery_task_id=None,
+                    started_at=None,
+                    finished_at=None,
+                    error_log=None,
+                    progress_current=0,
+                    progress_total=0,
+                    generated_rows=0,
+                    result={},
+                    updated_at=now,
+                )
+                jid = job.id
+                transaction.on_commit(lambda jid=jid: self._enqueue_report_generation_retry(jid))
+
+            for pid in parent_ids:
+                sync_parent_report_job_from_children(pid)
+
+        retried = len(jobs)
+        if retried:
+            self.message_user(request, f"{retried} job(s) reset and re-queued", level=messages.SUCCESS)
+        if non_executable.exists():
+            self.message_user(
+                request,
+                f"{non_executable.count()} parent row(s) skipped (only academy child jobs can run)",
+                level=messages.WARNING,
+            )
+        if skipped_wrong_status.exists():
+            self.message_user(
+                request,
+                f"{skipped_wrong_status.count()} job(s) skipped (status must be pending, error, partial, or cancelled)",
+                level=messages.WARNING,
+            )
+        if not retried and not non_executable.exists() and not skipped_wrong_status.exists():
+            self.message_user(request, "No matching jobs to retry", level=messages.WARNING)
+
+    @admin.action(description="Cancel selected report generation jobs")
+    def cancel_report_generation_jobs(self, request, queryset):
+        selected_ids = list(queryset.values_list("id", flat=True))
+        child_ids = list(ReportGenerationJob.objects.filter(parent_id__in=selected_ids).values_list("id", flat=True))
+        target_ids = list(set(selected_ids + child_ids))
+        now = timezone.now()
+
+        cancellable = ReportGenerationJob.objects.filter(id__in=target_ids).filter(
+            status__in=[ReportGenerationJob.Status.PENDING, ReportGenerationJob.Status.RUNNING]
+        )
+        updated = cancellable.update(
+            status=ReportGenerationJob.Status.CANCELLED,
+            status_message="Cancelled from Django admin",
+            finished_at=now,
+            updated_at=now,
+        )
+
+        skipped = ReportGenerationJob.objects.filter(id__in=target_ids).exclude(
+            status__in=[ReportGenerationJob.Status.PENDING, ReportGenerationJob.Status.RUNNING]
+        )
+
+        if updated:
+            self.message_user(request, f"{updated} job(s) cancelled", level=messages.SUCCESS)
+        if skipped.exists():
+            self.message_user(
+                request,
+                f"{skipped.count()} job(s) were skipped because they are already terminal",
+                level=messages.WARNING,
+            )
 
     def has_delete_permission(self, request, obj=None):
         if obj and obj.status in [ReportGenerationJob.Status.PENDING, ReportGenerationJob.Status.RUNNING]:

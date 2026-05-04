@@ -17,10 +17,12 @@ If you need to trigger regeneration jobs, use `bc-monitoring-read-reports-api` g
 ## Core Concepts
 
 - `source_type`:
-  - `FORM_ENTRY`: Marketing/CRM lead path.
+  - `FORM_ENTRY`: Marketing/CRM lead path; row is for the lead’s **creation** day (`FormEntry.created_at` date in the generator).
+  - `FORM_ENTRY_WON`: Same form lead when the deal was **won**; row is for **`won_at` date** (requires `deal_status=WON` and `won_at` set on `FormEntry`). Pairs with `FORM_ENTRY` for the same `source_id` (form entry id) on different `report_date`s when creation and win fall on different days. Use `by_source_type` for both; do not use win-only filters for a full-funnel story in one period.
   - `USER_INVITE`: Invite/self-serve onboarding path (not only staff-invited users).
   - `EVENT_RSVP`: Event/workshop registration from `events.EventCheckin` on the **RSVP day** (`created_at` date). Funnel tier **nurture_invite** (`4`).
   - `EVENT_ATTENDED`: Same check-in when the person **attended**; row is written on **`attended_at` date** with funnel tier **soft_lead** (`3`). RSVP and attendance are **two rows** (same `source_id`, different `source_type`) when both apply, so stage-flow is visible (same calendar day can have both).
+- This report is **time-window / activity** style: `report_date` is the day the event is counted, not a full cohort engine. Cohort questions (e.g. “leads from March who ever won”) need joining `FORM_ENTRY` and `FORM_ENTRY_WON` on `source_id` or analytics outside this summary.
 - `funnel_tier` (required contract):
   - `1 = won_or_sale`
   - `2 = strong_lead`
@@ -75,10 +77,10 @@ GET /v1/monitoring/report/acquisition/summary?date_start=2026-03-23&date_end=202
 
 ## Summary Keys and Meaning
 
-- `total_events` / `total`: total event rows in filter scope.
+- `report_row_count`: number of `AcquisitionReport` rows matching filters (all source types); not “unique leads” — use `unique_identities` for people-level dedup.
 - `unique_identities`: deduped identities in filter scope (`user_id`, fallback normalized `email`).
 - `cross_academy_identities`: deduped identities seen in more than one academy in the same query scope.
-- `by_source_type`: distribution by `FORM_ENTRY`, `USER_INVITE`, `EVENT_RSVP`, and `EVENT_ATTENDED`.
+- `by_source_type`: distribution by `FORM_ENTRY`, `FORM_ENTRY_WON`, `USER_INVITE`, `EVENT_RSVP`, and `EVENT_ATTENDED`.
 - `by_funnel_tier`: counts by tier number (`"1"`..`"4"`).
 - `by_funnel_tier_label`: counts by tier label (`won_or_sale`, `strong_lead`, `soft_lead`, `nurture_invite`).
 - `by_funnel_tier_identities`: deduped identity counts by best tier (best tier wins: `1` > `2` > `3` > `4`).
