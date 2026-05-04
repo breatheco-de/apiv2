@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import uuid
@@ -4940,6 +4941,137 @@ def invite_user_to_plan_financing_team(
         )
 
 
+def _conversion_info_for_build_plan_financing_task(conversion_info: Any) -> str | None:
+    if conversion_info is None:
+        return None
+    if isinstance(conversion_info, str):
+        return conversion_info
+    return json.dumps(conversion_info)
+
+
+def validate_student_invite_plan_access_config(
+    *,
+    plans: list[Plan],
+    how_many_installments: int,
+    initial_payment_amount: float | None,
+    initial_payment_notes: str | None,
+    grace_period_duration: int,
+    grace_period_duration_unit: str,
+    lang: str,
+) -> dict[str, Any]:
+    """
+    Validate optional plan-access fields for POST /v1/auth/academy/student (same financing rules as staff subscription).
+    Returns a JSON-serializable dict to persist on UserInvite.student_plan_access.
+    """
+    if not plans:
+        raise ValidationException(
+            translation(lang, en="At least one plan is required", es="Se requiere al menos un plan"),
+            slug="plans-required-for-plan-access",
+            code=400,
+        )
+
+    if how_many_installments <= 0:
+        raise ValidationException(
+            translation(
+                lang,
+                en="how_many_installments must be a positive integer",
+                es="how_many_installments debe ser un entero positivo",
+            ),
+            slug="invalid-how-many-installments",
+            code=400,
+        )
+
+    allowed_grace_period_units = {DAY, WEEK, MONTH, YEAR}
+    if grace_period_duration_unit not in allowed_grace_period_units:
+        raise ValidationException(
+            translation(
+                lang,
+                en="grace_period_duration_unit must be DAY, WEEK, MONTH or YEAR",
+                es="grace_period_duration_unit debe ser DAY, WEEK, MONTH o YEAR",
+            ),
+            slug="invalid-grace-period-duration-unit",
+            code=400,
+        )
+
+    if grace_period_duration < 0:
+        raise ValidationException(
+            translation(
+                lang,
+                en="grace_period_duration must be zero or a positive integer",
+                es="grace_period_duration debe ser cero o un entero positivo",
+            ),
+            slug="invalid-grace-period-duration",
+            code=400,
+        )
+
+    if initial_payment_amount is not None:
+        try:
+            initial_payment_amount = float(initial_payment_amount)
+        except (TypeError, ValueError):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="initial_payment_amount must be a number",
+                    es="initial_payment_amount debe ser un número",
+                ),
+                slug="invalid-initial-payment-amount",
+                code=400,
+            )
+        if initial_payment_amount < 0:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="initial_payment_amount must be zero or greater",
+                    es="initial_payment_amount debe ser cero o mayor",
+                ),
+                slug="invalid-initial-payment-amount",
+                code=400,
+            )
+
+    for p in plans:
+        if p.financing_options.filter(how_many_months=how_many_installments).first() is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Financing option not found for {how_many_installments} installments (plan {p.slug})",
+                    es=f"No hay opción de financiamiento para {how_many_installments} cuotas (plan {p.slug})",
+                ),
+                slug="financing-option-not-found",
+                code=404,
+            )
+
+    return {
+        "how_many_installments": how_many_installments,
+        "initial_payment_amount": initial_payment_amount,
+        "initial_payment_notes": initial_payment_notes,
+        "grace_period_duration": grace_period_duration,
+        "grace_period_duration_unit": grace_period_duration_unit,
+    }
+
+
+def resolve_student_plan_access_from_invite(user_invite: UserInvite) -> dict[str, Any]:
+    """Defaults match legacy invite behaviour (single installment, no grace, no initial split)."""
+    raw: dict[str, Any] = {}
+    spa = getattr(user_invite, "student_plan_access", None)
+    if isinstance(spa, dict) and spa:
+        raw = spa
+    elif isinstance(user_invite.conversion_info, dict):
+        # Compat: invitaciones creadas cuando el payload vivía bajo __bc_student_plan_access
+        legacy = user_invite.conversion_info.get("__bc_student_plan_access")
+        if isinstance(legacy, dict):
+            raw = legacy
+    unit = raw.get("grace_period_duration_unit") or MONTH
+    if unit not in {DAY, WEEK, MONTH, YEAR}:
+        unit = MONTH
+    return {
+        "how_many_installments": int(raw.get("how_many_installments") or 1),
+        "initial_payment_amount": raw.get("initial_payment_amount"),
+        "initial_payment_notes": raw.get("initial_payment_notes"),
+        "grace_period_duration": int(raw.get("grace_period_duration") or 0),
+        "grace_period_duration_unit": unit,
+    }
+
+
 def create_invited_plan_financing_for_user(
     user: User,
     plan: Plan,
@@ -4948,10 +5080,17 @@ def create_invited_plan_financing_for_user(
     payment_method: PaymentMethod | None = None,
     author: User | None = None,
     lang: str = "en",
+    *,
+    how_many_installments: int = 1,
+    initial_payment_amount: float | None = None,
+    initial_payment_notes: str | None = None,
+    grace_period_duration: int = 0,
+    grace_period_duration_unit: str = MONTH,
+    conversion_info: Any = None,
 ) -> None:
     """
-    Create PlanFinancing for an existing user (staff-assigned / bulk upload).
-    Replicates the invite-acceptance flow: Bag + Invoice + build_plan_financing.
+    Create PlanFinancing for an existing user (staff-assigned / bulk upload / invite acceptance).
+    Mirrors staff subscription financing: optional installments, initial payment, grace period.
     """
     if plan.status == Plan.Status.DRAFT:
         raise ValidationException(
@@ -5000,20 +5139,21 @@ def create_invited_plan_financing_for_user(
             code=400,
         )
 
-    financing_option = plan.financing_options.filter(how_many_months=1).first()
+    financing_option = plan.financing_options.filter(how_many_months=how_many_installments).first()
     if not financing_option:
         raise ValidationException(
             translation(
                 lang,
-                en="This plan does not have a one-installment financing option configured. Please contact the academy. In bulk invitation one installment is assumend.",
-                es="Este plan no tiene configurada una opción de financiamiento de un mes. Por favor contacta a la academia.",
+                en="Financing option not found for this plan and installment count",
+                es="No se encontró opción de financiamiento para este plan y número de cuotas",
             ),
-            slug="plan-without-one-month-financing-option",
-            code=400,
+            slug="financing-option-not-found",
+            code=404,
         )
 
-    plan_price = financing_option.monthly_price
-    is_free = plan_price == 0
+    installment_amount = float(financing_option.monthly_price)
+    amount = float(initial_payment_amount) if initial_payment_amount is not None else installment_amount
+    is_free = installment_amount == 0
     externally_managed = payment_method is not None
 
     if payment_method and not payment_method.is_crypto and not author:
@@ -5033,7 +5173,7 @@ def create_invited_plan_financing_for_user(
     bag.chosen_period = "NO_SET"
     bag.status = "PAID"
     bag.type = "INVITED"
-    bag.how_many_installments = 1
+    bag.how_many_installments = how_many_installments
     bag.academy = academy
     bag.user = user
     bag.is_recurrent = False
@@ -5055,7 +5195,7 @@ def create_invited_plan_financing_for_user(
         proof.save()
 
     invoice = Invoice(
-        amount=plan_price,
+        amount=amount,
         paid_at=utc_now,
         user=user,
         bag=bag,
@@ -5068,7 +5208,28 @@ def create_invited_plan_financing_for_user(
     )
     invoice.save()
 
-    tasks.build_plan_financing.delay(bag.id, invoice.id, is_free=is_free)
+    conv_str = _conversion_info_for_build_plan_financing_task(conversion_info)
+
+    use_extended = (
+        initial_payment_amount is not None
+        or (initial_payment_notes is not None and str(initial_payment_notes).strip() != "")
+        or grace_period_duration > 0
+        or how_many_installments != 1
+    )
+
+    if use_extended:
+        build_kwargs: dict[str, Any] = {
+            "conversion_info": conv_str,
+            "cohorts": [cohort.slug],
+            "principal_amount": installment_amount,
+            "initial_payment_amount": amount,
+            "initial_payment_notes": initial_payment_notes,
+            "grace_period_duration": grace_period_duration,
+            "grace_period_duration_unit": grace_period_duration_unit,
+        }
+        tasks.build_plan_financing.delay(bag.id, invoice.id, is_free=is_free, **build_kwargs)
+    else:
+        tasks.build_plan_financing.delay(bag.id, invoice.id, is_free=is_free)
 
 
 def create_plan_financing_seat(

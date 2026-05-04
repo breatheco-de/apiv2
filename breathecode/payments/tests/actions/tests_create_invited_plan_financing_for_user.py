@@ -131,8 +131,8 @@ class CreateInvitedPlanFinancingForUserTestSuite(PaymentsTestCase):
             )
         self.assertEqual(getattr(cm.exception, "slug", None), "plan-draft-not-assignable")
 
-    def test_plan_without_one_month_financing_option_raises(self):
-        """Raises when plan has no financing_option with how_many_months=1."""
+    def test_plan_without_default_installment_financing_option_raises(self):
+        """Raises when plan has no financing_option for default how_many_installments=1."""
         model = self.bc.database.create(
             user=1,
             academy=1,
@@ -153,4 +153,4 @@ class CreateInvitedPlanFinancingForUserTestSuite(PaymentsTestCase):
                 author=None,
                 lang="en",
             )
-        self.assertEqual(getattr(cm.exception, "slug", None), "plan-without-one-month-financing-option")
+        self.assertEqual(getattr(cm.exception, "slug", None), "financing-option-not-found")
