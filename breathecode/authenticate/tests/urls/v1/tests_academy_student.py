@@ -887,7 +887,7 @@ class StudentPostTestSuite(AuthTestCase):
         data = {"role": role, "user": model["user"].id, "first_name": "Kenny", "last_name": "McKornick"}
         response = self.client.post(url, data, headers={"academy": 1})
         json = response.json()
-        expected = {"detail": "already-exists", "status_code": 400}
+        expected = {"detail": "already-exists-with-non-student-role", "status_code": 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
