@@ -22,6 +22,8 @@ def service_item_serializer(service_item, service):
     return {
         "how_many": service_item.how_many,
         "is_team_allowed": False,
+        "renew_at": service_item.renew_at,
+        "renew_at_unit": service_item.renew_at_unit,
         "service": {
             "consumer": "NO_SET",
             "groups": [],
@@ -83,6 +85,7 @@ def get_serializer(event, currency, service=None, academy=None, service_items=[]
         "service_items": service_items,
         "slug": event.slug,
         "status": event.status,
+        "discontinued_reason": event.discontinued_reason,
         "time_of_life": event.time_of_life,
         "time_of_life_unit": event.time_of_life_unit,
         "trial_duration": event.trial_duration,
@@ -122,6 +125,7 @@ def put_serializer(
         "event_type_set": event.event_type_set,
         "pricing_ratio_exceptions": {},
         "invites": [],
+        "discontinued_reason": data.get("discontinued_reason", event.discontinued_reason),
         **data,
     }
 
@@ -317,6 +321,9 @@ class SignalTestSuite(PaymentsTestCase):
             data["trial_duration"] = random.randint(1, 100)
             data["trial_duration_unit"] = random.choice(["DAY", "WEEK", "MONTH", "YEAR"])
 
+        if data.get("status") == "DISCONTINUED":
+            data.setdefault("discontinued_reason", "test-discontinued-reason")
+
         url = reverse_lazy("payments:academy_plan_id", kwargs={"plan_id": 2})
         response = self.client.put(url, data, format="json")
 
@@ -380,6 +387,9 @@ class SignalTestSuite(PaymentsTestCase):
         else:
             data["trial_duration"] = random.randint(1, 100)
             data["trial_duration_unit"] = random.choice(["DAY", "WEEK", "MONTH", "YEAR"])
+
+        if data.get("status") == "DISCONTINUED":
+            data.setdefault("discontinued_reason", "test-discontinued-reason")
 
         url = reverse_lazy("payments:academy_plan_id", kwargs={"plan_id": 1})
         response = self.client.put(url, data, format="json")

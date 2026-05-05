@@ -23,6 +23,8 @@ def service_item_serializer(service_item, service):
     return {
         "how_many": service_item.how_many,
         "is_team_allowed": False,
+        "renew_at": service_item.renew_at,
+        "renew_at_unit": service_item.renew_at_unit,
         "service": {
             "consumer": "NO_SET",
             "groups": [],
@@ -85,6 +87,7 @@ def get_serializer(event, currency, service=None, academy=None, service_items=[]
         "service_items": service_items,
         "slug": event.slug,
         "status": event.status,
+        "discontinued_reason": event.discontinued_reason,
         "time_of_life": event.time_of_life,
         "time_of_life_unit": event.time_of_life_unit,
         "trial_duration": event.trial_duration,
@@ -121,6 +124,7 @@ def post_serializer(currency, service=None, academy=None, service_items=[], fina
         "invites": [],
         "pricing_ratio_exceptions": {},
         "title": None,
+        "discontinued_reason": None,
         **data,
     }
 
@@ -150,6 +154,7 @@ def row(currency, academy=None, data={}):
         "cohort_set_id": None,
         "event_type_set_id": None,
         "pricing_ratio_exceptions": {},
+        "discontinued_reason": None,
         **data,
     }
 
@@ -831,6 +836,9 @@ class SignalTestSuite(PaymentsTestCase):
             data["trial_duration"] = random.randint(1, 100)
             data["trial_duration_unit"] = random.choice(["DAY", "WEEK", "MONTH", "YEAR"])
 
+        if data.get("status") == "DISCONTINUED":
+            data.setdefault("discontinued_reason", "test-discontinued-reason")
+
         url = reverse_lazy("payments:academy_plan")
         response = self.client.post(url, data, format="json")
 
@@ -895,6 +903,9 @@ class SignalTestSuite(PaymentsTestCase):
         else:
             data["trial_duration"] = random.randint(1, 100)
             data["trial_duration_unit"] = random.choice(["DAY", "WEEK", "MONTH", "YEAR"])
+
+        if data.get("status") == "DISCONTINUED":
+            data.setdefault("discontinued_reason", "test-discontinued-reason")
 
         url = reverse_lazy("payments:academy_plan")
         response = self.client.post(url, data, format="json")
