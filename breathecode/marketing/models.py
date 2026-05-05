@@ -512,6 +512,14 @@ class FormEntry(models.Model):
     ac_deal_amount = models.FloatField(default=None, null=True, blank=True)
     ac_deal_currency_code = models.CharField(max_length=3, default=None, null=True, blank=True)
 
+    ac_reservation_or_course_form_of_payment = models.CharField(
+        max_length=500,
+        default=None,
+        null=True,
+        blank=True,
+        help_text="Reservation or course form of payment (e.g. '50€ May, 50€ June')",
+    )
+
     won_at = models.DateTimeField(default=None, null=True, blank=True)
 
     attribution_id = models.CharField(
