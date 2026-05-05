@@ -71,6 +71,7 @@ def deal_update(ac_cls, webhook, payload: dict, acp_ids):
     entry = update_expected_cohort(ac_cls, entry, acp_ids, deal_custom_fields)
     entry = update_location(ac_cls, entry, acp_ids, deal_custom_fields)
     entry = update_course(ac_cls, entry, acp_ids, deal_custom_fields)
+    entry = update_reservation_form_of_payment(ac_cls, entry, acp_ids, deal_custom_fields)
 
     entry.custom_fields = deal_custom_fields
     entry.save()
@@ -105,6 +106,17 @@ def update_location(ac_cls, entry, acp_ids, deal_custom_fields):
             new_alias = AcademyAlias.objects.filter(slug=new_location).first()
             if new_alias and new_alias.academy is not None:
                 entry.academy = new_alias.academy
+
+    return entry
+
+
+def update_reservation_form_of_payment(ac_cls, entry, acp_ids, deal_custom_fields):
+    deal_ids = acp_ids["deal"]
+
+    if deal_ids["reservation_form_of_payment"] in deal_custom_fields:
+        value = deal_custom_fields[deal_ids["reservation_form_of_payment"]]
+        if value is not None and value != "":
+            entry.ac_reservation_or_course_form_of_payment = value
 
     return entry
 
