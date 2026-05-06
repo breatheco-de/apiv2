@@ -97,6 +97,20 @@ IMAGES_MIME_ALLOW = ["image/png", "image/svg+xml", "image/jpeg", "image/jpg"]
 USER_ASSIGNMENTS_BUCKET = os.getenv("USER_ASSIGNMENTS_BUCKET", None)
 
 
+def _apply_cohort_live_meeting_filter(items, request):
+    cohort_live_meeting = request.GET.get("cohort_live_meeting", None)
+    if cohort_live_meeting is None:
+        return items
+
+    value = cohort_live_meeting.lower()
+    if value == "true":
+        return items.exclude(Q(cohort__online_meeting_url__isnull=True) | Q(cohort__online_meeting_url=""))
+    if value == "false":
+        return items.filter(Q(cohort__online_meeting_url__isnull=True) | Q(cohort__online_meeting_url=""))
+
+    return items
+
+
 class TaskTeacherView(APIView):
 
     def get(self, request, task_id=None, user_id=None):
@@ -169,6 +183,8 @@ class TaskTeacherView(APIView):
         if task_type is not None:
             items = items.filter(task_type__in=task_type.split(","))
 
+        items = _apply_cohort_live_meeting_filter(items, request)
+
         items = items.order_by("created_at")
 
         serializer = TaskGETSerializer(items, many=True)
@@ -223,6 +239,8 @@ class AcademyTaskView(APIView):
         associated_slug = request.GET.get("associated_slug", None)
         if associated_slug is not None:
             items = items.filter(associated_slug__in=[p.lower().strip() for p in associated_slug.split(",")])
+
+        items = _apply_cohort_live_meeting_filter(items, request)
 
         items = handler.queryset(items)
 
@@ -829,6 +847,7 @@ class CohortTaskView(APIView, GenerateLookupsMixin):
             items = items.distinct()
 
         items = items.filter(**lookup)
+        items = _apply_cohort_live_meeting_filter(items, request)
         items = handler.queryset(items)
 
         serializer = TaskGETSerializer(items, many=True)
