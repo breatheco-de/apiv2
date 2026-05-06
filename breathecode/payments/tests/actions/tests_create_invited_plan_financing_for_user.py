@@ -52,6 +52,41 @@ class CreateInvitedPlanFinancingForUserTestSuite(PaymentsTestCase):
 
         tasks.build_plan_financing.delay.assert_called_once_with(bag.id, invoice.id, is_free=False)
 
+    @patch("breathecode.payments.tasks.build_plan_financing.delay", MagicMock())
+    def test_unique_payment_negotiated_amount_sets_invoice_without_initial_payment_kwarg(self):
+        model = self.bc.database.create(
+            user=1,
+            academy=1,
+            currency=1,
+            cohort={"available_as_saas": True},
+            cohort_set=1,
+            cohort_set_cohort=1,
+            financing_option={"how_many_months": 1, "monthly_price": 9500},
+            plan={"is_renewable": False, "time_of_life": 1, "time_of_life_unit": "MONTH", "status": "ACTIVE"},
+        )
+        create_invited_plan_financing_for_user(
+            user=model.user,
+            plan=model.plan,
+            academy=model.academy,
+            cohort=model.cohort,
+            payment_method=None,
+            author=None,
+            lang="en",
+            unique_payment_negotiated_amount=8500,
+        )
+        bag = Bag.objects.filter(user=model.user, type="INVITED").first()
+        invoice = Invoice.objects.filter(bag=bag).first()
+        self.assertEqual(invoice.amount, 8500)
+        self.assertEqual(
+            invoice.amount_breakdown["plans"][model.plan.slug]["type"],
+            "UNIQUE_PAYMENT_NEGOTIATED",
+        )
+        from breathecode.payments import tasks
+
+        kw = tasks.build_plan_financing.delay.call_args.kwargs
+        self.assertEqual(kw.get("principal_amount"), 8500)
+        self.assertNotIn("initial_payment_amount", kw)
+
     def test_plan_cohort_mismatch_raises(self):
         """Raises when plan's cohort_set does not include the cohort."""
         model = self.bc.database.create(

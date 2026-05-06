@@ -1624,6 +1624,7 @@ def accept_invite_action(data=None, token=None, lang="en"):
                 how_many_installments=access["how_many_installments"],
                 initial_payment_amount=access["initial_payment_amount"],
                 initial_payment_notes=access["initial_payment_notes"],
+                unique_payment_negotiated_amount=access.get("unique_payment_negotiated_amount"),
                 grace_period_duration=access["grace_period_duration"],
                 grace_period_duration_unit=access["grace_period_duration_unit"],
             )

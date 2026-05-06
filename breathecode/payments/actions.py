@@ -2418,6 +2418,44 @@ def validate_and_create_subscriptions(
                 code=400,
             )
 
+    unique_payment_negotiated_amount = data.get("unique_payment_negotiated_amount", None)
+    if unique_payment_negotiated_amount is None and "negotiated_invoice_amount" in data:
+        unique_payment_negotiated_amount = data.get("negotiated_invoice_amount", None)
+    if unique_payment_negotiated_amount is not None:
+        try:
+            unique_payment_negotiated_amount = float(unique_payment_negotiated_amount)
+        except (TypeError, ValueError):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="unique_payment_negotiated_amount must be a number",
+                    es="unique_payment_negotiated_amount debe ser un número",
+                    slug="invalid-unique-payment-negotiated-amount",
+                ),
+                code=400,
+            )
+        if unique_payment_negotiated_amount <= 0:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="unique_payment_negotiated_amount must be greater than zero",
+                    es="unique_payment_negotiated_amount debe ser mayor que cero",
+                    slug="invalid-unique-payment-negotiated-amount",
+                ),
+                code=400,
+            )
+
+    if initial_payment_amount is not None and unique_payment_negotiated_amount is not None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="unique_payment_negotiated_amount cannot be combined with initial_payment_amount",
+                es="unique_payment_negotiated_amount no puede combinarse con initial_payment_amount",
+                slug="unique-payment-negotiated-initial-exclusive",
+            ),
+            code=400,
+        )
+
     initial_payment_notes = data.get("initial_payment_notes", None)
 
     try:
@@ -2561,8 +2599,17 @@ def validate_and_create_subscriptions(
     currency = resolve_currency_for_staff_payment(payment_method, academy, lang)
 
     original_price = option.monthly_price
-    installment_amount = get_discounted_price(original_price, coupons)
-    amount = initial_payment_amount if initial_payment_amount is not None else installment_amount
+    catalog_installment_amount = get_discounted_price(original_price, coupons)
+    installment_amount = catalog_installment_amount
+    if unique_payment_negotiated_amount is not None:
+        installment_amount = unique_payment_negotiated_amount
+
+    if initial_payment_amount is not None:
+        amount = initial_payment_amount
+    elif unique_payment_negotiated_amount is not None:
+        amount = unique_payment_negotiated_amount
+    else:
+        amount = installment_amount
 
     amount_breakdown = None
     if initial_payment_amount is not None:
@@ -2572,6 +2619,18 @@ def validate_and_create_subscriptions(
                     "amount": amount,
                     "currency": currency.code,
                     "type": "INITIAL_PAYMENT",
+                }
+            },
+            "service-items": {},
+        }
+    elif unique_payment_negotiated_amount is not None:
+        amount_breakdown = {
+            "plans": {
+                plan.slug: {
+                    "amount": amount,
+                    "currency": currency.code,
+                    "type": "UNIQUE_PAYMENT_NEGOTIATED",
+                    "catalog_installment_amount": catalog_installment_amount,
                 }
             },
             "service-items": {},
@@ -2595,25 +2654,23 @@ def validate_and_create_subscriptions(
     if coupons and original_price > 0:
         create_seller_reward_coupons(coupons, original_price, user)
 
-    build_kwargs = {
+    build_kwargs: dict[str, Any] = {
         "conversion_info": conversion_info,
         "cohorts": cohort,
     }
-    if (
-        initial_payment_amount is not None
-        or initial_payment_notes is not None
-        or grace_period_duration > 0
-        or "how_many_installments" in data
-    ):
-        build_kwargs.update(
-            {
-                "principal_amount": installment_amount,
-                "initial_payment_amount": amount,
-                "initial_payment_notes": initial_payment_notes,
-                "grace_period_duration": grace_period_duration,
-                "grace_period_duration_unit": grace_period_duration_unit,
-            }
-        )
+
+    if grace_period_duration > 0:
+        build_kwargs["grace_period_duration"] = grace_period_duration
+        build_kwargs["grace_period_duration_unit"] = grace_period_duration_unit
+
+    if initial_payment_notes is not None:
+        build_kwargs["initial_payment_notes"] = initial_payment_notes
+
+    if initial_payment_amount is not None:
+        build_kwargs["principal_amount"] = catalog_installment_amount
+        build_kwargs["initial_payment_amount"] = amount
+    elif unique_payment_negotiated_amount is not None:
+        build_kwargs["principal_amount"] = unique_payment_negotiated_amount
 
     tasks.build_plan_financing.delay(bag.id, invoice.id, **build_kwargs)
 
@@ -5025,6 +5082,7 @@ def validate_student_invite_plan_access_config(
     how_many_installments: int,
     initial_payment_amount: float | None,
     initial_payment_notes: str | None,
+    unique_payment_negotiated_amount: float | None = None,
     grace_period_duration: int,
     grace_period_duration_unit: str,
     lang: str,
@@ -5098,6 +5156,41 @@ def validate_student_invite_plan_access_config(
                 code=400,
             )
 
+    if unique_payment_negotiated_amount is not None:
+        try:
+            unique_payment_negotiated_amount = float(unique_payment_negotiated_amount)
+        except (TypeError, ValueError):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="unique_payment_negotiated_amount must be a number",
+                    es="unique_payment_negotiated_amount debe ser un número",
+                ),
+                slug="invalid-unique-payment-negotiated-amount",
+                code=400,
+            )
+        if unique_payment_negotiated_amount <= 0:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="unique_payment_negotiated_amount must be greater than zero",
+                    es="unique_payment_negotiated_amount debe ser mayor que cero",
+                ),
+                slug="invalid-unique-payment-negotiated-amount",
+                code=400,
+            )
+
+    if initial_payment_amount is not None and unique_payment_negotiated_amount is not None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="unique_payment_negotiated_amount cannot be combined with initial_payment_amount",
+                es="unique_payment_negotiated_amount no puede combinarse con initial_payment_amount",
+            ),
+            slug="unique-payment-negotiated-initial-exclusive",
+            code=400,
+        )
+
     for p in plans:
         if p.financing_options.filter(how_many_months=how_many_installments).first() is None:
             raise ValidationException(
@@ -5114,6 +5207,7 @@ def validate_student_invite_plan_access_config(
         "how_many_installments": how_many_installments,
         "initial_payment_amount": initial_payment_amount,
         "initial_payment_notes": initial_payment_notes,
+        "unique_payment_negotiated_amount": unique_payment_negotiated_amount,
         "grace_period_duration": grace_period_duration,
         "grace_period_duration_unit": grace_period_duration_unit,
     }
@@ -5133,10 +5227,14 @@ def resolve_student_plan_access_from_invite(user_invite: UserInvite) -> dict[str
     unit = raw.get("grace_period_duration_unit") or MONTH
     if unit not in {DAY, WEEK, MONTH, YEAR}:
         unit = MONTH
+    unique_raw = raw.get("unique_payment_negotiated_amount")
+    if unique_raw is None:
+        unique_raw = raw.get("negotiated_invoice_amount")
     return {
         "how_many_installments": int(raw.get("how_many_installments") or 1),
         "initial_payment_amount": raw.get("initial_payment_amount"),
         "initial_payment_notes": raw.get("initial_payment_notes"),
+        "unique_payment_negotiated_amount": unique_raw,
         "grace_period_duration": int(raw.get("grace_period_duration") or 0),
         "grace_period_duration_unit": unit,
     }
@@ -5154,6 +5252,7 @@ def create_invited_plan_financing_for_user(
     how_many_installments: int = 1,
     initial_payment_amount: float | None = None,
     initial_payment_notes: str | None = None,
+    unique_payment_negotiated_amount: float | None = None,
     grace_period_duration: int = 0,
     grace_period_duration_unit: str = MONTH,
     conversion_info: Any = None,
@@ -5221,7 +5320,37 @@ def create_invited_plan_financing_for_user(
             code=404,
         )
 
-    installment_amount = float(financing_option.monthly_price)
+    if initial_payment_amount is not None and unique_payment_negotiated_amount is not None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="unique_payment_negotiated_amount cannot be combined with initial_payment_amount",
+                es="unique_payment_negotiated_amount no puede combinarse con initial_payment_amount",
+            ),
+            slug="unique-payment-negotiated-initial-exclusive",
+            code=400,
+        )
+
+    catalog_installment_amount = float(financing_option.monthly_price)
+
+    uniq_negotiated: float | None = None
+    if unique_payment_negotiated_amount is not None:
+        uniq_negotiated = float(unique_payment_negotiated_amount)
+        if uniq_negotiated <= 0:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="unique_payment_negotiated_amount must be greater than zero",
+                    es="unique_payment_negotiated_amount debe ser mayor que cero",
+                ),
+                slug="invalid-unique-payment-negotiated-amount",
+                code=400,
+            )
+
+    installment_amount = catalog_installment_amount
+    if uniq_negotiated is not None:
+        installment_amount = uniq_negotiated
+
     amount = float(initial_payment_amount) if initial_payment_amount is not None else installment_amount
     is_free = installment_amount == 0
     externally_managed = payment_method is not None
@@ -5264,24 +5393,39 @@ def create_invited_plan_financing_for_user(
         )
         proof.save()
 
-    invoice = Invoice(
-        amount=amount,
-        paid_at=utc_now,
-        user=user,
-        bag=bag,
-        academy=academy,
-        status="FULFILLED",
-        currency=academy.main_currency,
-        payment_method=payment_method,
-        externally_managed=externally_managed,
-        proof=proof,
-    )
+    invoice_kw: dict[str, Any] = {
+        "amount": amount,
+        "paid_at": utc_now,
+        "user": user,
+        "bag": bag,
+        "academy": academy,
+        "status": "FULFILLED",
+        "currency": academy.main_currency,
+        "payment_method": payment_method,
+        "externally_managed": externally_managed,
+        "proof": proof,
+    }
+    if uniq_negotiated is not None:
+        invoice_kw["amount_breakdown"] = {
+            "plans": {
+                plan.slug: {
+                    "amount": amount,
+                    "currency": academy.main_currency.code if academy.main_currency else None,
+                    "type": "UNIQUE_PAYMENT_NEGOTIATED",
+                    "catalog_installment_amount": catalog_installment_amount,
+                }
+            },
+            "service-items": {},
+        }
+
+    invoice = Invoice(**invoice_kw)
     invoice.save()
 
     conv_str = _conversion_info_for_build_plan_financing_task(conversion_info)
 
     use_extended = (
         initial_payment_amount is not None
+        or uniq_negotiated is not None
         or (initial_payment_notes is not None and str(initial_payment_notes).strip() != "")
         or grace_period_duration > 0
         or how_many_installments != 1
@@ -5291,12 +5435,16 @@ def create_invited_plan_financing_for_user(
         build_kwargs: dict[str, Any] = {
             "conversion_info": conv_str,
             "cohorts": [cohort.slug],
-            "principal_amount": installment_amount,
-            "initial_payment_amount": amount,
-            "initial_payment_notes": initial_payment_notes,
             "grace_period_duration": grace_period_duration,
             "grace_period_duration_unit": grace_period_duration_unit,
         }
+        if initial_payment_notes is not None:
+            build_kwargs["initial_payment_notes"] = initial_payment_notes
+        if initial_payment_amount is not None:
+            build_kwargs["principal_amount"] = catalog_installment_amount
+            build_kwargs["initial_payment_amount"] = amount
+        else:
+            build_kwargs["principal_amount"] = installment_amount
         tasks.build_plan_financing.delay(bag.id, invoice.id, is_free=is_free, **build_kwargs)
     else:
         tasks.build_plan_financing.delay(bag.id, invoice.id, is_free=is_free)
