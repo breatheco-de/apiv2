@@ -49,6 +49,7 @@ acp_ids = {
         "utm_placement": "23",
         "referral_key": "34",
         "scheudule": "35",
+        "reservation_form_of_payment": "51",
     },
 }
 

@@ -1480,8 +1480,7 @@ JWT_LIFETIME = 10
 
 def accept_invite_action(data=None, token=None, lang="en"):
     from breathecode.payments import actions as payments_actions
-    from breathecode.payments import tasks as payments_tasks
-    from breathecode.payments.models import Bag, Invoice, Plan
+    from breathecode.payments.models import Plan
 
 
     if data is None:
@@ -1565,106 +1564,77 @@ def accept_invite_action(data=None, token=None, lang="en"):
         for plan in invite.subscription_seat.billing_team.plans.all():
             payments_actions.grant_student_capabilities(user, plan)
 
-    if invite.cohort is not None:
-        role = "student"
-        if invite.role is not None and invite.role.slug != "student":
-            role = invite.role.slug.upper()
+    # StudentPOSTSerializer creates one UserInvite per cohort (each with its own token). Accepting any
+    # of those tokens must enroll the user in every cohort in that batch (same email + academy + role).
+    pending_invite_qs = UserInvite.objects.filter(email__iexact=invite.email, status="PENDING")
+    if invite.academy_id is not None:
+        pending_invite_qs = pending_invite_qs.filter(academy_id=invite.academy_id)
+    else:
+        pending_invite_qs = pending_invite_qs.filter(pk=invite.pk)
+    if invite.role_id is not None:
+        pending_invite_qs = pending_invite_qs.filter(role_id=invite.role_id)
 
-        cu = CohortUser.objects.filter(user=user, cohort=invite.cohort).first()
+    pending_invites = list(
+        pending_invite_qs.select_related(
+            "cohort",
+            "cohort__academy",
+            "role",
+            "payment_method",
+            "author",
+            "user",
+        )
+    )
+
+    for user_invite in pending_invites:
+        if user_invite.cohort is None:
+            continue
+
+        role = "student"
+        if user_invite.role is not None and user_invite.role.slug != "student":
+            role = user_invite.role.slug.upper()
+
+        cu = CohortUser.objects.filter(user=user, cohort=user_invite.cohort).first()
         if cu is None:
-            cu = CohortUser(user=user, cohort=invite.cohort, role=role.upper(), finantial_status=UP_TO_DATE)
+            cu = CohortUser(user=user, cohort=user_invite.cohort, role=role.upper(), finantial_status=UP_TO_DATE)
             cu.save()
 
-        plan = Plan.objects.filter(cohort_set__cohorts=invite.cohort, invites=invite).first()
+        plan = Plan.objects.filter(cohort_set__cohorts=user_invite.cohort, invites=user_invite).first()
 
-        invite_user = invite.user or user
+        invite_user = user_invite.user or user
 
         if (
             plan
             and invite_user
-            and invite.cohort.academy.main_currency
+            and user_invite.cohort.academy.main_currency
             and (
-                invite.cohort.available_as_saas == True
-                or (invite.cohort.available_as_saas == None and invite.cohort.academy.available_as_saas == True)
+                user_invite.cohort.available_as_saas == True
+                or (user_invite.cohort.available_as_saas == None and user_invite.cohort.academy.available_as_saas == True)
             )
         ):
-            utc_now = timezone.now()
-
-            bag = Bag()
-            bag.chosen_period = "NO_SET"
-            bag.status = "PAID"
-            bag.type = "INVITED"
-            bag.how_many_installments = 1
-            bag.academy = invite.cohort.academy
-            bag.user = user
-            bag.is_recurrent = False
-            bag.was_delivered = False
-            bag.token = None
-            bag.currency = invite.cohort.academy.main_currency
-            bag.expires_at = None
-
-            bag.save()
-
-            bag.plans.add(plan)
-
-            financing_option = plan.financing_options.filter(how_many_months=1).first()
-            if not financing_option:
-                raise ValidationException(
-                    translation(
-                        en="This plan does not have a one-installment financing option configured. Please contact the academy.",
-                        es="Este plan no tiene configurada una opción de financiamiento de un mes. Por favor contacta a la academia.",
-                    ),
-                    slug="plan-without-one-month-financing-option",
-                    code=400,
-                )
-            plan_price = financing_option.monthly_price
-            is_free = plan_price == 0
-
-            externally_managed = invite.payment_method is not None
-
-            proof = None
-            if invite.payment_method and not invite.payment_method.is_crypto:
-                from breathecode.payments.models import ProofOfPayment
-
-                if not invite.author:
-                    raise ValidationException(
-                        translation(
-                            en="Invite author is required when payment method is set. The author is the staff member who created the invitation.",
-                            es="El autor de la invitación es requerido cuando se establece un método de pago. El autor es el miembro del staff que creó la invitación.",
-                        ),
-                        slug="invite-author-required-for-payment-method",
-                        code=400,
-                    )
-
-                proof = ProofOfPayment(
-                    created_by=invite.author,
-                    status=ProofOfPayment.Status.DONE,
-                    provided_payment_details=f"Payment via invitation with payment method: {invite.payment_method.title}",
-                    reference=f"INVITE-{invite.id}",
-                )
-                proof.save()
-
-            invoice = Invoice(
-                amount=plan_price,
-                paid_at=utc_now,
+            access = payments_actions.resolve_student_plan_access_from_invite(user_invite)
+            payments_actions.create_invited_plan_financing_for_user(
                 user=invite_user,
-                bag=bag,
-                academy=bag.academy,
-                status="FULFILLED",
-                currency=bag.academy.main_currency,
-                payment_method=invite.payment_method,
-                externally_managed=externally_managed,
-                proof=proof,
+                plan=plan,
+                academy=user_invite.cohort.academy,
+                cohort=user_invite.cohort,
+                payment_method=user_invite.payment_method,
+                author=user_invite.author,
+                lang=lang,
+                conversion_info=user_invite.conversion_info,
+                how_many_installments=access["how_many_installments"],
+                initial_payment_amount=access["initial_payment_amount"],
+                initial_payment_notes=access["initial_payment_notes"],
+                grace_period_duration=access["grace_period_duration"],
+                grace_period_duration_unit=access["grace_period_duration_unit"],
             )
-            invoice.save()
 
-            payments_tasks.build_plan_financing.delay(bag.id, invoice.id, is_free=is_free)
+    for user_invite in pending_invites:
+        user_invite.user = user
+        user_invite.status = "ACCEPTED"
+        user_invite.is_email_validated = True
+        user_invite.save()
 
-    invite.user = user
-    invite.status = "ACCEPTED"
-    invite.is_email_validated = True
-    invite.save()
-
+    invite.refresh_from_db()
     return invite
 
 
