@@ -22,6 +22,8 @@ def service_item_serializer(service_item, service):
     return {
         "how_many": service_item.how_many,
         "is_team_allowed": False,
+        "renew_at": service_item.renew_at,
+        "renew_at_unit": service_item.renew_at_unit,
         "service": {
             "consumer": "NO_SET",
             "groups": [],
@@ -83,6 +85,7 @@ def get_serializer(event, currency, service=None, academy=None, service_items=[]
         "service_items": service_items,
         "slug": event.slug,
         "status": event.status,
+        "discontinued_reason": event.discontinued_reason,
         "time_of_life": event.time_of_life,
         "time_of_life_unit": event.time_of_life_unit,
         "trial_duration": event.trial_duration,

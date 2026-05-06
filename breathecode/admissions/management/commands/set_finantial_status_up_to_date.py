@@ -1,36 +1,96 @@
-"""Set finantial_status to UP_TO_DATE for ACTIVE CohortUsers without a financial status."""
+"""Set finantial_status to UP_TO_DATE for ACTIVE/GRADUATED CohortUsers without a financial status."""
+
+from __future__ import annotations
+
+from datetime import datetime, time
 
 from django.core.management.base import BaseCommand, CommandError
-from django.db.models import Q
+from django.db.models import Exists, OuterRef, Q
+from django.utils import timezone
+from django.utils.dateparse import parse_date, parse_datetime
 
-from breathecode.admissions.models import ACTIVE, Cohort, CohortUser, UP_TO_DATE
+from breathecode.admissions.models import ACTIVE, Cohort, CohortUser, GRADUATED, UP_TO_DATE
+
+_ELIGIBLE_EDUCATIONAL = [ACTIVE, GRADUATED]
 
 
-def cohort_users_missing_financial(cohort: Cohort, *, role: str | None):
-    """CohortUsers in this cohort that are ACTIVE and have empty finantial_status."""
+def filter_users_with_active_plan_financing_or_subscription(qs):
+    """
+    Only CohortUsers whose user has at least one PlanFinancing in ACTIVE or FULLY_PAID,
+    or at least one Subscription in ACTIVE.
+    """
+    from breathecode.payments.models import PlanFinancing, Subscription
+
+    S = PlanFinancing.Status
+    pf_exists = PlanFinancing.objects.filter(
+        user_id=OuterRef("user_id"),
+        status__in=[S.ACTIVE, S.FULLY_PAID],
+    )
+    sub_exists = Subscription.objects.filter(
+        user_id=OuterRef("user_id"),
+        status=Subscription.Status.ACTIVE,
+    )
+    return qs.annotate(
+        _has_pf_ok=Exists(pf_exists),
+        _has_sub_ok=Exists(sub_exists),
+    ).filter(Q(_has_pf_ok=True) | Q(_has_sub_ok=True))
+
+
+def parse_created_on_or_after(raw: str):
+    """ISO date (YYYY-MM-DD) or datetime; naive values use the current timezone."""
+    s = raw.strip()
+    dt = parse_datetime(s)
+    if dt is not None:
+        if timezone.is_naive(dt):
+            dt = timezone.make_aware(dt, timezone.get_current_timezone())
+        return dt
+    d = parse_date(s)
+    if d is not None:
+        return timezone.make_aware(datetime.combine(d, time.min), timezone.get_current_timezone())
+    raise CommandError(
+        f"Invalid date/datetime {raw!r}. Use ISO date YYYY-MM-DD or datetime, e.g. 2026-01-15T12:00:00."
+    )
+
+
+def cohort_users_missing_financial(
+    cohort: Cohort, *, role: str | None, created_on_or_after: datetime | None = None
+):
+    """CohortUsers in this cohort that are ACTIVE or GRADUATED and have empty finantial_status."""
     qs = (
-        CohortUser.objects.filter(cohort=cohort, educational_status=ACTIVE)
+        CohortUser.objects.filter(cohort=cohort, educational_status__in=_ELIGIBLE_EDUCATIONAL)
         .filter(Q(finantial_status__isnull=True) | Q(finantial_status=""))
         .select_related("user", "cohort")
         .order_by("id")
     )
+    if created_on_or_after is not None:
+        qs = qs.filter(created_at__gte=created_on_or_after)
     if role:
         qs = qs.filter(role=role.strip().upper())
-    return qs
+    return filter_users_with_active_plan_financing_or_subscription(qs)
+
+
+def macro_enrolled_user_ids(cohort: Cohort, *, role: str | None):
+    """user_ids with an ACTIVE/GRADUATED CohortUser on this cohort (scopes which micro rows we touch)."""
+    qs = CohortUser.objects.filter(cohort=cohort, educational_status__in=_ELIGIBLE_EDUCATIONAL)
+    if role:
+        qs = qs.filter(role=role.strip().upper())
+    return qs.values("user_id")
 
 
 class Command(BaseCommand):
     help = (
-        "For a given cohort, list CohortUsers with no finantial_status "
-        "(null or empty) and educational_status ACTIVE, and set finantial_status to UP_TO_DATE. "
-        "If --include-micro-cohorts is set and this cohort links micro cohorts (macro), "
-        "also updates matching CohortUsers for the same users in those micro cohorts."
+        "Set finantial_status to UP_TO_DATE for CohortUsers with no finantial_status "
+        "(null or empty) and educational_status ACTIVE or GRADUATED. "
+        "You must pass the cohort with --cohort-id or --cohort-slug. "
+        "Use --include-micro-cohorts to also update linked micro cohorts for users on that macro. "
+        "Optional --created-on-or-after limits to CohortUser rows whose created_at is on or after that instant. "
+        "Only users with at least one PlanFinancing (ACTIVE or FULLY_PAID) or an active Subscription are included."
     )
 
     def add_arguments(self, parser):
-        group = parser.add_mutually_exclusive_group(required=True)
-        group.add_argument("--cohort-id", type=int, help="Cohort primary key")
-        group.add_argument("--cohort-slug", type=str, help="Cohort slug (unique)")
+        cohort_group = parser.add_mutually_exclusive_group(required=True)
+        cohort_group.add_argument("--cohort-id", type=int, help="Cohort primary key")
+        cohort_group.add_argument("--cohort-slug", type=str, help="Cohort slug (unique)")
 
         parser.add_argument(
             "--role",
@@ -50,24 +110,43 @@ class Command(BaseCommand):
             action="store_true",
             help=(
                 "If this cohort lists micro cohorts, also apply the same logic for CohortUsers in those "
-                "micro cohorts, but only for user_ids that qualify on this (macro) cohort."
+                "micro cohorts, for any user who has an ACTIVE or GRADUATED CohortUser on this macro cohort "
+                "(macro finantial_status may already be set)."
+            ),
+        )
+        parser.add_argument(
+            "--created-on-or-after",
+            type=str,
+            default=None,
+            metavar="DATE_OR_DATETIME",
+            help=(
+                "Only consider CohortUser rows with created_at >= this value "
+                "(ISO date YYYY-MM-DD or datetime). Omit to apply no created_at filter."
             ),
         )
 
     def handle(self, *args, **options):
-        if options["cohort_id"] is not None:
-            cohort = Cohort.objects.filter(id=options["cohort_id"]).first()
+        cohort_id = options.get("cohort_id")
+        cohort_slug = options.get("cohort_slug")
+
+        if cohort_id is not None:
+            cohort = Cohort.objects.filter(id=cohort_id).first()
             if not cohort:
-                raise CommandError(f"No cohort found with id={options['cohort_id']}")
+                raise CommandError(f"No cohort found with id={cohort_id}")
         else:
-            slug = options["cohort_slug"].strip()
+            slug = cohort_slug.strip()
             cohort = Cohort.objects.filter(slug=slug).first()
             if not cohort:
                 raise CommandError(f"No cohort found with slug={slug!r}")
 
         role = options["role"]
+        since_created = (
+            parse_created_on_or_after(options["created_on_or_after"])
+            if options.get("created_on_or_after")
+            else None
+        )
 
-        macro_qs = cohort_users_missing_financial(cohort, role=role)
+        macro_qs = cohort_users_missing_financial(cohort, role=role, created_on_or_after=since_created)
 
         micro_qs = CohortUser.objects.none()
         if options["include_micro_cohorts"]:
@@ -76,15 +155,18 @@ class Command(BaseCommand):
                 micro_qs = (
                     CohortUser.objects.filter(
                         cohort_id__in=micro_ids,
-                        user_id__in=macro_qs.values("user_id"),
-                        educational_status=ACTIVE,
+                        user_id__in=macro_enrolled_user_ids(cohort, role=role),
+                        educational_status__in=_ELIGIBLE_EDUCATIONAL,
                     )
                     .filter(Q(finantial_status__isnull=True) | Q(finantial_status=""))
                     .select_related("user", "cohort")
                     .order_by("cohort_id", "id")
                 )
+                if since_created is not None:
+                    micro_qs = micro_qs.filter(created_at__gte=since_created)
                 if role:
                     micro_qs = micro_qs.filter(role=role.strip().upper())
+                micro_qs = filter_users_with_active_plan_financing_or_subscription(micro_qs)
 
         macro_rows = list(macro_qs)
         micro_rows = list(micro_qs)
@@ -94,12 +176,22 @@ class Command(BaseCommand):
         rows = macro_rows + micro_rows
 
         self.stdout.write(self.style.NOTICE(f"Cohort: {cohort.name} (id={cohort.id}, slug={cohort.slug})"))
+        if since_created is not None:
+            self.stdout.write(
+                self.style.NOTICE(f"  created_at filter: CohortUser.created_at >= {since_created.isoformat()}")
+            )
+        self.stdout.write(
+            self.style.NOTICE(
+                "  Payment filter: user has PlanFinancing status ACTIVE or FULLY_PAID, "
+                "or Subscription status ACTIVE."
+            )
+        )
         if options["include_micro_cohorts"]:
             micro_linked = cohort.micro_cohorts.count()
             self.stdout.write(
                 self.style.NOTICE(
                     f"  Include micro cohorts: yes — linked micro cohorts: {micro_linked} "
-                    f"(matches restricted to macro-qualified user_ids)."
+                    f"(micro rows scoped to users with ACTIVE/GRADUATED on this macro)."
                 )
             )
         else:

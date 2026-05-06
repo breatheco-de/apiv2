@@ -1111,6 +1111,12 @@ class Plan(AbstractPriceByTime):
 
     status = models.CharField(max_length=12, choices=Status, default=Status.DRAFT, help_text="Status")
 
+    discontinued_reason = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Required when transitioning the plan status to DISCONTINUED",
+    )
+
     time_of_life = models.IntegerField(default=1, blank=True, null=True, help_text="Plan lifetime (e.g. 1, 2, 3, ...)")
     time_of_life_unit = models.CharField(
         max_length=10,
