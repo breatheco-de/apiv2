@@ -289,6 +289,66 @@ def build_certificate_diagnostic(cohort_user: CohortUser) -> dict:
     }
 
 
+def print_certificate_diagnostic(stdout, style: object, cohort_user: CohortUser) -> dict:
+    """
+    Print the same narrative report as diagnose_certificate.Command._print_diagnostic.
+
+    Args:
+        stdout: Management command stdout wrapper (implements .write(str)).
+        style: BaseCommand.style (SUCCESS, WARNING, ERROR, ...).
+
+    Returns:
+        Structured dict from build_certificate_diagnostic.
+    """
+    user = cohort_user.user
+    cohort = cohort_user.cohort
+    result = build_certificate_diagnostic(cohort_user)
+
+    stdout.write(f"\n{'='*80}")
+    stdout.write(
+        style.SUCCESS(
+            f"Usuario: {user.email} (ID: {user.id}) | "
+            f"Cohort: {cohort.name} (ID: {cohort.id}) | "
+            f"Academia: {cohort.academy.name if cohort.academy else 'N/A'}"
+        )
+    )
+    stdout.write(f"{'='*80}\n")
+
+    for ch in result.get("checks", []):
+        sym = "✓" if ch.get("ok") else ("⚠" if ch.get("severity") == "warning" else "❌")
+        stdout.write(f"{sym} [{ch.get('slug')}] {ch.get('message')}")
+
+    mp = result.get("mandatory_project_slugs") or []
+    if mp:
+        if len(mp) <= 10:
+            stdout.write(f"\nMandatory PROJECT slugs: {', '.join(mp)}")
+        else:
+            stdout.write(f"\nMandatory PROJECT slugs (first 10): {', '.join(mp[:10])}...")
+
+    for sample in result.get("pending_task_samples") or []:
+        stdout.write(
+            f"    • {sample.get('associated_slug')}: task_status={sample.get('task_status')}, "
+            f"revision_status={sample.get('revision_status')}"
+        )
+
+    stdout.write(f"\n{'─'*80}")
+    stdout.write(result.get("summary", ""))
+    if result.get("issues"):
+        stdout.write(style.ERROR(f"❌ ISSUES FOUND ({len(result['issues'])}):"))
+        for i, issue in enumerate(result["issues"], 1):
+            stdout.write(style.ERROR(f"  {i}. {issue}"))
+    else:
+        stdout.write(style.SUCCESS("✓ All checks passed! Certificate should be generable."))
+
+    if result.get("warnings"):
+        stdout.write(style.WARNING(f"⚠️  WARNINGS ({len(result['warnings'])}):"))
+        for i, warning in enumerate(result["warnings"], 1):
+            stdout.write(style.WARNING(f"  {i}. {warning}"))
+    stdout.write(f"{'─'*80}\n")
+
+    return result
+
+
 def list_graduated_without_certificate_cohort_users(academy_id: int | None, limit: int | None):
     """
     CohortUser rows: GRADUATED student, SaaS cohort, no PERSISTED certificate — same as diagnose_certificate --all-graduated.
