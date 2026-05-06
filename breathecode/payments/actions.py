@@ -5146,11 +5146,12 @@ def create_invited_plan_financing_for_user(
     user: User,
     plan: Plan,
     academy: Academy,
-    cohort: Cohort,
+    cohort: Cohort | None = None,
     payment_method: PaymentMethod | None = None,
     author: User | None = None,
     lang: str = "en",
     *,
+    joined_cohorts: list[Cohort] | None = None,
     how_many_installments: int = 1,
     initial_payment_amount: float | None = None,
     initial_payment_notes: str | None = None,
@@ -5161,6 +5162,7 @@ def create_invited_plan_financing_for_user(
     """
     Create PlanFinancing for an existing user (staff-assigned / bulk upload / invite acceptance).
     Mirrors staff subscription financing: optional installments, initial payment, grace period.
+    ``cohort`` / ``joined_cohorts``: optional; when omitted, financing is created without ``joined_cohorts``.
     """
     if plan.status == Plan.Status.DRAFT:
         raise ValidationException(
@@ -5173,16 +5175,24 @@ def create_invited_plan_financing_for_user(
             code=400,
         )
 
-    if not plan.cohort_set or not plan.cohort_set.cohorts.filter(id=cohort.id).exists():
-        raise ValidationException(
-            translation(
-                lang,
-                en="Plan does not include this cohort. The plan's cohort_set must contain the cohort.",
-                es="El plan no incluye este cohort. El cohort_set del plan debe contener el cohort.",
-            ),
-            slug="plan-cohort-mismatch",
-            code=400,
-        )
+    seen_ids: set[int] = set()
+    all_cohorts: list[Cohort] = []
+    for c in ([cohort] if cohort is not None else []) + list(joined_cohorts or []):
+        if c.id not in seen_ids:
+            seen_ids.add(c.id)
+            all_cohorts.append(c)
+
+    for c in all_cohorts:
+        if not plan.cohort_set or not plan.cohort_set.cohorts.filter(id=c.id).exists():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Plan does not include this cohort. The plan's cohort_set must contain the cohort.",
+                    es="El plan no incluye este cohort. El cohort_set del plan debe contener el cohort.",
+                ),
+                slug="plan-cohort-mismatch",
+                code=400,
+            )
 
     if not academy.main_currency_id:
         raise ValidationException(
@@ -5195,19 +5205,20 @@ def create_invited_plan_financing_for_user(
             code=400,
         )
 
-    if not (
-        cohort.available_as_saas is True
-        or (cohort.available_as_saas is None and academy.available_as_saas is True)
-    ):
-        raise ValidationException(
-            translation(
-                lang,
-                en="Cohort or academy must have available_as_saas=true for plan assignment",
-                es="El cohort o la academia deben tener available_as_saas=true para asignar planes",
-            ),
-            slug="cohort-not-available-as-saas",
-            code=400,
-        )
+    for c in all_cohorts:
+        if not (
+            c.available_as_saas is True
+            or (c.available_as_saas is None and academy.available_as_saas is True)
+        ):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Cohort or academy must have available_as_saas=true for plan assignment",
+                    es="El cohort o la academia deben tener available_as_saas=true para asignar planes",
+                ),
+                slug="cohort-not-available-as-saas",
+                code=400,
+            )
 
     financing_option = plan.financing_options.filter(how_many_months=how_many_installments).first()
     if not financing_option:
@@ -5287,10 +5298,12 @@ def create_invited_plan_financing_for_user(
         or how_many_installments != 1
     )
 
+    cohort_slugs = [c.slug for c in all_cohorts]
+
     if use_extended:
         build_kwargs: dict[str, Any] = {
             "conversion_info": conv_str,
-            "cohorts": [cohort.slug],
+            "cohorts": cohort_slugs,
             "principal_amount": installment_amount,
             "initial_payment_amount": amount,
             "initial_payment_notes": initial_payment_notes,
@@ -5298,6 +5311,8 @@ def create_invited_plan_financing_for_user(
             "grace_period_duration_unit": grace_period_duration_unit,
         }
         tasks.build_plan_financing.delay(bag.id, invoice.id, is_free=is_free, **build_kwargs)
+    elif cohort_slugs:
+        tasks.build_plan_financing.delay(bag.id, invoice.id, is_free=is_free, cohorts=cohort_slugs)
     else:
         tasks.build_plan_financing.delay(bag.id, invoice.id, is_free=is_free)
 
