@@ -17,7 +17,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 import breathecode.notify.actions as notify_actions
-from breathecode.admissions.models import Academy, City, Cohort, CohortUser, Country, Syllabus
+from breathecode.admissions.models import Academy, City, Cohort, CohortUser, Country, Syllabus, UP_TO_DATE
 from breathecode.authenticate.actions import convert_youtube_to_embed, get_app_url, get_invite_url, get_user_settings, sync_with_rigobot
 from breathecode.authenticate.tasks import verify_user_invite_email
 from breathecode.events.models import Event
@@ -1361,7 +1361,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                 CohortUser.objects.get_or_create(
                     cohort=c,
                     user=user,
-                    defaults={"role": "STUDENT"},
+                    defaults={"role": "STUDENT", "finantial_status": UP_TO_DATE},
                 )
 
             if plans_for_user and cohort:

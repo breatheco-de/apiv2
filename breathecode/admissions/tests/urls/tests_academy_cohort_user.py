@@ -23,7 +23,7 @@ def cohort_user_item(data={}):
     return {
         "cohort_id": 0,
         "educational_status": "ACTIVE",
-        "finantial_status": None,
+        "finantial_status": "UP_TO_DATE",
         "id": 0,
         "role": "STUDENT",
         "user_id": 0,
@@ -50,7 +50,7 @@ def post_serializer(self, cohort, user, profile_academy=None, data={}):
         "created_at": self.bc.datetime.to_iso_string(UTC_NOW),
         "updated_at": self.bc.datetime.to_iso_string(UTC_NOW),
         "educational_status": "ACTIVE",
-        "finantial_status": None,
+        "finantial_status": "UP_TO_DATE",
         "id": 1,
         "profile_academy": (
             {

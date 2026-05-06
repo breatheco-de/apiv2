@@ -19,6 +19,7 @@ from breathecode.certificate.models import Specialty
 from .actions import haversine, resolve_syllabus_json, test_syllabus
 from .models import (
     COHORT_STAGE,
+    UP_TO_DATE,
     Academy,
     Cohort,
     CohortTimeSlot,
@@ -1581,6 +1582,9 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
 class CohortUserListSerializer(serializers.ListSerializer):
 
     def create(self, validated_data):
+        for item in validated_data:
+            if item.get("finantial_status") is None:
+                item["finantial_status"] = UP_TO_DATE
 
         books = [CohortUser(**item) for item in validated_data]
 
@@ -1627,6 +1631,11 @@ class CohortUserSerializer(CohortUserSerializerMixin):
         model = CohortUser
         fields = ["id", "user", "cohort", "role", "educational_status", "finantial_status"]
         list_serializer_class = CohortUserListSerializer
+
+    def create(self, validated_data):
+        if validated_data.get("finantial_status") is None:
+            validated_data["finantial_status"] = UP_TO_DATE
+        return super().create(validated_data)
 
 
 class CohortTimeSlotSerializer(serializers.ModelSerializer):
@@ -1696,6 +1705,11 @@ class CohortUserPUTSerializer(CohortUserSerializerMixin):
         model = CohortUser
         fields = ["id", "user", "cohort", "role", "educational_status", "finantial_status", "watching"]
         list_serializer_class = CohortUserListSerializer
+
+    def create(self, validated_data):
+        if validated_data.get("finantial_status") is None:
+            validated_data["finantial_status"] = UP_TO_DATE
+        return super().create(validated_data)
 
 
 class SyllabusSerializer(serializers.ModelSerializer):
