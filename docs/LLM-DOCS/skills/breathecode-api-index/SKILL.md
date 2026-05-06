@@ -33,7 +33,7 @@ This skill is the entry point for all BreatheCode API interactions. Its only job
 | **admissions** | Students, cohorts, syllabi, enrollments, cohort stages, micro/macro cohorts | `bc-admissions-*` |
 | **activity** | User activity tracking, engagement stats, daily summaries, login streaks | `bc-activity-*` |
 | **assessment** | Quizzes, tests, student quiz attempts, grading | `bc-assessment-*` |
-| **assignment** | Student task deliveries, project submissions, revision requests | `bc-assignment-*` |
+| **assignment** | Student task deliveries, project submissions, revision requests; **PROJECT** teacher review (list → registry asset → `PUT` task; **ignore** = same `PUT` with `revision_status=IGNORED`, not a separate route) | `bc-assignment-*`, [`bc-assignment-review-submit-task-revision`](../bc-assignment-review-submit-task-revision/SKILL.md) |
 | **authenticate** | Login, token generation, password reset, permissions, API key management | `bc-authenticate-*` |
 | **career** | Job listings, job applications post-graduation, employer connections | `bc-career-*` |
 | **certificate** | Certificate emission, specialties, certificate-syllabus associations | `bc-certificate-*` |
@@ -83,6 +83,7 @@ Some user requests touch multiple domains. Load ALL listed skills before proceed
 | Inspect incoming LearnPack telemetry webhook logs by student/event/asset/package filters | `bc-assignment-diagnose-asset-telemetry` + `bc-authenticate-*` (academy capability/header scope and identity checks) |
 | Delete LearnPack webhook logs (single or bulk cleanup) | `bc-assignment-diagnose-asset-telemetry` + `bc-authenticate-*` (cleanup is academy-scoped and restricted to `ERROR` webhooks; bulk delete requires `status=ERROR`) |
 | Configure per-academy LearnPack telemetry webhook ignore rules (by user, package, asset slug, or event) | `bc-assignment-diagnose-asset-telemetry` — use `GET`/`PUT /v1/assignment/academy/learnpack/telemetry-webhook-ignore` (rules are stored under `learnpack_features.telemetry_webhook_ignore` on academy auth settings) |
+| Review **PROJECT** syllabus tasks (list pending **`DONE`** deliveries oldest-first, load asset **`config`**, submit **`PUT`** approval/rejection — **ignoring** uses the same **`PUT`** with **`revision_status=IGNORED`**, not a separate route) | [`bc-assignment-review-submit-task-revision`](../bc-assignment-review-submit-task-revision/SKILL.md) + registry asset read (`GET /v1/registry/asset/{slug}`) + `bc-authenticate-*` (token / headers as needed) |
 
 ---
 
