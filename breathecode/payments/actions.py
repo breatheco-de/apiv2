@@ -1878,6 +1878,59 @@ def regenerate_service_stock_for_target(
     }
 
 
+def enqueue_service_stock_regeneration_for_plan(*, academy_id: int, plan_id: int) -> dict:
+    """
+    Queue async rebuild of service stock schedulers for every plan financing or subscription in
+    the academy that includes this plan and is ACTIVE or FULLY_PAID.
+
+    Subscription rows cannot normally be FULLY_PAID (model validation); the filter is kept
+    aligned with plan financing statuses for consistency.
+    """
+    eligible_statuses = (PlanFinancing.Status.ACTIVE, PlanFinancing.Status.FULLY_PAID)
+
+    plan_financing_ids = list(
+        PlanFinancing.objects.filter(
+            academy_id=academy_id,
+            plans__id=plan_id,
+            status__in=eligible_statuses,
+        )
+        .values_list("id", flat=True)
+        .distinct()
+    )
+    subscription_ids = list(
+        Subscription.objects.filter(
+            academy_id=academy_id,
+            plans__id=plan_id,
+            status__in=eligible_statuses,
+        )
+        .values_list("id", flat=True)
+        .distinct()
+    )
+
+    for pf_id in plan_financing_ids:
+        tasks.build_service_stock_scheduler_from_plan_financing.delay(pf_id)
+
+    for sub_id in subscription_ids:
+        tasks.build_service_stock_scheduler_from_subscription.delay(sub_id)
+
+    total = len(plan_financing_ids) + len(subscription_ids)
+
+    return {
+        "plan_id": plan_id,
+        "academy_id": academy_id,
+        "plan_financing_ids_queued": plan_financing_ids,
+        "subscription_ids_queued": subscription_ids,
+        "plan_financings_queued": len(plan_financing_ids),
+        "subscriptions_queued": len(subscription_ids),
+        "total_queued": total,
+        "message": (
+            f"Queued service stock scheduler rebuild for {total} target(s)"
+            if total
+            else "No active or fully paid subscriptions or plan financings found for this plan in this academy"
+        ),
+    }
+
+
 # Default configuration for coupon statistics
 DEFAULT_COUPON_STATS_CONFIG = {
     "coupons": {
@@ -2869,6 +2922,18 @@ def register_student_deposit(
     if amount <= 0:
         raise ValidationException(
             translation(lang, en="amount must be greater than zero", es="amount debe ser mayor a cero", slug="invalid-amount"),
+            code=400,
+        )
+
+    monthly_price_cap = float(plan_financing.monthly_price or 0)
+    if monthly_price_cap > 0 and amount > monthly_price_cap + 1e-6:
+        raise ValidationException(
+            translation(
+                lang,
+                en="amount cannot exceed plan_financing monthly_price",
+                es="amount no puede superar monthly_price del plan financiado",
+                slug="deposit-amount-exceeds-monthly-price",
+            ),
             code=400,
         )
 

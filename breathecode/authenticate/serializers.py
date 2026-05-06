@@ -17,7 +17,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 import breathecode.notify.actions as notify_actions
-from breathecode.admissions.models import Academy, City, Cohort, CohortUser, Country, Syllabus
+from breathecode.admissions.models import Academy, City, Cohort, CohortUser, Country, Syllabus, UP_TO_DATE
 from breathecode.authenticate.actions import convert_youtube_to_embed, get_app_url, get_invite_url, get_user_settings, sync_with_rigobot
 from breathecode.authenticate.tasks import verify_user_invite_email
 from breathecode.events.models import Event
@@ -1185,9 +1185,17 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
         elif "user" in data:
             already = ProfileAcademy.objects.filter(user=data["user"], academy=self.context["academy_id"]).first()
             if already:
-                raise ValidationException(
-                    "This user is already a member of this academy staff", code=400, slug="already-exists"
-                )
+                if already.role_id != "student":
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en="This user is already a member of this academy with a non-student role",
+                            es="Este usuario ya es miembro de esta academia con un rol diferente al de estudiante",
+                        ),
+                        code=400,
+                        slug="already-exists-with-non-student-role",
+                    )
+                data["_existing_profile_academy_id"] = already.id
 
         financing_field_names = (
             "how_many_installments",
@@ -1265,6 +1273,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
         from breathecode.payments.models import Plan
 
         student_plan_access = validated_data.pop("_student_plan_access_payload", None)
+        existing_profile_academy_id = validated_data.pop("_existing_profile_academy_id", None)
 
         academy = Academy.objects.filter(id=self.context.get("academy_id")).first()
         if academy is None:
@@ -1327,23 +1336,32 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                         academy_id=academy.id,
                     ).first()
 
-            profile_academy = ProfileAcademy.objects.create(
-                **{
-                    **validated_data,
-                    "email": email,
-                    "user": user,
-                    "academy": academy,
-                    "role": role,
-                    "status": status,
-                }
-            )
-            profile_academy.save()
+            profile_academy_extra_fields = ("welcome_video", "cohorts")
+            for _f in profile_academy_extra_fields:
+                validated_data.pop(_f, None)
+
+            if existing_profile_academy_id:
+                profile_academy = ProfileAcademy.objects.filter(id=existing_profile_academy_id).first()
+                if profile_academy is None:
+                    raise ValidationException("Profile academy not found", slug="profile-academy-not-found")
+            else:
+                profile_academy = ProfileAcademy.objects.create(
+                    **{
+                        **validated_data,
+                        "email": email,
+                        "user": user,
+                        "academy": academy,
+                        "role": role,
+                        "status": status,
+                    }
+                )
+                profile_academy.save()
 
             for c in cohort:
-                CohortUser.objects.create(
+                CohortUser.objects.get_or_create(
                     cohort=c,
-                    role="STUDENT",
                     user=user,
+                    defaults={"role": "STUDENT", "finantial_status": UP_TO_DATE},
                 )
 
             if plans_for_user and cohort:
@@ -1370,17 +1388,18 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                         **financing_kwargs,
                     )
 
-            notify_actions.send_email_message(
-                "academy_invite",
-                email,
-                {
-                    "subject": f"Invitation to study at {academy.name}",
-                    "invites": [ProfileAcademySmallSerializer(profile_academy).data],
-                    "user": UserBigSerializer(user).data,
-                    "LINK": url,
-                },
-                academy=academy,
-            )
+            if not existing_profile_academy_id:
+                notify_actions.send_email_message(
+                    "academy_invite",
+                    email,
+                    {
+                        "subject": f"Invitation to study at {academy.name}",
+                        "invites": [ProfileAcademySmallSerializer(profile_academy).data],
+                        "user": UserBigSerializer(user).data,
+                        "LINK": url,
+                    },
+                    academy=academy,
+                )
             return profile_academy
 
         plans: list[Plan] = []

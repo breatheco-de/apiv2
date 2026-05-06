@@ -116,6 +116,11 @@ PERMISSIONS = [
         "codename": "manage_academy_flags",
     },
     {
+        "name": "Manage service stock schedulers",
+        "description": "Enqueue service stock scheduler rebuilds for subscriptions and plan financings",
+        "codename": "manage_service_stock_schedulers",
+    },
+    {
         "name": "Bill internal academies",
         "description": "Allows creating and managing bills about bootcamp users and provisioning vendors",
         "codename": "bill_internal_academies",
@@ -161,7 +166,11 @@ GROUPS = [
     {"name": "Classes", "permissions": ["live_class_join"], "inherit": []},
     {"name": "Legacy", "permissions": ["get_my_certificate"], "inherit": ["Classes", "Events", "Mentorships"]},
     {"name": "Paid Student", "permissions": ["get_private_link"], "inherit": []},
-    {"name": "Sysadmin", "permissions": ["manage_academy_flags", "bill_internal_academies"], "inherit": []},
+    {
+        "name": "Sysadmin",
+        "permissions": ["manage_academy_flags", "bill_internal_academies", "manage_service_stock_schedulers"],
+        "inherit": [],
+    },
 ]
 
 

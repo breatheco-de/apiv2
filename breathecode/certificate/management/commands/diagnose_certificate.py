@@ -3,8 +3,8 @@ from django.core.management.base import BaseCommand, CommandError
 from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.models import User
 from breathecode.certificate.diagnostics import (
-    build_certificate_diagnostic,
     list_graduated_without_certificate_cohort_users,
+    print_certificate_diagnostic,
 )
 
 
@@ -112,7 +112,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f"{'='*60}\n"))
 
         for cohort_user in cohort_users:
-            self._print_diagnostic(cohort_user)
+            print_certificate_diagnostic(self.stdout, self.style, cohort_user)
 
     def find_and_diagnose_all_graduated(self, academy_id=None, limit=None):
         self.stdout.write(self.style.SUCCESS(f"\n{'='*60}"))
@@ -138,42 +138,8 @@ class Command(BaseCommand):
             if user_key in users_processed:
                 continue
             users_processed.add(user_key)
-            self._print_diagnostic(cohort_user)
+            print_certificate_diagnostic(self.stdout, self.style, cohort_user)
 
         self.stdout.write(f"\n{'='*60}")
         self.stdout.write(self.style.SUCCESS(f"✓ Diagnóstico completado para {len(users_processed)} usuarios"))
         self.stdout.write(f"{'='*60}\n")
-
-    def _print_diagnostic(self, cohort_user):
-        user = cohort_user.user
-        cohort = cohort_user.cohort
-        result = build_certificate_diagnostic(cohort_user)
-
-        self.stdout.write(f"\n{'='*80}")
-        self.stdout.write(
-            self.style.SUCCESS(
-                f"Usuario: {user.email} (ID: {user.id}) | "
-                f"Cohort: {cohort.name} (ID: {cohort.id}) | "
-                f"Academia: {cohort.academy.name if cohort.academy else 'N/A'}"
-            )
-        )
-        self.stdout.write(f"{'='*80}\n")
-
-        for ch in result.get("checks", []):
-            sym = "✓" if ch.get("ok") else ("⚠" if ch.get("severity") == "warning" else "❌")
-            self.stdout.write(f"{sym} [{ch.get('slug')}] {ch.get('message')}")
-
-        self.stdout.write(f"\n{'─'*80}")
-        self.stdout.write(result.get("summary", ""))
-        if result.get("issues"):
-            self.stdout.write(self.style.ERROR(f"❌ ISSUES FOUND ({len(result['issues'])}):"))
-            for i, issue in enumerate(result["issues"], 1):
-                self.stdout.write(self.style.ERROR(f"  {i}. {issue}"))
-        else:
-            self.stdout.write(self.style.SUCCESS("✓ All checks passed! Certificate should be generable."))
-
-        if result.get("warnings"):
-            self.stdout.write(self.style.WARNING(f"⚠️  WARNINGS ({len(result['warnings'])}):"))
-            for i, warning in enumerate(result["warnings"], 1):
-                self.stdout.write(self.style.WARNING(f"  {i}. {warning}"))
-        self.stdout.write(f"{'─'*80}\n")
