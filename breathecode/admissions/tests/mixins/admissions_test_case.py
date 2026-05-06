@@ -138,7 +138,7 @@ class AdmissionsTestCase(
                     {
                         "cohort_id": 1,
                         "educational_status": None,
-                        "finantial_status": None,
+                        "finantial_status": "UP_TO_DATE",
                         "id": 1,
                         "role": "TEACHER",
                         "user_id": 1,

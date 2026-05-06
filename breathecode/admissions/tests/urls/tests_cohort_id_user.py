@@ -38,7 +38,7 @@ def post_serializer(self, cohort, user, profile_academy=None, data={}):
         "created_at": self.bc.datetime.to_iso_string(UTC_NOW),
         "updated_at": self.bc.datetime.to_iso_string(UTC_NOW),
         "educational_status": "ACTIVE",
-        "finantial_status": None,
+        "finantial_status": "UP_TO_DATE",
         "id": 1,
         "profile_academy": (
             {
@@ -68,7 +68,7 @@ def cohort_user_field(data={}):
     return {
         "cohort_id": 0,
         "educational_status": "ACTIVE",
-        "finantial_status": None,
+        "finantial_status": "UP_TO_DATE",
         "id": 0,
         "role": "STUDENT",
         "user_id": 0,
@@ -115,7 +115,7 @@ def check_cohort_user_that_not_have_role_student_can_be_teacher(self, role, upda
     )
 
     expected["educational_status"] = "ACTIVE"
-    expected["finantial_status"] = None
+    expected["finantial_status"] = None if update else "UP_TO_DATE"
 
     self.assertEqual(json, expected)
 
@@ -141,7 +141,7 @@ def check_cohort_user_that_not_have_role_student_can_be_teacher(self, role, upda
                 {
                     "cohort_id": 1,
                     "educational_status": "ACTIVE",
-                    "finantial_status": None,
+                    "finantial_status": "UP_TO_DATE",
                     "id": 1,
                     "role": "TEACHER",
                     "user_id": 1,
@@ -442,7 +442,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                 {
                     "cohort_id": 1,
                     "educational_status": "ACTIVE",
-                    "finantial_status": None,
+                    "finantial_status": "UP_TO_DATE",
                     "id": 1,
                     "role": "STUDENT",
                     "user_id": 1,
@@ -497,7 +497,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                 {
                     "cohort_id": 1,
                     "educational_status": "ACTIVE",
-                    "finantial_status": None,
+                    "finantial_status": "UP_TO_DATE",
                     "id": 1,
                     "role": "STUDENT",
                     "user_id": 2,
@@ -507,7 +507,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                 {
                     "cohort_id": 1,
                     "educational_status": "ACTIVE",
-                    "finantial_status": None,
+                    "finantial_status": "UP_TO_DATE",
                     "id": 2,
                     "role": "STUDENT",
                     "user_id": 3,
