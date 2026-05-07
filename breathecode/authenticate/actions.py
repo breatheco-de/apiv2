@@ -1578,6 +1578,7 @@ def accept_invite_action(data=None, token=None, lang="en"):
         pending_invite_qs.select_related(
             "cohort",
             "cohort__academy",
+            "academy",
             "role",
             "payment_method",
             "author",
@@ -1598,8 +1599,12 @@ def accept_invite_action(data=None, token=None, lang="en"):
             cu = CohortUser(user=user, cohort=user_invite.cohort, role=role.upper(), finantial_status=UP_TO_DATE)
             cu.save()
 
-        plan = Plan.objects.filter(cohort_set__cohorts=user_invite.cohort, invites=user_invite).first()
+    # Create financing for each accepted invite's plan (one invite per cohort).
+    for user_invite in pending_invites:
+        if user_invite.cohort is None:
+            continue
 
+        plan = Plan.objects.filter(cohort_set__cohorts=user_invite.cohort, invites=user_invite).first()
         invite_user = user_invite.user or user
 
         if (
@@ -1607,8 +1612,11 @@ def accept_invite_action(data=None, token=None, lang="en"):
             and invite_user
             and user_invite.cohort.academy.main_currency
             and (
-                user_invite.cohort.available_as_saas == True
-                or (user_invite.cohort.available_as_saas == None and user_invite.cohort.academy.available_as_saas == True)
+                user_invite.cohort.available_as_saas is True
+                or (
+                    user_invite.cohort.available_as_saas is None
+                    and user_invite.cohort.academy.available_as_saas is True
+                )
             )
         ):
             access = payments_actions.resolve_student_plan_access_from_invite(user_invite)

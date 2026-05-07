@@ -1386,14 +1386,15 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                     defaults={"role": "STUDENT", "finantial_status": UP_TO_DATE},
                 )
 
-            if plans_for_user and cohort:
+            if plans_for_user:
                 from breathecode.payments.actions import create_invited_plan_financing_for_user
 
                 author = self.context.get("request").user if self.context.get("request") else None
                 request = self.context.get("request")
                 lang = getattr(request, "LANG", None) if request else None
                 lang = lang or self.context.get("lang", "en") if isinstance(self.context.get("lang"), str) else "en"
-                single_cohort = cohort[0]
+                primary_cohort = cohort[0] if cohort else None
+                extra_cohorts = cohort[1:] if len(cohort) > 1 else None
                 financing_kwargs = {}
                 if student_plan_access:
                     financing_kwargs.update(student_plan_access)
@@ -1402,11 +1403,12 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                         user=user,
                         plan=plan,
                         academy=academy,
-                        cohort=single_cohort,
+                        cohort=primary_cohort,
                         payment_method=payment_method_for_plans,
                         author=author,
                         lang=lang,
                         conversion_info=conversion_info,
+                        joined_cohorts=extra_cohorts,
                         **financing_kwargs,
                     )
 
