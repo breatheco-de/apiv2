@@ -1074,6 +1074,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
     how_many_installments = serializers.IntegerField(write_only=True, required=False, min_value=1)
     initial_payment_amount = serializers.FloatField(write_only=True, required=False, allow_null=True)
     initial_payment_notes = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    unique_payment_negotiated_amount = serializers.FloatField(write_only=True, required=False, allow_null=True)
     grace_period_duration = serializers.IntegerField(write_only=True, required=False, min_value=0)
     grace_period_duration_unit = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
@@ -1102,6 +1103,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
             "how_many_installments",
             "initial_payment_amount",
             "initial_payment_notes",
+            "unique_payment_negotiated_amount",
             "grace_period_duration",
             "grace_period_duration_unit",
         )
@@ -1201,10 +1203,12 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
             "how_many_installments",
             "initial_payment_amount",
             "initial_payment_notes",
+            "unique_payment_negotiated_amount",
             "grace_period_duration",
             "grace_period_duration_unit",
         )
-        has_financing_fields = any(k in data for k in financing_field_names)
+        financing_request_keys = financing_field_names + ("negotiated_invoice_amount",)
+        has_financing_fields = any(k in data for k in financing_request_keys)
         if has_financing_fields and not data.get("plans"):
             raise ValidationException(
                 translation(
@@ -1233,6 +1237,11 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
             if "initial_payment_amount" not in data:
                 initial_amt = None
             initial_notes = data.get("initial_payment_notes", None)
+            unique_amt = data.get("unique_payment_negotiated_amount", None)
+            if "unique_payment_negotiated_amount" not in data and "negotiated_invoice_amount" in data:
+                unique_amt = data.get("negotiated_invoice_amount", None)
+            elif "unique_payment_negotiated_amount" not in data:
+                unique_amt = None
             grace_dur = data.get("grace_period_duration", 0)
             if grace_dur is None:
                 grace_dur = 0
@@ -1245,6 +1254,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                 how_many_installments=how_many,
                 initial_payment_amount=initial_amt,
                 initial_payment_notes=initial_notes,
+                unique_payment_negotiated_amount=unique_amt,
                 grace_period_duration=int(grace_dur),
                 grace_period_duration_unit=grace_unit,
                 lang=lang,
@@ -1261,8 +1271,20 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                     code=400,
                 )
 
+            if unique_amt is not None and float(unique_amt) > 0 and not data.get("payment_method"):
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="unique_payment_negotiated_amount greater than zero requires payment_method",
+                        es="unique_payment_negotiated_amount mayor que cero requiere payment_method",
+                    ),
+                    slug="unique-payment-negotiated-requires-payment-method",
+                    code=400,
+                )
+
         for k in financing_field_names:
             data.pop(k, None)
+        data.pop("negotiated_invoice_amount", None)
 
         if student_plan_access is not None:
             data["_student_plan_access_payload"] = student_plan_access

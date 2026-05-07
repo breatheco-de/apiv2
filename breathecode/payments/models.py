@@ -1111,6 +1111,12 @@ class Plan(AbstractPriceByTime):
 
     status = models.CharField(max_length=12, choices=Status, default=Status.DRAFT, help_text="Status")
 
+    discontinued_reason = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Required when transitioning the plan status to DISCONTINUED",
+    )
+
     time_of_life = models.IntegerField(default=1, blank=True, null=True, help_text="Plan lifetime (e.g. 1, 2, 3, ...)")
     time_of_life_unit = models.CharField(
         max_length=10,
@@ -2297,9 +2303,13 @@ class PlanFinancing(AbstractIOweYou):
         default=None, null=True, blank=False, help_text="Plan expires at, after this date the plan will not be renewed"
     )
 
-    # this remember the current price per month
     monthly_price = models.FloatField(
-        default=0, help_text="Monthly price, we keep this to avoid we changes him/her amount"
+        default=0,
+        help_text=(
+            "Per-installment amount the user is expected to pay for this financing, frozen at creation time "
+            "(not live catalog pricing). For negotiated single-pay purchases, this stores the agreed single payment "
+            "amount (legacy name: it is not always monthly)."
+        ),
     )
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency", null=True, blank=True)
 
@@ -2311,14 +2321,22 @@ class PlanFinancing(AbstractIOweYou):
         null=True,
         blank=True,
         default=None,
-        help_text="Amount paid when this plan financing was created by staff.",
+        help_text=(
+            "Optional upfront collected at financing creation that is NOT part of the regular installment schedule "
+            "(i.e. a negotiated split: upfront + future installments). Set this only when the first payment amount "
+            "differs from the recurring installment amount. Keep it null for standard installment plans (even if the "
+            "first installment is paid immediately) and for negotiated single-pay purchases."
+        ),
     )
     initial_payment_notes = models.CharField(
         max_length=250,
         null=True,
         blank=True,
         default=None,
-        help_text="Optional staff notes about the initial payment.",
+        help_text=(
+            "Staff justification/notes for negotiated payment terms. Used when staff agrees on a discounted "
+            "single-pay amount, or when staff negotiates an upfront amount plus future installments."
+        ),
     )
     grace_period_duration = models.PositiveIntegerField(
         default=0,

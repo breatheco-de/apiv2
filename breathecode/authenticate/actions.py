@@ -1599,107 +1599,43 @@ def accept_invite_action(data=None, token=None, lang="en"):
             cu = CohortUser(user=user, cohort=user_invite.cohort, role=role.upper(), finantial_status=UP_TO_DATE)
             cu.save()
 
-    from collections import defaultdict
-
-    plan_to_cohorts = defaultdict(list)
-    plan_to_seen_cohort_ids: dict[int, set[int]] = defaultdict(set)
-    plan_to_invite: dict[int, UserInvite] = {}
-
+    # Create financing for each accepted invite's plan (one invite per cohort).
     for user_invite in pending_invites:
-        invite_u = user_invite.user or user
-        acad = user_invite.academy
-        if user_invite.cohort_id is None or not invite_u or not acad or not acad.main_currency_id:
-            continue
-        for plan in Plan.objects.filter(invites=user_invite).distinct():
-            pid = plan.id
-            plan_to_invite[pid] = user_invite
-            if user_invite.cohort_id not in plan_to_seen_cohort_ids[pid]:
-                plan_to_seen_cohort_ids[pid].add(user_invite.cohort_id)
-                plan_to_cohorts[pid].append(user_invite.cohort)
-
-    plans_financing_without_cohort: set[int] = set()
-    for user_invite in pending_invites:
-        invite_u = user_invite.user or user
-        acad = user_invite.academy
-        if user_invite.cohort_id is not None or not invite_u or not acad or not acad.main_currency_id:
-            continue
-        for plan in Plan.objects.filter(invites=user_invite).distinct():
-            plans_financing_without_cohort.add(plan.id)
-            plan_to_invite[plan.id] = user_invite
-
-    financing_done_for_plan: set[int] = set()
-    for plan_id, cohorts_list in plan_to_cohorts.items():
-        if plan_id in financing_done_for_plan or not cohorts_list:
-            continue
-        financing_done_for_plan.add(plan_id)
-
-        plan_obj = Plan.objects.filter(id=plan_id).first()
-        if plan_obj is None:
+        if user_invite.cohort is None:
             continue
 
-        ui = plan_to_invite.get(plan_id)
-        if ui is None:
-            continue
+        plan = Plan.objects.filter(cohort_set__cohorts=user_invite.cohort, invites=user_invite).first()
+        invite_user = user_invite.user or user
 
-        academy_obj = ui.academy
-        invite_user_fin = ui.user or user
-        if not academy_obj or not academy_obj.main_currency_id:
-            continue
-
-        access = payments_actions.resolve_student_plan_access_from_invite(ui)
-        primary = cohorts_list[0]
-        joined = cohorts_list[1:] if len(cohorts_list) > 1 else None
-        payments_actions.create_invited_plan_financing_for_user(
-            user=invite_user_fin,
-            plan=plan_obj,
-            academy=academy_obj,
-            cohort=primary,
-            joined_cohorts=joined,
-            payment_method=ui.payment_method,
-            author=ui.author,
-            lang=lang,
-            conversion_info=ui.conversion_info,
-            how_many_installments=access["how_many_installments"],
-            initial_payment_amount=access["initial_payment_amount"],
-            initial_payment_notes=access["initial_payment_notes"],
-            grace_period_duration=access["grace_period_duration"],
-            grace_period_duration_unit=access["grace_period_duration_unit"],
-        )
-
-    for plan_id in plans_financing_without_cohort:
-        if plan_id in financing_done_for_plan:
-            continue
-        financing_done_for_plan.add(plan_id)
-
-        plan_obj = Plan.objects.filter(id=plan_id).first()
-        if plan_obj is None:
-            continue
-
-        ui = plan_to_invite.get(plan_id)
-        if ui is None:
-            continue
-
-        academy_obj = ui.academy
-        invite_user_fin = ui.user or user
-        if not academy_obj or not academy_obj.main_currency_id:
-            continue
-
-        access = payments_actions.resolve_student_plan_access_from_invite(ui)
-        payments_actions.create_invited_plan_financing_for_user(
-            user=invite_user_fin,
-            plan=plan_obj,
-            academy=academy_obj,
-            cohort=None,
-            payment_method=ui.payment_method,
-            author=ui.author,
-            lang=lang,
-            conversion_info=ui.conversion_info,
-            how_many_installments=access["how_many_installments"],
-            initial_payment_amount=access["initial_payment_amount"],
-            initial_payment_notes=access["initial_payment_notes"],
-            grace_period_duration=access["grace_period_duration"],
-            grace_period_duration_unit=access["grace_period_duration_unit"],
-        )
+        if (
+            plan
+            and invite_user
+            and user_invite.cohort.academy.main_currency
+            and (
+                user_invite.cohort.available_as_saas is True
+                or (
+                    user_invite.cohort.available_as_saas is None
+                    and user_invite.cohort.academy.available_as_saas is True
+                )
+            )
+        ):
+            access = payments_actions.resolve_student_plan_access_from_invite(user_invite)
+            payments_actions.create_invited_plan_financing_for_user(
+                user=invite_user,
+                plan=plan,
+                academy=user_invite.cohort.academy,
+                cohort=user_invite.cohort,
+                payment_method=user_invite.payment_method,
+                author=user_invite.author,
+                lang=lang,
+                conversion_info=user_invite.conversion_info,
+                how_many_installments=access["how_many_installments"],
+                initial_payment_amount=access["initial_payment_amount"],
+                initial_payment_notes=access["initial_payment_notes"],
+                unique_payment_negotiated_amount=access.get("unique_payment_negotiated_amount"),
+                grace_period_duration=access["grace_period_duration"],
+                grace_period_duration_unit=access["grace_period_duration_unit"],
+            )
 
     for user_invite in pending_invites:
         user_invite.user = user

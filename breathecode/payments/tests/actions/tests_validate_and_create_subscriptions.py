@@ -2,6 +2,8 @@
 Test /answer
 """
 
+import random
+import string
 from datetime import datetime, timedelta
 from unittest.mock import MagicMock, call
 
@@ -93,12 +95,21 @@ def serialize_invoice(data={}):
         "refund_stripe_id": None,
         "refunded_at": None,
         "amount_refunded": 0.0,
+        "coinbase_charge_id": None,
         "status": "FULFILLED",
         "stripe_id": None,
         "subscription_billing_team_id": None,
         "subscription_seat_id": None,
         "user_id": 1,
         **data,
+    }
+
+
+def financing_breakdown(plan, currency_code: str, amount: float = 1.0) -> dict:
+    cc = currency_code.upper() if currency_code else ""
+    return {
+        "plans": {plan.slug: {"amount": round(float(amount), 2), "currency": cc}},
+        "service-items": {},
     }
 
 
@@ -332,6 +343,7 @@ def test_schedule_plan_financing(
                 "id": 1,
                 "paid_at": utc_now,
                 "payment_method_id": 1,
+                "amount_breakdown": financing_breakdown(model.plan, model.currency.code),
             }
         ),
     ]
@@ -413,11 +425,11 @@ def test_schedule_plan_financing_with_initial_payment_and_grace_period(
             1,
             conversion_info=None,
             cohorts=[],
-            principal_amount=1200,
-            initial_payment_amount=5000,
-            initial_payment_notes="Staff discount approved",
             grace_period_duration=4,
             grace_period_duration_unit="MONTH",
+            initial_payment_notes="Staff discount approved",
+            principal_amount=1200,
+            initial_payment_amount=5000,
         )
     ]
 
@@ -426,21 +438,156 @@ def test_schedule_plan_financing_with_initial_payment_and_grace_period(
 
 
 @pytest.mark.parametrize("is_request", [True, False])
+def test_schedule_plan_financing_with_unique_payment_negotiated_amount(
+    database: capy.Database, format: capy.Format, is_request: bool, utc_now: datetime
+) -> None:
+    model = database.create(
+        user=1,
+        proof_of_payment=1,
+        plan={"time_of_life": None, "time_of_life_unit": None},
+        financing_option={"how_many_months": 1, "monthly_price": 9500},
+        academy=1,
+        city=1,
+        country=1,
+        payment_method=1,
+    )
+    data = {
+        "plans": [model.plan.slug],
+        "user": model.user.id,
+        "payment_method": 1,
+        "unique_payment_negotiated_amount": 8500,
+        "how_many_installments": 1,
+    }
+    academy = 1
+
+    if is_request:
+        data = get_request(data, user=model.user)
+
+    validate_and_create_subscriptions(data, model.user, model.proof_of_payment, academy, "en")
+
+    invoices = database.list_of("payments.Invoice")
+    assert len(invoices) == 1
+    assert invoices[0]["amount"] == 8500
+    assert invoices[0]["amount_breakdown"] == {
+        "plans": {
+            model.plan.slug: {
+                "amount": 8500,
+                "currency": model.currency.code,
+                "type": "UNIQUE_PAYMENT_NEGOTIATED",
+                "catalog_installment_amount": 9500,
+            }
+        },
+        "service-items": {},
+    }
+
+    assert build_plan_financing.delay.call_args_list == [
+        call(1, 1, conversion_info=None, cohorts=[], principal_amount=8500),
+    ]
+
+
+@pytest.mark.parametrize("is_request", [True, False])
+def test_unique_payment_negotiated_amount_conflicts_with_initial_payment(
+    database: capy.Database, format: capy.Format, is_request: bool
+) -> None:
+    model = database.create(
+        user=1,
+        proof_of_payment=1,
+        plan={"time_of_life": None, "time_of_life_unit": None},
+        financing_option={"how_many_months": 1, "monthly_price": 9500},
+        academy=1,
+        city=1,
+        country=1,
+        payment_method=1,
+    )
+    data = {
+        "plans": [model.plan.slug],
+        "user": model.user.id,
+        "payment_method": 1,
+        "unique_payment_negotiated_amount": 8500,
+        "initial_payment_amount": 3000,
+        "how_many_installments": 1,
+    }
+    academy = 1
+
+    if is_request:
+        data = get_request(data, user=model.user)
+
+    with pytest.raises(ValidationException) as exc:
+        validate_and_create_subscriptions(data, model.user, model.proof_of_payment, academy, "en")
+    assert exc.value.detail == "unique-payment-negotiated-initial-exclusive"
+
+    assert build_plan_financing.delay.call_args_list == []
+
+
+@pytest.mark.parametrize("is_request", [True, False])
+def test_schedule_plan_financing_multi_installment_without_staff_initial_uses_no_initial_kwarg(
+    database: capy.Database, format: capy.Format, is_request: bool, utc_now: datetime
+) -> None:
+    """Explicit how_many_installments without staff initial deposit must not pass initial_payment_amount to the task."""
+    model = database.create(
+        user=1,
+        proof_of_payment=1,
+        plan={"time_of_life": None, "time_of_life_unit": None},
+        financing_option={"how_many_months": 3, "monthly_price": 400},
+        academy=1,
+        city=1,
+        country=1,
+        payment_method=1,
+    )
+    data = {
+        "plans": [model.plan.slug],
+        "user": model.user.id,
+        "payment_method": 1,
+        "how_many_installments": 3,
+    }
+    academy = 1
+
+    if is_request:
+        data = get_request(data, user=model.user)
+
+    validate_and_create_subscriptions(data, model.user, model.proof_of_payment, academy, "en")
+
+    assert build_plan_financing.delay.call_args_list == [
+        call(1, 1, conversion_info=None, cohorts=[]),
+    ]
+
+
+@pytest.mark.parametrize("is_request", [True, False])
 def test_currency_from_payment_method_takes_priority(
     database: capy.Database, format: capy.Format, is_request: bool, utc_now: datetime
 ) -> None:
     """Test that payment_method.currency takes priority over academy.main_currency"""
+    from breathecode.payments.models import Currency, PaymentMethod
+
     model = database.create(
         user=1,
         proof_of_payment=1,
         plan={"time_of_life": None, "time_of_life_unit": None},
         financing_option={"how_many_months": 1},
-        academy=1,  # Has main_currency by default (id 1)
+        academy=1,
         city=1,
         country=1,
-        currency=(2, {"code": "EUR"}),  # Create two currencies
-        payment_method={"currency_id": 2},  # Payment method uses second currency
+        payment_method=1,
     )
+
+    preferred_code = ""
+    for _ in range(100):
+        candidate = "".join(random.choices(string.ascii_uppercase, k=3))
+        if not Currency.objects.filter(code=candidate).exists():
+            preferred_code = candidate
+            break
+    assert preferred_code, "could not allocate unique 3-letter currency code"
+    preferred_currency = Currency.objects.create(
+        code=preferred_code,
+        name=f"PM {preferred_code}"[:20],
+    )
+
+    academy_currency_id = model.academy.main_currency_id
+
+    PaymentMethod.objects.filter(pk=model.payment_method.pk).update(currency=preferred_currency)
+    model.payment_method.refresh_from_db()
+    preferred_id = preferred_currency.id
+
     data = {"plans": [model.plan.slug], "user": model.user.id, "payment_method": model.payment_method.id}
     academy = 1
 
@@ -449,9 +596,10 @@ def test_currency_from_payment_method_takes_priority(
 
     result = validate_and_create_subscriptions(data, model.user, model.proof_of_payment, academy, "en")
 
-    # Should use payment_method's currency (currency id 2) not academy's main_currency (currency id 1)
+    pm_curr = model.payment_method.currency
+
     assert database.list_of("payments.Bag") == [
-        serialize_bag(data={"currency_id": 2}),
+        serialize_bag(data={"currency_id": preferred_id}),
     ]
     assert database.list_of("payments.Invoice") == [
         serialize_invoice(
@@ -459,12 +607,14 @@ def test_currency_from_payment_method_takes_priority(
                 "id": 1,
                 "paid_at": utc_now,
                 "payment_method_id": 1,
-                "currency_id": 2,
+                "currency_id": preferred_id,
+                "amount_breakdown": financing_breakdown(model.plan, pm_curr.code),
             }
         ),
     ]
 
-    assert result[0].currency_id == 2  # Should be payment_method's currency
+    assert result[0].currency_id == preferred_id
+    assert result[0].currency_id != academy_currency_id
 
     assert build_plan_financing.delay.call_args_list == [call(1, 1, conversion_info=None, cohorts=[])]
 
@@ -501,6 +651,7 @@ def test_currency_fallback_to_academy_when_payment_method_has_no_currency(
                 "id": 1,
                 "paid_at": utc_now,
                 "payment_method_id": 1,
+                "amount_breakdown": financing_breakdown(model.plan, model.currency.code),
             }
         ),
     ]

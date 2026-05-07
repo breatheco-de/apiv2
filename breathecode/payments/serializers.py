@@ -142,6 +142,8 @@ class GetServiceItemSerializer(serpy.Serializer):
     sort_priority = serpy.Field()
     service = GetServiceSmallSerializer()
     is_team_allowed = serpy.Field()
+    renew_at = serpy.Field()
+    renew_at_unit = serpy.Field()
 
 
 class GetServiceItemFeatureShortSerializer(serpy.Serializer):
@@ -308,6 +310,7 @@ class GetPlanSmallTinySerializer(serpy.Serializer):
     title = serpy.Field()
     slug = serpy.Field()
     status = serpy.Field()
+    discontinued_reason = serpy.Field(required=False)
     time_of_life = serpy.Field()
     time_of_life_unit = serpy.Field()
     trial_duration = serpy.Field()
@@ -1250,6 +1253,32 @@ class PlanSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
     def validate(self, attrs):
+        instance = getattr(self, "instance", None)
+        old_status = instance.status if instance else None
+
+        incoming_status = attrs.get("status")
+        if incoming_status is None:
+            incoming_status = old_status if instance else Plan.Status.DRAFT
+
+        transitioning_to_discontinued = incoming_status == Plan.Status.DISCONTINUED and (
+            instance is None or old_status != Plan.Status.DISCONTINUED
+        )
+
+        if transitioning_to_discontinued:
+            reason = attrs.get("discontinued_reason")
+            if reason is None and instance is not None and "discontinued_reason" not in attrs:
+                reason = instance.discontinued_reason
+
+            if reason is None or (isinstance(reason, str) and not reason.strip()):
+                raise ValidationException(
+                    translation(
+                        en="discontinued_reason is required when setting plan status to DISCONTINUED",
+                        es="discontinued_reason es obligatorio al poner el plan en DISCONTINUED",
+                    ),
+                    slug="discontinued-reason-required",
+                    code=400,
+                )
+
         return attrs
 
     def create(self, validated_data):
@@ -1313,9 +1342,6 @@ class PutPlanSerializer(PlanSerializer):
     class Meta:
         model = Plan
         fields = "__all__"
-
-    def validate(self, attrs):
-        return attrs
 
 
 class FinancingOptionSerializer(serializers.ModelSerializer):
