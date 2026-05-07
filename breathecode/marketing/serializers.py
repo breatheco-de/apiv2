@@ -1,13 +1,16 @@
 import logging
 import re
+from copy import deepcopy
 from datetime import timedelta
 
 from capyc.rest_framework.exceptions import ValidationException
+from django.db import transaction
 from django.db.models.query_utils import Q
 from django.utils import timezone
 from rest_framework import serializers
 
 from breathecode.admissions.models import Academy, Cohort
+from breathecode.authenticate.models import ProfileAcademy
 from breathecode.monitoring.actions import test_link
 from breathecode.services.activecampaign.client import acp_ids
 from breathecode.utils import serpy
@@ -586,10 +589,13 @@ class GetCourseSerializer(GetCourseSmallSerializer):
 
 
 class CoursePOSTSerializer(serializers.ModelSerializer):
+    source_course = serializers.CharField(required=False, allow_null=True, allow_blank=False, write_only=True)
+
     class Meta:
         model = Course
         fields = (
             "slug",
+            "source_course",
             "syllabus",
             "cohort",
             "is_listed",
@@ -603,7 +609,72 @@ class CoursePOSTSerializer(serializers.ModelSerializer):
             "technologies",
             "has_waiting_list",
         )
+        extra_kwargs = {
+            "icon_url": {"required": False},
+            "technologies": {"required": False},
+            "slug": {"required": True},
+        }
         read_only_fields = ()
+
+    def _get_source_course(self, source_course):
+        source_value = str(source_course).strip()
+        query = Q(slug=source_value)
+        if source_value.isdigit():
+            query = query | Q(id=int(source_value))
+
+        source = Course.objects.filter(query).select_related("academy", "cohort").first()
+        if source is None:
+            raise ValidationException(f"Source course {source_value} not found", slug="source-course-not-found")
+
+        request = self.context.get("request")
+        if request is None:
+            raise ValidationException("Missing request context", slug="request-not-in-context")
+
+        has_source_permission = request.user.is_superuser or ProfileAcademy.objects.filter(
+            user=request.user,
+            academy=source.academy,
+            role__capabilities__slug="crud_course",
+        ).exists()
+        if not has_source_permission:
+            raise ValidationException(
+                "You do not have permission to clone from this source academy",
+                slug="source-course-forbidden",
+                code=403,
+            )
+
+        return source
+
+    def validate(self, attrs):
+        source_course = attrs.get("source_course")
+        if source_course:
+            attrs["_source_course_instance"] = self._get_source_course(source_course)
+
+        if not source_course:
+            if not attrs.get("icon_url"):
+                raise ValidationException("icon_url is required", slug="missing-icon-url")
+            if not attrs.get("technologies"):
+                raise ValidationException("technologies is required", slug="missing-technologies")
+
+        return attrs
+
+    def _copy_course_translations(self, source, destination):
+        source_translations = CourseTranslation.objects.filter(course=source)
+        for translation in source_translations:
+            CourseTranslation.objects.create(
+                course=destination,
+                lang=translation.lang,
+                title=translation.title,
+                heading=translation.heading,
+                description=translation.description,
+                short_description=translation.short_description,
+                video_url=translation.video_url,
+                featured_assets=translation.featured_assets,
+                landing_url=translation.landing_url,
+                preview_url=translation.preview_url,
+                course_modules=deepcopy(translation.course_modules),
+                landing_variables=deepcopy(translation.landing_variables),
+                prerequisite=deepcopy(translation.prerequisite),
+            )
 
     def create(self, validated_data):
         academy_id = self.context.get("academy_id")
@@ -611,7 +682,42 @@ class CoursePOSTSerializer(serializers.ModelSerializer):
         if academy is None:
             raise ValidationException(f"Academy {academy_id} not found", slug="academy-not-found")
 
-        return Course.objects.create(academy=academy, **validated_data)
+        source = validated_data.pop("_source_course_instance", None)
+        validated_data.pop("source_course", None)
+        syllabus = validated_data.pop("syllabus", None)
+
+        if source:
+            clone_defaults = {
+                "cohort": source.cohort if source.cohort and source.cohort.academy_id == academy.id else None,
+                "is_listed": source.is_listed,
+                "plan_slug": source.plan_slug,
+                "plan_by_country_code": deepcopy(source.plan_by_country_code),
+                "status": source.status,
+                "color": source.color,
+                "status_message": source.status_message,
+                "visibility": source.visibility,
+                "icon_url": source.icon_url,
+                "banner_image": source.banner_image,
+                "technologies": source.technologies,
+                "has_waiting_list": source.has_waiting_list,
+            }
+            clone_defaults.update(validated_data)
+            create_data = clone_defaults
+        else:
+            create_data = validated_data
+
+        with transaction.atomic():
+            course = Course.objects.create(academy=academy, **create_data)
+
+            if syllabus is not None:
+                course.syllabus.set(syllabus)
+            elif source:
+                course.syllabus.set(source.syllabus.all())
+                course.invites.set(source.invites.all())
+                course.suggested_plan_addon.set(source.suggested_plan_addon.all())
+                self._copy_course_translations(source, course)
+
+        return course
 
 
 class CoursePUTSerializer(serializers.ModelSerializer):

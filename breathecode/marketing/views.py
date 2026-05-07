@@ -1715,7 +1715,7 @@ class AcademyCourseView(APIView):
     @capable_of("crud_course")
     def post(self, request, academy_id=None):
         request_lang = get_user_language(request)
-        serializer = CoursePOSTSerializer(data=request.data, context={"academy_id": academy_id})
+        serializer = CoursePOSTSerializer(data=request.data, context={"academy_id": academy_id, "request": request})
 
         if serializer.is_valid():
             course = serializer.save()
