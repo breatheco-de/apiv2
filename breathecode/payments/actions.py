@@ -3009,6 +3009,27 @@ def register_student_deposit(
     payment_method = resolve_payment_method_for_staff(data, academy_id, lang, allow_card_and_crypto=False)
     currency = resolve_currency_for_staff_payment(payment_method, academy, lang)
     plans = plan_financing.plans.all()
+
+    # Block deposits when there are no installments remaining to pay.
+    # This must be computed BEFORE creating a new invoice, otherwise a fully paid financing
+    # could accept an extra deposit and incorrectly pull next_payment_at forward.
+    fulfilled_invoices = plan_financing.invoices.filter(status=Invoice.Status.FULFILLED, bag__was_delivered=True)
+    if plan_financing.initial_payment_amount is not None:
+        paid_future_installments = max(fulfilled_invoices.count() - 1, 0)
+    else:
+        paid_future_installments = fulfilled_invoices.count()
+    remaining_installments = max(plan_financing.how_many_installments - paid_future_installments, 0)
+    if remaining_installments <= 0:
+        raise ValidationException(
+            translation(
+                lang,
+                en="No installments remaining to pay for this plan financing",
+                es="No quedan cuotas por pagar para este plan financiado",
+                slug="no-remaining-installments",
+            ),
+            code=409,
+        )
+
     amount_breakdown = {
         "plans": {
             plan.slug: {
