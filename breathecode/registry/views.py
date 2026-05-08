@@ -39,6 +39,7 @@ from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExt
 from breathecode.utils.decorators import has_permission
 from breathecode.utils.decorators.capable_of import (
     acapable_of,
+    capable_of_many,
     academy_scope_response_meta,
     get_academy_ids_from_capability,
 )
@@ -54,7 +55,7 @@ from .actions import (
     atest_asset,
     test_asset,
 )
-from .caches import AssetCache, AssetCommentCache, CategoryCache, ContentVariableCache, KeywordCache, TechnologyCache
+from .caches import AssetCache, CategoryCache, ContentVariableCache, KeywordCache, TechnologyCache
 from .models import (
     Asset,
     AssetAlias,
@@ -118,6 +119,8 @@ from .tasks import (
 from .utils import (
     AssetErrorLogType,
     build_request_url_for_activity_log,
+    compute_asset_error_log_dedupe_merge,
+    get_asset_error_log_catalog,
     is_url,
     log_outbound_push_from_db,
     log_pull_outcome_from_db,
@@ -162,13 +165,13 @@ def forward_asset_url(request, asset_slug=None):
     except Exception as e:
         logger.error(e)
         msg = f"The url for the {asset.asset_type.lower()} your are trying to open ({asset_slug}) was not found, this error has been reported and will be fixed soon."
-        AssetErrorLog(
+        AssetErrorLog.log_once(
             slug=AssetErrorLogType.INVALID_URL,
             path=asset_slug,
             asset=asset,
             asset_type=asset.asset_type,
             status_text=msg,
-        ).save()
+        )
 
         return render_message(request, msg, academy=asset.academy)
 
@@ -2289,15 +2292,12 @@ class AcademyAssetCommentView(APIView, GenerateLookupsMixin):
     List all snippets, or create a new snippet.
     """
 
-    extensions = APIViewExtensions(cache=AssetCommentCache, sort="-created_at", paginate=True)
+    extensions = APIViewExtensions(paginate=True)
 
     @capable_of("read_asset")
     def get(self, request, academy_id=None):
 
         handler = self.extensions(request)
-        cache = handler.cache.get()
-        if cache is not None:
-            return cache
 
         academy_ids = [int(academy_id)]
         if academies_param := request.GET.get("academies"):
@@ -2344,6 +2344,11 @@ class AcademyAssetCommentView(APIView, GenerateLookupsMixin):
             lookup["author__email"] = param
 
         items = items.filter(**lookup)
+        sort = request.GET.get("sort")
+        if sort in ["priority", "-priority", "created_at", "-created_at"]:
+            items = items.order_by(sort)
+        else:
+            items = items.order_by("-created_at")
         items = handler.queryset(items)
 
         serializer = AcademyCommentSerializer(items, many=True)
@@ -2405,7 +2410,7 @@ class AcademyAssetErrorView(APIView, GenerateLookupsMixin):
     List all snippets, or create a new snippet.
     """
 
-    extensions = APIViewExtensions(sort="-created_at", paginate=True)
+    extensions = APIViewExtensions(paginate=True)
 
     @capable_of("read_asset_error")
     def get(self, request, academy_id=None):
@@ -2440,6 +2445,11 @@ class AcademyAssetErrorView(APIView, GenerateLookupsMixin):
         if like is not None and like != "undefined" and like != "":
             items = items.filter(Q(slug__icontains=slugify(like)) | Q(path__icontains=like))
 
+        sort = request.GET.get("sort")
+        if sort in ["priority", "-priority", "created_at", "-created_at"]:
+            items = items.order_by(sort)
+        else:
+            items = items.order_by("-created_at")
         items = handler.queryset(items)
 
         serializer = AcademyErrorSerializer(items, many=True)
@@ -2500,6 +2510,80 @@ class AcademyAssetErrorView(APIView, GenerateLookupsMixin):
             items.delete()
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademyAssetErrorDedupeView(APIView):
+    """
+    Collapse duplicate AssetErrorLog rows for the same logical issue key.
+
+    The canonical grouping matches the rest of the registry tooling:
+    (slug, asset_type, path, asset).
+    """
+
+    @capable_of("crud_asset_error")
+    def post(self, request, error_id=None, academy_id=None):
+
+        if not error_id:
+            raise ValidationException("Missing error ID on the URL", 404)
+
+        keeper = AssetErrorLog.objects.filter(
+            Q(id=error_id) & (Q(asset__academy__id=academy_id) | Q(asset__isnull=True))
+        ).first()
+        if keeper is None:
+            raise ValidationException("This error does not exist", 404)
+
+        duplicates = AssetErrorLog.objects.filter(
+            slug=keeper.slug,
+            asset_type=keeper.asset_type,
+            path=keeper.path,
+            asset=keeper.asset,
+        ).exclude(id=keeper.id)
+
+        duplicate_rows = list(duplicates.order_by("id"))
+        deleted_ids = [row.id for row in duplicate_rows]
+
+        if not duplicate_rows:
+            serializer = AcademyErrorSerializer(keeper)
+            return Response({"kept": serializer.data, "deleted_ids": [], "deleted_count": 0}, status=status.HTTP_200_OK)
+
+        merged = compute_asset_error_log_dedupe_merge(keeper, duplicate_rows)
+
+        update_fields = merged["update_fields"]
+        if "status" in update_fields:
+            keeper.status = merged["status"]
+
+        if "status_text" in update_fields:
+            keeper.status_text = merged["status_text"]
+
+        if "user" in update_fields:
+            keeper.user_id = merged["user_id"]
+
+        if "priority" in update_fields:
+            keeper.priority = merged["priority"]
+
+        if update_fields:
+            keeper.save(update_fields=update_fields)
+
+        duplicates.delete()
+
+        keeper.refresh_from_db()
+        serializer = AcademyErrorSerializer(keeper)
+        return Response(
+            {"kept": serializer.data, "deleted_ids": deleted_ids, "deleted_count": len(deleted_ids)},
+            status=status.HTTP_200_OK,
+        )
+
+
+class AcademyAssetErrorCatalogView(APIView):
+    @capable_of_many("read_asset_error", scope="read_aggregate")
+    def get(self, request, academy_ids=None):
+        catalog = get_asset_error_log_catalog()
+        meta = academy_scope_response_meta(request)
+
+        if meta:
+            return Response({"results": catalog, **meta}, status=status.HTTP_200_OK)
+
+        return Response(catalog, status=status.HTTP_200_OK)
 
 
 class AcademyAssetAliasView(APIView, GenerateLookupsMixin):

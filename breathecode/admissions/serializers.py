@@ -19,6 +19,7 @@ from breathecode.certificate.models import Specialty
 from .actions import haversine, resolve_syllabus_json, test_syllabus
 from .models import (
     COHORT_STAGE,
+    UP_TO_DATE,
     Academy,
     Cohort,
     CohortTimeSlot,
@@ -1467,7 +1468,15 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
         count_cohort_users = CohortUser.objects.filter(user_id=user.id, cohort_id=cohort.id).count()
 
         if is_post_method and count_cohort_users:
-            raise ValidationException("That user already exists in this cohort")
+            user_pk = user.id if hasattr(user, "id") else user
+            raise ValidationException(
+                f"User {user_pk} already has a CohortUser row for this cohort (id={cohort.id}, "
+                f'name="{cohort.name}", slug={cohort.slug}). The cohort is taken from the URL '
+                f"`POST .../cohort/<cohort_id>/user`, not from a list in the body—if you meant another cohort, "
+                f"change <cohort_id> in the path.",
+                slug="user-already-in-this-cohort",
+                code=400,
+            )
 
         if (
             "role" in data
@@ -1481,9 +1490,33 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
         role = data.get("role") or (instance.role if instance else None) or "STUDENT"
 
         if is_post_method and role == "STUDENT" and cohort.schedule and self.count_certificates_by_cohort(cohort, user.id) > 0:
+            prior_cohort_user = (
+                CohortUser.objects.filter(
+                    Q(educational_status="ACTIVE") | Q(educational_status__isnull=True),
+                    user_id=user.id,
+                    role="STUDENT",
+                    cohort__schedule=cohort.schedule,
+                )
+                .exclude(cohort_id=cohort.id)
+                .select_related("cohort")
+                .first()
+            )
+            prior = prior_cohort_user.cohort if prior_cohort_user else None
+            if prior:
+                detail = (
+                    f'This student is already ACTIVE in another cohort for the same certificate. Prior cohort: '
+                    f'"{prior.name}" (slug: {prior.slug}, id: {prior.id}). Please set his/her educational status on '
+                    f'that cohort to something other than ACTIVE before adding the student here.'
+                )
+            else:
+                detail = (
+                    "This student is already ACTIVE in another cohort for the same certificate. Please set his/her "
+                    "educational status on the prior cohort to something other than ACTIVE before continuing."
+                )
             raise ValidationException(
-                "This student is already in another cohort for the same certificate, please mark him/her hi "
-                "educational status on this prior cohort different than ACTIVE before cotinuing"
+                detail,
+                slug="student-active-in-prior-cohort-same-certificate",
+                code=400,
             )
 
         role = data.get("role")
@@ -1549,6 +1582,9 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
 class CohortUserListSerializer(serializers.ListSerializer):
 
     def create(self, validated_data):
+        for item in validated_data:
+            if item.get("finantial_status") is None:
+                item["finantial_status"] = UP_TO_DATE
 
         books = [CohortUser(**item) for item in validated_data]
 
@@ -1595,6 +1631,11 @@ class CohortUserSerializer(CohortUserSerializerMixin):
         model = CohortUser
         fields = ["id", "user", "cohort", "role", "educational_status", "finantial_status"]
         list_serializer_class = CohortUserListSerializer
+
+    def create(self, validated_data):
+        if validated_data.get("finantial_status") is None:
+            validated_data["finantial_status"] = UP_TO_DATE
+        return super().create(validated_data)
 
 
 class CohortTimeSlotSerializer(serializers.ModelSerializer):
@@ -1664,6 +1705,11 @@ class CohortUserPUTSerializer(CohortUserSerializerMixin):
         model = CohortUser
         fields = ["id", "user", "cohort", "role", "educational_status", "finantial_status", "watching"]
         list_serializer_class = CohortUserListSerializer
+
+    def create(self, validated_data):
+        if validated_data.get("finantial_status") is None:
+            validated_data["finantial_status"] = UP_TO_DATE
+        return super().create(validated_data)
 
 
 class SyllabusSerializer(serializers.ModelSerializer):

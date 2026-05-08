@@ -102,6 +102,7 @@ from breathecode.payments.serializers import (
     GetPlanSerializer,
     GetServiceItemWithFeaturesSerializer,
     GetServiceSerializer,
+    GetStudentDepositSerializer,
     GetSubscriptionSerializer,
     MentorshipServiceSetSerializer,
     PaymentMethodSerializer,
@@ -1944,6 +1945,47 @@ class AcademyServiceStockConsumableRegenerateView(APIView):
 
         response_status = status.HTTP_200_OK if data.get("status") == "success" else status.HTTP_409_CONFLICT
         return Response(data, status=response_status)
+
+
+class AcademyPlanServiceStockSchedulersRegenerateView(APIView):
+    """
+    Academy POST (manage_service_stock_schedulers): for a given plan, enqueue service stock
+    scheduler rebuild for every related subscription or plan financing in this academy with
+    status ACTIVE or FULLY_PAID.
+    """
+
+    @capable_of("manage_service_stock_schedulers")
+    def post(self, request, academy_id=None, plan_id=None, plan_slug=None):
+        lang = get_user_language(request)
+
+        if plan_id is not None:
+            lookup = Q(id=plan_id)
+        elif plan_slug is not None:
+            lookup = Q(slug=plan_slug)
+        else:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Plan id or slug is required",
+                    es="Se requiere id o slug del plan",
+                    slug="missing-plan-key",
+                ),
+                code=400,
+            )
+
+        plan = (
+            Plan.objects.filter(lookup, Q(owner__id=academy_id) | Q(owner__isnull=True))
+            .exclude(status="DELETED")
+            .first()
+        )
+        if not plan:
+            raise ValidationException(
+                translation(lang, en="Plan not found", es="Plan no existe", slug="not-found"),
+                code=404,
+            )
+
+        data = actions.enqueue_service_stock_regeneration_for_plan(academy_id=academy_id, plan_id=plan.id)
+        return Response(data)
 
 
 class MentorshipServiceSetView(APIView):
@@ -6317,6 +6359,27 @@ class AcademyGrantConsumableView(APIView):
             proof.delete()
             raise e
         serializer = GetInvoiceSerializer(invoice, many=False)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class AcademyStudentDepositView(APIView):
+    """
+    Academy-only POST to register a manual deposit and apply it to a plan financing installment.
+
+    ``amount`` must not exceed ``plan_financing.monthly_price`` when that value is greater than zero.
+    """
+
+    @capable_of("crud_subscription")
+    def post(self, request, academy_id=None):
+        lang = get_user_language(request)
+        proof = actions.validate_and_create_proof_of_payment(request, request.user, academy_id, lang)
+        try:
+            deposit = actions.register_student_deposit(request, proof, academy_id, lang)
+        except Exception as e:
+            proof.delete()
+            raise e
+
+        serializer = GetStudentDepositSerializer(deposit, many=False)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 

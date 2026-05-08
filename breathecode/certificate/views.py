@@ -9,8 +9,9 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from breathecode.admissions.models import Academy, CohortUser, Syllabus
-from breathecode.authenticate.models import ProfileAcademy
+from breathecode.admissions.diagnostics import build_graduation_diagnostic
+from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
+from breathecode.authenticate.models import ProfileAcademy, User
 from breathecode.authenticate.actions import get_user_language
 from breathecode.utils import GenerateLookupsMixin, HeaderLimitOffsetPagination, capable_of
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
@@ -19,6 +20,7 @@ from breathecode.utils.decorators import has_permission
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 
 from .actions import generate_certificate, get_syllabus_specialty_bucket_conflict
+from .diagnostics import build_certificate_diagnostic, list_graduated_without_certificate_cohort_users
 from .models import Badge, LayoutDesign, Specialty, UserSpecialty
 from .serializers import BadgeSerializer, LayoutDesignSerializer, SpecialtySerializer, UserSpecialtySerializer
 from .tasks import async_generate_certificate
@@ -541,6 +543,240 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination, GenerateLooku
         serializer = UserSpecialtySerializer(certs, many=True)
 
         return Response(serializer.data)
+
+
+class AcademyStudentDiagnosticView(APIView):
+    """
+    Read-only graduation or certificate diagnostics for students (same rules as diagnose_* commands).
+    Required query: kind=graduation|certificate.
+    Targeting: cohort_user_id; or user_id / user_email with optional cohort_id;
+    or scope=cohort&cohort_id; or all_graduated_without_certificate=true (certificate only).
+    """
+
+    @capable_of("read_certificate")
+    def get(self, request, academy_id=None):
+        lang = get_user_language(request)
+        kind = request.GET.get("kind")
+        if kind not in ("graduation", "certificate"):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="kind must be graduation or certificate",
+                    es="kind debe ser graduation o certificate",
+                ),
+                code=400,
+                slug="invalid-diagnostic-kind",
+            )
+
+        ag_flag = request.GET.get("all_graduated_without_certificate", "").lower() in ("true", "1", "yes")
+        if ag_flag:
+            if kind != "certificate":
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="all_graduated_without_certificate only applies when kind=certificate",
+                        es="all_graduated_without_certificate solo aplica cuando kind=certificate",
+                    ),
+                    code=400,
+                    slug="invalid-diagnostic-combination",
+                )
+            try:
+                limit = int(request.GET.get("limit") or 20)
+            except (TypeError, ValueError):
+                raise ValidationException(
+                    translation(lang, en="limit must be an integer", es="limit debe ser un entero"),
+                    code=400,
+                    slug="invalid-limit",
+                )
+            if limit < 1 or limit > 500:
+                raise ValidationException(
+                    translation(lang, en="limit must be between 1 and 500", es="limit debe estar entre 1 y 500"),
+                    code=400,
+                    slug="invalid-limit",
+                )
+            cohort_users = list_graduated_without_certificate_cohort_users(academy_id, limit)
+            results = [build_certificate_diagnostic(cu) for cu in cohort_users]
+            return Response(
+                {"kind": "certificate", "academy_id": academy_id, "results": results},
+                status=status.HTTP_200_OK,
+            )
+
+        scope = request.GET.get("scope")
+        if scope == "cohort":
+            cohort_id_raw = request.GET.get("cohort_id")
+            if not cohort_id_raw:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="cohort_id is required when scope=cohort",
+                        es="cohort_id es requerido cuando scope=cohort",
+                    ),
+                    code=400,
+                    slug="missing-cohort-id",
+                )
+            try:
+                cohort_id = int(cohort_id_raw)
+            except (TypeError, ValueError):
+                raise ValidationException(
+                    translation(lang, en="cohort_id must be an integer", es="cohort_id debe ser un entero"),
+                    code=400,
+                    slug="invalid-cohort-id",
+                )
+            cohort = Cohort.objects.filter(id=cohort_id).first()
+            if cohort is None or cohort.academy_id != academy_id:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Cohort not found for this academy",
+                        es="Cohorte no encontrada para esta academia",
+                    ),
+                    code=404,
+                    slug="cohort-not-found",
+                )
+            try:
+                limit = int(request.GET.get("limit") or 50)
+                offset = int(request.GET.get("offset") or 0)
+            except (TypeError, ValueError):
+                raise ValidationException(
+                    translation(lang, en="limit and offset must be integers", es="limit y offset deben ser enteros"),
+                    code=400,
+                    slug="invalid-pagination",
+                )
+            if limit < 1 or limit > 500 or offset < 0:
+                raise ValidationException(
+                    translation(lang, en="Invalid limit or offset", es="limit u offset inválido"),
+                    code=400,
+                    slug="invalid-pagination",
+                )
+            qs = (
+                CohortUser.objects.filter(cohort_id=cohort_id, role="STUDENT")
+                .exclude(cohort__stage="DELETED")
+                .order_by("id")[offset : offset + limit]
+            )
+            results = []
+            for cu in qs:
+                if kind == "graduation":
+                    results.append(build_graduation_diagnostic(cu))
+                else:
+                    results.append(build_certificate_diagnostic(cu))
+            return Response({"kind": kind, "academy_id": academy_id, "results": results}, status=status.HTTP_200_OK)
+
+        cohort_user_id = request.GET.get("cohort_user_id")
+        user_id = request.GET.get("user_id")
+        user_email = request.GET.get("user_email")
+        cohort_id_filter = request.GET.get("cohort_id")
+
+        if cohort_user_id:
+            try:
+                cu_id = int(cohort_user_id)
+            except (TypeError, ValueError):
+                raise ValidationException(
+                    translation(lang, en="cohort_user_id must be an integer", es="cohort_user_id debe ser un entero"),
+                    code=400,
+                    slug="invalid-cohort-user-id",
+                )
+            cohort_user = CohortUser.objects.exclude(cohort__stage="DELETED").filter(id=cu_id).first()
+            if cohort_user is None:
+                raise ValidationException(
+                    translation(lang, en="CohortUser not found", es="CohortUser no encontrado"),
+                    code=404,
+                    slug="cohort-user-not-found",
+                )
+            if cohort_user.cohort.academy_id != academy_id:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="CohortUser not found for this academy",
+                        es="CohortUser no encontrado para esta academia",
+                    ),
+                    code=404,
+                    slug="cohort-user-not-found",
+                )
+            if kind == "graduation":
+                result = build_graduation_diagnostic(cohort_user)
+            else:
+                result = build_certificate_diagnostic(cohort_user)
+            return Response({"kind": kind, "academy_id": academy_id, "result": result}, status=status.HTTP_200_OK)
+
+        if user_id or user_email:
+            if user_id:
+                try:
+                    uid = int(user_id)
+                except (TypeError, ValueError):
+                    raise ValidationException(
+                        translation(lang, en="user_id must be an integer", es="user_id debe ser un entero"),
+                        code=400,
+                        slug="invalid-user-id",
+                    )
+                user = User.objects.filter(id=uid).first()
+            else:
+                user = User.objects.filter(email=user_email.strip()).first()
+            if user is None:
+                raise ValidationException(
+                    translation(lang, en="User not found", es="Usuario no encontrado"),
+                    code=404,
+                    slug="user-not-found",
+                )
+            q = {"user__id": user.id}
+            if cohort_id_filter:
+                try:
+                    q["cohort__id"] = int(cohort_id_filter)
+                except (TypeError, ValueError):
+                    raise ValidationException(
+                        translation(lang, en="cohort_id must be an integer", es="cohort_id debe ser un entero"),
+                        code=400,
+                        slug="invalid-cohort-id",
+                    )
+            cohort_users = list(CohortUser.objects.filter(**q).exclude(cohort__stage="DELETED"))
+            if not cohort_users:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="No CohortUser found for this user",
+                        es="No hay CohortUser para este usuario",
+                    ),
+                    code=404,
+                    slug="cohort-user-not-found",
+                )
+            if len(cohort_users) > 1 and not cohort_id_filter:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="User is in multiple cohorts; pass cohort_id to choose one",
+                        es="El usuario está en varias cohortes; envía cohort_id para elegir una",
+                    ),
+                    code=400,
+                    slug="ambiguous-cohort-user",
+                )
+            out = []
+            for cu in cohort_users:
+                if cu.cohort.academy_id != academy_id:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en="CohortUser not found for this academy",
+                            es="CohortUser no encontrado para esta academia",
+                        ),
+                        code=404,
+                        slug="cohort-user-not-found",
+                    )
+                if kind == "graduation":
+                    out.append(build_graduation_diagnostic(cu))
+                else:
+                    out.append(build_certificate_diagnostic(cu))
+            if len(out) == 1:
+                return Response({"kind": kind, "academy_id": academy_id, "result": out[0]}, status=status.HTTP_200_OK)
+            return Response({"kind": kind, "academy_id": academy_id, "results": out}, status=status.HTTP_200_OK)
+
+        raise ValidationException(
+            translation(
+                lang,
+                en="Provide cohort_user_id, user_id or user_email, scope=cohort with cohort_id, or all_graduated_without_certificate",
+                es="Indique cohort_user_id, user_id o user_email, scope=cohort con cohort_id, o all_graduated_without_certificate",
+            ),
+            code=400,
+            slug="missing-diagnostic-target",
+        )
 
 
 class CertificateMeView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):

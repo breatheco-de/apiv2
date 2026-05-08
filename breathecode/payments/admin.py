@@ -45,6 +45,7 @@ from breathecode.payments.models import (
     ServiceItemFeature,
     ServiceStockScheduler,
     ServiceTranslation,
+    StudentDeposit,
     Subscription,
     SubscriptionBillingTeam,
     SubscriptionSeat,
@@ -564,10 +565,50 @@ def regenerate_service_stock_schedulers(modeladmin, request, queryset):
         tasks.build_service_stock_scheduler_from_plan_financing.delay(item.id)
 
 
+class PlanFinancingInvoiceInline(admin.TabularInline):
+    model = PlanFinancing.invoices.through
+    extra = 0
+    can_delete = False
+    raw_id_fields = ("invoice",)
+    fields = ("invoice", "invoice_amount", "invoice_status", "invoice_paid_at")
+    readonly_fields = ("invoice_amount", "invoice_status", "invoice_paid_at")
+    verbose_name = "Associated invoice"
+    verbose_name_plural = "Associated invoices"
+
+    def invoice_amount(self, obj):
+        return obj.invoice.amount
+
+    def invoice_status(self, obj):
+        return obj.invoice.status
+
+    def invoice_paid_at(self, obj):
+        return obj.invoice.paid_at
+
+
+class StudentDepositInline(admin.TabularInline):
+    model = StudentDeposit
+    extra = 0
+    can_delete = False
+    raw_id_fields = ("invoice", "currency")
+    fields = ("invoice", "amount", "currency", "status", "applied_at", "refunded_at", "notes")
+    readonly_fields = ("invoice", "amount", "currency", "status", "applied_at", "refunded_at", "notes")
+
+
 @admin.register(PlanFinancing)
 class PlanFinancingAdmin(admin.ModelAdmin):
-    list_display = ("id", "next_payment_at", "valid_until", "status", "user")
-    list_filter = ["status"]
+    list_display = (
+        "id",
+        "user",
+        "academy",
+        "status",
+        "monthly_price",
+        "initial_payment_amount",
+        "how_many_installments",
+        "grace_period",
+        "next_payment_at",
+        "valid_until",
+    )
+    list_filter = ["status", "academy", "externally_managed", "grace_period_duration_unit", "next_payment_at"]
     search_fields = ["user__email", "user__first_name", "user__last_name"]
     raw_id_fields = [
         "user",
@@ -578,9 +619,96 @@ class PlanFinancingAdmin(admin.ModelAdmin):
         "plans",
         "joined_cohorts",
         "invoices",
-        "coupons"
+        "coupons",
     ]
+    readonly_fields = ("invoice_summary",)
+    fieldsets = (
+        (
+            "Billing",
+            {
+                "fields": (
+                    "user",
+                    "academy",
+                    "status",
+                    "status_message",
+                    "externally_managed",
+                    "monthly_price",
+                    "initial_payment_amount",
+                    "initial_payment_notes",
+                    "how_many_installments",
+                    "next_payment_at",
+                    "valid_until",
+                    "plan_expires_at",
+                )
+            },
+        ),
+        (
+            "Grace period",
+            {
+                "fields": (
+                    "grace_period_duration",
+                    "grace_period_duration_unit",
+                )
+            },
+        ),
+        (
+            "Plan and cohorts",
+            {
+                "fields": (
+                    "plans",
+                    "selected_cohort_set",
+                    "joined_cohorts",
+                    "selected_mentorship_service_set",
+                    "selected_event_type_set",
+                    "seat_service_item",
+                )
+            },
+        ),
+        (
+            "Audit",
+            {
+                "classes": ("collapse",),
+                "fields": (
+                    "currency",
+                    "coupons",
+                    "invoices",
+                    "invoice_summary",
+                    "conversion_info",
+                    "country_code",
+                    "next_charge_pull_applied",
+                    "auto_recharge_enabled",
+                    "recharge_threshold_amount",
+                    "recharge_amount",
+                    "max_period_spend",
+                ),
+            },
+        ),
+    )
+    inlines = [PlanFinancingInvoiceInline, StudentDepositInline]
     actions = [renew_plan_financing_consumables, charge_plan_financing, regenerate_service_stock_schedulers]
+
+    def grace_period(self, obj):
+        return f"{obj.grace_period_duration} {obj.grace_period_duration_unit}"
+
+    def invoice_summary(self, obj):
+        invoices = obj.invoices.order_by("paid_at", "id")
+        if not invoices.exists():
+            return "-"
+
+        rows = []
+        for invoice in invoices:
+            amount = invoice.currency.format_price(invoice.amount) if invoice.currency else invoice.amount
+            rows.append(f"#{invoice.id}: {amount} - {invoice.status} - {invoice.paid_at}")
+
+        return format_html("<br>".join(rows))
+
+
+@admin.register(StudentDeposit)
+class StudentDepositAdmin(admin.ModelAdmin):
+    list_display = ("id", "user", "academy", "amount", "currency", "status", "invoice", "plan_financing", "applied_at")
+    list_filter = ("status", "academy", "currency", "applied_at", "refunded_at")
+    search_fields = ("user__email", "user__first_name", "user__last_name", "invoice__id", "plan_financing__id")
+    raw_id_fields = ("user", "academy", "invoice", "plan_financing", "currency")
 
 
 @admin.register(PlanFinancingTeam)

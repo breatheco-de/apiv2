@@ -30,6 +30,7 @@ from breathecode.utils.decorators import service_deprovisioner
 
 from .models import (
     ADD,
+    PENDING,
     SYNCHED,
     AcademyAuthSettings,
     CredentialsGithub,
@@ -1172,12 +1173,24 @@ def delete_from_github(github_user: GithubAcademyUser):
         return False
 
 
-def sync_organization_members(academy_id, only_status=None):
+def sync_organization_members(
+    academy_id, only_status=None, github_academy_user_id: Optional[int] = None, force_requeue: bool = False
+):
+    """
+    Synchronize GithubAcademyUser rows for an academy with the GitHub org.
 
+    :param github_academy_user_id: If set, only this GithubAcademyUser is processed
+        (and the "unknown org members" pass is skipped).
+    :param force_requeue: If True with ``github_academy_user_id``, set storage to PENDING+ADD before syncing.
+
+    Per-member failures inviting to or deleting from GitHub are logged on the row (``storage_status=ERROR``)
+    and on ``AcademyAuthSettings``; processing continues with the remaining users.
+    """
     if only_status is None:
         only_status = []
 
     now = timezone.now()
+    single_gau = github_academy_user_id is not None
 
     settings = AcademyAuthSettings.objects.filter(academy__id=academy_id).first()
     if settings is None or not settings.github_is_sync:
@@ -1205,18 +1218,36 @@ def sync_organization_members(academy_id, only_status=None):
             slug="invalid-owner",
         )
 
-    # retry errored users only from this academy being synched
-    GithubAcademyUser.objects.filter(academy=settings.academy, storage_status="ERROR").update(
-        storage_status="PENDING", storage_synch_at=None
-    )
-
-    # users without github credentials are marked as error
-    no_github_credentials = GithubAcademyUser.objects.filter(
-        academy=settings.academy, user__credentialsgithub__isnull=True
-    )
-    no_github_credentials.update(
-        storage_status="ERROR", storage_log=[GithubAcademyUser.create_log("This user needs connect to github")]
-    )
+    if single_gau:
+        gau = GithubAcademyUser.objects.filter(id=github_academy_user_id, academy=settings.academy).first()
+        if gau is None:
+            raise ValidationException(
+                translation(
+                    en=f"GithubAcademyUser id {github_academy_user_id} not found for this academy",
+                    es=f"No existe GithubAcademyUser id {github_academy_user_id} en esta academia",
+                ),
+                slug="gau-not-found",
+            )
+        if force_requeue:
+            gau.storage_status = PENDING
+            gau.storage_action = ADD
+            gau.save()
+        if gau.user is None or not CredentialsGithub.objects.filter(user=gau.user).exists():
+            gau.storage_status = "ERROR"
+            gau.log("This user needs connect to github", reset=True)
+            gau.save()
+    else:
+        # retry errored users only from this academy being synched
+        GithubAcademyUser.objects.filter(academy=settings.academy, storage_status="ERROR").update(
+            storage_status="PENDING", storage_synch_at=None
+        )
+        # users without github credentials are marked as error
+        no_github_credentials = GithubAcademyUser.objects.filter(
+            academy=settings.academy, user__credentialsgithub__isnull=True
+        )
+        no_github_credentials.update(
+            storage_status="ERROR", storage_log=[GithubAcademyUser.create_log("This user needs connect to github")]
+        )
 
     gb = Github(org=settings.github_username, token=settings.github_owner.credentialsgithub.token)
 
@@ -1235,8 +1266,13 @@ def sync_organization_members(academy_id, only_status=None):
     if len(only_status) > 0:
         org_users = org_users.filter(storage_action__in=only_status)
 
+    if single_gau:
+        org_users = org_users.filter(id=github_academy_user_id)
+
     for _member in org_users:
         github = CredentialsGithub.objects.filter(user=_member.user).first()
+        if github is None:
+            continue
         if _member.storage_status in ["PENDING"] and _member.storage_action in ["ADD", "INVITE"]:
             if github.username in remaining_usernames:
                 _member.log("User was already added to github")
@@ -1255,7 +1291,10 @@ def sync_organization_members(academy_id, only_status=None):
                     gb.invite_org_member(github.email, team_ids=teams)
                 except Exception as e:
                     settings.add_error("Error inviting member " + str(github.email) + " to org: " + str(e))
-                    raise e
+                    _member.log(f"Error inviting to GitHub org: {e}")
+                    _member.storage_status = "ERROR"
+                    _member.save()
+                    continue
                 _member.storage_status = "SYNCHED"
                 _member.log(f"Sent invitation to {github.email}")
                 _member.storage_action = "INVITE"
@@ -1285,7 +1324,10 @@ def sync_organization_members(academy_id, only_status=None):
                         gb.delete_org_member(github.username)
                     except Exception as e:
                         settings.add_error("Error deleting member from org: " + str(e))
-                        raise e
+                        _member.log(f"Error deleting from GitHub org: {e}")
+                        _member.storage_status = "ERROR"
+                        _member.save()
+                        continue
                     _member.log("Successfully deleted in github organization")
                 else:
                     _member.log(
@@ -1299,39 +1341,40 @@ def sync_organization_members(academy_id, only_status=None):
         remaining_usernames = set([username for username in remaining_usernames if username != github_username])
 
     # there are some users from github we could not find in THIS academy cohorts
-    for u in remaining_usernames:
-        _user = CredentialsGithub.objects.filter(username=u).first()
-        if _user is not None:
-            _user = _user.user
+    if not single_gau:
+        for u in remaining_usernames:
+            _user = CredentialsGithub.objects.filter(username=u).first()
+            if _user is not None:
+                _user = _user.user
 
-        # we look if the user is present in this particular academy, not from academy_slugs because we do want
-        # to duplicate this users per academy, that way each academy can decide if wants to delete or not
-        # you should see in the code for deletion that users will only be deleted if all the academies for
-        # the same organization delete it
-        _query = GithubAcademyUser.objects.filter(academy=settings.academy).filter(username=u)
-        if _user is not None:
-            _query = _query.filter(user=_user)
-        unknown_user = _query.first()
+            # we look if the user is present in this particular academy, not from academy_slugs because we do want
+            # to duplicate this users per academy, that way each academy can decide if wants to delete or not
+            # you should see in the code for deletion that users will only be deleted if all the academies for
+            # the same organization delete it
+            _query = GithubAcademyUser.objects.filter(academy=settings.academy).filter(username=u)
+            if _user is not None:
+                _query = _query.filter(user=_user)
+            unknown_user = _query.first()
 
-        if unknown_user is None:
-            unknown_user = GithubAcademyUser(
-                academy=settings.academy,
-                user=_user,
-                username=u,
-                storage_status="UNKNOWN",
-                storage_action="IGNORE",
-                storage_synch_at=now,
+            if unknown_user is None:
+                unknown_user = GithubAcademyUser(
+                    academy=settings.academy,
+                    user=_user,
+                    username=u,
+                    storage_status="UNKNOWN",
+                    storage_action="IGNORE",
+                    storage_synch_at=now,
+                )
+                unknown_user.save()
+
+            unknown_user.storage_status = "UNKNOWN"
+            unknown_user.storage_action = "IGNORE"
+            unknown_user.storage_synch_at = now
+            unknown_user.log(
+                "This user is coming from github, we don't know if its a student from your academy or if it should be added or deleted, keep it as IGNORED to avoid deletion",
+                reset=True,
             )
             unknown_user.save()
-
-        unknown_user.storage_status = "UNKNOWN"
-        unknown_user.storage_action = "IGNORE"
-        unknown_user.storage_synch_at = now
-        unknown_user.log(
-            "This user is coming from github, we don't know if its a student from your academy or if it should be added or deleted, keep it as IGNORED to avoid deletion",
-            reset=True,
-        )
-        unknown_user.save()
 
     return True
 
@@ -1437,8 +1480,7 @@ JWT_LIFETIME = 10
 
 def accept_invite_action(data=None, token=None, lang="en"):
     from breathecode.payments import actions as payments_actions
-    from breathecode.payments import tasks as payments_tasks
-    from breathecode.payments.models import Bag, Invoice, Plan
+    from breathecode.payments.models import Plan
 
 
     if data is None:
@@ -1522,106 +1564,121 @@ def accept_invite_action(data=None, token=None, lang="en"):
         for plan in invite.subscription_seat.billing_team.plans.all():
             payments_actions.grant_student_capabilities(user, plan)
 
-    if invite.cohort is not None:
-        role = "student"
-        if invite.role is not None and invite.role.slug != "student":
-            role = invite.role.slug.upper()
+    # StudentPOSTSerializer creates one UserInvite per cohort (each with its own token). Accepting any
+    # of those tokens must enroll the user in every cohort in that batch (same email + academy + role).
+    pending_invite_qs = UserInvite.objects.filter(email__iexact=invite.email, status="PENDING")
+    if invite.academy_id is not None:
+        pending_invite_qs = pending_invite_qs.filter(academy_id=invite.academy_id)
+    else:
+        pending_invite_qs = pending_invite_qs.filter(pk=invite.pk)
+    if invite.role_id is not None:
+        pending_invite_qs = pending_invite_qs.filter(role_id=invite.role_id)
 
-        cu = CohortUser.objects.filter(user=user, cohort=invite.cohort).first()
+    pending_invites = list(
+        pending_invite_qs.select_related(
+            "cohort",
+            "cohort__academy",
+            "academy",
+            "role",
+            "payment_method",
+            "author",
+            "user",
+        )
+    )
+
+    for user_invite in pending_invites:
+        if user_invite.cohort is None:
+            continue
+
+        role = "student"
+        if user_invite.role is not None and user_invite.role.slug != "student":
+            role = user_invite.role.slug.upper()
+
+        cu = CohortUser.objects.filter(user=user, cohort=user_invite.cohort).first()
         if cu is None:
-            cu = CohortUser(user=user, cohort=invite.cohort, role=role.upper(), finantial_status=UP_TO_DATE)
+            cu = CohortUser(user=user, cohort=user_invite.cohort, role=role.upper(), finantial_status=UP_TO_DATE)
             cu.save()
 
-        plan = Plan.objects.filter(cohort_set__cohorts=invite.cohort, invites=invite).first()
+    # Create ONE financing per plan, even if the user was invited to multiple cohorts that belong to the same plan's
+    # cohort_set. Each invite is cohort-scoped (one token per cohort), but financing is plan-scoped.
+    from collections import defaultdict
 
-        invite_user = invite.user or user
+    plan_to_cohorts: dict[int, list[Cohort]] = defaultdict(list)
+    plan_to_seen_cohort_ids: dict[int, set[int]] = defaultdict(set)
+    plan_to_invite: dict[int, UserInvite] = {}
+    plan_to_plan: dict[int, Plan] = {}
 
-        if (
-            plan
-            and invite_user
-            and invite.cohort.academy.main_currency
-            and (
-                invite.cohort.available_as_saas == True
-                or (invite.cohort.available_as_saas == None and invite.cohort.academy.available_as_saas == True)
-            )
+    for user_invite in pending_invites:
+        if user_invite.cohort is None:
+            continue
+
+        invite_user = user_invite.user or user
+        academy = user_invite.cohort.academy
+        if not invite_user or not academy or not academy.main_currency_id:
+            continue
+
+        if not (
+            user_invite.cohort.available_as_saas is True
+            or (user_invite.cohort.available_as_saas is None and academy.available_as_saas is True)
         ):
-            utc_now = timezone.now()
+            continue
 
-            bag = Bag()
-            bag.chosen_period = "NO_SET"
-            bag.status = "PAID"
-            bag.type = "INVITED"
-            bag.how_many_installments = 1
-            bag.academy = invite.cohort.academy
-            bag.user = user
-            bag.is_recurrent = False
-            bag.was_delivered = False
-            bag.token = None
-            bag.currency = invite.cohort.academy.main_currency
-            bag.expires_at = None
+        for plan in Plan.objects.filter(invites=user_invite).distinct():
+            # Only group cohorts that actually belong to the plan's cohort_set.
+            if not plan.cohort_set_id or not plan.cohort_set.cohorts.filter(id=user_invite.cohort_id).exists():
+                continue
 
-            bag.save()
+            pid = plan.id
+            plan_to_plan[pid] = plan
+            plan_to_invite[pid] = user_invite  # keep last (same batch metadata is expected)
 
-            bag.plans.add(plan)
+            if user_invite.cohort_id not in plan_to_seen_cohort_ids[pid]:
+                plan_to_seen_cohort_ids[pid].add(user_invite.cohort_id)
+                plan_to_cohorts[pid].append(user_invite.cohort)
 
-            financing_option = plan.financing_options.filter(how_many_months=1).first()
-            if not financing_option:
-                raise ValidationException(
-                    translation(
-                        en="This plan does not have a one-installment financing option configured. Please contact the academy.",
-                        es="Este plan no tiene configurada una opción de financiamiento de un mes. Por favor contacta a la academia.",
-                    ),
-                    slug="plan-without-one-month-financing-option",
-                    code=400,
-                )
-            plan_price = financing_option.monthly_price
-            is_free = plan_price == 0
+    for plan_id, cohorts_list in plan_to_cohorts.items():
+        if not cohorts_list:
+            continue
 
-            externally_managed = invite.payment_method is not None
+        plan = plan_to_plan.get(plan_id)
+        ui = plan_to_invite.get(plan_id)
+        if plan is None or ui is None:
+            continue
 
-            proof = None
-            if invite.payment_method and not invite.payment_method.is_crypto:
-                from breathecode.payments.models import ProofOfPayment
+        invite_user = ui.user or user
+        academy = ui.academy or (cohorts_list[0].academy if cohorts_list else None)
+        if not invite_user or not academy:
+            continue
 
-                if not invite.author:
-                    raise ValidationException(
-                        translation(
-                            en="Invite author is required when payment method is set. The author is the staff member who created the invitation.",
-                            es="El autor de la invitación es requerido cuando se establece un método de pago. El autor es el miembro del staff que creó la invitación.",
-                        ),
-                        slug="invite-author-required-for-payment-method",
-                        code=400,
-                    )
+        access = payments_actions.resolve_student_plan_access_from_invite(ui)
+        primary = cohorts_list[0]
+        joined = cohorts_list[1:] if len(cohorts_list) > 1 else None
 
-                proof = ProofOfPayment(
-                    created_by=invite.author,
-                    status=ProofOfPayment.Status.DONE,
-                    provided_payment_details=f"Payment via invitation with payment method: {invite.payment_method.title}",
-                    reference=f"INVITE-{invite.id}",
-                )
-                proof.save()
+        payments_actions.create_invited_plan_financing_for_user(
+            user=invite_user,
+            plan=plan,
+            academy=academy,
+            cohort=primary,
+            joined_cohorts=joined,
+            payment_method=ui.payment_method,
+            author=ui.author,
+            lang=lang,
+            conversion_info=ui.conversion_info,
+            how_many_installments=access["how_many_installments"],
+            initial_payment_amount=access["initial_payment_amount"],
+            initial_payment_notes=access["initial_payment_notes"],
+            unique_payment_negotiated_amount=access.get("unique_payment_negotiated_amount"),
+            grace_period_duration=access["grace_period_duration"],
+            grace_period_duration_unit=access["grace_period_duration_unit"],
+        )
 
-            invoice = Invoice(
-                amount=plan_price,
-                paid_at=utc_now,
-                user=invite_user,
-                bag=bag,
-                academy=bag.academy,
-                status="FULFILLED",
-                currency=bag.academy.main_currency,
-                payment_method=invite.payment_method,
-                externally_managed=externally_managed,
-                proof=proof,
-            )
-            invoice.save()
+    for user_invite in pending_invites:
+        user_invite.user = user
+        user_invite.status = "ACCEPTED"
+        user_invite.is_email_validated = True
+        user_invite.save()
 
-            payments_tasks.build_plan_financing.delay(bag.id, invoice.id, is_free=is_free)
-
-    invite.user = user
-    invite.status = "ACCEPTED"
-    invite.is_email_validated = True
-    invite.save()
-
+    invite.refresh_from_db()
     return invite
 
 

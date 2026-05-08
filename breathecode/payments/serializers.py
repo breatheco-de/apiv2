@@ -26,6 +26,7 @@ from breathecode.payments.models import (
     Service,
     ServiceItem,
     ServiceItemFeature,
+    StudentDeposit,
 )
 from breathecode.utils import serializers, serpy
 
@@ -141,6 +142,8 @@ class GetServiceItemSerializer(serpy.Serializer):
     sort_priority = serpy.Field()
     service = GetServiceSmallSerializer()
     is_team_allowed = serpy.Field()
+    renew_at = serpy.Field()
+    renew_at_unit = serpy.Field()
 
 
 class GetServiceItemFeatureShortSerializer(serpy.Serializer):
@@ -307,6 +310,7 @@ class GetPlanSmallTinySerializer(serpy.Serializer):
     title = serpy.Field()
     slug = serpy.Field()
     status = serpy.Field()
+    discontinued_reason = serpy.Field(required=False)
     time_of_life = serpy.Field()
     time_of_life_unit = serpy.Field()
     trial_duration = serpy.Field()
@@ -1049,6 +1053,22 @@ class CreditNoteSerializer(serpy.Serializer):
             return []
 
 
+class GetStudentDepositSerializer(serpy.Serializer):
+    id = serpy.Field()
+    amount = serpy.Field()
+    currency = GetCurrencySmallSerializer(many=False)
+    status = serpy.Field()
+    notes = serpy.Field()
+    applied_at = serpy.Field()
+    refunded_at = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+    invoice_id = serpy.Field()
+    plan_financing_id = serpy.Field()
+    user = GetUserSmallSerializer(many=False)
+    academy = GetAcademySmallSerializer(many=False)
+
+
 class GetInvoiceSerializer(GetInvoiceSmallSerializer):
     id = serpy.Field()
     amount = serpy.Field()
@@ -1066,6 +1086,7 @@ class GetInvoiceSerializer(GetInvoiceSmallSerializer):
     standalone_consumables = serpy.MethodField()
     payment_method = serpy.MethodField()
     proof = serpy.MethodField()
+    student_deposit = serpy.MethodField()
 
     def get_credit_notes(self, obj):
         import logging
@@ -1103,6 +1124,12 @@ class GetInvoiceSerializer(GetInvoiceSmallSerializer):
         if getattr(obj, "proof_id", None) and getattr(obj, "proof", None):
             return GetProofOfPaymentSerializer(obj.proof, many=False).data
         return None
+
+    def get_student_deposit(self, obj):
+        try:
+            return GetStudentDepositSerializer(obj.student_deposit, many=False).data
+        except StudentDeposit.DoesNotExist:
+            return None
 
 
 class GetAbstractIOweYouSerializer(serpy.Serializer):
@@ -1150,6 +1177,14 @@ class GetPlanFinancingSerializer(GetAbstractIOweYouSerializer):
     plan_expires_at = serpy.Field()
     monthly_price = serpy.Field()
     how_many_installments = serpy.Field()
+    initial_payment_amount = serpy.Field()
+    initial_payment_notes = serpy.Field()
+    grace_period_duration = serpy.Field()
+    grace_period_duration_unit = serpy.Field()
+    student_deposits = serpy.MethodField()
+
+    def get_student_deposits(self, obj):
+        return GetStudentDepositSerializer(obj.student_deposits.all(), many=True).data
 
 
 class GetSubscriptionHookSerializer(GetAbstractIOweYouSerializer):
@@ -1218,6 +1253,32 @@ class PlanSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
     def validate(self, attrs):
+        instance = getattr(self, "instance", None)
+        old_status = instance.status if instance else None
+
+        incoming_status = attrs.get("status")
+        if incoming_status is None:
+            incoming_status = old_status if instance else Plan.Status.DRAFT
+
+        transitioning_to_discontinued = incoming_status == Plan.Status.DISCONTINUED and (
+            instance is None or old_status != Plan.Status.DISCONTINUED
+        )
+
+        if transitioning_to_discontinued:
+            reason = attrs.get("discontinued_reason")
+            if reason is None and instance is not None and "discontinued_reason" not in attrs:
+                reason = instance.discontinued_reason
+
+            if reason is None or (isinstance(reason, str) and not reason.strip()):
+                raise ValidationException(
+                    translation(
+                        en="discontinued_reason is required when setting plan status to DISCONTINUED",
+                        es="discontinued_reason es obligatorio al poner el plan en DISCONTINUED",
+                    ),
+                    slug="discontinued-reason-required",
+                    code=400,
+                )
+
         return attrs
 
     def create(self, validated_data):
@@ -1281,9 +1342,6 @@ class PutPlanSerializer(PlanSerializer):
     class Meta:
         model = Plan
         fields = "__all__"
-
-    def validate(self, attrs):
-        return attrs
 
 
 class FinancingOptionSerializer(serializers.ModelSerializer):

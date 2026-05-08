@@ -255,6 +255,17 @@ class UserInvite(models.Model):
         help_text="Video de bienvenida con preview_image y url. Formato: {'preview_image': 'url', 'url': 'url'}"
     )
 
+    student_plan_access = models.JSONField(
+        default=None,
+        blank=True,
+        null=True,
+        help_text=(
+            "Agreed-on financing when inviting a student (kept separate from conversion_info / UTMs). "
+            "Keys: how_many_installments, initial_payment_amount, initial_payment_notes, "
+            "grace_period_duration, grace_period_duration_unit."
+        ),
+    )
+
     # link to team membership (optional)
     subscription_seat = models.ForeignKey(
         "payments.SubscriptionSeat",
@@ -480,6 +491,13 @@ class AcademyAuthSettings(models.Model):
         related_name="learnpack_academy_auth_settings",
         help_text="User who owns the LearnPack integration for this academy. Must have FirstPartyCredentials with rigobot id.",
     )
+    # LearnPack JSON config. Reserved key ``telemetry_webhook_ignore`` (object with optional list fields
+    # ``user_ids``, ``learnpack_package_ids``, ``package_slugs``, ``asset_ids``, ``events``): if any
+    # listed value matches an incoming LearnPack telemetry webhook for this academy, the webhook row is
+    # saved as IGNORED and Celery processing is skipped. Prefer
+    # ``PUT /v1/assignment/academy/learnpack/telemetry-webhook-ignore`` to edit only that subtree; see also
+    # ``AcademyAuthSettingsSerializer.update`` merge behavior when updating ``learnpack_features`` via auth
+    # settings.
     learnpack_features = models.JSONField(
         default=dict,
         blank=True,

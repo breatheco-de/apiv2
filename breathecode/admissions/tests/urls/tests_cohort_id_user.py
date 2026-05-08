@@ -38,7 +38,7 @@ def post_serializer(self, cohort, user, profile_academy=None, data={}):
         "created_at": self.bc.datetime.to_iso_string(UTC_NOW),
         "updated_at": self.bc.datetime.to_iso_string(UTC_NOW),
         "educational_status": "ACTIVE",
-        "finantial_status": None,
+        "finantial_status": "UP_TO_DATE",
         "id": 1,
         "profile_academy": (
             {
@@ -68,7 +68,7 @@ def cohort_user_field(data={}):
     return {
         "cohort_id": 0,
         "educational_status": "ACTIVE",
-        "finantial_status": None,
+        "finantial_status": "UP_TO_DATE",
         "id": 0,
         "role": "STUDENT",
         "user_id": 0,
@@ -115,7 +115,7 @@ def check_cohort_user_that_not_have_role_student_can_be_teacher(self, role, upda
     )
 
     expected["educational_status"] = "ACTIVE"
-    expected["finantial_status"] = None
+    expected["finantial_status"] = None if update else "UP_TO_DATE"
 
     self.assertEqual(json, expected)
 
@@ -141,7 +141,7 @@ def check_cohort_user_that_not_have_role_student_can_be_teacher(self, role, upda
                 {
                     "cohort_id": 1,
                     "educational_status": "ACTIVE",
-                    "finantial_status": None,
+                    "finantial_status": "UP_TO_DATE",
                     "id": 1,
                     "role": "TEACHER",
                     "user_id": 1,
@@ -442,7 +442,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                 {
                     "cohort_id": 1,
                     "educational_status": "ACTIVE",
-                    "finantial_status": None,
+                    "finantial_status": "UP_TO_DATE",
                     "id": 1,
                     "role": "STUDENT",
                     "user_id": 1,
@@ -497,7 +497,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                 {
                     "cohort_id": 1,
                     "educational_status": "ACTIVE",
-                    "finantial_status": None,
+                    "finantial_status": "UP_TO_DATE",
                     "id": 1,
                     "role": "STUDENT",
                     "user_id": 2,
@@ -507,7 +507,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                 {
                     "cohort_id": 1,
                     "educational_status": "ACTIVE",
-                    "finantial_status": None,
+                    "finantial_status": "UP_TO_DATE",
                     "id": 2,
                     "role": "STUDENT",
                     "user_id": 3,
@@ -550,19 +550,18 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         data = {
             "user": models[0]["user"].id,
         }
+        prior_cohort = models[0]["cohort"]
         response = self.client.post(url, data, format="json")
         json = response.json()
-        expected = {
-            "detail": (
-                "This student is already in another cohort for the same "
-                "certificate, please mark him/her hi educational status on "
-                "this prior cohort different than ACTIVE before cotinuing"
-            ),
-            "status_code": 400,
-        }
+        expected_detail = (
+            f'This student is already ACTIVE in another cohort for the same certificate. Prior cohort: '
+            f'"{prior_cohort.name}" (slug: {prior_cohort.slug}, id: {prior_cohort.id}). Please set his/her '
+            f"educational status on that cohort to something other than ACTIVE before adding the student here."
+        )
 
-        self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(json.get("status_code"), 400)
+        self.assertEqual(json.get("detail"), expected_detail)
 
     """
     🔽🔽🔽 Post adding the same user twice
@@ -585,10 +584,17 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         # self.client.post(url, data)
         response = self.client.post(url, data, format="json")
         json = response.json()
-        expected = {"detail": "That user already exists in this cohort", "status_code": 400}
+        c = model["cohort"]
+        expected_detail = (
+            f"User {model['user'].id} already has a CohortUser row for this cohort (id={c.id}, "
+            f'name="{c.name}", slug={c.slug}). The cohort is taken from the URL '
+            f"`POST .../cohort/<cohort_id>/user`, not from a list in the body—if you meant another cohort, "
+            f"change <cohort_id> in the path."
+        )
 
-        self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(json.get("status_code"), 400)
+        self.assertEqual(json.get("detail"), expected_detail)
 
     """
     🔽🔽🔽 Post one teacher

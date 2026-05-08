@@ -9,7 +9,7 @@ from django.utils import timezone
 from breathecode.payments import tasks
 from breathecode.payments.actions import (
     SCHEDULE_CHARGE_LAG_AFTER_NEXT_PAYMENT,
-    reschedule_billing_after_vps_next_payment_pull_forward,
+    reschedule_billing_tasks,
 )
 
 
@@ -47,7 +47,7 @@ def test_reschedule_subscription_recreates_charge_even_if_manager_exists_true(bc
         "task_manager.django.actions.schedule_task",
         side_effect=schedule_task_side_effect,
     ), patch("breathecode.payments.actions.timezone.now", return_value=now):
-        reschedule_billing_after_vps_next_payment_pull_forward(subscription_id=sub.id)
+        reschedule_billing_tasks(subscription_id=sub.id)
 
     charge_manager.call.assert_called_once_with(sub.id)
     charge_etas = [eta for fn, eta in scheduled if fn == tasks.charge_subscription]

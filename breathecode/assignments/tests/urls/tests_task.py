@@ -395,6 +395,42 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of("assignments.Task"), self.bc.format.to_dict(model.task))
 
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
+    def test_task__query_cohort_live_meeting__true(self):
+        cohorts = [{"online_meeting_url": "https://meet.example.com/room"}, {"online_meeting_url": ""}]
+        tasks = [{"cohort_id": 1}, {"cohort_id": 2}]
+        model = self.bc.database.create(profile_academy=1, user=1, cohort=cohorts, task=tasks)
+        self.client.force_authenticate(model.user)
+
+        url = reverse_lazy("assignments:task") + "?cohort_live_meeting=true"
+        response = self.client.get(url)
+
+        json = response.json()
+        expected = [get_serializer(self, model.task[0], model.user)]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), self.bc.format.to_dict(model.task))
+
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
+    def test_task__query_cohort_live_meeting__false(self):
+        cohorts = [{"online_meeting_url": "https://meet.example.com/room"}, {"online_meeting_url": None}]
+        tasks = [{"cohort_id": 1}, {"cohort_id": 2}]
+        model = self.bc.database.create(profile_academy=1, user=1, cohort=cohorts, task=tasks)
+        self.client.force_authenticate(model.user)
+
+        url = reverse_lazy("assignments:task") + "?cohort_live_meeting=false"
+        response = self.client.get(url)
+
+        json = response.json()
+        expected = [get_serializer(self, model.task[1], model.user)]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), self.bc.format.to_dict(model.task))
+
     """
     🔽🔽🔽 Query stu_cohort
     """
