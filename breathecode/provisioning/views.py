@@ -358,6 +358,41 @@ def _get_litellm_vendor_options(pa: ProvisioningAcademy, lang: str):
     return options
 
 
+def _resolve_llm_key_effective_models(item: dict, user_data: dict, teams_map: dict[str, dict]) -> list[str]:
+    """
+    Resolve effective models for one key with deterministic priority:
+    key.models -> user_info.models -> team.models.
+
+    This keeps GET /me/llm/keys and POST /me/llm/keys consistent when exposing
+    the `models` field.
+    """
+    key_models = [model.strip() for model in (item.get("models") or []) if model and model.strip()]
+    user_models = [model.strip() for model in (user_data.get("models") or []) if model and model.strip()]
+
+    team_models = []
+    key_team_id = item.get("team_id")
+    if key_team_id is not None:
+        team_ids = [str(key_team_id)]
+    else:
+        team_ids = list(teams_map.keys())
+
+    for team_id in team_ids:
+        team = teams_map.get(team_id)
+        if not team:
+            continue
+        models = team.get("models") or []
+        for model_name in models:
+            normalized = model_name.strip()
+            if normalized and normalized not in team_models:
+                team_models.append(normalized)
+
+    if key_models:
+        return key_models
+    if user_models:
+        return user_models
+    return team_models
+
+
 def _get_hostinger_vendor_options(token: str, lang: str):
     import hostinger_api
     from hostinger_api.rest import ApiException
@@ -1907,32 +1942,7 @@ class MeLLMKeysView(APIView):
                 if token_id in token_ids:
                     continue
                 token_ids.add(token_id)
-                key_models = [model.strip() for model in (item.get("models") or []) if model and model.strip()]
-                user_models = [model.strip() for model in (user_data.get("models") or []) if model and model.strip()]
-
-                team_models = []
-                key_team_id = item.get("team_id")
-                if key_team_id is not None:
-                    team_ids = [str(key_team_id)]
-                else:
-                    team_ids = list(teams_map.keys())
-
-                for team_id in team_ids:
-                    team = teams_map.get(team_id)
-                    if not team:
-                        continue
-                    models = team.get("models") or []
-                    for model_name in models:
-                        normalized = model_name.strip()
-                        if normalized and normalized not in team_models:
-                            team_models.append(normalized)
-
-                if key_models:
-                    effective_models = key_models
-                elif user_models:
-                    effective_models = user_models
-                else:
-                    effective_models = team_models
+                effective_models = _resolve_llm_key_effective_models(item, user_data, teams_map)
 
                 all_keys.append(
                     {
@@ -1981,6 +1991,31 @@ class MeLLMKeysView(APIView):
             client, external_user_id = resolve_llm_client_and_external_id(request, ensure_llm_user_record=True)
             metadata = {"plan_title": plan_title} if plan_title else None
             created = client.create_api_key(external_user_id=external_user_id, name=alias, metadata=metadata)
+            created_token_id = created.get("id") or created.get("token_id") or created.get("token")
+            effective_models = []
+            if created_token_id and hasattr(client, "get_user_info"):
+                try:
+                    user_info = client.get_user_info(user_id=external_user_id)
+                    user_data = user_info.get("user_info") or {}
+                    teams_data = user_info.get("teams") or []
+                    teams_map = {}
+                    for team in teams_data:
+                        team_id = team.get("team_id")
+                        if team_id is not None:
+                            teams_map[str(team_id)] = team
+
+                    keys_data = user_info.get("keys") or []
+                    created_item = None
+                    for item in keys_data:
+                        token_id = item.get("token_id") or item.get("token")
+                        if token_id == created_token_id:
+                            created_item = item
+                            break
+                    if created_item:
+                        effective_models = _resolve_llm_key_effective_models(created_item, user_data, teams_map)
+                except LLMClientError:
+                    effective_models = []
+            created["models"] = effective_models
             raw_academy_id = request.headers.get("Academy") or request.headers.get("academy")
             try:
                 academy_id = int(str(raw_academy_id).strip())

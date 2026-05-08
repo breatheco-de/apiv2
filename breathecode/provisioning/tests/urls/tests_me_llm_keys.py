@@ -115,3 +115,28 @@ class MeLLMKeysViewTestSuite(ProvisioningTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json()[0]["models"], ["team/model-1"])
+
+    @patch("breathecode.provisioning.views.resolve_llm_client_and_external_id")
+    def test_post_me_llm_keys_returns_models_with_fallback_to_empty(self, resolve_llm_client_mock):
+        model = self.bc.database.create(user=1)
+        llm_client_mock = MagicMock()
+        llm_client_mock.create_api_key.return_value = {
+            "id": "tok-created",
+            "key": "sk-xxx",
+            "name": "alias",
+            "created_at": "2026-01-03T00:00:00Z",
+        }
+        llm_client_mock.get_user_info.return_value = {
+            "user_info": {"models": []},
+            "keys": [],
+            "teams": [],
+        }
+        resolve_llm_client_mock.return_value = (llm_client_mock, "external-user")
+
+        self.client.force_authenticate(model.user)
+        self.headers(academy=1)
+        url = reverse_lazy("provisioning:me_llm_keys")
+        response = self.client.post(url, data={"key_alias": "alias"}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.json()["models"], [])
