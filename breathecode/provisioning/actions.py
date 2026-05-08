@@ -324,9 +324,11 @@ def ensure_llm_user(user, provisioning_academy, client=None):
 
     if client is None:
         client = get_llm_client(provisioning_academy)
+
+    user_data: dict | None = None
     if client and hasattr(client, "get_user_info") and hasattr(client, "create_user"):
         try:
-            client.get_user_info(user_id=external_user_id)
+            user_data = client.get_user_info(user_id=external_user_id)
         except LLMClientError as exc:
             exc_str = str(exc).lower()
             # LiteLLM returns: User <id> not found (code 404 in our wrapper)
@@ -339,11 +341,40 @@ def ensure_llm_user(user, provisioning_academy, client=None):
                         user_alias=getattr(user, "username", None),
                         metadata=user_metadata,
                     )
-                except LLMClientError:
-                    # If the user already exists due to a race condition, generation will work anyway.
-                    retry_msg = str(exc).lower()
+                except LLMClientError as create_exc:
+                    retry_msg = str(create_exc).lower()
                     if "409" not in retry_msg and "already" not in retry_msg:
                         raise
+                try:
+                    user_data = client.get_user_info(user_id=external_user_id)
+                except LLMClientError:
+                    user_data = None
+
+    vendor_settings = getattr(provisioning_academy, "vendor_settings", None) or {}
+    team_id = str(vendor_settings.get("team_id") or "").strip() if isinstance(vendor_settings, dict) else ""
+    if team_id and client and hasattr(client, "add_user_to_team"):
+        member_team_ids: set[str] = set()
+        if user_data is not None:
+            user_info = user_data.get("user_info") or {}
+            raw_teams = user_info.get("teams") or []
+            member_team_ids = {str(tid).strip() for tid in raw_teams if tid is not None and str(tid).strip()}
+
+        if user_data is None or team_id not in member_team_ids:
+            try:
+                client.add_user_to_team(team_id=team_id, user_ids=[external_user_id])
+            except LLMClientError as exc:
+                exc_msg = str(exc).lower()
+                if "409" not in exc_msg and "already" not in exc_msg and "exists" not in exc_msg:
+                    raise
+        else:
+            logger.info(
+                "LLM user already in configured team; skipping member_add (user_id=%s academy_id=%s "
+                "external_user_id=%s team_id=%s)",
+                user.id,
+                provisioning_academy.academy_id,
+                external_user_id,
+                team_id,
+            )
 
     return provisioning_llm
 

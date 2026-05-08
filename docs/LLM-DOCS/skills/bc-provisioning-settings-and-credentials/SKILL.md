@@ -15,7 +15,7 @@ Use this skill when the user asks to **create or update a provisioning profile**
 - **Provisioning profile**: Links an academy to a vendor. Optional: restrict which cohorts or members use that vendor. At least one profile and a matching academy config with credentials are required for students to request a VPS.
 - **Vendor type**: Vendors are grouped by `vendor_type` (`CODING_EDITOR`, `VPS_SERVER`, `LLM`). Vendors of the same type share connection-check protocol behavior.
 - **Provisioning academy config**: Per (academy, vendor): stores credentials (token, optional key) and settings (container_idle_timeout, max_active_containers, allowed_machine_types). Credentials are never returned by the API; the response only indicates whether they are set. List and detail responses also include **vendor API connection health**: `connection_status` (e.g. `UNTESTED`, `OK`, `DEGRADED`, `ERROR`), optional `connection_status_text`, and `connection_test_at` (timestamp of the last connection test, or null). These are read-only in the API; they are updated when the backend runs a vendor connection check.
-- **Vendor settings allowlists**: Some VPS vendors require extra allowlist values stored in `vendor_settings`. **Hostinger** uses `item_ids`, `template_ids`, `data_center_ids`. **DigitalOcean** uses `region_slugs`, `size_slugs`, `image_slugs` (all lists of strings). The vendor list endpoint (`GET /v1/provisioning/academy/vendor`) returns a `settings_schema` per vendor that tells you which keys/types must be provided inside `vendor_settings`. Templates and data centers for Hostinger are **only** valid under those keys inside `vendor_settings` — there are **no** top-level fields such as `allowed_template_ids` or `allowed_data_center_ids` (those names are wrong and are ignored by the API).
+- **Vendor settings allowlists**: Some VPS vendors require extra allowlist values stored in `vendor_settings`. **Hostinger** uses `item_ids`, `template_ids`, `data_center_ids`. **DigitalOcean** uses `region_slugs`, `size_slugs`, `image_slugs` (all lists of strings). For **LiteLLM**, `vendor_settings.team_id` is required and defines the team where academy users are assigned on ensure/create. The vendor list endpoint (`GET /v1/provisioning/academy/vendor`) returns a `settings_schema` per vendor that tells you which keys/types must be provided inside `vendor_settings`. Templates and data centers for Hostinger are **only** valid under those keys inside `vendor_settings` — there are **no** top-level fields such as `allowed_template_ids` or `allowed_data_center_ids` (those names are wrong and are ignored by the API).
 - **allowed_machine_type_ids**: Optional list on create/update academy config. Each entry is either a **positive integer** (primary key of a provisioning machine type for that vendor) or a **non-empty string slug** (the machine type’s `slug`). Values must exist for **this** config’s vendor or the API returns 400 (`unknown-provisioning-machine-type`).
 - **Academy scope:** All endpoints use the **Academy** header to identify the academy; there is no academy_id in the URL path.
 
@@ -43,11 +43,12 @@ Use this skill when the user asks to **create or update a provisioning profile**
 
 After credentials/settings are in place, when the user actually requests a VPS you should switch to `bc-provisioning-manage-vps-server`.
 
-To configure VPS allowlists, staff should first fetch the full set of vendor options by calling:
+To configure VPS/LLM options, staff should first fetch the full set of vendor options by calling:
 `GET /v1/provisioning/academy/provisioningacademy/<provisioning_academy_id>/vendor-options`.
 
 - **Hostinger:** Response includes `catalog_items`, `templates`, and `data_centers` as raw vendor payload objects. Store allowed values in `vendor_settings` as `item_ids`, `template_ids`, `data_center_ids`.
 - **DigitalOcean:** Response includes `regions`, `sizes`, and `images` as raw DigitalOcean API objects (distribution images only for the images list). Store allowed slugs in `vendor_settings` as `region_slugs`, `size_slugs`, `image_slugs`.
+- **LiteLLM:** Response includes `teams`. Store the selected team ID in `vendor_settings.team_id` (required).
 
 VPS provisioning will fail at request time if the allowlists needed for that vendor are missing or empty.
 
@@ -67,6 +68,7 @@ VPS provisioning will fail at request time if the allowlists needed for that ven
 | Update academy config | PUT | `/v1/provisioning/academy/provisioningacademy/<provisioning_academy_id>` | `Authorization`, `Academy: <academy_id>` | Optional: credentials_token, credentials_key, vendor_settings, container_idle_timeout, max_active_containers, allowed_machine_type_ids. All optional; omit credentials to leave unchanged. | Config object. |
 | Delete academy config | DELETE | `/v1/provisioning/academy/provisioningacademy/<provisioning_academy_id>` | `Authorization`, `Academy: <academy_id>` | — | 204 No Content. |
 | Test academy vendor connection | POST | `/v1/provisioning/academy/provisioningacademy/<provisioning_academy_id>/test-connection` | `Authorization`, `Academy: <academy_id>` | — | Runs vendor check and returns updated config with `connection_status`, `connection_status_text`, `connection_test_at`. |
+| List LiteLLM teams (global tenant view) | GET | `/v1/provisioning/academy/admin/llm/teams` | `Authorization`, `Academy: <academy_id>` | — | Returns normalized LiteLLM team list (`team_id`, `team_alias`, `models`, `max_budget`, `budget_duration`, `budget_reset_at`, `spend`, `blocked`). Academy header/capability is used for authorization; response is tenant-global. |
 
 **Create profile — request (POST `/v1/provisioning/academy/provisioningprofile`):**
 ```json
