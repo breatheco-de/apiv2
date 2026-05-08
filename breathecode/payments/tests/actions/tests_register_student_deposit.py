@@ -148,4 +148,71 @@ def test_register_student_deposit_rejects_amount_above_monthly_price(
             "en",
         )
 
-    assert exc.value.slug == "deposit-amount-exceeds-monthly-price"
+    assert exc.value.detail == "deposit-amount-exceeds-monthly-price"
+
+
+def test_register_student_deposit_rejects_when_no_installments_remaining(
+    database: capy.Database, monkeypatch: pytest.MonkeyPatch, utc_now
+):
+    """
+    If the user already paid all expected installments (e.g. one-payment: 1/1),
+    /deposit must reject and must not create a new invoice or move next_payment_at forward.
+    """
+    monkeypatch.setattr(actions.timezone, "now", MagicMock(return_value=utc_now))
+    monkeypatch.setattr(actions, "reschedule_billing_tasks", MagicMock())
+    monkeypatch.setattr(tasks.renew_plan_financing_consumables, "delay", MagicMock())
+
+    model = database.create(
+        country=1,
+        city=1,
+        academy=1,
+        user=1,
+        plan={"is_renewable": False},
+        currency=1,
+        proof_of_payment=2,
+        payment_method={"currency_id": 1, "is_credit_card": False, "is_crypto": False},
+        bag={"was_delivered": True},
+        invoice={
+            "amount": 4000,
+            "paid_at": utc_now - relativedelta(days=1),
+            "status": "FULFILLED",
+            "externally_managed": True,
+        },
+        plan_financing={
+            "academy_id": 1,
+            "user_id": 1,
+            "monthly_price": 4000,
+            "initial_payment_amount": None,
+            "how_many_installments": 1,
+            "next_payment_at": utc_now + relativedelta(months=1),
+            "valid_until": utc_now,
+            "plan_expires_at": utc_now + relativedelta(months=12),
+            "status": "ACTIVE",
+            "currency_id": 1,
+        },
+    )
+    model.plan_financing.invoices.add(model.invoice)
+    model.plan_financing.plans.add(model.plan)
+
+    with pytest.raises(ValidationException) as exc:
+        actions.register_student_deposit(
+            {
+                "plan_financing": model.plan_financing.id,
+                "amount": 100,
+                "payment_method": model.payment_method.id,
+                "notes": "Late cash",
+            },
+            model.proof_of_payment[1],
+            model.academy.id,
+            "en",
+        )
+
+    assert exc.value.detail == "no-remaining-installments"
+    invoices = database.list_of("payments.Invoice")
+    deposits = database.list_of("payments.StudentDeposit")
+    financing = database.list_of("payments.PlanFinancing")[0]
+    assert len(invoices) == 1
+    assert deposits == []
+    assert financing["status"] == "ACTIVE"
+    assert financing["next_payment_at"] == model.plan_financing.next_payment_at
+    assert actions.reschedule_billing_tasks.call_args_list == []

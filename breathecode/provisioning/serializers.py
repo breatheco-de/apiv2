@@ -635,6 +635,21 @@ def get_vendor_settings_schema(vendor_name: str) -> Dict[str, Any]:
                 },
             ]
         }
+    if slug == "litellm":
+        return {
+            "fields": [
+                {
+                    "options_key": "teams",
+                    "settings_key": "team_id",
+                    "selection_key": "team_id",
+                    "label_en": "LiteLLM Team",
+                    "label_es": "Equipo de LiteLLM",
+                    "type": "string",
+                    "required": True,
+                    "help_text": "Team ID used to assign users created for this academy in LiteLLM.",
+                },
+            ]
+        }
     return {"fields": []}
 
 
@@ -652,12 +667,12 @@ def validate_vendor_settings(vendor_name: str, vendor_settings: Dict[str, Any], 
             code=400,
         )
 
-    if slug not in ("hostinger", "digitalocean"):
+    if slug not in ("hostinger", "digitalocean", "litellm"):
         return settings
 
     # Allow creating/updating an academy config before the allowlists are filled.
     # The VPS request flow will enforce that allowlists exist and are non-empty at request-time.
-    if not settings:
+    if not settings and slug != "litellm":
         return settings
 
     if slug == "hostinger":
@@ -717,6 +732,35 @@ def validate_vendor_settings(vendor_name: str, vendor_settings: Dict[str, Any], 
 
         _require_list("template_ids", int)
         _require_list("data_center_ids", int)
+        return settings
+
+    if slug == "litellm":
+        allowed_keys = {"team_id"}
+        unknown = sorted(set(settings.keys()) - allowed_keys)
+        if unknown:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Unknown vendor_settings keys: {', '.join(unknown)}.",
+                    es=f"Claves desconocidas en vendor_settings: {', '.join(unknown)}.",
+                    slug="invalid-vendor-settings-keys",
+                ),
+                code=400,
+            )
+
+        team_id = settings.get("team_id")
+        if team_id is None or not str(team_id).strip():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="team_id is required for LiteLLM vendor settings.",
+                    es="team_id es obligatorio para la configuración de vendor de LiteLLM.",
+                    slug="missing-litellm-team-id",
+                ),
+                code=400,
+            )
+
+        settings["team_id"] = str(team_id).strip()
         return settings
 
     # digitalocean

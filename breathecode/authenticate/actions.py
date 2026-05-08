@@ -1578,6 +1578,7 @@ def accept_invite_action(data=None, token=None, lang="en"):
         pending_invite_qs.select_related(
             "cohort",
             "cohort__academy",
+            "academy",
             "role",
             "payment_method",
             "author",
@@ -1598,35 +1599,78 @@ def accept_invite_action(data=None, token=None, lang="en"):
             cu = CohortUser(user=user, cohort=user_invite.cohort, role=role.upper(), finantial_status=UP_TO_DATE)
             cu.save()
 
-        plan = Plan.objects.filter(cohort_set__cohorts=user_invite.cohort, invites=user_invite).first()
+    # Create ONE financing per plan, even if the user was invited to multiple cohorts that belong to the same plan's
+    # cohort_set. Each invite is cohort-scoped (one token per cohort), but financing is plan-scoped.
+    from collections import defaultdict
+
+    plan_to_cohorts: dict[int, list[Cohort]] = defaultdict(list)
+    plan_to_seen_cohort_ids: dict[int, set[int]] = defaultdict(set)
+    plan_to_invite: dict[int, UserInvite] = {}
+    plan_to_plan: dict[int, Plan] = {}
+
+    for user_invite in pending_invites:
+        if user_invite.cohort is None:
+            continue
 
         invite_user = user_invite.user or user
+        academy = user_invite.cohort.academy
+        if not invite_user or not academy or not academy.main_currency_id:
+            continue
 
-        if (
-            plan
-            and invite_user
-            and user_invite.cohort.academy.main_currency
-            and (
-                user_invite.cohort.available_as_saas == True
-                or (user_invite.cohort.available_as_saas == None and user_invite.cohort.academy.available_as_saas == True)
-            )
+        if not (
+            user_invite.cohort.available_as_saas is True
+            or (user_invite.cohort.available_as_saas is None and academy.available_as_saas is True)
         ):
-            access = payments_actions.resolve_student_plan_access_from_invite(user_invite)
-            payments_actions.create_invited_plan_financing_for_user(
-                user=invite_user,
-                plan=plan,
-                academy=user_invite.cohort.academy,
-                cohort=user_invite.cohort,
-                payment_method=user_invite.payment_method,
-                author=user_invite.author,
-                lang=lang,
-                conversion_info=user_invite.conversion_info,
-                how_many_installments=access["how_many_installments"],
-                initial_payment_amount=access["initial_payment_amount"],
-                initial_payment_notes=access["initial_payment_notes"],
-                grace_period_duration=access["grace_period_duration"],
-                grace_period_duration_unit=access["grace_period_duration_unit"],
-            )
+            continue
+
+        for plan in Plan.objects.filter(invites=user_invite).distinct():
+            # Only group cohorts that actually belong to the plan's cohort_set.
+            if not plan.cohort_set_id or not plan.cohort_set.cohorts.filter(id=user_invite.cohort_id).exists():
+                continue
+
+            pid = plan.id
+            plan_to_plan[pid] = plan
+            plan_to_invite[pid] = user_invite  # keep last (same batch metadata is expected)
+
+            if user_invite.cohort_id not in plan_to_seen_cohort_ids[pid]:
+                plan_to_seen_cohort_ids[pid].add(user_invite.cohort_id)
+                plan_to_cohorts[pid].append(user_invite.cohort)
+
+    for plan_id, cohorts_list in plan_to_cohorts.items():
+        if not cohorts_list:
+            continue
+
+        plan = plan_to_plan.get(plan_id)
+        ui = plan_to_invite.get(plan_id)
+        if plan is None or ui is None:
+            continue
+
+        invite_user = ui.user or user
+        academy = ui.academy or (cohorts_list[0].academy if cohorts_list else None)
+        if not invite_user or not academy:
+            continue
+
+        access = payments_actions.resolve_student_plan_access_from_invite(ui)
+        primary = cohorts_list[0]
+        joined = cohorts_list[1:] if len(cohorts_list) > 1 else None
+
+        payments_actions.create_invited_plan_financing_for_user(
+            user=invite_user,
+            plan=plan,
+            academy=academy,
+            cohort=primary,
+            joined_cohorts=joined,
+            payment_method=ui.payment_method,
+            author=ui.author,
+            lang=lang,
+            conversion_info=ui.conversion_info,
+            how_many_installments=access["how_many_installments"],
+            initial_payment_amount=access["initial_payment_amount"],
+            initial_payment_notes=access["initial_payment_notes"],
+            unique_payment_negotiated_amount=access.get("unique_payment_negotiated_amount"),
+            grace_period_duration=access["grace_period_duration"],
+            grace_period_duration_unit=access["grace_period_duration_unit"],
+        )
 
     for user_invite in pending_invites:
         user_invite.user = user
