@@ -23,8 +23,8 @@ from rest_framework_csv.renderers import CSVRenderer
 from breathecode.admissions.models import Academy, Cohort, CohortUser
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
-from breathecode.payments.models import Consumable
 from breathecode.notify.actions import get_template_content
+from breathecode.payments.models import Consumable
 from breathecode.provisioning import tasks
 from breathecode.provisioning.serializers import (
     AcademyVPSCreateSerializer,
@@ -38,7 +38,6 @@ from breathecode.provisioning.serializers import (
     GetProvisioningVendorSerializer,
     ProvisioningAcademyCreateSerializer,
     ProvisioningAcademyUpdateSerializer,
-    resolve_allowed_machine_types_for_vendor,
     ProvisioningBillHTMLSerializer,
     ProvisioningBillSerializer,
     ProvisioningProfileCreateUpdateSerializer,
@@ -46,6 +45,7 @@ from breathecode.provisioning.serializers import (
     VPSDetailSerializer,
     VPSListSerializer,
     VPSRequestSerializer,
+    resolve_allowed_machine_types_for_vendor,
     validate_vendor_settings,
 )
 from breathecode.utils import capable_of, cut_csv
@@ -57,11 +57,11 @@ from breathecode.utils.views import private_view, render_message
 from .actions import (
     can_request_vps,
     get_provisioning_vendor,
+    get_vps_provisioning_academy_for_academy,
     request_vps,
+    request_vps_for_student,
     resolve_llm_client_and_external_id,
     resolve_provisioning_academy_for_llm,
-    get_vps_provisioning_academy_for_academy,
-    request_vps_for_student,
 )
 from .models import (
     BILL_STATUS,
@@ -70,8 +70,8 @@ from .models import (
     ProvisioningLLM,
     ProvisioningProfile,
     ProvisioningUserConsumption,
-    ProvisioningVPS,
     ProvisioningVendor,
+    ProvisioningVPS,
 )
 from .utils.coding_editor_client import CodingEditorConnectionError, get_coding_editor_client
 from .utils.llm_client import LLMClientError, LLMConnectionError, get_llm_client
@@ -311,6 +311,86 @@ def _build_digitalocean_vendor_selection(vendor_settings, request_data, lang):
         "size_slug": selected_size,
         "image_slug": selected_image,
     }
+
+
+def _get_litellm_vendor_options(pa: ProvisioningAcademy, lang: str):
+    client = get_llm_client(pa)
+    if client is None or not hasattr(client, "list_teams"):
+        raise ValidationException(
+            translation(
+                lang,
+                en="LLM provisioning is not configured for your academy.",
+                es="El aprovisionamiento de LLM no está configurado para tu academia.",
+                slug="llm-client-not-configured",
+            ),
+            code=400,
+        )
+
+    try:
+        options = client.list_teams()
+        teams = options.get("teams") or []
+        budget_ids = []
+        for team in teams:
+            budget_id = (team.get("metadata") or {}).get("team_member_budget_id")
+            if budget_id:
+                budget_ids.append(budget_id)
+
+        if budget_ids and hasattr(client, "get_budgets_info"):
+            budgets = client.get_budgets_info(budgets=list(set(budget_ids)))
+            budgets_map = {budget["budget_id"]: budget for budget in budgets}
+        else:
+            budgets_map = {}
+
+        for team in teams:
+            budget_id = (team.get("metadata") or {}).get("team_member_budget_id")
+            team["team_member_budget_details"] = budgets_map.get(budget_id)
+    except LLMClientError as exc:
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Error retrieving LiteLLM teams: {exc}",
+                es=f"Error recuperando equipos de LiteLLM: {exc}",
+                slug="llm-team-list-error",
+            ),
+            code=502,
+        )
+
+    return options
+
+
+def _resolve_llm_key_effective_models(item: dict, user_data: dict, teams_map: dict[str, dict]) -> list[str]:
+    """
+    Resolve effective models for one key with deterministic priority:
+    key.models -> user_info.models -> team.models.
+
+    This keeps GET /me/llm/keys and POST /me/llm/keys consistent when exposing
+    the `models` field.
+    """
+    key_models = [model.strip() for model in (item.get("models") or []) if model and model.strip()]
+    user_models = [model.strip() for model in (user_data.get("models") or []) if model and model.strip()]
+
+    team_models = []
+    key_team_id = item.get("team_id")
+    if key_team_id is not None:
+        team_ids = [str(key_team_id)]
+    else:
+        team_ids = list(teams_map.keys())
+
+    for team_id in team_ids:
+        team = teams_map.get(team_id)
+        if not team:
+            continue
+        models = team.get("models") or []
+        for model_name in models:
+            normalized = model_name.strip()
+            if normalized and normalized not in team_models:
+                team_models.append(normalized)
+
+    if key_models:
+        return key_models
+    if user_models:
+        return user_models
+    return team_models
 
 
 def _get_hostinger_vendor_options(token: str, lang: str):
@@ -1418,7 +1498,7 @@ class ProvisioningAcademyVendorOptionsView(APIView):
             )
 
         vendor_slug = (getattr(pa.vendor, "name", "") or "").lower().strip()
-        if vendor_slug not in ("hostinger", "digitalocean"):
+        if vendor_slug not in ("hostinger", "digitalocean", "litellm"):
             return Response(
                 {
                     "catalog_items": [],
@@ -1427,6 +1507,7 @@ class ProvisioningAcademyVendorOptionsView(APIView):
                     "regions": [],
                     "sizes": [],
                     "images": [],
+                    "teams": [],
                 }
             )
         if not pa.credentials_token:
@@ -1442,6 +1523,9 @@ class ProvisioningAcademyVendorOptionsView(APIView):
 
         if vendor_slug == "hostinger":
             options = _get_hostinger_vendor_options(pa.credentials_token, lang)
+            return Response(options)
+        if vendor_slug == "litellm":
+            options = _get_litellm_vendor_options(pa, lang)
             return Response(options)
         options = _get_digitalocean_vendor_options(pa.credentials_token, lang)
         return Response(options)
@@ -1839,8 +1923,14 @@ class MeLLMKeysView(APIView):
             except LLMClientError:
                 continue
             keys_data = user_info.get("keys") or []
-            if not isinstance(keys_data, list):
-                continue
+            user_data = user_info.get("user_info") or {}
+            teams_data = user_info.get("teams") or []
+            teams_map: dict[str, dict] = {}
+            for team in teams_data:
+                team_id = team.get("team_id")
+                if team_id is None:
+                    continue
+                teams_map[str(team_id)] = team
             for item in keys_data:
                 if not isinstance(item, dict):
                     continue
@@ -1852,6 +1942,8 @@ class MeLLMKeysView(APIView):
                 if token_id in token_ids:
                     continue
                 token_ids.add(token_id)
+                effective_models = _resolve_llm_key_effective_models(item, user_data, teams_map)
+
                 all_keys.append(
                     {
                         "token_id": token_id,
@@ -1860,6 +1952,7 @@ class MeLLMKeysView(APIView):
                         "created_at": item.get("created_at"),
                         "academy_id": academy_id,
                         "metadata": item.get("metadata") or {},
+                        "models": effective_models,
                     }
                 )
 
@@ -1898,6 +1991,31 @@ class MeLLMKeysView(APIView):
             client, external_user_id = resolve_llm_client_and_external_id(request, ensure_llm_user_record=True)
             metadata = {"plan_title": plan_title} if plan_title else None
             created = client.create_api_key(external_user_id=external_user_id, name=alias, metadata=metadata)
+            created_token_id = created.get("id") or created.get("token_id") or created.get("token")
+            effective_models = []
+            if created_token_id and hasattr(client, "get_user_info"):
+                try:
+                    user_info = client.get_user_info(user_id=external_user_id)
+                    user_data = user_info.get("user_info") or {}
+                    teams_data = user_info.get("teams") or []
+                    teams_map = {}
+                    for team in teams_data:
+                        team_id = team.get("team_id")
+                        if team_id is not None:
+                            teams_map[str(team_id)] = team
+
+                    keys_data = user_info.get("keys") or []
+                    created_item = None
+                    for item in keys_data:
+                        token_id = item.get("token_id") or item.get("token")
+                        if token_id == created_token_id:
+                            created_item = item
+                            break
+                    if created_item:
+                        effective_models = _resolve_llm_key_effective_models(created_item, user_data, teams_map)
+                except LLMClientError:
+                    effective_models = []
+            created["models"] = effective_models
             raw_academy_id = request.headers.get("Academy") or request.headers.get("academy")
             try:
                 academy_id = int(str(raw_academy_id).strip())

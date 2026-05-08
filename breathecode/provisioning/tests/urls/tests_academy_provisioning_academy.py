@@ -27,9 +27,9 @@ def pa_serializer(pa):
         "vendor_settings": pa.vendor_settings or {},
         "connection_status": pa.connection_status,
         "connection_status_text": pa.connection_status_text,
-        "connection_test_at": pa.connection_test_at.isoformat().replace("+00:00", "Z")
-        if pa.connection_test_at
-        else None,
+        "connection_test_at": (
+            pa.connection_test_at.isoformat().replace("+00:00", "Z") if pa.connection_test_at else None
+        ),
         "container_idle_timeout": pa.container_idle_timeout,
         "max_active_containers": pa.max_active_containers,
         "created_at": pa.created_at.isoformat() if pa.created_at else None,
@@ -659,3 +659,118 @@ class AcademyProvisioningAcademyTestSuite(ProvisioningTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json()["connection_status"], ProvisioningAcademy.ConnectionStatus.ERROR)
         self.assertIn("DigitalOcean credentials missing token", response.json()["connection_status_text"])
+
+    def test_post_create_litellm_requires_team_id_in_vendor_settings(self):
+        model = self.bc.database.create(
+            user=1,
+            profile_academy=1,
+            role=1,
+            capability="crud_provisioning_activity",
+            provisioning_vendor=1,
+        )
+        model.provisioning_vendor.name = "litellm"
+        model.provisioning_vendor.vendor_type = ProvisioningVendor.VendorType.LLM
+        model.provisioning_vendor.save()
+        self.client.force_authenticate(model.user)
+        self.headers(academy=1)
+        url = reverse_lazy("provisioning:academy_provisioning_academy")
+        payload = {
+            "vendor_id": model.provisioning_vendor.id,
+            "credentials_token": "token123",
+            "vendor_settings": {},
+        }
+        response = self.client.post(url, data=payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_put_update_litellm_requires_team_id_in_vendor_settings(self):
+        model = self.bc.database.create(
+            user=1,
+            profile_academy=1,
+            role=1,
+            capability="crud_provisioning_activity",
+            provisioning_vendor=1,
+            provisioning_academy=1,
+        )
+        model.provisioning_vendor.name = "litellm"
+        model.provisioning_vendor.vendor_type = ProvisioningVendor.VendorType.LLM
+        model.provisioning_vendor.save()
+        model.provisioning_academy.academy_id = model.profile_academy.academy_id
+        model.provisioning_academy.vendor = model.provisioning_vendor
+        model.provisioning_academy.vendor_settings = {"team_id": "team-1"}
+        model.provisioning_academy.save()
+        self.client.force_authenticate(model.user)
+        self.headers(academy=1)
+        url = reverse_lazy(
+            "provisioning:academy_provisioning_academy_id",
+            kwargs={"provisioning_academy_id": model.provisioning_academy.id},
+        )
+        response = self.client.put(url, data={"vendor_settings": {}}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @patch("breathecode.provisioning.views.get_llm_client")
+    def test_get_vendor_options_returns_litellm_teams(self, get_llm_client_mock):
+        llm_client_mock = type(
+            "LiteLLMClientMock",
+            (),
+            {
+                "list_teams": lambda *_args, **_kwargs: {
+                    "teams": [
+                        {
+                            "team_id": "team-1",
+                            "team_alias": "Madrid Students",
+                            "metadata": {"team_member_budget_id": "budget-1"},
+                        },
+                        {"team_id": "team-2", "team_alias": "Ai Engineering", "metadata": {}},
+                    ]
+                },
+                "get_budgets_info": lambda *_args, **_kwargs: [
+                    {"budget_id": "budget-1", "max_budget": 7.0, "soft_budget": None}
+                ],
+            },
+        )()
+        get_llm_client_mock.return_value = llm_client_mock
+
+        model = self.bc.database.create(
+            user=1,
+            profile_academy=1,
+            role=1,
+            capability="read_provisioning_activity",
+            provisioning_vendor=1,
+            provisioning_academy=1,
+        )
+        model.provisioning_vendor.name = "litellm"
+        model.provisioning_vendor.vendor_type = ProvisioningVendor.VendorType.LLM
+        model.provisioning_vendor.save()
+        model.provisioning_academy.academy_id = model.profile_academy.academy_id
+        model.provisioning_academy.vendor = model.provisioning_vendor
+        model.provisioning_academy.credentials_token = "tok"
+        model.provisioning_academy.vendor_settings = {"team_id": "team-1"}
+        model.provisioning_academy.save()
+
+        self.client.force_authenticate(model.user)
+        self.headers(academy=model.profile_academy.academy_id)
+        url = reverse_lazy(
+            "provisioning:academy_provisioning_academy_vendor_options",
+            kwargs={"provisioning_academy_id": model.provisioning_academy.id},
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.json(),
+            {
+                "teams": [
+                    {
+                        "team_id": "team-1",
+                        "team_alias": "Madrid Students",
+                        "metadata": {"team_member_budget_id": "budget-1"},
+                        "team_member_budget_details": {"budget_id": "budget-1", "max_budget": 7.0, "soft_budget": None},
+                    },
+                    {
+                        "team_id": "team-2",
+                        "team_alias": "Ai Engineering",
+                        "metadata": {},
+                        "team_member_budget_details": None,
+                    },
+                ]
+            },
+        )
