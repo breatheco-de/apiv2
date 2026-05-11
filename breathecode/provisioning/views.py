@@ -1900,7 +1900,10 @@ class MeLLMKeysView(APIView):
         all_keys = []
         token_ids: set[str] = set()
         for academy_id in academy_ids:
-            provisioning_academy = resolve_provisioning_academy_for_llm(academy_id)
+            academy_obj = Academy.objects.filter(id=academy_id).first()
+            if not academy_obj:
+                continue
+            provisioning_academy = resolve_provisioning_academy_for_llm(academy_obj)
             if not provisioning_academy:
                 continue
 
@@ -1951,6 +1954,11 @@ class MeLLMKeysView(APIView):
                         "spend": item.get("spend"),
                         "created_at": item.get("created_at"),
                         "academy_id": academy_id,
+                        "host": getattr(provisioning_academy.vendor, "api_url", "") or None,
+                        "vendor_name": str(
+                            getattr(getattr(provisioning_academy, "vendor", None), "name", "") or ""
+                        ).strip()
+                        or None,
                         "metadata": item.get("metadata") or {},
                         "models": effective_models,
                     }
@@ -2021,6 +2029,16 @@ class MeLLMKeysView(APIView):
                 academy_id = int(str(raw_academy_id).strip())
             except Exception:
                 academy_id = None
+            created["host"] = None
+            created["vendor_name"] = None
+            if academy_id:
+                academy_obj = Academy.objects.filter(id=academy_id).first()
+                if academy_obj:
+                    pa_llm = resolve_provisioning_academy_for_llm(academy_obj)
+                    if pa_llm and getattr(pa_llm, "vendor", None):
+                        v = pa_llm.vendor
+                        created["host"] = getattr(v, "api_url", "") or None
+                        created["vendor_name"] = str(getattr(v, "name", "") or "").strip() or None
             if academy_id:
                 ProvisioningLLM.objects.filter(
                     user=request.user,
