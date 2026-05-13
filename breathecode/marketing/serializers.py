@@ -746,6 +746,41 @@ class CoursePUTSerializer(serializers.ModelSerializer):
         read_only_fields = ()
 
 
+class CourseTranslationPOSTSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CourseTranslation
+        fields = (
+            "lang",
+            "title",
+            "heading",
+            "description",
+            "short_description",
+            "video_url",
+            "featured_assets",
+            "landing_url",
+            "preview_url",
+            "course_modules",
+            "landing_variables",
+            "prerequisite",
+        )
+
+    def validate(self, attrs):
+        course = self.context.get("course")
+        lang = attrs.get("lang")
+
+        if CourseTranslation.objects.filter(course=course, lang=lang).exists():
+            raise ValidationException(
+                f"A translation for lang '{lang}' already exists for this course",
+                slug="translation-already-exists",
+            )
+
+        return attrs
+
+    def create(self, validated_data):
+        course = self.context.get("course")
+        return CourseTranslation.objects.create(course=course, **validated_data)
+
+
 class CourseTranslationPUTSerializer(serializers.ModelSerializer):
     class Meta:
         model = CourseTranslation
@@ -758,6 +793,9 @@ class CourseTranslationPUTSerializer(serializers.ModelSerializer):
             "featured_assets",
             "landing_url",
             "preview_url",
+            "course_modules",
+            "landing_variables",
+            "prerequisite",
         )
 
 
