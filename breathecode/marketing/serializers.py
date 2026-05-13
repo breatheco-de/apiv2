@@ -793,6 +793,9 @@ class CourseTranslationPUTSerializer(serializers.ModelSerializer):
             "featured_assets",
             "landing_url",
             "preview_url",
+            "course_modules",
+            "landing_variables",
+            "prerequisite",
         )
 
 
