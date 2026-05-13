@@ -309,6 +309,12 @@ class ProvisioningVPS(models.Model):
         (VPS_STATUS_DELETED, "Deleted"),
     )
 
+    class RestartMode(models.TextChoices):
+        """Public API ``mode`` for VPS restart; each vendor exposes a subset via ``supported_restart_modes``."""
+
+        GRACEFUL = "graceful", "Graceful reboot"
+        FORCED = "forced", "Forced reboot"
+
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     vendor = models.ForeignKey(ProvisioningVendor, on_delete=models.SET_NULL, null=True, default=None)

@@ -361,12 +361,18 @@ class VPSListSerializer(serpy.Serializer):
     deleted_at = serpy.Field()
     created_at = serpy.Field()
     updated_at = serpy.Field()
+    restart_modes = serpy.MethodField()
 
     def get_vendor(self, obj):
         vendor = getattr(obj, "vendor", None)
         if not vendor:
             return None
         return {"id": vendor.id, "name": vendor.name}
+
+    def get_restart_modes(self, obj):
+        from breathecode.provisioning.actions import vps_restart_modes_for_list
+
+        return vps_restart_modes_for_list(obj)
 
 
 class VPSDetailSerializer(serpy.Serializer):

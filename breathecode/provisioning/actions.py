@@ -579,6 +579,31 @@ def _resolve_vps_consumable_for_plan(user, academy: Academy, plan_slug: str, *, 
     return consumable
 
 
+def vps_restart_modes_for_list(vps: ProvisioningVPS) -> list[str]:
+    """
+    Modes the UI may offer for ``POST .../restart`` for this VPS (empty if restart is not available).
+    """
+    if not (vps.external_id or "").strip():
+        return []
+    vendor = getattr(vps, "vendor", None)
+    if not vendor:
+        return []
+    client = get_vps_client(vendor)
+    if client is None or not hasattr(client, "restart_vps"):
+        return []
+    supported = getattr(type(client), "supported_restart_modes", None)
+    if supported is None:
+        return []
+    try:
+        raw = client.supported_restart_modes()
+    except Exception:
+        return []
+    if not isinstance(raw, (frozenset, set, tuple, list)):
+        return []
+    allowed = frozenset(str(x) for x in raw) & frozenset(ProvisioningVPS.RestartMode.values)
+    return [m for m in ProvisioningVPS.RestartMode.values if m in allowed]
+
+
 def request_vps(
     user,
     plan_slug=None,

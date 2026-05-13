@@ -62,6 +62,7 @@ from .actions import (
     request_vps_for_student,
     resolve_llm_client_and_external_id,
     resolve_provisioning_academy_for_llm,
+    vps_restart_modes_for_list,
 )
 from .models import (
     BILL_STATUS,
@@ -1633,7 +1634,7 @@ class MeVPSView(APIView):
 
     def get(self, request):
         handler = self.extensions(request)
-        items = ProvisioningVPS.objects.filter(user=request.user).order_by("-created_at")
+        items = ProvisioningVPS.objects.filter(user=request.user).select_related("vendor").order_by("-created_at")
         items = handler.queryset(items)
         serializer = VPSListSerializer(items, many=True)
         return handler.response({"can_request_vps": can_request_vps(request.user), "results": serializer.data})
@@ -1685,6 +1686,123 @@ class MeVPSView(APIView):
             raise
         out_serializer = VPSListSerializer(vps)
         return Response(out_serializer.data, status=status.HTTP_202_ACCEPTED)
+
+
+class MeVPSRestartView(APIView):
+    """POST: restart the owner's ACTIVE VPS if the vendor client exposes restart_vps (e.g. DigitalOcean)."""
+
+    def post(self, request, vps_id):
+        lang = get_user_language(request)
+        vps = ProvisioningVPS.objects.filter(id=vps_id, user=request.user).select_related("academy", "vendor").first()
+        if not vps:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="VPS not found or you do not have permission to view it.",
+                    es="VPS no encontrado o no tienes permiso para verlo.",
+                    slug="vps-not-found",
+                ),
+                code=404,
+            )
+        if vps.status != ProvisioningVPS.VPS_STATUS_ACTIVE:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Only an active VPS can be restarted.",
+                    es="Solo se puede reiniciar un VPS en estado activo.",
+                    slug="vps-restart-not-active",
+                ),
+                code=400,
+            )
+        if not (vps.external_id or "").strip():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="This VPS has no provider machine id yet; restart is not available.",
+                    es="Este VPS aún no tiene id de máquina en el proveedor; no se puede reiniciar.",
+                    slug="vps-restart-missing-external-id",
+                ),
+                code=400,
+            )
+
+        body = request.data if isinstance(request.data, dict) else {}
+        raw_mode = body.get("mode", ProvisioningVPS.RestartMode.GRACEFUL.value)
+        if isinstance(raw_mode, str):
+            mode = raw_mode.strip().lower()
+        else:
+            mode = ProvisioningVPS.RestartMode.GRACEFUL.value
+        if mode not in ProvisioningVPS.RestartMode.values:
+            allowed = ", ".join(sorted(ProvisioningVPS.RestartMode.values))
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Invalid mode. Use one of: {allowed}.",
+                    es=f"Modo inválido. Usa uno de: {allowed}.",
+                    slug="vps-restart-invalid-mode",
+                ),
+                code=400,
+            )
+
+        allowed_modes = vps_restart_modes_for_list(vps)
+        if not allowed_modes:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Restart is not available for this VPS vendor.",
+                    es="El reinicio no está disponible para el proveedor de este VPS.",
+                    slug="vps-restart-not-supported",
+                ),
+                code=400,
+            )
+        if mode not in allowed_modes:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Restart with this mode is not available for this VPS.",
+                    es="El reinicio con este modo no está disponible para este VPS.",
+                    slug="vps-restart-mode-not-allowed",
+                ),
+                code=400,
+            )
+
+        provisioning_academy = ProvisioningAcademy.objects.filter(academy=vps.academy, vendor=vps.vendor).first()
+        if not provisioning_academy:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Provisioning academy config not found for this VPS.",
+                    es="Configuración de aprovisionamiento no encontrada para este VPS.",
+                    slug="provisioning-academy-not-found-for-vps",
+                ),
+                code=404,
+            )
+
+        credentials = {"token": provisioning_academy.credentials_token or ""}
+        if provisioning_academy.credentials_key:
+            credentials["key"] = provisioning_academy.credentials_key
+        if provisioning_academy.vendor_settings:
+            credentials.update(provisioning_academy.vendor_settings)
+
+        client = get_vps_client(vps.vendor)
+
+        try:
+            result = client.restart_vps(
+                credentials,
+                vps.external_id,
+                mode=mode,
+            )
+        except VPSProvisioningError as e:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="The VPS provider could not restart the machine.",
+                    es="El proveedor del VPS no pudo reiniciar la máquina.",
+                    slug="vps-restart-vendor-error",
+                ),
+                code=502,
+            ) from e
+
+        return Response(result, status=status.HTTP_200_OK)
 
 
 class MeVPSByIdView(APIView):
