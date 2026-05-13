@@ -431,7 +431,7 @@ class LearnPackWebhookAdmin(admin.ModelAdmin):
     form = LearnPackWebhookForm
     list_display = ("id", "event", "status", "package_slug", "student", "created_at", "asset_id", "learnpack_package_id")
     search_fields = ["telemetry__asset_slug", "telemetry__user__email", "student__email", "package_slug", "learnpack_package_id", "asset_id"]
-    list_filter = ["status", "event"]
+    list_filter = ["status", "event", "package_slug"]
     raw_id_fields = ["student", "telemetry"]
     actions = [process_hook, async_process_hook]
 

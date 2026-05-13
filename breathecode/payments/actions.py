@@ -3024,7 +3024,7 @@ def register_student_deposit(
             translation(
                 lang,
                 en="No installments remaining to pay for this plan financing",
-                es="No quedan cuotas por pagar para este plan financiado",
+                es="No installments remaining to pay for this plan financing",
                 slug="no-remaining-installments",
             ),
             code=409,

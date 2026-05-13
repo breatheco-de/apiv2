@@ -1846,11 +1846,9 @@ def build_plan_financing(
     # in the first invoice. When provided, it is used as the monthly_price
     # instead of the invoice.amount.
     monthly_price = principal_amount if principal_amount is not None else invoice.amount
-    valid_until = (
-        next_payment_at + relativedelta(months=max(months - 1, 0))
-        if initial_payment_amount is not None
-        else invoice.paid_at + relativedelta(months=months - 1)
-    )
+    # Last installment due date: (months - 1) periods after the first scheduled payment.
+    # Must use next_payment_at (includes grace) so valid_until shifts with grace; do not anchor only to paid_at.
+    valid_until = next_payment_at + relativedelta(months=max(months - 1, 0))
 
     financing = PlanFinancing.objects.create(
         user=bag.user,
