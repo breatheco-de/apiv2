@@ -75,6 +75,7 @@ from .serializers import (
     GetCourseSerializer,
     CoursePOSTSerializer,
     CoursePUTSerializer,
+    CourseTranslationPOSTSerializer,
     CourseTranslationPUTSerializer,
     LeadgenAppSmallSerializer,
     PostFormEntrySerializer,
@@ -1715,7 +1716,7 @@ class AcademyCourseView(APIView):
     @capable_of("crud_course")
     def post(self, request, academy_id=None):
         request_lang = get_user_language(request)
-        serializer = CoursePOSTSerializer(data=request.data, context={"academy_id": academy_id})
+        serializer = CoursePOSTSerializer(data=request.data, context={"academy_id": academy_id, "request": request})
 
         if serializer.is_valid():
             course = serializer.save()
@@ -1798,6 +1799,22 @@ class CoursePlanByCountryCodeView(APIView):
 
 class CourseTranslationView(APIView):
     permission_classes = [IsAuthenticated]
+
+    @capable_of("crud_course")
+    def post(self, request, course_identifier, academy_id=None):
+        request_lang = get_user_language(request)
+        course = _get_course_or_404(course_identifier, academy_id, request_lang)
+
+        serializer = CourseTranslationPOSTSerializer(data=request.data, context={"course": course})
+
+        if serializer.is_valid():
+            translation_instance = serializer.save()
+            CourseCache.clear()
+
+            payload = GetCourseTranslationSerializer(translation_instance, many=False).data
+            return Response(payload, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of("crud_course")
     def put(self, request, course_identifier, academy_id=None):

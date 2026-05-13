@@ -56,6 +56,42 @@ def plan_financing_item(data={}):
     }
 
 
+def scheduled_tasks_for_new_plan_financing(paid_at, utc_now):
+    """Mirrors build_plan_financing scheduled tasks (charge + optional renewal notify)."""
+    next_at = paid_at + relativedelta(months=1)
+    days_until_next_payment = (next_at - paid_at).days
+    charge_delta = datetime.timedelta(days=days_until_next_payment)
+    charge = {
+        "task_name": "charge_plan_financing",
+        "task_module": "breathecode.payments.tasks",
+        "arguments": {
+            "args": [1],
+            "kwargs": {},
+        },
+        "duration": charge_delta,
+        "eta": utc_now + charge_delta,
+        "status": "PENDING",
+        "id": 1,
+    }
+    if days_until_next_payment <= 2:
+        return [charge]
+    notification_day = days_until_next_payment - 2
+    notify_delta = datetime.timedelta(days=notification_day)
+    notify = {
+        "task_name": "notify_plan_financing_renewal",
+        "task_module": "breathecode.payments.tasks",
+        "arguments": {
+            "args": [1],
+            "kwargs": {},
+        },
+        "duration": notify_delta,
+        "eta": utc_now + notify_delta,
+        "status": "PENDING",
+        "id": 2,
+    }
+    return [charge, notify]
+
+
 @pytest.fixture(autouse=True)
 def setup(monkeypatch):
     monkeypatch.setattr(activity_tasks.add_activity, "delay", MagicMock())
@@ -269,7 +305,9 @@ class PaymentsTestSuite(PaymentsTestCase):
                     {
                         "conversion_info": None,
                         "monthly_price": model.invoice.amount,
-                        "valid_until": model.invoice.paid_at + relativedelta(months=months - 1),
+                        "valid_until": model.invoice.paid_at
+                        + relativedelta(months=1)
+                        + relativedelta(months=max(months - 1, 0)),
                         "next_payment_at": model.invoice.paid_at + relativedelta(months=1),
                         "plan_expires_at": model.invoice.paid_at
                         + calculate_relative_delta(model.plan.time_of_life, model.plan.time_of_life_unit),
@@ -285,21 +323,10 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=1),
             ],
         )
-        delta = datetime.timedelta(days=(model.invoice.paid_at + relativedelta(months=1) - model.invoice.paid_at).days)
-        assert self.bc.database.list_of("task_manager.ScheduledTask") == [
-            {
-                "task_name": "charge_plan_financing",
-                "task_module": "breathecode.payments.tasks",
-                "arguments": {
-                    "args": [1],
-                    "kwargs": {},
-                },
-                "duration": delta,
-                "eta": UTC_NOW + delta,
-                "status": "PENDING",
-                "id": 1,
-            },
-        ]
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == scheduled_tasks_for_new_plan_financing(
+            model.invoice.paid_at,
+            UTC_NOW,
+        )
 
     @patch("logging.Logger.info", MagicMock())
     @patch("logging.Logger.error", MagicMock())
@@ -354,6 +381,37 @@ class PaymentsTestSuite(PaymentsTestCase):
         assert deposits[0]["status"] == "APPLIED"
         assert deposits[0]["notes"] == "Staff discount approved"
         assert deposits[0]["applied_at"] == UTC_NOW
+
+    @patch("logging.Logger.info", MagicMock())
+    @patch("logging.Logger.error", MagicMock())
+    @patch.object(timezone, "now", MagicMock(return_value=UTC_NOW))
+    @patch("breathecode.payments.tasks.build_service_stock_scheduler_from_plan_financing.delay", MagicMock())
+    def test_valid_until_follows_grace_without_initial_payment(self):
+        """Grace delays first installment; valid_until must extend by the same offset (9 installments)."""
+        bag = {
+            "status": "PAID",
+            "was_delivered": False,
+            "chosen_period": "NO_SET",
+            "how_many_installments": 9,
+        }
+        invoice = {"status": "FULFILLED", "amount": 100}
+        plan = {"is_renewable": False}
+
+        model = self.bc.database.create(bag=bag, invoice=invoice, plan=plan)
+
+        build_plan_financing.delay(
+            1,
+            1,
+            grace_period_duration=2,
+            grace_period_duration_unit="MONTH",
+        )
+
+        financing = self.bc.database.list_of("payments.PlanFinancing")[0]
+        next_payment_at = model.invoice.paid_at + relativedelta(months=2)
+        assert financing["next_payment_at"].replace(tzinfo=None) == next_payment_at.replace(tzinfo=None)
+        assert financing["valid_until"].replace(tzinfo=None) == (
+            next_payment_at + relativedelta(months=8)
+        ).replace(tzinfo=None)
 
     """
     🔽🔽🔽 With Bag with Cohort and Invoice with amount
@@ -426,7 +484,9 @@ class PaymentsTestSuite(PaymentsTestCase):
                         "conversion_info": None,
                         "monthly_price": model.invoice.amount,
                         "selected_cohort_set_id": 1,
-                        "valid_until": model.invoice.paid_at + relativedelta(months=months - 1),
+                        "valid_until": model.invoice.paid_at
+                        + relativedelta(months=1)
+                        + relativedelta(months=max(months - 1, 0)),
                         "next_payment_at": model.invoice.paid_at + relativedelta(months=1),
                         "plan_expires_at": model.invoice.paid_at
                         + calculate_relative_delta(model.plan.time_of_life, model.plan.time_of_life_unit),
@@ -447,21 +507,10 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=1),
             ],
         )
-        delta = datetime.timedelta(days=(model.invoice.paid_at + relativedelta(months=1) - model.invoice.paid_at).days)
-        assert self.bc.database.list_of("task_manager.ScheduledTask") == [
-            {
-                "task_name": "charge_plan_financing",
-                "task_module": "breathecode.payments.tasks",
-                "arguments": {
-                    "args": [1],
-                    "kwargs": {},
-                },
-                "duration": delta,
-                "eta": UTC_NOW + delta,
-                "status": "PENDING",
-                "id": 1,
-            },
-        ]
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == scheduled_tasks_for_new_plan_financing(
+            model.invoice.paid_at,
+            UTC_NOW,
+        )
 
     """
     🔽🔽🔽 With Bag with EventTypeSet and Invoice with amount
@@ -528,7 +577,9 @@ class PaymentsTestSuite(PaymentsTestCase):
                         "conversion_info": None,
                         "monthly_price": model.invoice.amount,
                         "selected_event_type_set_id": 1,
-                        "valid_until": model.invoice.paid_at + relativedelta(months=months - 1),
+                        "valid_until": model.invoice.paid_at
+                        + relativedelta(months=1)
+                        + relativedelta(months=max(months - 1, 0)),
                         "next_payment_at": model.invoice.paid_at + relativedelta(months=1),
                         "plan_expires_at": model.invoice.paid_at
                         + calculate_relative_delta(model.plan.time_of_life, model.plan.time_of_life_unit),
@@ -549,21 +600,10 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=1),
             ],
         )
-        delta = datetime.timedelta(days=(model.invoice.paid_at + relativedelta(months=1) - model.invoice.paid_at).days)
-        assert self.bc.database.list_of("task_manager.ScheduledTask") == [
-            {
-                "task_name": "charge_plan_financing",
-                "task_module": "breathecode.payments.tasks",
-                "arguments": {
-                    "args": [1],
-                    "kwargs": {},
-                },
-                "duration": delta,
-                "eta": UTC_NOW + delta,
-                "status": "PENDING",
-                "id": 1,
-            },
-        ]
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == scheduled_tasks_for_new_plan_financing(
+            model.invoice.paid_at,
+            UTC_NOW,
+        )
 
     """
     🔽🔽🔽 With Bag with MentorshipServiceSet and Invoice with amount
@@ -630,7 +670,9 @@ class PaymentsTestSuite(PaymentsTestCase):
                         "conversion_info": None,
                         "monthly_price": model.invoice.amount,
                         "selected_mentorship_service_set_id": 1,
-                        "valid_until": model.invoice.paid_at + relativedelta(months=months - 1),
+                        "valid_until": model.invoice.paid_at
+                        + relativedelta(months=1)
+                        + relativedelta(months=max(months - 1, 0)),
                         "next_payment_at": model.invoice.paid_at + relativedelta(months=1),
                         "plan_expires_at": model.invoice.paid_at
                         + calculate_relative_delta(model.plan.time_of_life, model.plan.time_of_life_unit),
@@ -651,21 +693,10 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=1),
             ],
         )
-        delta = datetime.timedelta(days=(model.invoice.paid_at + relativedelta(months=1) - model.invoice.paid_at).days)
-        assert self.bc.database.list_of("task_manager.ScheduledTask") == [
-            {
-                "task_name": "charge_plan_financing",
-                "task_module": "breathecode.payments.tasks",
-                "arguments": {
-                    "args": [1],
-                    "kwargs": {},
-                },
-                "duration": delta,
-                "eta": UTC_NOW + delta,
-                "status": "PENDING",
-                "id": 1,
-            },
-        ]
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == scheduled_tasks_for_new_plan_financing(
+            model.invoice.paid_at,
+            UTC_NOW,
+        )
 
     """
     🔽🔽🔽 With Bag with MentorshipServiceSet and Invoice with amount and conversion_info
@@ -732,7 +763,9 @@ class PaymentsTestSuite(PaymentsTestCase):
                         "conversion_info": {"landing_url": "/home"},
                         "monthly_price": model.invoice.amount,
                         "selected_mentorship_service_set_id": 1,
-                        "valid_until": model.invoice.paid_at + relativedelta(months=months - 1),
+                        "valid_until": model.invoice.paid_at
+                        + relativedelta(months=1)
+                        + relativedelta(months=max(months - 1, 0)),
                         "next_payment_at": model.invoice.paid_at + relativedelta(months=1),
                         "plan_expires_at": model.invoice.paid_at
                         + calculate_relative_delta(model.plan.time_of_life, model.plan.time_of_life_unit),
@@ -753,18 +786,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=1),
             ],
         )
-        delta = datetime.timedelta(days=(model.invoice.paid_at + relativedelta(months=1) - model.invoice.paid_at).days)
-        assert self.bc.database.list_of("task_manager.ScheduledTask") == [
-            {
-                "task_name": "charge_plan_financing",
-                "task_module": "breathecode.payments.tasks",
-                "arguments": {
-                    "args": [1],
-                    "kwargs": {},
-                },
-                "duration": delta,
-                "eta": UTC_NOW + delta,
-                "status": "PENDING",
-                "id": 1,
-            },
-        ]
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == scheduled_tasks_for_new_plan_financing(
+            model.invoice.paid_at,
+            UTC_NOW,
+        )

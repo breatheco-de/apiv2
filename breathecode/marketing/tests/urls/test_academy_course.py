@@ -3,13 +3,14 @@ from django.contrib.auth.models import User
 from django.urls import reverse
 from rest_framework import status
 
-from breathecode.admissions.models import Academy, City, Country
+from breathecode.admissions.models import Academy, City, Country, Syllabus
 from breathecode.authenticate.models import Capability, ProfileAcademy, Role
 from breathecode.marketing.models import COURSE_STATUS, Course, CourseTranslation
 
 
 def _create_user_with_capability(academy, capability_slug="crud_course"):
-    user = User.objects.create_user(username="tester", email="tester@example.com", password="pass1234")
+    username = f"tester-{academy.slug}"
+    user = User.objects.create_user(username=username, email=f"{username}@example.com", password="pass1234")
     capability, _ = Capability.objects.get_or_create(
         slug=capability_slug,
         defaults={"description": capability_slug},
@@ -20,13 +21,13 @@ def _create_user_with_capability(academy, capability_slug="crud_course"):
     return user
 
 
-def _create_academy():
+def _create_academy(slug="downtown-miami", name="Downtown Miami"):
     country, _ = Country.objects.get_or_create(code="US", defaults={"name": "United States"})
     city, _ = City.objects.get_or_create(name="Miami", country=country)
 
     return Academy.objects.create(
-        slug="downtown-miami",
-        name="Downtown Miami",
+        slug=slug,
+        name=name,
         logo_url="https://assets.test/logo.png",
         street_address="123 Main Street",
         country=country,
@@ -49,7 +50,7 @@ def test_update_course(client):
     )
     user = _create_user_with_capability(academy)
 
-    url = reverse("marketing:academy_course_id", kwargs={"course_id": course.id})
+    url = reverse("marketing:academy_course_id", kwargs={"course_identifier": course.id})
     payload = {
         "plan_slug": "full-stack-global",
         "is_listed": False,
@@ -85,7 +86,7 @@ def test_update_plan_by_country_code(client):
 
     url = reverse(
         "marketing:academy_course_id_plan_by_country_code",
-        kwargs={"course_id": course.id},
+        kwargs={"course_identifier": course.id},
     )
     payload = {"plan_by_country_code": {"us": "data-science-us", "co": "data-science-co"}}
 
@@ -119,7 +120,7 @@ def test_update_course_translation_requires_lang(client):
     )
     user = _create_user_with_capability(academy)
 
-    url = reverse("marketing:academy_course_id_translation", kwargs={"course_id": course.id})
+    url = reverse("marketing:academy_course_id_translation", kwargs={"course_identifier": course.id})
 
     client.force_authenticate(user=user)
     response = client.put(url, {"title": "New Title"}, format="json", HTTP_Academy=str(academy.id))
@@ -150,7 +151,7 @@ def test_update_course_modules(client):
     )
     user = _create_user_with_capability(academy)
 
-    url = reverse("marketing:academy_course_id_course_modules", kwargs={"course_id": course.id})
+    url = reverse("marketing:academy_course_id_course_modules", kwargs={"course_identifier": course.id})
     new_modules = [
         {"name": "Foundations", "slug": "foundations", "description": "Math basics"},
         {"name": "Supervised", "slug": "supervised", "description": "Supervised learning"},
@@ -167,4 +168,131 @@ def test_update_course_modules(client):
     assert response.status_code == status.HTTP_200_OK
     translation.refresh_from_db()
     assert translation.course_modules == new_modules
+
+
+@pytest.mark.django_db
+def test_create_course_from_scratch(client):
+    academy = _create_academy()
+    user = _create_user_with_capability(academy)
+    url = reverse("marketing:academy_course")
+
+    payload = {
+        "slug": "ai-engineering",
+        "icon_url": "https://assets.test/ai-icon.png",
+        "technologies": "python,llm",
+        "visibility": "PUBLIC",
+    }
+
+    client.force_authenticate(user=user)
+    response = client.post(url, payload, format="json", HTTP_Academy=str(academy.id))
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert Course.objects.filter(slug="ai-engineering", academy=academy).exists()
+
+
+@pytest.mark.django_db
+def test_clone_course_success_with_permissions(client):
+    source_academy = _create_academy(slug="source-academy", name="Source Academy")
+    destination_academy = _create_academy(slug="destination-academy", name="Destination Academy")
+    user = _create_user_with_capability(source_academy)
+    role = ProfileAcademy.objects.filter(user=user, academy=source_academy).first().role
+    ProfileAcademy.objects.create(user=user, academy=destination_academy, role=role)
+
+    syllabus = Syllabus.objects.create(slug="fs-base", name="Full Stack Base")
+    source_course = Course.objects.create(
+        slug="full-stack-source",
+        academy=source_academy,
+        is_listed=False,
+        plan_slug="pro-plan",
+        status="ARCHIVED",
+        icon_url="https://assets.test/source-icon.png",
+        technologies="python,react",
+        visibility="UNLISTED",
+        has_waiting_list=True,
+        color="#123456",
+        banner_image="https://assets.test/source-banner.png",
+    )
+    source_course.syllabus.add(syllabus)
+    CourseTranslation.objects.create(
+        course=source_course,
+        lang="en",
+        title="Source title",
+        description="Source description",
+        short_description="Short",
+    )
+
+    url = reverse("marketing:academy_course")
+    payload = {
+        "slug": "full-stack-clone",
+        "source_course": source_course.slug,
+    }
+
+    client.force_authenticate(user=user)
+    response = client.post(url, payload, format="json", HTTP_Academy=str(destination_academy.id))
+
+    assert response.status_code == status.HTTP_201_CREATED
+    clone = Course.objects.get(slug="full-stack-clone")
+    assert clone.academy_id == destination_academy.id
+    assert clone.visibility == source_course.visibility
+    assert clone.icon_url == source_course.icon_url
+    assert clone.syllabus.count() == 1
+    assert clone.syllabus.first().id == syllabus.id
+    assert CourseTranslation.objects.filter(course=clone, lang="en", title="Source title").exists()
+
+
+@pytest.mark.django_db
+def test_clone_course_rejects_without_source_permission(client):
+    source_academy = _create_academy(slug="source-only", name="Source Only")
+    destination_academy = _create_academy(slug="destination-only", name="Destination Only")
+    source_course = Course.objects.create(
+        slug="hidden-source-course",
+        academy=source_academy,
+        icon_url="https://assets.test/source-icon.png",
+        technologies="python",
+    )
+    user = _create_user_with_capability(destination_academy)
+    url = reverse("marketing:academy_course")
+
+    payload = {
+        "slug": "clone-attempt",
+        "source_course": source_course.slug,
+    }
+
+    client.force_authenticate(user=user)
+    response = client.post(url, payload, format="json", HTTP_Academy=str(destination_academy.id))
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.json()["detail"] == "source-course-forbidden"
+
+
+@pytest.mark.django_db
+def test_clone_course_slug_conflict(client):
+    source_academy = _create_academy(slug="academy-1", name="Academy 1")
+    destination_academy = _create_academy(slug="academy-2", name="Academy 2")
+    source_course = Course.objects.create(
+        slug="source-course",
+        academy=source_academy,
+        icon_url="https://assets.test/source-icon.png",
+        technologies="python",
+    )
+
+    user = _create_user_with_capability(source_academy)
+    role = ProfileAcademy.objects.filter(user=user, academy=source_academy).first().role
+    ProfileAcademy.objects.create(user=user, academy=destination_academy, role=role)
+
+    Course.objects.create(
+        slug="taken-slug",
+        academy=destination_academy,
+        icon_url="https://assets.test/taken-icon.png",
+        technologies="react",
+    )
+
+    url = reverse("marketing:academy_course")
+    payload = {"slug": "taken-slug", "source_course": source_course.slug}
+
+    client.force_authenticate(user=user)
+    response = client.post(url, payload, format="json", HTTP_Academy=str(destination_academy.id))
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "slug" in response.json()
 
