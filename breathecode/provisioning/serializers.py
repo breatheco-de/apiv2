@@ -456,7 +456,13 @@ class AcademyVPSListSerializer(serpy.Serializer):
     provisioned_at = serpy.Field()
     deleted_at = serpy.Field()
     created_at = serpy.Field()
+    restart_modes = serpy.MethodField()
     user = UserTinySerializer(required=False)
+
+    def get_restart_modes(self, obj):
+        from breathecode.provisioning.actions import vps_restart_modes_for_list
+
+        return vps_restart_modes_for_list(obj)
 
 
 # --- Provisioning academy (credentials and settings) ---

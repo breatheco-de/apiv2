@@ -236,7 +236,7 @@ class MeVPSGetListRestartModesTestSuite(ProvisioningTestCase):
         response = self.client.get(reverse_lazy("provisioning:me_vps"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         row = response.json()["results"][0]
-        self.assertEqual(row["restart_modes"], sorted(ProvisioningVPS.RestartMode.values))
+        self.assertEqual(row["restart_modes"], list(ProvisioningVPS.RestartMode.values))
 
     def test_me_vps_get_list_restart_modes_empty_without_external_id(self):
         model = self.bc.database.create(user=1, academy=1, provisioning_vendor=1)
@@ -368,10 +368,10 @@ class MeVPSRestartViewTestSuite(ProvisioningTestCase):
         )
         with (
             patch(
-                "breathecode.provisioning.views.vps_restart_modes_for_list",
+                "breathecode.provisioning.actions.vps_restart_modes_for_list",
                 return_value=sorted(ProvisioningVPS.RestartMode.values),
             ),
-            patch("breathecode.provisioning.views.get_vps_client", return_value=mock_client),
+            patch("breathecode.provisioning.actions.get_vps_client", return_value=mock_client),
         ):
             self.client.force_authenticate(model.user)
             url = reverse_lazy("provisioning:me_vps_restart", kwargs={"vps_id": vps.id})
@@ -406,10 +406,10 @@ class MeVPSRestartViewTestSuite(ProvisioningTestCase):
         )
         with (
             patch(
-                "breathecode.provisioning.views.vps_restart_modes_for_list",
+                "breathecode.provisioning.actions.vps_restart_modes_for_list",
                 return_value=sorted(ProvisioningVPS.RestartMode.values),
             ),
-            patch("breathecode.provisioning.views.get_vps_client", return_value=mock_client),
+            patch("breathecode.provisioning.actions.get_vps_client", return_value=mock_client),
         ):
             self.client.force_authenticate(model.user)
             url = reverse_lazy("provisioning:me_vps_restart", kwargs={"vps_id": vps.id})
@@ -438,10 +438,10 @@ class MeVPSRestartViewTestSuite(ProvisioningTestCase):
         mock_client.restart_vps = MagicMock(side_effect=VPSProvisioningError("upstream"))
         with (
             patch(
-                "breathecode.provisioning.views.vps_restart_modes_for_list",
+                "breathecode.provisioning.actions.vps_restart_modes_for_list",
                 return_value=sorted(ProvisioningVPS.RestartMode.values),
             ),
-            patch("breathecode.provisioning.views.get_vps_client", return_value=mock_client),
+            patch("breathecode.provisioning.actions.get_vps_client", return_value=mock_client),
         ):
             self.client.force_authenticate(model.user)
             url = reverse_lazy("provisioning:me_vps_restart", kwargs={"vps_id": vps.id})
@@ -466,8 +466,8 @@ class MeVPSRestartViewTestSuite(ProvisioningTestCase):
         mock_client = MagicMock()
         mock_client.restart_vps = MagicMock()
         with (
-            patch("breathecode.provisioning.views.vps_restart_modes_for_list", return_value=["graceful"]),
-            patch("breathecode.provisioning.views.get_vps_client", return_value=mock_client),
+            patch("breathecode.provisioning.actions.vps_restart_modes_for_list", return_value=["graceful"]),
+            patch("breathecode.provisioning.actions.get_vps_client", return_value=mock_client),
         ):
             self.client.force_authenticate(model.user)
             url = reverse_lazy("provisioning:me_vps_restart", kwargs={"vps_id": vps.id})

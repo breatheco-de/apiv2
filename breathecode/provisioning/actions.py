@@ -44,7 +44,7 @@ from .models import (
     ProvisioningVPS,
 )
 from .utils.llm_client import LLMClientError, get_llm_client
-from .utils.vps_client import get_vps_client
+from .utils.vps_client import VPSProvisioningError, get_vps_client
 
 logger = getLogger(__name__)
 
@@ -602,6 +602,105 @@ def vps_restart_modes_for_list(vps: ProvisioningVPS) -> list[str]:
         return []
     allowed = frozenset(str(x) for x in raw) & frozenset(ProvisioningVPS.RestartMode.values)
     return [m for m in ProvisioningVPS.RestartMode.values if m in allowed]
+
+
+def restart_provisioning_vps(vps: ProvisioningVPS, *, lang: str, mode: str) -> dict[str, Any]:
+    """
+    Validate and run vendor restart for a resolved ``ProvisioningVPS`` (caller enforces access).
+
+    ``mode`` must be a public restart mode string (e.g. ``ProvisioningVPS.RestartMode.*.value``); caller parses HTTP input.
+    """
+    if vps.status != ProvisioningVPS.VPS_STATUS_ACTIVE:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Only an active VPS can be restarted.",
+                es="Solo se puede reiniciar un VPS en estado activo.",
+                slug="vps-restart-not-active",
+            ),
+            code=400,
+        )
+    if not (vps.external_id or "").strip():
+        raise ValidationException(
+            translation(
+                lang,
+                en="This VPS has no provider machine id yet; restart is not available.",
+                es="Este VPS aún no tiene id de máquina en el proveedor; no se puede reiniciar.",
+                slug="vps-restart-missing-external-id",
+            ),
+            code=400,
+        )
+
+    if mode not in ProvisioningVPS.RestartMode.values:
+        allowed = ", ".join(sorted(ProvisioningVPS.RestartMode.values))
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Invalid mode. Use one of: {allowed}.",
+                es=f"Modo inválido. Usa uno de: {allowed}.",
+                slug="vps-restart-invalid-mode",
+            ),
+            code=400,
+        )
+
+    allowed_modes = vps_restart_modes_for_list(vps)
+    if not allowed_modes:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Restart is not available for this VPS vendor.",
+                es="El reinicio no está disponible para el proveedor de este VPS.",
+                slug="vps-restart-not-supported",
+            ),
+            code=400,
+        )
+    if mode not in allowed_modes:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Restart with this mode is not available for this VPS.",
+                es="El reinicio con este modo no está disponible para este VPS.",
+                slug="vps-restart-mode-not-allowed",
+            ),
+            code=400,
+        )
+
+    provisioning_academy = ProvisioningAcademy.objects.filter(academy=vps.academy, vendor=vps.vendor).first()
+    if not provisioning_academy:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Provisioning academy config not found for this VPS.",
+                es="Configuración de aprovisionamiento no encontrada para este VPS.",
+                slug="provisioning-academy-not-found-for-vps",
+            ),
+            code=404,
+        )
+
+    credentials = {"token": provisioning_academy.credentials_token or ""}
+    if provisioning_academy.credentials_key:
+        credentials["key"] = provisioning_academy.credentials_key
+    if provisioning_academy.vendor_settings:
+        credentials.update(provisioning_academy.vendor_settings)
+
+    client = get_vps_client(vps.vendor)
+
+    try:
+        return client.restart_vps(
+            credentials,
+            vps.external_id,
+            mode=mode,
+        )
+    except VPSProvisioningError as e:
+        raise ValidationException(
+            translation(
+                lang,
+                en="The VPS provider could not restart the machine.",
+                es="El proveedor del VPS no pudo reiniciar la máquina.",
+                slug="vps-restart-vendor-error",
+            ),
+            code=502,
+        ) from e
 
 
 def request_vps(
