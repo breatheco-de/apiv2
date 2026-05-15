@@ -9,6 +9,7 @@ from typing import Any
 import pandas as pd
 import pytz
 from dateutil.relativedelta import relativedelta
+from django.db import transaction
 from django.db.models import DecimalField, F, Sum
 from django.db.models.functions import Coalesce
 from django.utils import timezone
@@ -552,23 +553,36 @@ def renew_or_deprovision_vps_task(provisioning_vps_id: int, **_: Any):
 
 
 @task(priority=TaskPriority.STUDENT.value)
-def deprovision_vps_task(provisioning_vps_id: int, **_: Any):
+def deprovision_vps_task(provisioning_vps_id: int, *, request_mid_cycle_rebuild: bool = False, **_: Any):
     """
     Deprovision a VPS via the vendor API (e.g. academy delete or monthly renewal).
     Sets status to DELETED. Optionally send vps_deprovisioned email.
+    When request_mid_cycle_rebuild is True (student me/vps delete), may refund the initial consumable
+    if ProvisioningAcademy.vendor_settings.allow_mid_cycle_rebuild is True; DELETED is committed in its own
+    transaction before reimbursement so a refund failure cannot roll back DELETED after the vendor destroy.
+    If there is no ProvisioningAcademy or no external_id, marks DELETED locally only (no vendor call, no refund, no email)
+    — same as legacy: provisioning failure path usually already reimbursed the consumable.
     """
-    vps = ProvisioningVPS.objects.filter(id=provisioning_vps_id).select_related("vendor", "academy", "user").first()
+    vps = (
+        ProvisioningVPS.objects.filter(id=provisioning_vps_id)
+        .select_related("vendor", "academy", "user", "consumed_consumable")
+        .first()
+    )
     if not vps:
         logger.warning("ProvisioningVPS id=%s not found for deprovision", provisioning_vps_id)
         return
     if vps.status == ProvisioningVPS.VPS_STATUS_DELETED:
         return
+
+    prior_status = vps.status
     provisioning_academy = ProvisioningAcademy.objects.filter(academy=vps.academy, vendor=vps.vendor).first()
+
     if not provisioning_academy or not vps.external_id:
         vps.status = ProvisioningVPS.VPS_STATUS_DELETED
         vps.deleted_at = timezone.now()
         vps.save(update_fields=["status", "deleted_at", "updated_at"])
         return
+
     credentials = {"token": provisioning_academy.credentials_token or ""}
     client = get_vps_client(vps.vendor)
     if client:
@@ -576,9 +590,30 @@ def deprovision_vps_task(provisioning_vps_id: int, **_: Any):
             client.destroy_vps(credentials, vps.external_id)
         except VPSProvisioningError as e:
             logger.warning("Deprovision VPS %s failed: %s", provisioning_vps_id, e)
-    vps.status = ProvisioningVPS.VPS_STATUS_DELETED
-    vps.deleted_at = timezone.now()
-    vps.save(update_fields=["status", "deleted_at", "updated_at"])
+
+    with transaction.atomic():
+        locked = ProvisioningVPS.objects.select_for_update().filter(pk=provisioning_vps_id).first()
+        if not locked or locked.status == ProvisioningVPS.VPS_STATUS_DELETED:
+            return
+        locked.status = ProvisioningVPS.VPS_STATUS_DELETED
+        locked.deleted_at = timezone.now()
+        locked.save(update_fields=["status", "deleted_at", "updated_at"])
+
+    if request_mid_cycle_rebuild:
+        pa = ProvisioningAcademy.objects.filter(academy=locked.academy, vendor=locked.vendor).first()
+        allow_reimbursement = bool((pa.vendor_settings or {}).get("allow_mid_cycle_rebuild")) if pa else False
+        eligible = prior_status in (
+            ProvisioningVPS.VPS_STATUS_PENDING,
+            ProvisioningVPS.VPS_STATUS_PROVISIONING,
+            ProvisioningVPS.VPS_STATUS_ACTIVE,
+        )
+        if allow_reimbursement and eligible and locked.consumed_consumable_id:
+            try:
+                reimburse_service_units.send_robust(sender=Consumable, instance=locked.consumed_consumable, how_many=1)
+            except Exception as e:
+                logger.exception("Reimburse consumable failed: %s", e)
+                raise
+
     try:
         from breathecode.notify.actions import send_email_message
 

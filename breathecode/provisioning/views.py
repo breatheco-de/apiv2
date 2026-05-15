@@ -62,6 +62,7 @@ from .actions import (
     request_vps_for_student,
     resolve_llm_client_and_external_id,
     resolve_provisioning_academy_for_llm,
+    restart_provisioning_vps,
 )
 from .models import (
     BILL_STATUS,
@@ -1633,7 +1634,7 @@ class MeVPSView(APIView):
 
     def get(self, request):
         handler = self.extensions(request)
-        items = ProvisioningVPS.objects.filter(user=request.user).order_by("-created_at")
+        items = ProvisioningVPS.objects.filter(user=request.user).select_related("vendor").order_by("-created_at")
         items = handler.queryset(items)
         serializer = VPSListSerializer(items, many=True)
         return handler.response({"can_request_vps": can_request_vps(request.user), "results": serializer.data})
@@ -1687,8 +1688,34 @@ class MeVPSView(APIView):
         return Response(out_serializer.data, status=status.HTTP_202_ACCEPTED)
 
 
+class MeVPSRestartView(APIView):
+    """POST: restart the owner's ACTIVE VPS if the vendor client exposes restart_vps (e.g. DigitalOcean)."""
+
+    def post(self, request, vps_id):
+        lang = get_user_language(request)
+        vps = ProvisioningVPS.objects.filter(id=vps_id, user=request.user).select_related("academy", "vendor").first()
+        if not vps:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="VPS not found or you do not have permission to view it.",
+                    es="VPS no encontrado o no tienes permiso para verlo.",
+                    slug="vps-not-found",
+                ),
+                code=404,
+            )
+        body = request.data if isinstance(request.data, dict) else {}
+        raw_mode = body.get("mode", ProvisioningVPS.RestartMode.GRACEFUL.value)
+        if isinstance(raw_mode, str):
+            mode = raw_mode.strip().lower()
+        else:
+            mode = ProvisioningVPS.RestartMode.GRACEFUL.value
+        result = restart_provisioning_vps(vps, lang=lang, mode=mode)
+        return Response(result, status=status.HTTP_200_OK)
+
+
 class MeVPSByIdView(APIView):
-    """GET: one VPS by id; only for owner; includes decrypted root_password for owner."""
+    """GET: one VPS by id; only for owner; includes decrypted root_password for owner. DELETE: owner deprovisions (optional mid-cycle consumable refund per academy policy)."""
 
     def get(self, request, vps_id):
         lang = get_user_language(request)
@@ -1705,6 +1732,50 @@ class MeVPSByIdView(APIView):
             )
         serializer = VPSDetailSerializer(vps, context={"show_password": True})
         return Response(serializer.data)
+
+    def delete(self, request, vps_id):
+        lang = get_user_language(request)
+        vps = ProvisioningVPS.objects.filter(id=vps_id, user=request.user).first()
+        if not vps:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="VPS not found or you do not have permission to view it.",
+                    es="VPS no encontrado o no tienes permiso para verlo.",
+                    slug="vps-not-found",
+                ),
+                code=404,
+            )
+        if vps.status == ProvisioningVPS.VPS_STATUS_DELETED:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="This VPS is already deleted.",
+                    es="Este VPS ya está eliminado.",
+                    slug="vps-already-deleted",
+                ),
+                code=400,
+            )
+
+        if vps.status not in (
+            ProvisioningVPS.VPS_STATUS_PENDING,
+            ProvisioningVPS.VPS_STATUS_PROVISIONING,
+            ProvisioningVPS.VPS_STATUS_ACTIVE,
+            ProvisioningVPS.VPS_STATUS_ERROR,
+        ):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="This VPS cannot be deleted in its current state.",
+                    es="Este VPS no puede eliminarse en su estado actual.",
+                    slug="vps-invalid-state-for-delete",
+                ),
+                code=400,
+            )
+        from breathecode.provisioning.tasks import deprovision_vps_task
+
+        deprovision_vps_task.delay(vps.id, request_mid_cycle_rebuild=True)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class AcademyVPSView(APIView):
@@ -1773,6 +1844,35 @@ class AcademyVPSView(APIView):
             raise
         out_serializer = VPSListSerializer(vps)
         return Response(out_serializer.data, status=status.HTTP_202_ACCEPTED)
+
+
+class AcademyVPSRestartView(APIView):
+    """POST: staff restarts a student's VPS in this academy (same vendor rules as ``me/vps/.../restart``)."""
+
+    @capable_of("crud_provisioning_activity")
+    def post(self, request, academy_id=None, vps_id=None):
+        lang = get_user_language(request)
+        vps = (
+            ProvisioningVPS.objects.filter(id=vps_id, academy_id=academy_id).select_related("academy", "vendor").first()
+        )
+        if not vps:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="VPS not found or it does not belong to this academy.",
+                    es="VPS no encontrado o no pertenece a esta academia.",
+                    slug="vps-not-found",
+                ),
+                code=404,
+            )
+        body = request.data if isinstance(request.data, dict) else {}
+        raw_mode = body.get("mode", ProvisioningVPS.RestartMode.GRACEFUL.value)
+        if isinstance(raw_mode, str):
+            mode = raw_mode.strip().lower()
+        else:
+            mode = ProvisioningVPS.RestartMode.GRACEFUL.value
+        result = restart_provisioning_vps(vps, lang=lang, mode=mode)
+        return Response(result, status=status.HTTP_200_OK)
 
 
 class AcademyVPSByIdView(APIView):
