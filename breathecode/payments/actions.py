@@ -60,6 +60,7 @@ from .models import (
     PlanFinancing,
     PlanFinancingSeat,
     PlanFinancingTeam,
+    PlanServiceItem,
     ProofOfPayment,
     Service,
     ServiceItem,
@@ -1878,10 +1879,109 @@ def regenerate_service_stock_for_target(
     }
 
 
-def enqueue_service_stock_regeneration_for_plan(*, academy_id: int, plan_id: int) -> dict:
+def resolve_plan_regeneration_service_ids(*, plan_id: int, services: Any, lang: str) -> list[int]:
+    """
+    Parse and validate service ids or slugs for bulk plan stock regeneration.
+    Every resolved service must belong to the plan via PlanServiceItem.
+    """
+    if services is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="services is required (list of service ids or slugs from the plan)",
+                es="services es requerido (lista de ids o slugs de servicios del plan)",
+                slug="missing-services",
+            ),
+            code=400,
+        )
+
+    if not isinstance(services, list) or not services:
+        raise ValidationException(
+            translation(
+                lang,
+                en="services must be a non-empty list",
+                es="services debe ser una lista no vacía",
+                slug="invalid-services",
+            ),
+            code=400,
+        )
+
+    service_ids: list[int] = []
+    slugs: list[str] = []
+
+    for entry in services:
+        if isinstance(entry, int):
+            service_ids.append(entry)
+        elif isinstance(entry, str) and entry.strip().isdigit():
+            service_ids.append(int(entry.strip()))
+        elif isinstance(entry, str) and entry.strip():
+            slugs.append(entry.strip())
+        else:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Each service must be an integer id or a slug string",
+                    es="Cada servicio debe ser un id entero o un slug",
+                    slug="invalid-service-entry",
+                ),
+                code=400,
+            )
+
+    if slugs:
+        slug_rows = list(Service.objects.filter(slug__in=slugs).values("id", "slug"))
+        slug_to_id = {row["slug"]: row["id"] for row in slug_rows}
+        missing_slugs = sorted(set(slugs) - set(slug_to_id))
+        if missing_slugs:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Services not found: {', '.join(missing_slugs)}",
+                    es=f"Servicios no encontrados: {', '.join(missing_slugs)}",
+                    slug="service-not-found",
+                ),
+                code=404,
+            )
+        service_ids.extend(slug_to_id[slug] for slug in slugs)
+
+    service_ids = list(dict.fromkeys(service_ids))
+
+    plan_service_ids = set(
+        PlanServiceItem.objects.filter(plan_id=plan_id)
+        .values_list("service_item__service_id", flat=True)
+        .distinct()
+    )
+    if not plan_service_ids:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Plan has no services configured",
+                es="El plan no tiene servicios configurados",
+                slug="plan-without-services",
+            ),
+            code=400,
+        )
+
+    invalid_ids = sorted({sid for sid in service_ids if sid not in plan_service_ids})
+    if invalid_ids:
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Services {invalid_ids} are not part of plan {plan_id}",
+                es=f"Los servicios {invalid_ids} no pertenecen al plan {plan_id}",
+                slug="service-not-in-plan",
+            ),
+            code=400,
+        )
+
+    return service_ids
+
+
+def enqueue_service_stock_regeneration_for_plan(*, academy_id: int, plan_id: int, service_ids: list[int]) -> dict:
     """
     Queue async rebuild of service stock schedulers for every plan financing or subscription in
     the academy that includes this plan and is ACTIVE or FULLY_PAID.
+
+    Only schedulers for the given service_ids are rebuilt.
 
     Subscription rows cannot normally be FULLY_PAID (model validation); the filter is kept
     aligned with plan financing statuses for consistency.
@@ -1908,16 +2008,17 @@ def enqueue_service_stock_regeneration_for_plan(*, academy_id: int, plan_id: int
     )
 
     for pf_id in plan_financing_ids:
-        tasks.build_service_stock_scheduler_from_plan_financing.delay(pf_id)
+        tasks.build_service_stock_scheduler_from_plan_financing.delay(pf_id, service_ids=service_ids)
 
     for sub_id in subscription_ids:
-        tasks.build_service_stock_scheduler_from_subscription.delay(sub_id)
+        tasks.build_service_stock_scheduler_from_subscription.delay(sub_id, service_ids=service_ids)
 
     total = len(plan_financing_ids) + len(subscription_ids)
 
     return {
         "plan_id": plan_id,
         "academy_id": academy_id,
+        "service_ids": service_ids,
         "plan_financing_ids_queued": plan_financing_ids,
         "subscription_ids_queued": subscription_ids,
         "plan_financings_queued": len(plan_financing_ids),
