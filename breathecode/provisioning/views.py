@@ -1715,7 +1715,7 @@ class MeVPSRestartView(APIView):
 
 
 class MeVPSByIdView(APIView):
-    """GET: one VPS by id; only for owner; includes decrypted root_password for owner."""
+    """GET: one VPS by id; only for owner; includes decrypted root_password for owner. DELETE: owner deprovisions (optional mid-cycle consumable refund per academy policy)."""
 
     def get(self, request, vps_id):
         lang = get_user_language(request)
@@ -1732,6 +1732,50 @@ class MeVPSByIdView(APIView):
             )
         serializer = VPSDetailSerializer(vps, context={"show_password": True})
         return Response(serializer.data)
+
+    def delete(self, request, vps_id):
+        lang = get_user_language(request)
+        vps = ProvisioningVPS.objects.filter(id=vps_id, user=request.user).first()
+        if not vps:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="VPS not found or you do not have permission to view it.",
+                    es="VPS no encontrado o no tienes permiso para verlo.",
+                    slug="vps-not-found",
+                ),
+                code=404,
+            )
+        if vps.status == ProvisioningVPS.VPS_STATUS_DELETED:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="This VPS is already deleted.",
+                    es="Este VPS ya está eliminado.",
+                    slug="vps-already-deleted",
+                ),
+                code=400,
+            )
+
+        if vps.status not in (
+            ProvisioningVPS.VPS_STATUS_PENDING,
+            ProvisioningVPS.VPS_STATUS_PROVISIONING,
+            ProvisioningVPS.VPS_STATUS_ACTIVE,
+            ProvisioningVPS.VPS_STATUS_ERROR,
+        ):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="This VPS cannot be deleted in its current state.",
+                    es="Este VPS no puede eliminarse en su estado actual.",
+                    slug="vps-invalid-state-for-delete",
+                ),
+                code=400,
+            )
+        from breathecode.provisioning.tasks import deprovision_vps_task
+
+        deprovision_vps_task.delay(vps.id, request_mid_cycle_rebuild=True)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class AcademyVPSView(APIView):
@@ -1809,9 +1853,7 @@ class AcademyVPSRestartView(APIView):
     def post(self, request, academy_id=None, vps_id=None):
         lang = get_user_language(request)
         vps = (
-            ProvisioningVPS.objects.filter(id=vps_id, academy_id=academy_id)
-            .select_related("academy", "vendor")
-            .first()
+            ProvisioningVPS.objects.filter(id=vps_id, academy_id=academy_id).select_related("academy", "vendor").first()
         )
         if not vps:
             raise ValidationException(

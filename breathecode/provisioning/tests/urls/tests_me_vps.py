@@ -218,9 +218,26 @@ class MeVPSByIdViewTestSuite(ProvisioningTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json()["id"], vps.id)
         self.assertEqual(response.json()["hostname"], "vps.example.com")
+        self.assertIsNone(response.json().get("provisioning_academy"))
 
+    def test_me_vps_by_id_includes_provisioning_academy_when_configured(self):
+        model = self.bc.database.create(user=1, academy=1, provisioning_vendor=1, provisioning_academy=1)
+        model.provisioning_academy.vendor = model.provisioning_vendor
+        model.provisioning_academy.academy = model.academy
+        model.provisioning_academy.save()
+        vps = ProvisioningVPS.objects.create(
+            user=model.user,
+            academy=model.academy,
+            vendor=model.provisioning_vendor,
+            status=ProvisioningVPS.VPS_STATUS_ACTIVE,
+            hostname="vps.example.com",
+        )
+        self.client.force_authenticate(model.user)
+        url = reverse_lazy("provisioning:me_vps_id", kwargs={"vps_id": vps.id})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["provisioning_academy"]["id"], model.provisioning_academy.id)
 
-class MeVPSGetListRestartModesTestSuite(ProvisioningTestCase):
     def test_me_vps_get_list_restart_modes_digitalocean_active(self):
         model = self.bc.database.create(user=1, academy=1, provisioning_vendor=1)
         model.provisioning_vendor.name = "digitalocean"

@@ -7,11 +7,7 @@ from rest_framework import serializers
 
 from breathecode.utils import serpy
 
-from .models import (
-    ProvisioningBill,
-    ProvisioningContainer,
-    ProvisioningMachineTypes,
-)
+from .models import ProvisioningAcademy, ProvisioningBill, ProvisioningContainer, ProvisioningMachineTypes
 
 
 class AcademySerializer(serpy.Serializer):
@@ -391,7 +387,22 @@ class VPSDetailSerializer(serpy.Serializer):
     deleted_at = serpy.Field()
     created_at = serpy.Field()
     updated_at = serpy.Field()
+    provisioning_academy = serpy.MethodField()
     root_password = serpy.MethodField()
+
+    def get_provisioning_academy(self, obj):
+        academy_id = getattr(obj, "academy_id", None)
+        vendor_id = getattr(obj, "vendor_id", None)
+        if not academy_id or not vendor_id:
+            return None
+        pa = (
+            ProvisioningAcademy.objects.filter(academy_id=academy_id, vendor_id=vendor_id)
+            .select_related("vendor", "academy")
+            .first()
+        )
+        if not pa:
+            return None
+        return GetProvisioningAcademySerializer(pa).data
 
     def get_root_password(self, obj):
         if not (self.context or {}).get("show_password"):
@@ -610,6 +621,16 @@ def get_vendor_settings_schema(vendor_name: str) -> Dict[str, Any]:
                     "required": True,
                     "help_text": "Allowed Hostinger data center IDs for this academy.",
                 },
+                {
+                    "options_key": None,
+                    "settings_key": "allow_mid_cycle_rebuild",
+                    "selection_key": None,
+                    "label_en": "Allow mid-cycle consumable refund on student VPS delete",
+                    "label_es": "Permitir reembolso del consumible al borrar VPS por el alumno antes del ciclo",
+                    "type": "boolean",
+                    "required": False,
+                    "help_text": "When true, deleting a VPS via the student endpoint may refund the initial vps_server consumable per academy policy.",
+                },
             ]
         }
     if slug == "digitalocean":
@@ -644,6 +665,16 @@ def get_vendor_settings_schema(vendor_name: str) -> Dict[str, Any]:
                     "type": "list[string]",
                     "required": True,
                     "help_text": "Allowed DigitalOcean distribution image slugs for this academy.",
+                },
+                {
+                    "options_key": None,
+                    "settings_key": "allow_mid_cycle_rebuild",
+                    "selection_key": None,
+                    "label_en": "Allow mid-cycle consumable refund on student VPS delete",
+                    "label_es": "Permitir reembolso del consumible al borrar VPS por el alumno antes del ciclo",
+                    "type": "boolean",
+                    "required": False,
+                    "help_text": "When true, deleting a VPS via the student endpoint may refund the initial vps_server consumable per academy policy.",
                 },
             ]
         }
@@ -688,7 +719,7 @@ def validate_vendor_settings(vendor_name: str, vendor_settings: Dict[str, Any], 
         return settings
 
     if slug == "hostinger":
-        allowed_keys = {"item_ids", "template_ids", "data_center_ids"}
+        allowed_keys = {"item_ids", "template_ids", "data_center_ids", "allow_mid_cycle_rebuild"}
         unknown = sorted(set(settings.keys()) - allowed_keys)
         if unknown:
             raise ValidationException(
@@ -700,6 +731,19 @@ def validate_vendor_settings(vendor_name: str, vendor_settings: Dict[str, Any], 
                 ),
                 code=400,
             )
+
+        if "allow_mid_cycle_rebuild" in settings:
+            v = settings["allow_mid_cycle_rebuild"]
+            if not isinstance(v, bool):
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="allow_mid_cycle_rebuild must be a boolean.",
+                        es="allow_mid_cycle_rebuild debe ser un booleano.",
+                        slug="invalid-vendor-settings-value",
+                    ),
+                    code=400,
+                )
 
         def _require_list(key: str, cast):
             values = settings.get(key)
@@ -776,7 +820,7 @@ def validate_vendor_settings(vendor_name: str, vendor_settings: Dict[str, Any], 
         return settings
 
     # digitalocean
-    allowed_keys = {"region_slugs", "size_slugs", "image_slugs"}
+    allowed_keys = {"region_slugs", "size_slugs", "image_slugs", "allow_mid_cycle_rebuild"}
     unknown = sorted(set(settings.keys()) - allowed_keys)
     if unknown:
         raise ValidationException(
@@ -788,6 +832,19 @@ def validate_vendor_settings(vendor_name: str, vendor_settings: Dict[str, Any], 
             ),
             code=400,
         )
+
+    if "allow_mid_cycle_rebuild" in settings:
+        v = settings["allow_mid_cycle_rebuild"]
+        if not isinstance(v, bool):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="allow_mid_cycle_rebuild must be a boolean.",
+                    es="allow_mid_cycle_rebuild debe ser un booleano.",
+                    slug="invalid-vendor-settings-value",
+                ),
+                code=400,
+            )
 
     def _require_str_list(key: str):
         values = settings.get(key)
