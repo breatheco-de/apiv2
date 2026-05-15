@@ -547,7 +547,7 @@ class Cohort(models.Model):
     )
 
     cohorts_order = models.CharField(
-        max_length=50,
+        max_length=120,
         null=True,
         blank=True,
         default=None,
