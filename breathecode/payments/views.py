@@ -1496,7 +1496,7 @@ class AcademyAcademyServiceView(APIView):
 
     @capable_of("crud_academyservice")
     def put(self, request, service_slug=None, academy_id=None):
-        service = Service.objects.filter(Q(owner__id=academy_id) | Q(owner=None), slug=service_slug).first()
+        service = Service.objects.filter(slug=service_slug).first()
         lang = get_user_language(request)
 
         if not service:
@@ -1952,6 +1952,9 @@ class AcademyPlanServiceStockSchedulersRegenerateView(APIView):
     Academy POST (manage_service_stock_schedulers): for a given plan, enqueue service stock
     scheduler rebuild for every related subscription or plan financing in this academy with
     status ACTIVE or FULLY_PAID.
+
+  Body:
+    - services (required): non-empty list of service ids (int) or slugs (str) that belong to the plan.
     """
 
     @capable_of("manage_service_stock_schedulers")
@@ -1984,7 +1987,16 @@ class AcademyPlanServiceStockSchedulersRegenerateView(APIView):
                 code=404,
             )
 
-        data = actions.enqueue_service_stock_regeneration_for_plan(academy_id=academy_id, plan_id=plan.id)
+        service_ids = actions.resolve_plan_regeneration_service_ids(
+            plan_id=plan.id,
+            services=request.data.get("services"),
+            lang=lang,
+        )
+        data = actions.enqueue_service_stock_regeneration_for_plan(
+            academy_id=academy_id,
+            plan_id=plan.id,
+            service_ids=service_ids,
+        )
         return Response(data)
 
 
