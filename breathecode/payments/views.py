@@ -1496,7 +1496,7 @@ class AcademyAcademyServiceView(APIView):
 
     @capable_of("crud_academyservice")
     def put(self, request, service_slug=None, academy_id=None):
-        service = Service.objects.filter(Q(owner__id=academy_id) | Q(owner=None), slug=service_slug).first()
+        service = Service.objects.filter(slug=service_slug).first()
         lang = get_user_language(request)
 
         if not service:
