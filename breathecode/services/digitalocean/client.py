@@ -14,6 +14,8 @@ from typing import Any, Dict, List, Optional
 
 import requests
 
+from breathecode.provisioning.models import ProvisioningVPS
+
 from breathecode.provisioning.utils.vps_client import VPSProvisioningError, register_vps_client
 
 logger = logging.getLogger(__name__)
@@ -114,6 +116,11 @@ def _collect_paginated(token: str, path: str, params: Optional[Dict[str, Any]] =
 class DigitalOceanVPSClient:
     """DigitalOcean Droplets implementation of VPS create_vps / destroy_vps."""
 
+    @classmethod
+    def supported_restart_modes(cls) -> frozenset[str]:
+        """Public API ``mode`` values accepted for this vendor."""
+        return frozenset(ProvisioningVPS.RestartMode.values)
+
     def create_vps(
         self,
         credentials: Dict[str, Any],
@@ -195,6 +202,35 @@ class DigitalOceanVPSClient:
         except ValueError as e:
             raise VPSProvisioningError(f"Invalid DigitalOcean droplet id: {external_id}") from e
         _do_request("DELETE", token, f"/droplets/{droplet_id}")
+
+    def restart_vps(
+        self,
+        credentials: Dict[str, Any],
+        external_id: str,
+        *,
+        mode: str,
+    ) -> Dict[str, Any]:
+        """Queue a DigitalOcean droplet action from public API ``mode`` (graceful→reboot, forced→power_cycle)."""
+        if mode == ProvisioningVPS.RestartMode.GRACEFUL.value:
+            action_type = "reboot"
+        elif mode == ProvisioningVPS.RestartMode.FORCED.value:
+            action_type = "power_cycle"
+        else:
+            raise VPSProvisioningError(f"Unsupported restart mode: {mode!r}")
+        token = credentials.get("token") or credentials.get("access_token")
+        if not token:
+            raise VPSProvisioningError("DigitalOcean credentials missing token")
+        try:
+            droplet_id = int(str(external_id).strip())
+        except ValueError as e:
+            raise VPSProvisioningError(f"Invalid DigitalOcean droplet id: {external_id}") from e
+        data = _do_request("POST", token, f"/droplets/{droplet_id}/actions", json_body={"type": action_type})
+        action = data.get("action") if isinstance(data.get("action"), dict) else {}
+        return {
+            "action_id": action.get("id"),
+            "action_status": action.get("status"),
+            "action_type": action.get("type") or action_type,
+        }
 
     def test_connection(self, credentials: Dict[str, Any]) -> None:
         token = credentials.get("token") or credentials.get("access_token")
