@@ -34,7 +34,8 @@ from breathecode.marketing.caches import CourseCache
 from breathecode.monitoring.models import CSVUpload
 from breathecode.renderers import PlainTextRenderer
 from breathecode.services.activecampaign import ActiveCampaign
-from breathecode.utils import GenerateLookupsMixin, HeaderLimitOffsetPagination, capable_of, localize_query
+from breathecode.utils import GenerateLookupsMixin, HeaderLimitOffsetPagination, capable_of, capable_of_many, localize_query
+from breathecode.utils.decorators.capable_of import academy_scope_response_meta
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import academy_has_feature, validate_captcha, validate_captcha_challenge
 from breathecode.utils.find_by_full_name import query_like_by_full_name
@@ -54,6 +55,7 @@ from .models import (
     Tag,
     UTMField,
     ACTIVE,
+    DELETED,
     UNLISTED,
     PUBLIC,
 )
@@ -1711,6 +1713,37 @@ def _get_course_translation_or_404(request, course_identifier, academy_id):
 
 class AcademyCourseView(APIView):
     permission_classes = [IsAuthenticated]
+
+    @capable_of_many("crud_course", scope="read_aggregate")
+    def get(self, request, course_identifier=None, academy_ids=None):
+        if course_identifier is not None:
+            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+        request_lang = get_user_language(request)
+        response_lang = request.GET.get("lang") or request_lang
+        country_code = request.GET.get("country_code")
+
+        items = Course.objects.filter(academy_id__in=academy_ids).exclude(status=DELETED)
+        items = items.annotate(lang=Value(response_lang, output_field=CharField()))
+
+        handler = APIViewExtensions(sort="-updated_at", paginate=True)(request)
+        items = handler.queryset(items)
+
+        serializer = GetCourseSerializer(
+            items,
+            context={"lang": response_lang, "country_code": country_code},
+            many=True,
+        )
+        data = serializer.data
+        meta = academy_scope_response_meta(request)
+        response = handler.response(data)
+        if meta:
+            body = response.data
+            if isinstance(body, list):
+                return Response({"results": body, **meta}, status=response.status_code, headers=response.headers)
+            if isinstance(body, dict):
+                return Response({**body, **meta}, status=response.status_code, headers=response.headers)
+        return response
 
     @capable_of("crud_course")
     def post(self, request, academy_id=None):
