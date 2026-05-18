@@ -36,6 +36,7 @@ from .models import (
     FormEntry,
     Tag,
 )
+from .utils.person_name import standardize_person_name
 
 logger = getLogger(__name__)
 
@@ -818,6 +819,9 @@ def register_new_lead(form_entry=None):
     if not "last_name" in form_entry:
         raise ValidationException("The last name doesn't exist")
 
+    form_entry["first_name"] = standardize_person_name(form_entry["first_name"])
+    form_entry["last_name"] = standardize_person_name(form_entry["last_name"])
+
     if not "phone" in form_entry:
         raise ValidationException("The phone doesn't exist")
 
@@ -828,9 +832,11 @@ def register_new_lead(form_entry=None):
     if not entry:
         raise ValidationException("FormEntry not found (id: " + str(form_entry["id"]) + ")")
 
+    entry.first_name = form_entry["first_name"]
+    entry.last_name = form_entry["last_name"]
     entry.storage_status = "PENDING"
     entry.storage_status_text = ""
-    entry.save(update_fields=["storage_status", "storage_status_text"])
+    entry.save(update_fields=["first_name", "last_name", "storage_status", "storage_status_text"])
 
     if not "course" in form_entry:
         raise ValidationException("The course doesn't exist")
@@ -1211,10 +1217,13 @@ def get_facebook_lead_info(lead_id, academy_id=None):
             lead.utm_medium = data["ad_id"]
             lead.utm_source = "facebook"
             for field in data["field_data"]:
+                raw_value = field["values"]
+                if isinstance(raw_value, list):
+                    raw_value = raw_value[0] if raw_value else ""
                 if field["name"] == "first_name" or field["name"] == "full_name":
-                    lead.first_name = field["values"]
+                    lead.first_name = standardize_person_name(raw_value)
                 elif field["name"] == "last_name":
-                    lead.last_name = field["values"]
+                    lead.last_name = standardize_person_name(raw_value)
                 elif field["name"] == "email":
                     lead.email = field["values"]
                 elif field["name"] == "phone":

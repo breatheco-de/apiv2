@@ -27,6 +27,7 @@ from .models import (
     ShortLink,
     Tag,
 )
+from .utils.person_name import standardize_person_name
 
 logger = logging.getLogger(__name__)
 
@@ -806,6 +807,13 @@ class PostFormEntrySerializer(serializers.ModelSerializer):
         exclude = ()
         read_only_fields = ["id"]
 
+    def validate(self, attrs):
+        if attrs.get("first_name"):
+            attrs["first_name"] = standardize_person_name(attrs["first_name"])
+        if attrs.get("last_name"):
+            attrs["last_name"] = standardize_person_name(attrs["last_name"])
+        return attrs
+
     def create(self, validated_data):
 
         academy = None
@@ -1192,6 +1200,13 @@ class PostFormEntrySerializerV2(serializers.ModelSerializer):
             data = data.copy()
             data["gclid"] = data.pop("ppc_tracking_id")
         return super().to_internal_value(data)
+
+    def validate(self, attrs):
+        if attrs.get("first_name"):
+            attrs["first_name"] = standardize_person_name(attrs["first_name"])
+        if attrs.get("last_name"):
+            attrs["last_name"] = standardize_person_name(attrs["last_name"])
+        return attrs
 
     def create(self, validated_data):
         academy = None

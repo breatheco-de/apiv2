@@ -142,6 +142,7 @@ def form_entry_field(data={}):
         "ac_expected_cohort_date": None,
         "ac_deal_amount": None,
         "ac_deal_currency_code": None,
+        "ac_reservation_or_course_form_of_payment": None,
         **data,
     }
 
@@ -331,8 +332,7 @@ class CreateFormEntryTestSuite(MarketingTestCase):
                         "status": "ERROR",
                         "finished_at": UTC_NOW,
                         "log": f"No academy exists with this academy active_campaign_slug: {slug}, "
-                        f"No academy exists with this academy slug: {slug}, first "
-                        "name has incorrect characters, last name has incorrect characters, "
+                        f"No academy exists with this academy slug: {slug}, "
                         "email has incorrect format, No location or academy in form entry. ",
                     }
                 ],
@@ -343,16 +343,13 @@ class CreateFormEntryTestSuite(MarketingTestCase):
                 [
                     call(f'No academy exists with this academy active_campaign_slug: {data["academy"]}'),
                     call(f'No academy exists with this academy slug: {data["academy"]}'),
-                    call("first name has incorrect characters"),
-                    call("last name has incorrect characters"),
                     call("email has incorrect format"),
                     call("No location or academy in form entry"),
                     call("Missing field in received item"),
                     call(data),
                     call(
                         f"No academy exists with this academy active_campaign_slug: {slug}, No "
-                        f"academy exists with this academy slug: {slug}, first name has incorrect characters, "
-                        "last name has incorrect characters, email has incorrect format, No location or "
+                        f"academy exists with this academy slug: {slug}, email has incorrect format, No location or "
                         "academy in form entry. ",
                         exc_info=True,
                     ),
@@ -383,6 +380,8 @@ class CreateFormEntryTestSuite(MarketingTestCase):
         create_form_entry.delay(1, **data)
 
         del data["academy"]
+        data["first_name"] = "john"
+        data["last_name"] = "smith"
 
         self.assertEqual(
             self.bc.database.list_of("marketing.FormEntry"),
