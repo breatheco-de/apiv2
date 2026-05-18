@@ -19,13 +19,27 @@ from breathecode.utils.api_view_extensions.extensions.lookup_extension import Q
 from breathecode.utils.decorators import has_permission
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 
-from .actions import generate_certificate, get_syllabus_specialty_bucket_conflict
+from .actions import (
+    generate_certificate,
+    generate_certificate_ignoring_tasks,
+    get_syllabus_specialty_bucket_conflict,
+)
 from .diagnostics import build_certificate_diagnostic, list_graduated_without_certificate_cohort_users
 from .models import Badge, LayoutDesign, Specialty, UserSpecialty
 from .serializers import BadgeSerializer, LayoutDesignSerializer, SpecialtySerializer, UserSpecialtySerializer
 from .tasks import async_generate_certificate
 
 logger = logging.getLogger(__name__)
+
+
+def _parse_request_bool(value) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.lower() in ("true", "1", "yes")
+    return bool(value)
 
 
 def _specialty_visible_to_academy_q(academy_id):
@@ -387,23 +401,45 @@ class CertificateCohortView(APIView):
 
     @capable_of("crud_certificate")
     def post(self, request, cohort_id, academy_id=None):
+        lang = get_user_language(request)
+        layout_slug = request.data.get("layout_slug")
+        ignore_tasks = _parse_request_bool(request.data.get("ignore_tasks"))
+        student_id = request.data.get("student_id")
 
-        layout_slug = None
-        if "layout_slug" in request.data:
-            layout_slug = request.data["layout_slug"]
+        if student_id is not None:
+            try:
+                student_id = int(student_id)
+            except (TypeError, ValueError):
+                raise ValidationException(
+                    translation(lang, en="student_id must be an integer", es="student_id debe ser un entero"),
+                    code=400,
+                    slug="invalid-student-id",
+                )
 
         cohort_users = CohortUser.objects.filter(cohort__id=cohort_id, role="STUDENT", cohort__academy__id=academy_id)
-        all_certs = []
-        cohort__users = []
+
+        if student_id is not None:
+            cohort_users = cohort_users.filter(user__id=student_id)
 
         if cohort_users.count() == 0:
+            if student_id is not None:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Student not found for this cohort",
+                        es="Estudiante no encontrado en este cohort",
+                    ),
+                    code=404,
+                    slug="student-not-found",
+                )
             raise ValidationException(
                 "There are no users with STUDENT role in this cohort", code=400, slug="no-user-with-student-role"
             )
 
+        cohort__users = []
         for cohort_user in cohort_users:
             cohort = cohort_user.cohort
-            if cohort.stage != "ENDED" or cohort.never_ends != False:
+            if cohort.stage != "ENDED" or cohort.never_ends is not False:
                 raise ValidationException(
                     "Cohort stage must be ENDED or never ends", code=400, slug="cohort-stage-must-be-ended"
                 )
@@ -414,11 +450,13 @@ class CertificateCohortView(APIView):
                     slug="cohort-has-no-syllabus-version-assigned",
                 )
 
-            else:
-                cohort__users.append(cohort_user)
+            cohort__users.append(cohort_user)
+
+        generate_fn = generate_certificate_ignoring_tasks if ignore_tasks else generate_certificate
+        all_certs = []
 
         for cu in cohort__users:
-            cert = generate_certificate(cu.user, cu.cohort, layout_slug)
+            cert = generate_fn(cu.user, cu.cohort, layout_slug)
             serializer = UserSpecialtySerializer(cert, many=False)
             all_certs.append(serializer.data)
 
