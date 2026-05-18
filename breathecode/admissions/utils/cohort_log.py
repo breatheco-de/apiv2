@@ -15,6 +15,7 @@ def has_duplicates(values):
 
 class CohortDayLog(object):
     current_module = None
+    micro_cohort_id = None
     teacher_comments = None
     created_at = None
     attendance_ids = []
@@ -24,6 +25,7 @@ class CohortDayLog(object):
     def __init__(
         self,
         current_module: str = None,
+        micro_cohort_id: int = None,
         teacher_comments: str = None,
         attendance_ids: list = None,
         unattendance_ids: list = None,
@@ -58,6 +60,7 @@ class CohortDayLog(object):
         # If it's already a datetime object, keep it as is
 
         self.current_module = current_module
+        self.micro_cohort_id = micro_cohort_id
         self.teacher_comments = teacher_comments
         self.attendance_ids = attendance_ids
         self.unattendance_ids = unattendance_ids
@@ -79,7 +82,7 @@ class CohortDayLog(object):
         )
 
     def serialize(self):
-        return {
+        payload = {
             "current_module": self.current_module,
             "teacher_comments": self.teacher_comments,
             "attendance_ids": self.attendance_ids,
@@ -87,6 +90,9 @@ class CohortDayLog(object):
             "updated_at": str(self.updated_at),
             "liveclass_date": str(self.liveclass_date) if self.liveclass_date else None,
         }
+        if self.micro_cohort_id is not None:
+            payload["micro_cohort_id"] = self.micro_cohort_id
+        return payload
 
 
 class CohortLog(object):
