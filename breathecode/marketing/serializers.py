@@ -247,7 +247,6 @@ class FormEntryHookSerializer(serpy.Serializer):
     ac_deal_currency_code = serpy.Field()
     ac_expected_cohort = serpy.Field()
     ac_expected_cohort_date = serpy.Field()
-    ac_reservation_or_course_form_of_payment = serpy.Field()
 
     cohort = serpy.MethodField(required=False)
     is_won = serpy.MethodField(required=False)
