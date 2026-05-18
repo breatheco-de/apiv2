@@ -44,7 +44,7 @@ from .models import (
     ProvisioningVPS,
 )
 from .utils.llm_client import LLMClientError, get_llm_client
-from .utils.vps_client import get_vps_client
+from .utils.vps_client import VPSProvisioningError, get_vps_client
 
 logger = getLogger(__name__)
 
@@ -324,9 +324,11 @@ def ensure_llm_user(user, provisioning_academy, client=None):
 
     if client is None:
         client = get_llm_client(provisioning_academy)
+
+    user_data: dict | None = None
     if client and hasattr(client, "get_user_info") and hasattr(client, "create_user"):
         try:
-            client.get_user_info(user_id=external_user_id)
+            user_data = client.get_user_info(user_id=external_user_id)
         except LLMClientError as exc:
             exc_str = str(exc).lower()
             # LiteLLM returns: User <id> not found (code 404 in our wrapper)
@@ -339,11 +341,40 @@ def ensure_llm_user(user, provisioning_academy, client=None):
                         user_alias=getattr(user, "username", None),
                         metadata=user_metadata,
                     )
-                except LLMClientError:
-                    # If the user already exists due to a race condition, generation will work anyway.
-                    retry_msg = str(exc).lower()
+                except LLMClientError as create_exc:
+                    retry_msg = str(create_exc).lower()
                     if "409" not in retry_msg and "already" not in retry_msg:
                         raise
+                try:
+                    user_data = client.get_user_info(user_id=external_user_id)
+                except LLMClientError:
+                    user_data = None
+
+    vendor_settings = getattr(provisioning_academy, "vendor_settings", None) or {}
+    team_id = str(vendor_settings.get("team_id") or "").strip() if isinstance(vendor_settings, dict) else ""
+    if team_id and client and hasattr(client, "add_user_to_team"):
+        member_team_ids: set[str] = set()
+        if user_data is not None:
+            user_info = user_data.get("user_info") or {}
+            raw_teams = user_info.get("teams") or []
+            member_team_ids = {str(tid).strip() for tid in raw_teams if tid is not None and str(tid).strip()}
+
+        if user_data is None or team_id not in member_team_ids:
+            try:
+                client.add_user_to_team(team_id=team_id, user_ids=[external_user_id])
+            except LLMClientError as exc:
+                exc_msg = str(exc).lower()
+                if "409" not in exc_msg and "already" not in exc_msg and "exists" not in exc_msg:
+                    raise
+        else:
+            logger.info(
+                "LLM user already in configured team; skipping member_add (user_id=%s academy_id=%s "
+                "external_user_id=%s team_id=%s)",
+                user.id,
+                provisioning_academy.academy_id,
+                external_user_id,
+                team_id,
+            )
 
     return provisioning_llm
 
@@ -546,6 +577,130 @@ def _resolve_vps_consumable_for_plan(user, academy: Academy, plan_slug: str, *, 
         )
 
     return consumable
+
+
+def vps_restart_modes_for_list(vps: ProvisioningVPS) -> list[str]:
+    """
+    Modes the UI may offer for ``POST .../restart`` for this VPS (empty if restart is not available).
+    """
+    if not (vps.external_id or "").strip():
+        return []
+    vendor = getattr(vps, "vendor", None)
+    if not vendor:
+        return []
+    client = get_vps_client(vendor)
+    if client is None or not hasattr(client, "restart_vps"):
+        return []
+    supported = getattr(type(client), "supported_restart_modes", None)
+    if supported is None:
+        return []
+    try:
+        raw = client.supported_restart_modes()
+    except Exception:
+        return []
+    if not isinstance(raw, (frozenset, set, tuple, list)):
+        return []
+    allowed = frozenset(str(x) for x in raw) & frozenset(ProvisioningVPS.RestartMode.values)
+    return [m for m in ProvisioningVPS.RestartMode.values if m in allowed]
+
+
+def restart_provisioning_vps(vps: ProvisioningVPS, *, lang: str, mode: str) -> dict[str, Any]:
+    """
+    Validate and run vendor restart for a resolved ``ProvisioningVPS`` (caller enforces access).
+
+    ``mode`` must be a public restart mode string (e.g. ``ProvisioningVPS.RestartMode.*.value``); caller parses HTTP input.
+    """
+    if vps.status != ProvisioningVPS.VPS_STATUS_ACTIVE:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Only an active VPS can be restarted.",
+                es="Solo se puede reiniciar un VPS en estado activo.",
+                slug="vps-restart-not-active",
+            ),
+            code=400,
+        )
+    if not (vps.external_id or "").strip():
+        raise ValidationException(
+            translation(
+                lang,
+                en="This VPS has no provider machine id yet; restart is not available.",
+                es="Este VPS aún no tiene id de máquina en el proveedor; no se puede reiniciar.",
+                slug="vps-restart-missing-external-id",
+            ),
+            code=400,
+        )
+
+    if mode not in ProvisioningVPS.RestartMode.values:
+        allowed = ", ".join(sorted(ProvisioningVPS.RestartMode.values))
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Invalid mode. Use one of: {allowed}.",
+                es=f"Modo inválido. Usa uno de: {allowed}.",
+                slug="vps-restart-invalid-mode",
+            ),
+            code=400,
+        )
+
+    allowed_modes = vps_restart_modes_for_list(vps)
+    if not allowed_modes:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Restart is not available for this VPS vendor.",
+                es="El reinicio no está disponible para el proveedor de este VPS.",
+                slug="vps-restart-not-supported",
+            ),
+            code=400,
+        )
+    if mode not in allowed_modes:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Restart with this mode is not available for this VPS.",
+                es="El reinicio con este modo no está disponible para este VPS.",
+                slug="vps-restart-mode-not-allowed",
+            ),
+            code=400,
+        )
+
+    provisioning_academy = ProvisioningAcademy.objects.filter(academy=vps.academy, vendor=vps.vendor).first()
+    if not provisioning_academy:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Provisioning academy config not found for this VPS.",
+                es="Configuración de aprovisionamiento no encontrada para este VPS.",
+                slug="provisioning-academy-not-found-for-vps",
+            ),
+            code=404,
+        )
+
+    credentials = {"token": provisioning_academy.credentials_token or ""}
+    if provisioning_academy.credentials_key:
+        credentials["key"] = provisioning_academy.credentials_key
+    if provisioning_academy.vendor_settings:
+        credentials.update(provisioning_academy.vendor_settings)
+
+    client = get_vps_client(vps.vendor)
+
+    try:
+        return client.restart_vps(
+            credentials,
+            vps.external_id,
+            mode=mode,
+        )
+    except VPSProvisioningError as e:
+        raise ValidationException(
+            translation(
+                lang,
+                en="The VPS provider could not restart the machine.",
+                es="El proveedor del VPS no pudo reiniciar la máquina.",
+                slug="vps-restart-vendor-error",
+            ),
+            code=502,
+        ) from e
 
 
 def request_vps(

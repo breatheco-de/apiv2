@@ -7,11 +7,7 @@ from rest_framework import serializers
 
 from breathecode.utils import serpy
 
-from .models import (
-    ProvisioningBill,
-    ProvisioningContainer,
-    ProvisioningMachineTypes,
-)
+from .models import ProvisioningAcademy, ProvisioningBill, ProvisioningContainer, ProvisioningMachineTypes
 
 
 class AcademySerializer(serpy.Serializer):
@@ -361,12 +357,18 @@ class VPSListSerializer(serpy.Serializer):
     deleted_at = serpy.Field()
     created_at = serpy.Field()
     updated_at = serpy.Field()
+    restart_modes = serpy.MethodField()
 
     def get_vendor(self, obj):
         vendor = getattr(obj, "vendor", None)
         if not vendor:
             return None
         return {"id": vendor.id, "name": vendor.name}
+
+    def get_restart_modes(self, obj):
+        from breathecode.provisioning.actions import vps_restart_modes_for_list
+
+        return vps_restart_modes_for_list(obj)
 
 
 class VPSDetailSerializer(serpy.Serializer):
@@ -385,7 +387,22 @@ class VPSDetailSerializer(serpy.Serializer):
     deleted_at = serpy.Field()
     created_at = serpy.Field()
     updated_at = serpy.Field()
+    provisioning_academy = serpy.MethodField()
     root_password = serpy.MethodField()
+
+    def get_provisioning_academy(self, obj):
+        academy_id = getattr(obj, "academy_id", None)
+        vendor_id = getattr(obj, "vendor_id", None)
+        if not academy_id or not vendor_id:
+            return None
+        pa = (
+            ProvisioningAcademy.objects.filter(academy_id=academy_id, vendor_id=vendor_id)
+            .select_related("vendor", "academy")
+            .first()
+        )
+        if not pa:
+            return None
+        return GetProvisioningAcademySerializer(pa).data
 
     def get_root_password(self, obj):
         if not (self.context or {}).get("show_password"):
@@ -450,7 +467,13 @@ class AcademyVPSListSerializer(serpy.Serializer):
     provisioned_at = serpy.Field()
     deleted_at = serpy.Field()
     created_at = serpy.Field()
+    restart_modes = serpy.MethodField()
     user = UserTinySerializer(required=False)
+
+    def get_restart_modes(self, obj):
+        from breathecode.provisioning.actions import vps_restart_modes_for_list
+
+        return vps_restart_modes_for_list(obj)
 
 
 # --- Provisioning academy (credentials and settings) ---
@@ -598,6 +621,16 @@ def get_vendor_settings_schema(vendor_name: str) -> Dict[str, Any]:
                     "required": True,
                     "help_text": "Allowed Hostinger data center IDs for this academy.",
                 },
+                {
+                    "options_key": None,
+                    "settings_key": "allow_mid_cycle_rebuild",
+                    "selection_key": None,
+                    "label_en": "Allow mid-cycle consumable refund on student VPS delete",
+                    "label_es": "Permitir reembolso del consumible al borrar VPS por el alumno antes del ciclo",
+                    "type": "boolean",
+                    "required": False,
+                    "help_text": "When true, deleting a VPS via the student endpoint may refund the initial vps_server consumable per academy policy.",
+                },
             ]
         }
     if slug == "digitalocean":
@@ -633,6 +666,31 @@ def get_vendor_settings_schema(vendor_name: str) -> Dict[str, Any]:
                     "required": True,
                     "help_text": "Allowed DigitalOcean distribution image slugs for this academy.",
                 },
+                {
+                    "options_key": None,
+                    "settings_key": "allow_mid_cycle_rebuild",
+                    "selection_key": None,
+                    "label_en": "Allow mid-cycle consumable refund on student VPS delete",
+                    "label_es": "Permitir reembolso del consumible al borrar VPS por el alumno antes del ciclo",
+                    "type": "boolean",
+                    "required": False,
+                    "help_text": "When true, deleting a VPS via the student endpoint may refund the initial vps_server consumable per academy policy.",
+                },
+            ]
+        }
+    if slug == "litellm":
+        return {
+            "fields": [
+                {
+                    "options_key": "teams",
+                    "settings_key": "team_id",
+                    "selection_key": "team_id",
+                    "label_en": "LiteLLM Team",
+                    "label_es": "Equipo de LiteLLM",
+                    "type": "string",
+                    "required": True,
+                    "help_text": "Team ID used to assign users created for this academy in LiteLLM.",
+                },
             ]
         }
     return {"fields": []}
@@ -652,16 +710,16 @@ def validate_vendor_settings(vendor_name: str, vendor_settings: Dict[str, Any], 
             code=400,
         )
 
-    if slug not in ("hostinger", "digitalocean"):
+    if slug not in ("hostinger", "digitalocean", "litellm"):
         return settings
 
     # Allow creating/updating an academy config before the allowlists are filled.
     # The VPS request flow will enforce that allowlists exist and are non-empty at request-time.
-    if not settings:
+    if not settings and slug != "litellm":
         return settings
 
     if slug == "hostinger":
-        allowed_keys = {"item_ids", "template_ids", "data_center_ids"}
+        allowed_keys = {"item_ids", "template_ids", "data_center_ids", "allow_mid_cycle_rebuild"}
         unknown = sorted(set(settings.keys()) - allowed_keys)
         if unknown:
             raise ValidationException(
@@ -673,6 +731,19 @@ def validate_vendor_settings(vendor_name: str, vendor_settings: Dict[str, Any], 
                 ),
                 code=400,
             )
+
+        if "allow_mid_cycle_rebuild" in settings:
+            v = settings["allow_mid_cycle_rebuild"]
+            if not isinstance(v, bool):
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="allow_mid_cycle_rebuild must be a boolean.",
+                        es="allow_mid_cycle_rebuild debe ser un booleano.",
+                        slug="invalid-vendor-settings-value",
+                    ),
+                    code=400,
+                )
 
         def _require_list(key: str, cast):
             values = settings.get(key)
@@ -719,8 +790,37 @@ def validate_vendor_settings(vendor_name: str, vendor_settings: Dict[str, Any], 
         _require_list("data_center_ids", int)
         return settings
 
+    if slug == "litellm":
+        allowed_keys = {"team_id"}
+        unknown = sorted(set(settings.keys()) - allowed_keys)
+        if unknown:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Unknown vendor_settings keys: {', '.join(unknown)}.",
+                    es=f"Claves desconocidas en vendor_settings: {', '.join(unknown)}.",
+                    slug="invalid-vendor-settings-keys",
+                ),
+                code=400,
+            )
+
+        team_id = settings.get("team_id")
+        if team_id is None or not str(team_id).strip():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="team_id is required for LiteLLM vendor settings.",
+                    es="team_id es obligatorio para la configuración de vendor de LiteLLM.",
+                    slug="missing-litellm-team-id",
+                ),
+                code=400,
+            )
+
+        settings["team_id"] = str(team_id).strip()
+        return settings
+
     # digitalocean
-    allowed_keys = {"region_slugs", "size_slugs", "image_slugs"}
+    allowed_keys = {"region_slugs", "size_slugs", "image_slugs", "allow_mid_cycle_rebuild"}
     unknown = sorted(set(settings.keys()) - allowed_keys)
     if unknown:
         raise ValidationException(
@@ -732,6 +832,19 @@ def validate_vendor_settings(vendor_name: str, vendor_settings: Dict[str, Any], 
             ),
             code=400,
         )
+
+    if "allow_mid_cycle_rebuild" in settings:
+        v = settings["allow_mid_cycle_rebuild"]
+        if not isinstance(v, bool):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="allow_mid_cycle_rebuild must be a boolean.",
+                    es="allow_mid_cycle_rebuild debe ser un booleano.",
+                    slug="invalid-vendor-settings-value",
+                ),
+                code=400,
+            )
 
     def _require_str_list(key: str):
         values = settings.get(key)

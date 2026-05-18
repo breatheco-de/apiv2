@@ -25,6 +25,11 @@ def _generate_root_password(length: int = 24) -> str:
 class HostingerVPSClient:
     """Hostinger implementation of VPS create_vps / destroy_vps."""
 
+    @classmethod
+    def supported_restart_modes(cls) -> frozenset[str]:
+        """Restart API not wired for Hostinger yet; empty list in VPS listing."""
+        return frozenset()
+
     def create_vps(
         self,
         credentials: Dict[str, Any],

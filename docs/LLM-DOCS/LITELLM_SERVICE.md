@@ -35,6 +35,7 @@ LLM key endpoints are defined in provisioning routes:
 ```113:115:/workspaces/apiv2/breathecode/provisioning/urls.py
     path("me/llm/keys", MeLLMKeysView.as_view(), name="me_llm_keys"),
     path("me/llm/keys/<str:key_id>", MeLLMKeyByIdView.as_view(), name="me_llm_key_by_id"),
+    path("academy/admin/llm/teams", AdminLLMTeamsView.as_view(), name="academy_admin_llm_teams"),
 ```
 
 All examples below assume `/v1/provisioning` prefix.
@@ -83,6 +84,7 @@ Returns keys visible for the authenticated user across academies that have LiteL
 - Queries candidate academies for the user.
 - Fetches user info from LiteLLM (`get_user_info`) per academy/vendor context.
 - Collects `keys` and deduplicates by `token_id`.
+- Resolves `models` per key using priority: `key.models` -> `user_info.models` -> `team.models`.
 
 **Response (200)**
 
@@ -93,7 +95,8 @@ Returns keys visible for the authenticated user across academies that have LiteL
     "key_alias": "My Laptop",
     "spend": 1.92,
     "created_at": "2026-03-21T14:11:00Z",
-    "academy_id": 1
+    "academy_id": 1,
+    "models": ["groq/llama-3.1-8b-instant"]
   }
 ]
 ```
@@ -187,6 +190,40 @@ Deletes one key by token id.
 
 ---
 
+### 4) List LiteLLM Teams (Admin)
+
+**Endpoint:** `GET /v1/provisioning/academy/admin/llm/teams`
+
+**Purpose**
+
+Returns all LiteLLM teams visible to the tenant credentials configured for the selected academy.
+
+**Authentication**
+
+- Required.
+- Requires academy capability: `crud_provisioning_activity`.
+
+**Headers**
+
+- `Academy` (required): academy used for authorization and tenant credential resolution.
+
+**Response (200)**
+
+```json
+[
+  {
+    "team_id": "27c669b7-3be8-43a9-94f6-2c1a6c625b3c",
+    "team_alias": "AI Engineering",
+    "models": ["groq/llama-3.1-8b-instant"],
+    "max_budget": 5.0,
+    "budget_duration": "30d",
+    "budget_reset_at": "2026-06-01T00:00:00Z",
+    "spend": 0.0013,
+    "blocked": false
+  }
+]
+```
+
 ## End-to-End Creation Flow (What Happens Internally)
 
 When `POST /me/llm/keys` is called:
@@ -279,9 +316,12 @@ Main methods in `breathecode/services/litellm/client.py`:
 - `delete_api_keys(user_id, token_ids)`
 - `get_user_info(user_id)`
 - `create_user(user_id, user_email, user_alias)`
+- `add_user_to_team(team_id, user_ids)`
 - `delete_user(user_ids)`
 
 These are thin wrappers around LiteLLM proxy endpoints (`/key/generate`, `/key/delete`, `/user/info`, `/user/new`, `/user/delete`).
+
+LiteLLM vendor settings now require `team_id` (`vendor_settings.team_id`) so users can be assigned to the selected team when ensured/created.
 
 ---
 

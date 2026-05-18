@@ -21,7 +21,7 @@ def setup(db):
 class AcademyPlanServiceStockSchedulersRegenerateSuite(PaymentsTestCase):
     def test_without_auth(self):
         url = reverse_lazy("payments:academy_plan_service_stock_schedulers_regenerate", kwargs={"plan_id": 1})
-        response = self.client.post(url, headers={"academy": 1})
+        response = self.client.post(url, headers={"academy": 1}, data={"services": [1]}, format="json")
         json = response.json()
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -46,7 +46,7 @@ class AcademyPlanServiceStockSchedulersRegenerateSuite(PaymentsTestCase):
             "payments:academy_plan_service_stock_schedulers_regenerate",
             kwargs={"plan_id": model.plan.id},
         )
-        response = self.client.post(url, headers={"academy": 1})
+        response = self.client.post(url, headers={"academy": 1}, data={"services": [1]}, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -56,18 +56,78 @@ class AcademyPlanServiceStockSchedulersRegenerateSuite(PaymentsTestCase):
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy("payments:academy_plan_service_stock_schedulers_regenerate", kwargs={"plan_id": 99999})
-        response = self.client.post(url, headers={"academy": 1})
+        response = self.client.post(url, headers={"academy": 1}, data={"services": [1]}, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     @pytest.mark.django_db
-    def test_post_by_slug(self):
+    def test_missing_services(self):
         model = self.bc.database.create(
             country=1,
             city=1,
             user=1,
             academy=1,
+            plan={"slug": "p-missing-services", "owner": None},
+            role=1,
+            capability="manage_service_stock_schedulers",
+            profile_academy=1,
+        )
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy(
+            "payments:academy_plan_service_stock_schedulers_regenerate",
+            kwargs={"plan_id": model.plan.id},
+        )
+        response = self.client.post(url, headers={"academy": 1}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json()["slug"], "missing-services")
+
+    @pytest.mark.django_db
+    def test_service_not_in_plan(self):
+        service = {"slug": "orphan-service"}
+        plan_service_items = [{"service_item_id": 1, "plan_id": 1}]
+        model = self.bc.database.create(
+            country=1,
+            city=1,
+            user=1,
+            academy=1,
+            service=service,
+            service_item=1,
+            plan={"slug": "p1", "owner": None},
+            plan_service_item=plan_service_items,
+            role=1,
+            capability="manage_service_stock_schedulers",
+            profile_academy=1,
+        )
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy(
+            "payments:academy_plan_service_stock_schedulers_regenerate",
+            kwargs={"plan_id": model.plan.id},
+        )
+        response = self.client.post(
+            url,
+            headers={"academy": 1},
+            data={"services": [model.service.id]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json()["slug"], "service-not-in-plan")
+
+    @pytest.mark.django_db
+    def test_post_by_slug(self):
+        plan_service_items = [{"service_item_id": 1, "plan_id": 1}]
+        model = self.bc.database.create(
+            country=1,
+            city=1,
+            user=1,
+            academy=1,
+            service=1,
+            service_item=1,
             plan={"slug": "test-plan-slug-regen", "owner": None},
+            plan_service_item=plan_service_items,
             role=1,
             capability="manage_service_stock_schedulers",
             profile_academy=1,
@@ -80,23 +140,32 @@ class AcademyPlanServiceStockSchedulersRegenerateSuite(PaymentsTestCase):
                 "payments:academy_plan_slug_service_stock_schedulers_regenerate",
                 kwargs={"plan_slug": "test-plan-slug-regen"},
             )
-            response = self.client.post(url, headers={"academy": 1})
+            response = self.client.post(
+                url,
+                headers={"academy": 1},
+                data={"services": [model.service.slug]},
+                format="json",
+            )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        expected.assert_called_once_with(academy_id=1, plan_id=model.plan.id)
+        expected.assert_called_once_with(academy_id=1, plan_id=model.plan.id, service_ids=[model.service.id])
 
     @pytest.mark.django_db
     def test_queues_matching_targets(self):
         plan = {"slug": "p1", "owner": None}
         plan_financing = {"status": "ACTIVE"}
         subscription = {"status": "ACTIVE"}
+        plan_service_items = [{"service_item_id": 1, "plan_id": 1}]
 
         model = self.bc.database.create(
             country=1,
             city=1,
             user=1,
             academy=1,
+            service=1,
+            service_item=1,
             plan=plan,
+            plan_service_item=plan_service_items,
             plan_financing=plan_financing,
             subscription=subscription,
             role=1,
@@ -114,13 +183,25 @@ class AcademyPlanServiceStockSchedulersRegenerateSuite(PaymentsTestCase):
                     "payments:academy_plan_service_stock_schedulers_regenerate",
                     kwargs={"plan_id": model.plan.id},
                 )
-                response = self.client.post(url, headers={"academy": 1})
+                response = self.client.post(
+                    url,
+                    headers={"academy": 1},
+                    data={"services": [model.service.id]},
+                    format="json",
+                )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         body = response.json()
         self.assertEqual(body["total_queued"], 2)
+        self.assertEqual(body["service_ids"], [model.service.id])
         self.assertEqual(body["plan_financing_ids_queued"], [model.plan_financing.id])
         self.assertEqual(body["subscription_ids_queued"], [model.subscription.id])
 
-        self.assertEqual(pf_delay.call_args_list, [call(model.plan_financing.id)])
-        self.assertEqual(sub_delay.call_args_list, [call(model.subscription.id)])
+        self.assertEqual(
+            pf_delay.call_args_list,
+            [call(model.plan_financing.id, service_ids=[model.service.id])],
+        )
+        self.assertEqual(
+            sub_delay.call_args_list,
+            [call(model.subscription.id, service_ids=[model.service.id])],
+        )

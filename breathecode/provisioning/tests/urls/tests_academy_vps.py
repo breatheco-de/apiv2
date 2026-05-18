@@ -1,6 +1,6 @@
 """Tests for GET/POST /provisioning/academy/vps and DELETE /provisioning/academy/vps/<id>."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from django.urls import reverse_lazy
 from rest_framework import status
@@ -146,3 +146,101 @@ class AcademyVPSViewTestSuite(ProvisioningTestCase):
         response = self.client.post(url, {"user_id": 99999, "plan_slug": "full-stack"}, format="json")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertIn("user-not-found", response.content.decode())
+
+    def test_academy_vps_get_list_includes_restart_modes(self):
+        staff_model = self.bc.database.create(
+            user=1,
+            profile_academy=1,
+            role=1,
+            capability="crud_provisioning_activity",
+            academy=1,
+            provisioning_vendor=1,
+        )
+        staff_model.provisioning_vendor.name = "digitalocean"
+        staff_model.provisioning_vendor.save()
+        student_model = self.bc.database.create(user=1)
+        vps = ProvisioningVPS.objects.create(
+            user=student_model.user,
+            academy=staff_model.academy,
+            vendor=staff_model.provisioning_vendor,
+            status=ProvisioningVPS.VPS_STATUS_ACTIVE,
+            external_id="42",
+        )
+        self.client.force_authenticate(staff_model.user)
+        self.headers(academy=staff_model.academy.id)
+        url = reverse_lazy("provisioning:academy_vps")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        rows = data["results"] if isinstance(data, dict) and "results" in data else data
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["id"], vps.id)
+        self.assertEqual(rows[0]["restart_modes"], list(ProvisioningVPS.RestartMode.values))
+
+
+class AcademyVPSRestartViewTestSuite(ProvisioningTestCase):
+    def test_academy_vps_restart_403_without_capability(self):
+        model = self.bc.database.create(user=1, profile_academy=1, academy=1)
+        self.client.force_authenticate(model.user)
+        self.headers(academy=model.academy.id)
+        url = reverse_lazy("provisioning:academy_vps_restart", kwargs={"vps_id": 1})
+        response = self.client.post(url, {}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_academy_vps_restart_404_unknown_vps(self):
+        staff_model = self.bc.database.create(
+            user=1,
+            profile_academy=1,
+            role=1,
+            capability="crud_provisioning_activity",
+            academy=1,
+        )
+        self.client.force_authenticate(staff_model.user)
+        self.headers(academy=staff_model.academy.id)
+        url = reverse_lazy("provisioning:academy_vps_restart", kwargs={"vps_id": 999999})
+        response = self.client.post(url, {}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_academy_vps_restart_200_digitalocean(self):
+        staff_model = self.bc.database.create(
+            user=1,
+            profile_academy=1,
+            role=1,
+            capability="crud_provisioning_activity",
+            academy=1,
+            provisioning_vendor=1,
+            provisioning_academy=1,
+        )
+        staff_model.provisioning_academy.vendor = staff_model.provisioning_vendor
+        staff_model.provisioning_academy.academy = staff_model.academy
+        staff_model.provisioning_academy.credentials_token = "tok"
+        staff_model.provisioning_academy.save()
+        staff_model.provisioning_vendor.name = "digitalocean"
+        staff_model.provisioning_vendor.save()
+        student_model = self.bc.database.create(user=1)
+        vps = ProvisioningVPS.objects.create(
+            user=student_model.user,
+            academy=staff_model.academy,
+            vendor=staff_model.provisioning_vendor,
+            status=ProvisioningVPS.VPS_STATUS_ACTIVE,
+            external_id="12345",
+        )
+        mock_client = MagicMock()
+        mock_client.restart_vps = MagicMock(
+            return_value={"action_id": 1, "action_status": "in-progress", "action_type": "reboot"}
+        )
+        with (
+            patch(
+                "breathecode.provisioning.actions.vps_restart_modes_for_list",
+                return_value=list(ProvisioningVPS.RestartMode.values),
+            ),
+            patch("breathecode.provisioning.actions.get_vps_client", return_value=mock_client),
+        ):
+            self.client.force_authenticate(staff_model.user)
+            self.headers(academy=staff_model.academy.id)
+            url = reverse_lazy("provisioning:academy_vps_restart", kwargs={"vps_id": vps.id})
+            response = self.client.post(url, {}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json().get("action_type"), "reboot")
+        _args, kwargs = mock_client.restart_vps.call_args
+        self.assertEqual(kwargs.get("mode"), "graceful")

@@ -3,11 +3,7 @@ from typing import Any, Dict, Optional
 
 import requests
 
-from breathecode.provisioning.utils.llm_client import (
-    LLMClientError,
-    LLMConnectionError,
-    register_llm_client,
-)
+from breathecode.provisioning.utils.llm_client import LLMClientError, LLMConnectionError, register_llm_client
 
 logger = logging.getLogger(__name__)
 
@@ -156,7 +152,10 @@ class LiteLLMClient:
         Get LiteLLM user information (including usage) for the given user_id.
 
         Sends the user_id in the querystring, as expected by LiteLLM.
-        Returns the raw JSON response from LiteLLM.
+        Returns the raw JSON from LiteLLM (includes ``user_info.teams``: list of team_id strings).
+
+        Keys are echoed at the root (e.g. ``user_id``, ``keys``, ``teams`` enrichments).
+        Provisioning compares ``vendor_settings.team_id`` against ``user_info["teams"]``.
         """
         url = f"{self.base_url.rstrip('/')}/user/info"
 
@@ -237,5 +236,63 @@ class LiteLLMClient:
         if resp.status_code >= 400:
             message = self._extract_error_message(resp)
             raise LiteLLMError(f"Failed to delete LiteLLM user(s) ({resp.status_code}): {message}")
+
+        return True
+
+    def list_teams(self, timeout: float = 10.0) -> Dict[str, Any]:
+        url = f"{self.base_url.rstrip('/')}/v2/team/list"
+
+        try:
+            resp = requests.get(url, headers=self.headers, timeout=timeout)
+        except requests.RequestException as exc:
+            raise LiteLLMError(f"Failed calling LiteLLM to get teams: {exc}") from exc
+
+        if resp.status_code >= 400:
+            message = self._extract_error_message(resp)
+            raise LiteLLMError(f"Failed to get LiteLLM teams ({resp.status_code}): {message}")
+
+        return resp.json()
+
+    def get_budgets_info(self, budgets: list[str], timeout: float = 10.0) -> list[Dict[str, Any]]:
+        """
+        Get budget details for the provided LiteLLM budget ids.
+
+        Endpoint: POST /budget/info with payload {"budgets": [...]}.
+        """
+        url = f"{self.base_url.rstrip('/')}/budget/info"
+        payload: Dict[str, Any] = {"budgets": budgets}
+
+        try:
+            resp = requests.post(url, headers=self.headers, json=payload, timeout=timeout)
+        except requests.RequestException as exc:
+            raise LiteLLMError(f"Failed calling LiteLLM to get budgets info: {exc}") from exc
+
+        if resp.status_code >= 400:
+            message = self._extract_error_message(resp)
+            raise LiteLLMError(f"Failed to get LiteLLM budgets info ({resp.status_code}): {message}")
+
+        return resp.json()
+
+    def add_user_to_team(
+        self,
+        team_id: str,
+        user_ids: list[str],
+        timeout: float = 10.0,
+    ) -> bool:
+        url = f"{self.base_url.rstrip('/')}/team/member_add"
+        members = [{"user_id": user_id, "role": "user"} for user_id in user_ids if user_id]
+        payload: Dict[str, Any] = {
+            "team_id": team_id,
+            "member": members,
+        }
+
+        try:
+            resp = requests.post(url, headers=self.headers, json=payload, timeout=timeout)
+        except requests.RequestException as exc:
+            raise LiteLLMError(f"Failed calling LiteLLM to add team members: {exc}") from exc
+
+        if resp.status_code >= 400:
+            message = self._extract_error_message(resp)
+            raise LiteLLMError(f"Failed to add LiteLLM team members ({resp.status_code}): {message}")
 
         return True

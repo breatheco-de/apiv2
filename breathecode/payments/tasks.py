@@ -289,7 +289,13 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
 
 
 @task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
-def renew_subscription_consumables(self, subscription_id: int, seat_id: Optional[int] = None, **_: Any):
+def renew_subscription_consumables(
+    self,
+    subscription_id: int,
+    seat_id: Optional[int] = None,
+    service_ids: Optional[list[int]] = None,
+    **_: Any,
+):
     """Renew consumables belongs to a subscription."""
 
     logger.info(f"Starting renew_subscription_consumables for id {subscription_id}")
@@ -328,14 +334,24 @@ def renew_subscription_consumables(self, subscription_id: int, seat_id: Optional
     if subscription.next_payment_at < utc_now:
         raise AbortTask(f"The subscription {subscription.id} needs to be paid to renew the consumables")
 
-    for scheduler in ServiceStockScheduler.objects.filter(
+    subscription_schedulers = ServiceStockScheduler.objects.filter(
         subscription_handler__subscription=subscription, subscription_seat=subscription_seat
-    ):
+    )
+    if service_ids:
+        subscription_schedulers = subscription_schedulers.filter(
+            subscription_handler__service_item__service_id__in=service_ids
+        )
+
+    for scheduler in subscription_schedulers:
         renew_consumables.delay(scheduler.id)
 
-    for scheduler in ServiceStockScheduler.objects.filter(
+    plan_schedulers = ServiceStockScheduler.objects.filter(
         plan_handler__subscription=subscription, subscription_seat=subscription_seat
-    ):
+    )
+    if service_ids:
+        plan_schedulers = plan_schedulers.filter(plan_handler__handler__service_item__service_id__in=service_ids)
+
+    for scheduler in plan_schedulers:
         renew_consumables.delay(scheduler.id)
 
 
@@ -344,6 +360,7 @@ def renew_plan_financing_consumables(
     self,
     plan_financing_id: int,
     seat_id: Optional[int] = None,
+    service_ids: Optional[list[int]] = None,
     **_: Any,
 ):
     """Renew consumables belongs to a plan financing."""
@@ -387,6 +404,9 @@ def renew_plan_financing_consumables(
             raise RetryTask(f"PlanFinancingSeat with id {seat_id} not found")
 
         scheduler_filters["plan_financing_seat_id"] = seat_id
+
+    if service_ids:
+        scheduler_filters["plan_handler__handler__service_item__service_id__in"] = service_ids
 
     schedulers = ServiceStockScheduler.objects.filter(**scheduler_filters)
 
@@ -1344,6 +1364,7 @@ def build_service_stock_scheduler_from_subscription(
     user_id: Optional[int] = None,
     update_mode: Optional[bool] = False,
     seat_id: Optional[int] = None,
+    service_ids: Optional[list[int]] = None,
     **_: Any,
 ):
     """Build service stock scheduler for a subscription."""
@@ -1398,6 +1419,8 @@ def build_service_stock_scheduler_from_subscription(
             billing_team = subscription_seat.billing_team
 
         for handler in SubscriptionServiceItem.objects.filter(subscription=subscription).select_related("service_item"):
+            if service_ids and handler.service_item.service_id not in service_ids:
+                continue
             # Filter by team-allowed depending on context; applies to owner, team-owned, or seat
             if allow_team is not None and handler.service_item.is_team_allowed is not allow_team:
                 continue
@@ -1421,6 +1444,8 @@ def build_service_stock_scheduler_from_subscription(
 
         for plan in subscription.plans.all():
             for handler in PlanServiceItem.objects.filter(plan=plan).select_related("service_item"):
+                if service_ids and handler.service_item.service_id not in service_ids:
+                    continue
                 # Filter by team-allowed depending on context; applies to owner, team-owned, or seat
                 if allow_team is not None and handler.service_item.is_team_allowed is not allow_team:
                     continue
@@ -1445,7 +1470,7 @@ def build_service_stock_scheduler_from_subscription(
                 )
 
         if not update_mode:
-            renew_subscription_consumables.delay(subscription.id, seat_id=seat_id)
+            renew_subscription_consumables.delay(subscription.id, seat_id=seat_id, service_ids=service_ids)
 
     team = None
     subscription_seat = None
@@ -1511,7 +1536,9 @@ def build_service_stock_scheduler_from_subscription(
         build_schedulers(False, team_for_billing=None)
         # Schedule per-seat builds (these runs will create schedulers only for team-allowed items)
         for seat in SubscriptionSeat.objects.filter(billing_team=team):
-            build_service_stock_scheduler_from_subscription.delay(subscription_id, seat_id=seat.id)
+            build_service_stock_scheduler_from_subscription.delay(
+                subscription_id, seat_id=seat.id, service_ids=service_ids
+            )
 
         return
 
@@ -1525,6 +1552,7 @@ def build_service_stock_scheduler_from_plan_financing(
     plan_financing_id: int,
     seat_id: Optional[int] = None,
     user_id: Optional[int] = None,
+    service_ids: Optional[list[int]] = None,
     **_: Any,
 ):
     """Build service stock scheduler for a plan financing."""
@@ -1609,7 +1637,11 @@ def build_service_stock_scheduler_from_plan_financing(
         return valid_until
 
     for plan in plan_financing.plans.all():
-        for plan_service_item in PlanServiceItem.objects.filter(plan=plan):
+        plan_service_items = PlanServiceItem.objects.filter(plan=plan).select_related("service_item")
+        if service_ids:
+            plan_service_items = plan_service_items.filter(service_item__service_id__in=service_ids)
+
+        for plan_service_item in plan_service_items:
             handler_obj, _ = PlanServiceItemHandler.objects.get_or_create(
                 plan_financing=plan_financing, handler=plan_service_item
             )
@@ -1624,9 +1656,9 @@ def build_service_stock_scheduler_from_plan_financing(
                 upsert_scheduler(handler_obj, valid_until)
 
     if seat_id:
-        renew_plan_financing_consumables.delay(plan_financing.id, seat_id=seat_id)
+        renew_plan_financing_consumables.delay(plan_financing.id, seat_id=seat_id, service_ids=service_ids)
     else:
-        renew_plan_financing_consumables.delay(plan_financing.id)
+        renew_plan_financing_consumables.delay(plan_financing.id, service_ids=service_ids)
 
 
 @task(bind=False, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
@@ -1846,11 +1878,9 @@ def build_plan_financing(
     # in the first invoice. When provided, it is used as the monthly_price
     # instead of the invoice.amount.
     monthly_price = principal_amount if principal_amount is not None else invoice.amount
-    valid_until = (
-        next_payment_at + relativedelta(months=max(months - 1, 0))
-        if initial_payment_amount is not None
-        else invoice.paid_at + relativedelta(months=months - 1)
-    )
+    # Last installment due date: (months - 1) periods after the first scheduled payment.
+    # Must use next_payment_at (includes grace) so valid_until shifts with grace; do not anchor only to paid_at.
+    valid_until = next_payment_at + relativedelta(months=max(months - 1, 0))
 
     financing = PlanFinancing.objects.create(
         user=bag.user,
