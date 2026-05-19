@@ -3020,8 +3020,15 @@ def get_remaining_installments(plan_financing: PlanFinancing) -> int:
 
 
 def get_credit_balance(plan_financing: PlanFinancing) -> float:
-    """Return the current credit balance for a PlanFinancing from the CreditLedgerEntry ledger."""
-    result = CreditLedgerEntry.objects.filter(plan_financing=plan_financing).aggregate(total=Sum("amount"))["total"]
+    """Return the current credit balance for a PlanFinancing from the CreditLedgerEntry ledger.
+
+    The filter is intentionally scoped to PLAN_FINANCING entries only, so that any future GLOBAL
+    entries for the same user are not accidentally included in installment calculations.
+    """
+    result = CreditLedgerEntry.objects.filter(
+        plan_financing=plan_financing,
+        scope=CreditLedgerEntry.Scope.PLAN_FINANCING,
+    ).aggregate(total=Sum("amount"))["total"]
     return float(result or 0)
 
 

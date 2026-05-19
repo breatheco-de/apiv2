@@ -2741,6 +2741,16 @@ class CreditLedgerEntry(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
 
+    def clean(self) -> None:
+        if self.scope == self.Scope.PLAN_FINANCING and self.plan_financing_id is None:
+            raise forms.ValidationError(
+                translation("en", en="plan_financing is required when scope is PLAN_FINANCING")
+            )
+        if self.scope == self.Scope.SUBSCRIPTION and self.subscription_id is None:
+            raise forms.ValidationError(
+                translation("en", en="subscription is required when scope is SUBSCRIPTION")
+            )
+
     def __str__(self) -> str:
         if self.scope == self.Scope.PLAN_FINANCING:
             target = f"PlanFinancing #{self.plan_financing_id}"
