@@ -6,6 +6,7 @@ from django.dispatch import receiver
 from breathecode.authenticate.models import User
 from breathecode.monitoring import signals as monitoring_signals
 from breathecode.monitoring.models import StripeEvent
+from breathecode.payments import actions as payment_actions
 from breathecode.payments.models import Consumable, Service
 from breathecode.payments.signals import deprovision_service
 from breathecode.provisioning.models import ProvisioningBill
@@ -104,17 +105,10 @@ def deprovision_service_receiver(sender: Type[Service], instance: Service, user_
             )
             return
     elif academy_id is not None:
-        has_consumables = (
-            Consumable.list(
-                user=user,
-                service=instance,
-                extra={"subscription__academy_id": academy_id},
-            ).exists()
-            or Consumable.list(
-                user=user,
-                service=instance,
-                extra={"plan_financing__academy_id": academy_id},
-            ).exists()
+        has_consumables = payment_actions.user_has_service_entitlement_in_academy(
+            user,
+            instance,
+            academy_id,
         )
         if has_consumables:
             logger.info(
