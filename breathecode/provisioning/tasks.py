@@ -1,7 +1,7 @@
 import logging
 import math
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 from io import BytesIO
 from typing import Any
@@ -17,9 +17,10 @@ from task_manager.core.exceptions import AbortTask, RetryTask
 from task_manager.django.decorators import task
 
 from breathecode.authenticate.models import User
+from breathecode.payments import actions as payment_actions
 from breathecode.payments.models import Consumable, Service
 from breathecode.payments.services.stripe import Stripe
-from breathecode.payments.signals import consume_service, reimburse_service_units
+from breathecode.payments.signals import consume_service, deprovision_service, reimburse_service_units
 from breathecode.provisioning import actions
 from breathecode.provisioning.utils.llm_client import LLMClientError, get_llm_client
 from breathecode.provisioning.models import (
@@ -644,7 +645,111 @@ def monthly_vps_renewal_dispatcher(**_: Any):
 
 
 @task(priority=TaskPriority.STUDENT.value)
-def deprovision_litellm_user_task(user_id: int, academy_id: int | None = None, **_: Any):
+def deprovision_standalone_consumable(consumable_id: int, **_: Any):
+    """
+    At standalone consumable ``valid_until``, tear down provisioned resources for that grant.
+
+    VPS: ``provisioning_vps_ids``; other VOID services: ``academy_id``.
+
+    If invoked before ``valid_until``, reschedules at that datetime (no extra 1h buffer; grant already applied it).
+    """
+    from breathecode.utils.decorators.service_deprovisioner import get_service_deprovisioner
+
+    consumable = (
+        Consumable.objects.filter(id=consumable_id)
+        .select_related("service_item__service", "standalone_invoice__bag", "user")
+        .first()
+    )
+    if not consumable or not consumable.standalone_invoice_id:
+        logger.info(
+            "deprovision_standalone_consumable: consumable %s missing or not standalone, skipping",
+            consumable_id,
+        )
+        return
+
+    if not consumable.service_item_id or not consumable.service_item.service_id:
+        logger.info("deprovision_standalone_consumable: consumable %s has no service, skipping", consumable_id)
+        return
+
+    service = consumable.service_item.service
+    if not service.slug or not get_service_deprovisioner(service.slug):
+        logger.info(
+            "deprovision_standalone_consumable: no deprovisioner for service %s, skipping",
+            service.slug,
+        )
+        return
+
+    user_id = consumable.user_id
+    if not user_id:
+        logger.info("deprovision_standalone_consumable: consumable %s has no user, skipping", consumable_id)
+        return
+
+    utc_now = timezone.now()
+    valid_until = consumable.valid_until
+    if valid_until is None:
+        logger.info(
+            "deprovision_standalone_consumable: consumable %s has no valid_until, skipping",
+            consumable_id,
+        )
+        return
+    if valid_until > utc_now:
+        logger.info(
+            "deprovision_standalone_consumable: consumable %s valid_until %s still in the future, rescheduling",
+            consumable_id,
+            valid_until,
+        )
+        payment_actions.schedule_standalone_consumable_deprovision(consumable_id, valid_until, service)
+        return
+
+    bag = consumable.standalone_invoice.bag if consumable.standalone_invoice_id else None
+    academy_id = bag.academy_id if bag else None
+
+    if service.consumer == Service.Consumer.VPS_SERVER:
+        active_statuses = [
+            ProvisioningVPS.VPS_STATUS_PENDING,
+            ProvisioningVPS.VPS_STATUS_PROVISIONING,
+            ProvisioningVPS.VPS_STATUS_ACTIVE,
+        ]
+        vps_ids = list(
+            ProvisioningVPS.objects.filter(
+                consumed_consumable_id=consumable_id,
+                status__in=active_statuses,
+            ).values_list("id", flat=True)
+        )
+        if not vps_ids:
+            logger.info(
+                "deprovision_standalone_consumable: no active VPS for consumable %s, skipping signal",
+                consumable_id,
+            )
+            return
+        deprovision_service.send_robust(
+            sender=Service,
+            instance=service,
+            user_id=user_id,
+            context={"provisioning_vps_ids": vps_ids},
+        )
+        return
+
+    if academy_id is None:
+        logger.info(
+            "deprovision_standalone_consumable: no academy for consumable %s, skipping",
+            consumable_id,
+        )
+        return
+    deprovision_service.send_robust(
+        sender=Service,
+        instance=service,
+        user_id=user_id,
+        context={"academy_id": academy_id},
+    )
+
+
+@task(priority=TaskPriority.STUDENT.value)
+def deprovision_litellm_user_task(
+    user_id: int,
+    academy_id: int | None = None,
+    **_: Any,
+):
     """
     Deprovision a user from Litellm by deleting the external user and its API keys.
 
@@ -661,17 +766,10 @@ def deprovision_litellm_user_task(user_id: int, academy_id: int | None = None, *
             academy_id = None
 
     if academy_id:
-        has_entitlement = (
-            Consumable.list(
-                user=user,
-                service="free-monthly-llm-budget",
-                extra={"subscription__academy_id": academy_id},
-            ).exists()
-            or Consumable.list(
-                user=user,
-                service="free-monthly-llm-budget",
-                extra={"plan_financing__academy_id": academy_id},
-            ).exists()
+        has_entitlement = payment_actions.user_has_service_entitlement_in_academy(
+            user,
+            "free-monthly-llm-budget",
+            academy_id,
         )
         if has_entitlement:
             logger.info(

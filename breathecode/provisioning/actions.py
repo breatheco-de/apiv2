@@ -23,6 +23,7 @@ from breathecode.authenticate.models import (
     GithubAcademyUserLog,
     ProfileAcademy,
 )
+from breathecode.payments.actions import user_has_service_entitlement_in_academy
 from breathecode.payments.models import Consumable, Currency, PlanFinancing, Subscription
 from breathecode.payments.signals import consume_service
 from breathecode.registry.models import Asset
@@ -293,19 +294,7 @@ def ensure_llm_user(user, provisioning_academy, client=None):
 
     if provisioning_llm.status == ProvisioningLLM.STATUS_DEPROVISIONED:
         academy_id = provisioning_academy.academy.id
-        has_entitlement = (
-            Consumable.list(
-                user=user,
-                service="free-monthly-llm-budget",
-                extra={"subscription__academy_id": academy_id},
-            ).exists()
-            or Consumable.list(
-                user=user,
-                service="free-monthly-llm-budget",
-                extra={"plan_financing__academy_id": academy_id},
-            ).exists()
-        )
-        if has_entitlement:
+        if user_has_service_entitlement_in_academy(user, "free-monthly-llm-budget", academy_id):
             provisioning_llm.status = ProvisioningLLM.STATUS_ACTIVE
             provisioning_llm.deprovisioned_at = None
             provisioning_llm.error_message = ""
@@ -421,19 +410,7 @@ def resolve_llm_client_and_external_id(request, ensure_llm_user_record: bool = F
             code=400,
         )
 
-    has_entitlement = (
-        Consumable.list(
-            user=user,
-            service="free-monthly-llm-budget",
-            extra={"subscription__academy_id": academy_id},
-        ).exists()
-        or Consumable.list(
-            user=user,
-            service="free-monthly-llm-budget",
-            extra={"plan_financing__academy_id": academy_id},
-        ).exists()
-    )
-    if not has_entitlement:
+    if not user_has_service_entitlement_in_academy(user, "free-monthly-llm-budget", academy_id):
         raise ValidationException(
             translation(
                 lang,
@@ -1805,7 +1782,10 @@ def deprovision_free_monthly_llm_budget(user_id: int, context: dict | None = Non
     academy_id = None
     if isinstance(context, dict):
         academy_id = context.get("academy_id") or context.get("academy")
-    deprovision_litellm_user_task.delay(user_id=user_id, academy_id=academy_id)
+    deprovision_litellm_user_task.delay(
+        user_id=user_id,
+        academy_id=academy_id,
+    )
 
 
 @service_deprovisioner("vps_server")
