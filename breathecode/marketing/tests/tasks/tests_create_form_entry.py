@@ -208,6 +208,7 @@ def form_entry_serializer(self, data={}):
         "ac_expected_cohort_date": None,
         "ac_deal_amount": None,
         "ac_deal_currency_code": None,
+        "ac_reservation_or_course_form_of_payment": None,
         **data,
     }
 
