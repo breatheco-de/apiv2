@@ -5,6 +5,7 @@ import uuid
 from datetime import datetime, timedelta
 from decimal import ROUND_FLOOR, Decimal
 from functools import lru_cache
+from dataclasses import dataclass
 from typing import Any, Literal, Optional, Tuple, Type, TypedDict, Union
 
 import redis
@@ -53,6 +54,7 @@ from .models import (
     Currency,
     EventTypeSet,
     FinancingOption,
+    CreditLedgerEntry,
     Invoice,
     MentorshipServiceSet,
     PaymentMethod,
@@ -2988,6 +2990,41 @@ def grant_consumables_for_user(
     return invoice
 
 
+@dataclass
+class DepositAllocation:
+    """Describes how a single deposit amount was allocated."""
+
+    installment_applied: bool
+    credit_entry_amount: float
+    credit_entry_type: Optional[str]
+    credit_consumed: float
+    invoice_amount: float
+
+
+@dataclass
+class DepositResult:
+    """Full result returned by register_student_deposit."""
+
+    deposit: StudentDeposit
+    allocation: DepositAllocation
+    credit_balance: float
+    remaining_installments: int
+    warning: Optional[str]
+
+
+def get_remaining_installments(plan_financing: PlanFinancing) -> int:
+    """Return the number of installments still pending on a PlanFinancing."""
+    fulfilled = plan_financing.invoices.filter(status=Invoice.Status.FULFILLED, bag__was_delivered=True)
+    paid = max(fulfilled.count() - 1, 0) if plan_financing.initial_payment_amount is not None else fulfilled.count()
+    return max(plan_financing.how_many_installments - paid, 0)
+
+
+def get_credit_balance(plan_financing: PlanFinancing) -> float:
+    """Return the current credit balance for a PlanFinancing from the CreditLedgerEntry ledger."""
+    result = CreditLedgerEntry.objects.filter(plan_financing=plan_financing).aggregate(total=Sum("amount"))["total"]
+    return float(result or 0)
+
+
 @transaction.atomic
 def register_student_deposit(
     request: dict | WSGIRequest | AsyncRequest | HttpRequest | Request,
@@ -3083,18 +3120,6 @@ def register_student_deposit(
             code=400,
         )
 
-    monthly_price_cap = float(plan_financing.monthly_price or 0)
-    if monthly_price_cap > 0 and amount > monthly_price_cap + 1e-6:
-        raise ValidationException(
-            translation(
-                lang,
-                en="amount cannot exceed plan_financing monthly_price",
-                es="amount no puede superar monthly_price del plan financiado",
-                slug="deposit-amount-exceeds-monthly-price",
-            ),
-            code=400,
-        )
-
     notes = data.get("notes") or data.get("deposit_notes")
     if notes and len(notes) > 250:
         raise ValidationException(
@@ -3110,33 +3135,73 @@ def register_student_deposit(
     payment_method = resolve_payment_method_for_staff(data, academy_id, lang, allow_card_and_crypto=False)
     currency = resolve_currency_for_staff_payment(payment_method, academy, lang)
     plans = plan_financing.plans.all()
+    monthly_price = float(plan_financing.monthly_price or 0)
 
-    # Block deposits when there are no installments remaining to pay.
-    # This must be computed BEFORE creating a new invoice, otherwise a fully paid financing
-    # could accept an extra deposit and incorrectly pull next_payment_at forward.
-    fulfilled_invoices = plan_financing.invoices.filter(status=Invoice.Status.FULFILLED, bag__was_delivered=True)
-    if plan_financing.initial_payment_amount is not None:
-        paid_future_installments = max(fulfilled_invoices.count() - 1, 0)
-    else:
-        paid_future_installments = fulfilled_invoices.count()
-    remaining_installments = max(plan_financing.how_many_installments - paid_future_installments, 0)
+    # Compute remaining installments and current credit BEFORE creating the invoice so a fully-paid
+    # financing cannot accept extra deposits and incorrectly advance next_payment_at.
+    remaining_installments = get_remaining_installments(plan_financing)
     if remaining_installments <= 0:
         raise ValidationException(
             translation(
                 lang,
                 en="No installments remaining to pay for this plan financing",
-                es="No installments remaining to pay for this plan financing",
+                es="No quedan cuotas por pagar en este plan de financiamiento",
                 slug="no-remaining-installments",
             ),
             code=409,
         )
+
+    credit_balance = get_credit_balance(plan_financing)
+
+    # ── Determine allocation ──────────────────────────────────────────────────
+    if remaining_installments == 1:
+        still_owed = max(monthly_price - credit_balance, 0)
+        if amount > still_owed + 1e-9:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Amount {currency.format_price(amount)} exceeds the remaining balance "
+                    f"of {currency.format_price(still_owed)} for the last installment.",
+                    es=f"El monto {currency.format_price(amount)} supera el saldo pendiente "
+                    f"de {currency.format_price(still_owed)} para la última cuota.",
+                ),
+                slug="overpayment-on-last-installment",
+            )
+        if amount >= still_owed:
+            # Exact payment — closes the plan.
+            installment_applied = True
+            credit_consumed = credit_balance
+            credit_entry_amount = -credit_balance if credit_balance > 1e-9 else 0.0
+            credit_entry_type = CreditLedgerEntry.EntryType.CREDIT_CONSUMED if credit_entry_amount else None
+        else:
+            # Partial towards the last installment.
+            installment_applied = False
+            credit_consumed = 0.0
+            credit_entry_amount = amount
+            credit_entry_type = CreditLedgerEntry.EntryType.CREDIT_ADDED
+    else:
+        # Intermediate installment.
+        if amount >= monthly_price - 1e-9:
+            installment_applied = True
+            credit_consumed = 0.0
+            overpay = amount - monthly_price
+            credit_entry_amount = overpay if overpay > 1e-9 else 0.0
+            credit_entry_type = CreditLedgerEntry.EntryType.CREDIT_ADDED if credit_entry_amount else None
+        else:
+            installment_applied = False
+            credit_consumed = 0.0
+            credit_entry_amount = amount
+            credit_entry_type = CreditLedgerEntry.EntryType.CREDIT_ADDED
+
+    # ── Build breakdown type label ────────────────────────────────────────────
+    breakdown_type = "MANUAL_DEPOSIT_INSTALLMENT" if installment_applied else "MANUAL_DEPOSIT_CREDIT"
 
     amount_breakdown = {
         "plans": {
             plan.slug: {
                 "amount": amount,
                 "currency": currency.code,
-                "type": "MANUAL_DEPOSIT",
+                "type": breakdown_type,
             }
             for plan in plans
         },
@@ -3173,39 +3238,79 @@ def register_student_deposit(
         applied_at=utc_now,
     )
 
-    fulfilled_invoices = plan_financing.invoices.filter(status=Invoice.Status.FULFILLED, bag__was_delivered=True)
-    if plan_financing.initial_payment_amount is not None:
-        paid_future_installments = max(fulfilled_invoices.count() - 1, 0)
-    else:
-        paid_future_installments = fulfilled_invoices.count()
+    # ── Persist ledger entry ──────────────────────────────────────────────────
+    if credit_entry_type is not None:
+        CreditLedgerEntry.objects.create(
+            user=plan_financing.user,
+            scope=CreditLedgerEntry.Scope.PLAN_FINANCING,
+            plan_financing=plan_financing,
+            amount=credit_entry_amount,
+            entry_type=credit_entry_type,
+            source_deposit=deposit,
+            notes=notes,
+        )
 
-    remaining_installments = max(plan_financing.how_many_installments - paid_future_installments, 0)
-    delta = relativedelta(months=1)
-    while utc_now >= plan_financing.next_payment_at + delta:
-        delta += relativedelta(months=1)
+    # ── Build warning message ─────────────────────────────────────────────────
+    warning: Optional[str] = None
+    if not installment_applied:
+        warning = translation(
+            lang,
+            en=(
+                f"Partial payment recorded. Full installment required before "
+                f"{plan_financing.next_payment_at.date()} to avoid cancellation."
+            ),
+            es=(
+                f"Pago parcial registrado. Se requiere el pago completo de la cuota antes del "
+                f"{plan_financing.next_payment_at.date()} para evitar la cancelación."
+            ),
+        )
 
-    plan_financing.next_payment_at += delta
-    if plan_financing.valid_until:
-        if utc_now > plan_financing.valid_until:
-            plan_financing.valid_until = utc_now + relativedelta(months=remaining_installments)
+    # ── Advance billing cycle when installment is applied ─────────────────────
+    if installment_applied:
+        # Recompute remaining after the new invoice is linked.
+        remaining_installments = get_remaining_installments(plan_financing)
+
+        delta = relativedelta(months=1)
+        while utc_now >= plan_financing.next_payment_at + delta:
+            delta += relativedelta(months=1)
+
+        plan_financing.next_payment_at += delta
+        if plan_financing.valid_until:
+            if utc_now > plan_financing.valid_until:
+                plan_financing.valid_until = utc_now + relativedelta(months=remaining_installments)
+            else:
+                # Keep contract end aligned when paying before due.
+                plan_financing.valid_until += delta
+        plan_financing.status = (
+            PlanFinancing.Status.ACTIVE if remaining_installments > 0 else PlanFinancing.Status.FULLY_PAID
+        )
+        plan_financing.status_message = None
+        plan_financing.save()
+
+        tasks.renew_plan_financing_consumables.delay(plan_financing.id)
+        if remaining_installments > 0:
+            reschedule_billing_tasks(plan_financing_id=plan_financing.id)
         else:
-            # Keep contract end aligned when paying before due: next_payment_at moved by `delta`
-            # but valid_until was only recomputed when expired, which left valid_until < next_payment_at.
-            plan_financing.valid_until += delta
-    plan_financing.status = (
-        PlanFinancing.Status.ACTIVE if remaining_installments > 0 else PlanFinancing.Status.FULLY_PAID
+            for fn in (tasks.charge_plan_financing, tasks.notify_plan_financing_renewal):
+                _cancel_pending_future_scheduled(fn, plan_financing.id, utc_now=utc_now)
+
+    new_credit_balance = get_credit_balance(plan_financing)
+
+    allocation = DepositAllocation(
+        installment_applied=installment_applied,
+        credit_entry_amount=credit_entry_amount,
+        credit_entry_type=credit_entry_type,
+        credit_consumed=credit_consumed,
+        invoice_amount=amount,
     )
-    plan_financing.status_message = None
-    plan_financing.save()
 
-    tasks.renew_plan_financing_consumables.delay(plan_financing.id)
-    if remaining_installments > 0:
-        reschedule_billing_tasks(plan_financing_id=plan_financing.id)
-    else:
-        for fn in (tasks.charge_plan_financing, tasks.notify_plan_financing_renewal):
-            _cancel_pending_future_scheduled(fn, plan_financing.id, utc_now=utc_now)
-
-    return deposit
+    return DepositResult(
+        deposit=deposit,
+        allocation=allocation,
+        credit_balance=new_credit_balance,
+        remaining_installments=remaining_installments,
+        warning=warning,
+    )
 
 
 class UnitBalance(TypedDict):

@@ -2652,6 +2652,108 @@ class StudentDeposit(models.Model):
         return f"{self.user.email} - {self.amount} {self.currency.code} ({self.status})"
 
 
+class CreditLedgerEntry(models.Model):
+    """
+    Generic ledger of credit movements for any billable entity (PlanFinancing, Subscription, or global).
+
+    Each row is a signed monetary movement:
+    - Positive amount (CREDIT_ADDED): money received that does not close a full installment
+      (partial payment or overpayment surplus on an intermediate installment).
+    - Negative amount (CREDIT_CONSUMED): credit spent when an installment/charge is closed.
+
+    Overpayment on the last installment is rejected at the API level; no excess entry type is needed.
+
+    Scope rules:
+    - PLAN_FINANCING: credit applies only to the linked plan_financing.
+    - SUBSCRIPTION: credit applies only to the linked subscription (reserved for future use).
+    - GLOBAL: credit applies to any plan or subscription of the user (reserved for future use).
+
+    The current credit balance for a given scope is always computed as SUM(amount) from all
+    matching entries. There is no denormalised cache field — the ledger is the single source of truth.
+    """
+
+    if TYPE_CHECKING:
+        objects: TypedManager["CreditLedgerEntry"]
+
+    class EntryType(models.TextChoices):
+        CREDIT_ADDED = "CREDIT_ADDED", "Credit Added"
+        CREDIT_CONSUMED = "CREDIT_CONSUMED", "Credit Consumed"
+
+    class Scope(models.TextChoices):
+        PLAN_FINANCING = "PLAN_FINANCING", "Plan Financing"
+        SUBSCRIPTION = "SUBSCRIPTION", "Subscription"
+        GLOBAL = "GLOBAL", "Global"
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="credit_entries",
+        help_text="User this credit movement belongs to",
+    )
+    scope = models.CharField(
+        max_length=16,
+        choices=Scope.choices,
+        db_index=True,
+        help_text="Scope that determines where this credit can be consumed",
+    )
+    plan_financing = models.ForeignKey(
+        PlanFinancing,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        default=None,
+        related_name="credit_entries",
+        help_text="Plan financing this credit movement belongs to (when scope is PLAN_FINANCING)",
+    )
+    subscription = models.ForeignKey(
+        "payments.Subscription",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        default=None,
+        related_name="credit_entries",
+        help_text="Subscription this credit movement belongs to (when scope is SUBSCRIPTION)",
+    )
+    amount = models.FloatField(
+        help_text="Signed amount: positive when credit is added, negative when consumed",
+    )
+    entry_type = models.CharField(
+        max_length=16,
+        choices=EntryType.choices,
+        db_index=True,
+        help_text="Type of credit movement",
+    )
+    source_deposit = models.ForeignKey(
+        StudentDeposit,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=None,
+        related_name="credit_entries",
+        help_text="StudentDeposit that originated this credit movement (when applicable)",
+    )
+    notes = models.CharField(
+        max_length=250,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Optional notes about this credit movement",
+    )
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+
+    def __str__(self) -> str:
+        if self.scope == self.Scope.PLAN_FINANCING:
+            target = f"PlanFinancing #{self.plan_financing_id}"
+        elif self.scope == self.Scope.SUBSCRIPTION:
+            target = f"Subscription #{self.subscription_id}"
+        else:
+            target = f"User #{self.user_id} (global)"
+        return f"{self.entry_type} {self.amount:+.2f} → {target}"
+
+
+# Backwards-compatible alias so existing imports keep working during the transition.
+
+
 class Subscription(AbstractIOweYou):
     """Allows to create a subscription to a plan and services."""
 

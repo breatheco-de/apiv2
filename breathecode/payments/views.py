@@ -6376,9 +6376,15 @@ class AcademyGrantConsumableView(APIView):
 
 class AcademyStudentDepositView(APIView):
     """
-    Academy-only POST to register a manual deposit and apply it to a plan financing installment.
+    Academy-only POST to register a manual payment and apply it toward a plan financing installment.
 
-    ``amount`` must not exceed ``plan_financing.monthly_price`` when that value is greater than zero.
+    ``amount`` can be any positive value:
+    - Equal to monthly_price: closes the current installment.
+    - Greater than monthly_price: closes the installment and records the surplus as credit.
+    - Less than monthly_price: records partial credit; the installment is NOT closed and a warning
+      is returned indicating that the full amount must be paid before next_payment_at.
+
+    On the last installment, overpayment is rejected with a validation error.
     """
 
     @capable_of("crud_subscription")
@@ -6386,13 +6392,29 @@ class AcademyStudentDepositView(APIView):
         lang = get_user_language(request)
         proof = actions.validate_and_create_proof_of_payment(request, request.user, academy_id, lang)
         try:
-            deposit = actions.register_student_deposit(request, proof, academy_id, lang)
+            result = actions.register_student_deposit(request, proof, academy_id, lang)
         except Exception as e:
             proof.delete()
             raise e
 
-        serializer = GetStudentDepositSerializer(deposit, many=False)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        alloc = result.allocation
+        credit_entry_data = None
+        if alloc.credit_entry_type is not None:
+            credit_entry_data = {
+                "amount": alloc.credit_entry_amount,
+                "entry_type": alloc.credit_entry_type,
+            }
+
+        response_data = {
+            "deposit": GetStudentDepositSerializer(result.deposit, many=False).data,
+            "installment_applied": alloc.installment_applied,
+            "credit_entry": credit_entry_data,
+            "credit_consumed": alloc.credit_consumed,
+            "credit_balance": result.credit_balance,
+            "remaining_installments": result.remaining_installments,
+            "warning": result.warning,
+        }
+        return Response(response_data, status=status.HTTP_201_CREATED)
 
 
 class CurrencyView(APIView):

@@ -36,6 +36,7 @@ from .models import (
     Consumable,
     ConsumptionSession,
     Coupon,
+    CreditLedgerEntry,
     Invoice,
     PaymentMethod,
     Plan,
@@ -1219,76 +1220,140 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                 remaining_installments = installments - invoices.count()
 
             if remaining_installments > 0:
-                # Look for existing payment that hasn't been delivered yet
-                invoice = (
-                    plan_financing.invoices.filter(paid_at__lte=utc_now, status="FULFILLED", bag__was_delivered=False)
-                    .order_by("-paid_at")
-                    .first()
-                )
+                # ── Credit-first: consume CreditLedgerEntry balance before hitting Stripe ────────
+                credit_balance = actions.get_credit_balance(plan_financing)
+                amount_owed = float(amount or 0)
+                _credit_to_consume = 0.0
 
-                if invoice:
-                    bag = invoice.bag
+                if credit_balance >= amount_owed - 1e-9 and amount_owed > 0:
+                    # Credit covers the full installment — create an externally-managed invoice.
+                    plans = plan_financing.plans.all()
+                    currency = plan_financing.currency
+                    credit_breakdown = {
+                        "plans": {
+                            plan.slug: {
+                                "amount": amount_owed,
+                                "currency": currency.code if currency else "USD",
+                                "type": "CREDIT_APPLIED",
+                            }
+                            for plan in plans
+                        },
+                        "service-items": {},
+                    }
+                    credit_bag, credit_invoice = actions.create_externally_managed_bag_and_invoice(
+                        user=plan_financing.user,
+                        academy=plan_financing.academy,
+                        currency=currency,
+                        amount=amount_owed,
+                        payment_method=None,
+                        proof_of_payment=None,
+                        lang=settings.lang,
+                        bag_type=Bag.Type.CHARGE,
+                        plans=plans,
+                        how_many_installments=0,
+                        amount_breakdown=credit_breakdown,
+                    )
+                    credit_bag.was_delivered = True
+                    credit_bag.save()
+                    plan_financing.invoices.add(credit_invoice)
+                    CreditLedgerEntry.objects.create(
+                        user=plan_financing.user,
+                        scope=CreditLedgerEntry.Scope.PLAN_FINANCING,
+                        plan_financing=plan_financing,
+                        amount=-amount_owed,
+                        entry_type=CreditLedgerEntry.EntryType.CREDIT_CONSUMED,
+                        notes="Automatic charge covered by accumulated credit",
+                    )
+                    invoice = credit_invoice
+                    bag = credit_bag
 
                 else:
-                    if plan_financing.externally_managed:
-                        message = translation(
-                            settings.lang,
-                            en="Please make your payment in your academy or use another payment method",
-                            es="Por favor realiza tu pago en tu academia o utiliza otro método de pago",
-                        )
+                    if credit_balance > 1e-9 and amount_owed > 0:
+                        # Partial credit — reduce the Stripe charge by the available credit.
+                        _credit_to_consume = credit_balance
+                        amount = amount_owed - credit_balance
 
-                        button = translation(
-                            settings.lang,
-                            en="Renew with another method",
-                            es="Renovar con otro método",
-                        )
-                        alert_payment_issue(message, button)
+                    # Look for existing payment that hasn't been delivered yet
+                    invoice = (
+                        plan_financing.invoices.filter(paid_at__lte=utc_now, status="FULFILLED", bag__was_delivered=False)
+                        .order_by("-paid_at")
+                        .first()
+                    )
 
-                        if plan_financing.status not in no_charge_statuses:
-                            manager = schedule_task(charge_plan_financing, "1d")
-                            if not manager.exists(plan_financing.id):
-                                manager.call(plan_financing.id)
+                    if invoice:
+                        bag = invoice.bag
 
-                        raise AbortTask(f"Payment to PlanFinancing {plan_financing_id} failed")
                     else:
-                        try:
-                            bag = actions.get_bag_from_plan_financing(plan_financing, settings)
-                        except Exception as e:
-                            plan_financing.status = "ERROR"
-                            plan_financing.status_message = str(e)
-                            plan_financing.save()
+                        if plan_financing.externally_managed:
+                            message = translation(
+                                settings.lang,
+                                en="Please make your payment in your academy or use another payment method",
+                                es="Por favor realiza tu pago en tu academia o utiliza otro método de pago",
+                            )
+
+                            button = translation(
+                                settings.lang,
+                                en="Renew with another method",
+                                es="Renovar con otro método",
+                            )
+                            alert_payment_issue(message, button)
 
                             if plan_financing.status not in no_charge_statuses:
                                 manager = schedule_task(charge_plan_financing, "1d")
                                 if not manager.exists(plan_financing.id):
                                     manager.call(plan_financing.id)
 
-                            raise AbortTask(f"Error getting bag from plan financing {plan_financing_id}: {e}")
-
-                        try:
-                            s = Stripe(academy=plan_financing.academy)
-                            s.set_language(settings.lang)
-                            invoice = s.pay(plan_financing.user, bag, amount, currency=bag.currency)
-
-                        except Exception:
-                            message = translation(
-                                settings.lang,
-                                en="Your payment with credit card was declined, please update your card or use another payment method",
-                                es="Tu pago con tarjeta de crédito fue rechazado, por favor update tu tarjeta o utiliza otro método de pago",
-                            )
-
-                            button = translation(
-                                settings.lang,
-                                en="Change payment method",
-                                es="Cambiar método de pago",
-                            )
-                            alert_payment_issue(message, button)
-
-                            manager = schedule_task(charge_plan_financing, "1d")
-                            if not manager.exists(plan_financing.id):
-                                manager.call(plan_financing.id)
-
                             raise AbortTask(f"Payment to PlanFinancing {plan_financing_id} failed")
+                        else:
+                            try:
+                                bag = actions.get_bag_from_plan_financing(plan_financing, settings)
+                            except Exception as e:
+                                plan_financing.status = "ERROR"
+                                plan_financing.status_message = str(e)
+                                plan_financing.save()
+
+                                if plan_financing.status not in no_charge_statuses:
+                                    manager = schedule_task(charge_plan_financing, "1d")
+                                    if not manager.exists(plan_financing.id):
+                                        manager.call(plan_financing.id)
+
+                                raise AbortTask(f"Error getting bag from plan financing {plan_financing_id}: {e}")
+
+                            try:
+                                s = Stripe(academy=plan_financing.academy)
+                                s.set_language(settings.lang)
+                                invoice = s.pay(plan_financing.user, bag, amount, currency=bag.currency)
+
+                            except Exception:
+                                message = translation(
+                                    settings.lang,
+                                    en="Your payment with credit card was declined, please update your card or use another payment method",
+                                    es="Tu pago con tarjeta de crédito fue rechazado, por favor update tu tarjeta o utiliza otro método de pago",
+                                )
+
+                                button = translation(
+                                    settings.lang,
+                                    en="Change payment method",
+                                    es="Cambiar método de pago",
+                                )
+                                alert_payment_issue(message, button)
+
+                                manager = schedule_task(charge_plan_financing, "1d")
+                                if not manager.exists(plan_financing.id):
+                                    manager.call(plan_financing.id)
+
+                                raise AbortTask(f"Payment to PlanFinancing {plan_financing_id} failed")
+
+                    # If partial credit was applied alongside a successful Stripe charge, record it.
+                    if _credit_to_consume > 1e-9:
+                        CreditLedgerEntry.objects.create(
+                            user=plan_financing.user,
+                            scope=CreditLedgerEntry.Scope.PLAN_FINANCING,
+                            plan_financing=plan_financing,
+                            amount=-_credit_to_consume,
+                            entry_type=CreditLedgerEntry.EntryType.CREDIT_CONSUMED,
+                            notes="Partial credit applied to reduce automatic charge",
+                        )
 
                 if utc_now > plan_financing.valid_until:
                     remaining_installments -= 1
