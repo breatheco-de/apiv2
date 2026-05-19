@@ -23,6 +23,7 @@ from django_redis import get_redis_connection
 from pytz import UTC
 from rest_framework.request import Request
 from task_manager.core.exceptions import AbortTask, RetryTask
+from task_manager.django.actions import schedule_task
 
 from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
@@ -34,12 +35,14 @@ from breathecode.notify import actions as notify_actions
 from breathecode.payments import tasks
 from breathecode.payments.signals import consume_service, deprovision_service
 from breathecode.utils import getLogger
+from breathecode.utils.decorators.service_deprovisioner import get_service_deprovisioner
 from breathecode.utils.validate_conversion_info import validate_conversion_info
 from settings import GENERAL_PRICING_RATIOS
 
 from .models import (
     DAY,
     MONTH,
+    PAY_EVERY_UNIT,
     SERVICE_UNITS,
     WEEK,
     YEAR,
@@ -76,7 +79,6 @@ logger = getLogger(__name__)
 # past the deadline (avoids clock skew and ``next_payment_at > utc_now`` in charge tasks).
 SCHEDULE_CHARGE_LAG_AFTER_NEXT_PAYMENT = timedelta(seconds=3)
 
-
 def _cancel_pending_future_scheduled(task_callable: Any, entity_id: int, *, utc_now: datetime) -> None:
     from task_manager.core.actions import get_fn_desc, parse_payload
     from task_manager.django.models import ScheduledTask
@@ -110,6 +112,131 @@ def _eta_for_schedule_at(target: datetime, utc_now: datetime) -> str:
     if total_seconds < 1:
         return "1s"
     return f"{total_seconds}s"
+
+
+def resolve_grant_valid_until(
+    duration: int | str | None,
+    duration_unit: str | None,
+    lang: str,
+    service: Service,
+) -> Optional[datetime]:
+    """
+    Compute consumable ``valid_until`` from grant ``duration`` and ``duration_unit``.
+
+    If both are omitted (``None``), returns ``None``. If only one is set, raises ``ValidationException``.
+
+    When ``service`` has a deprovisioner, subtract one hour so scheduled teardown at ``valid_until``
+    matches loss of entitlement in ``Consumable.list``.
+    """
+    if duration is None and duration_unit is None:
+        return None
+    if duration is None or duration_unit is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="duration and duration_unit must be sent together",
+                es="duration y duration_unit deben enviarse juntos",
+                slug="incomplete-duration",
+            ),
+            code=400,
+        )
+
+    allowed_units = {choice[0] for choice in PAY_EVERY_UNIT}
+
+    try:
+        duration = int(duration)
+    except (TypeError, ValueError):
+        raise ValidationException(
+            translation(
+                lang,
+                en="duration must be a positive integer",
+                es="duration debe ser un entero positivo",
+                slug="invalid-duration",
+            ),
+            code=400,
+        )
+
+    if duration <= 0:
+        raise ValidationException(
+            translation(
+                lang,
+                en="duration must be a positive integer",
+                es="duration debe ser un entero positivo",
+                slug="invalid-duration",
+            ),
+            code=400,
+        )
+
+    if not isinstance(duration_unit, str):
+        raise ValidationException(
+            translation(
+                lang,
+                en="duration_unit must be a string",
+                es="duration_unit debe ser una cadena",
+                slug="invalid-duration-unit-type",
+            ),
+            code=400,
+        )
+    unit = duration_unit.strip().upper()
+
+    if unit not in allowed_units:
+        allowed = ", ".join(sorted(allowed_units))
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"duration_unit must be one of {allowed}",
+                es=f"duration_unit debe ser uno de {allowed}",
+                slug="invalid-duration-unit",
+            ),
+            code=400,
+        )
+
+    valid_until = timezone.now() + calculate_relative_delta(duration, unit)
+    slug = service.slug
+    if slug and get_service_deprovisioner(slug):
+        return valid_until - timedelta(hours=1)
+    return valid_until
+
+
+def user_has_service_entitlement_in_academy(
+    user: User,
+    service: Service | str,
+    academy_id: int,
+) -> bool:
+    """Whether the user still has active consumables for ``service`` in ``academy_id``."""
+
+    def _has(extra: dict) -> bool:
+        return Consumable.list(user=user, service=service, extra=extra).exists()
+
+    return (
+        _has({"subscription__academy_id": academy_id})
+        or _has({"plan_financing__academy_id": academy_id})
+        or _has({"standalone_invoice__bag__academy_id": academy_id})
+    )
+
+
+def schedule_standalone_consumable_deprovision(consumable_id: int, valid_until: datetime, service: Service) -> None:
+    """
+    Schedule ``deprovision_standalone_consumable`` at ``valid_until`` for VOID services with a deprovisioner.
+
+    ``valid_until`` on the consumable is already adjusted at grant time when a deprovisioner exists.
+    """
+    from breathecode.provisioning.tasks import deprovision_standalone_consumable
+
+    if service.type != Service.Type.VOID:
+        return
+
+    slug = service.slug
+    if not slug or not get_service_deprovisioner(slug):
+        return
+
+    utc_now = timezone.now()
+    run_at = valid_until
+
+    _cancel_pending_future_scheduled(deprovision_standalone_consumable, consumable_id, utc_now=utc_now)
+
+    eta = _eta_for_schedule_at(run_at, utc_now)
+    schedule_task(deprovision_standalone_consumable, eta).call(consumable_id)
 
 
 def _vps_alignment_billing_scope(consumable: Consumable) -> dict | None:
@@ -2975,6 +3102,13 @@ def grant_consumables_for_user(
         how_many_installments=0,
     )
 
+    valid_until = resolve_grant_valid_until(
+        data.get("duration") if "duration" in data else None,
+        data.get("duration_unit") if "duration_unit" in data else None,
+        lang,
+        service,
+    )
+
     consumable = Consumable(
         service_item=service_item,
         user=user,
@@ -2982,8 +3116,12 @@ def grant_consumables_for_user(
         mentorship_service_set=mentorship_service_set,
         event_type_set=event_type_set,
         standalone_invoice=invoice,
+        valid_until=valid_until,
     )
     consumable.save()
+
+    if valid_until:
+        schedule_standalone_consumable_deprovision(consumable.id, valid_until, service)
 
     return invoice
 

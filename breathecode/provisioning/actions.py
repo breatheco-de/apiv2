@@ -1805,7 +1805,10 @@ def deprovision_free_monthly_llm_budget(user_id: int, context: dict | None = Non
     academy_id = None
     if isinstance(context, dict):
         academy_id = context.get("academy_id") or context.get("academy")
-    deprovision_litellm_user_task.delay(user_id=user_id, academy_id=academy_id)
+    deprovision_litellm_user_task.delay(
+        user_id=user_id,
+        academy_id=academy_id,
+    )
 
 
 @service_deprovisioner("vps_server")
