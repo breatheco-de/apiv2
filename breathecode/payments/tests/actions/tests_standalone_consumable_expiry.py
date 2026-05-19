@@ -13,9 +13,19 @@ from breathecode.payments import actions
 from breathecode.payments.models import UNIT, Consumable, Service
 
 
-def test_resolve_grant_valid_until_returns_none_without_fields():
+@patch("breathecode.payments.actions.get_service_deprovisioner", return_value=None)
+def test_resolve_grant_valid_until_returns_none_without_fields(_mock):
     service = Service(slug="vps_server", type=Service.Type.VOID)
     assert actions.resolve_grant_valid_until(None, None, "en", service) is None
+
+
+@patch("breathecode.payments.actions.get_service_deprovisioner")
+def test_resolve_grant_valid_until_requires_duration_when_deprovisioner(mock_get_deprovisioner):
+    mock_get_deprovisioner.return_value = lambda **kwargs: None
+    service = Service(slug="vps_server", type=Service.Type.VOID)
+    with pytest.raises(Exception) as exc:
+        actions.resolve_grant_valid_until(None, None, "en", service)
+    assert getattr(exc.value, "slug", None) == "duration-required-for-deprovisioned-service"
 
 
 @patch("breathecode.payments.actions.get_service_deprovisioner", return_value=None)

@@ -123,12 +123,26 @@ def resolve_grant_valid_until(
     """
     Compute consumable ``valid_until`` from grant ``duration`` and ``duration_unit``.
 
-    If both are omitted (``None``), returns ``None``. If only one is set, raises ``ValidationException``.
+    If both are omitted (``None``), returns ``None`` unless the service has a deprovisioner (then both are
+    required). If only one is set, raises ``ValidationException``.
 
     When ``service`` has a deprovisioner, subtract one hour so scheduled teardown at ``valid_until``
     matches loss of entitlement in ``Consumable.list``.
     """
+    slug = service.slug
+    has_deprovisioner = bool(slug and get_service_deprovisioner(slug))
+
     if duration is None and duration_unit is None:
+        if has_deprovisioner:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="duration and duration_unit are required for this service",
+                    es="duration y duration_unit son obligatorios para este servicio",
+                    slug="duration-required-for-deprovisioned-service",
+                ),
+                code=400,
+            )
         return None
     if duration is None or duration_unit is None:
         raise ValidationException(
@@ -192,8 +206,7 @@ def resolve_grant_valid_until(
         )
 
     valid_until = timezone.now() + calculate_relative_delta(duration, unit)
-    slug = service.slug
-    if slug and get_service_deprovisioner(slug):
+    if has_deprovisioner:
         return valid_until - timedelta(hours=1)
     return valid_until
 
@@ -1484,6 +1497,24 @@ def filter_void_consumable_balance(request: WSGIRequest, items: QuerySet[Consuma
         elif result[service.id]["balance"]["unit"] != -1:
             result[service.id]["balance"]["unit"] += consumable.how_many
 
+        standalone_invoice = None
+        if consumable.standalone_invoice_id:
+            invoice = consumable.standalone_invoice
+            bag = invoice.bag if invoice else None
+            academy = bag.academy if bag else None
+            standalone_invoice = {
+                "id": invoice.id,
+                "academy": (
+                    {
+                        "id": academy.id,
+                        "slug": academy.slug,
+                        "name": academy.name,
+                    }
+                    if academy
+                    else None
+                ),
+            }
+
         result[service.id]["items"].append(
             {
                 "id": consumable.id,
@@ -1497,6 +1528,7 @@ def filter_void_consumable_balance(request: WSGIRequest, items: QuerySet[Consuma
                 "user": consumable.user.id if consumable.user else None,
                 "subscription": consumable.subscription.id if consumable.subscription else None,
                 "plan_financing": consumable.plan_financing.id if consumable.plan_financing else None,
+                "standalone_invoice": standalone_invoice,
             }
         )
 
@@ -1529,6 +1561,24 @@ def get_balance_by_resource(
             if valid_until:
                 valid_until = re.sub(r"\+00:00$", "Z", valid_until.replace(tzinfo=UTC).isoformat())
 
+            standalone_invoice = None
+            if x.standalone_invoice_id:
+                invoice = x.standalone_invoice
+                bag = invoice.bag if invoice else None
+                academy = bag.academy if bag else None
+                standalone_invoice = {
+                    "id": invoice.id,
+                    "academy": (
+                        {
+                            "id": academy.id,
+                            "slug": academy.slug,
+                            "name": academy.name,
+                        }
+                        if academy
+                        else None
+                    ),
+                }
+
             items.append(
                 {
                     "id": x.id,
@@ -1543,6 +1593,7 @@ def get_balance_by_resource(
                     "user": x.user.id if x.user else None,
                     "subscription": x.subscription.id if x.subscription else None,
                     "plan_financing": x.plan_financing.id if x.plan_financing else None,
+                    "standalone_invoice": standalone_invoice,
                 }
             )
 
