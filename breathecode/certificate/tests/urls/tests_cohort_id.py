@@ -998,3 +998,102 @@ class CertificateTestSuite(CertificateTestCase):
                 call(instance=model.user_specialty, sender=model.user_specialty.__class__),
             ],
         )
+
+    @patch("breathecode.certificate.views.generate_certificate_ignoring_tasks", MagicMock())
+    @patch("breathecode.certificate.views.generate_certificate", MagicMock())
+    def test_post__with_student_id__calls_generate_for_one_student(self, mock_generate, mock_generate_ignore):
+        self.headers(academy=1)
+        cohort_kwargs = {"stage": "ENDED"}
+        model = self.generate_models(
+            authenticate=True,
+            cohort=True,
+            user=True,
+            profile_academy=True,
+            capability="crud_certificate",
+            role="STUDENT",
+            cohort_user=True,
+            syllabus=True,
+            syllabus_version=True,
+            syllabus_schedule=True,
+            specialty=True,
+            layout_design=True,
+            cohort_kwargs=cohort_kwargs,
+        )
+        mock_generate.return_value = model.user_specialty
+
+        url = reverse_lazy("certificate:cohort_id", kwargs={"cohort_id": 1})
+        response = self.client.post(url, {"student_id": 1}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        mock_generate.assert_called_once()
+        mock_generate_ignore.assert_not_called()
+
+    @patch("breathecode.certificate.views.generate_certificate_ignoring_tasks", MagicMock())
+    @patch("breathecode.certificate.views.generate_certificate", MagicMock())
+    def test_post__with_ignore_tasks__uses_ignoring_generator(self, mock_generate, mock_generate_ignore):
+        self.headers(academy=1)
+        cohort_kwargs = {"stage": "ENDED"}
+        model = self.generate_models(
+            authenticate=True,
+            cohort=True,
+            user=True,
+            profile_academy=True,
+            capability="crud_certificate",
+            role="STUDENT",
+            cohort_user=True,
+            syllabus=True,
+            syllabus_version=True,
+            syllabus_schedule=True,
+            specialty=True,
+            layout_design=True,
+            cohort_kwargs=cohort_kwargs,
+        )
+        mock_generate_ignore.return_value = model.user_specialty
+
+        url = reverse_lazy("certificate:cohort_id", kwargs={"cohort_id": 1})
+        response = self.client.post(url, {"ignore_tasks": True}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        mock_generate_ignore.assert_called_once()
+        mock_generate.assert_not_called()
+
+    @patch("breathecode.certificate.views.generate_certificate_ignoring_tasks", MagicMock())
+    @patch("breathecode.certificate.views.generate_certificate", MagicMock())
+    @patch(GOOGLE_CLOUD_PATH["client"], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH["bucket"], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH["blob"], apply_google_cloud_blob_mock())
+    @patch("breathecode.certificate.signals.user_specialty_saved.send_robust", MagicMock())
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
+    def test_post__never_ends_prework__does_not_require_ended_stage(self, mock_generate, mock_generate_ignore):
+        self.headers(academy=1)
+        cohort_kwargs = {"stage": "PREWORK", "never_ends": True}
+        cohort_user_kwargs = {"finantial_status": "UP_TO_DATE", "educational_status": "GRADUATED"}
+        model = self.generate_models(
+            authenticate=True,
+            cohort=True,
+            user=True,
+            profile_academy=True,
+            capability="crud_certificate",
+            role="STUDENT",
+            cohort_user=True,
+            syllabus=True,
+            syllabus_version=True,
+            syllabus_schedule=True,
+            specialty=True,
+            layout_design=True,
+            cohort_kwargs=cohort_kwargs,
+            cohort_user_kwargs=cohort_user_kwargs,
+        )
+        mock_generate_ignore.return_value = model.user_specialty
+
+        url = reverse_lazy("certificate:cohort_id", kwargs={"cohort_id": 1})
+        response = self.client.post(
+            url,
+            {"student_id": 1, "ignore_tasks": True},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        mock_generate_ignore.assert_called_once()
+        mock_generate.assert_not_called()
