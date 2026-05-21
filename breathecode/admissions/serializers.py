@@ -563,6 +563,7 @@ class GetMeCohortSerializer(serpy.Serializer):
     name = serpy.Field()
     kickoff_date = serpy.Field()
     ending_date = serpy.Field()
+    never_ends = serpy.Field()
     micro_cohorts = serpy.MethodField()
     cohorts_order = serpy.Field()
     intro_video = serpy.Field()

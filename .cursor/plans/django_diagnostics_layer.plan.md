@@ -139,7 +139,7 @@ Add **[`docs/llm-docs/skills/bc-diagnostics-author-and-registry/SKILL.md`](docs/
 - **Edge cases**: Missing app `diagnostics` package; duplicate slug; heavy imports in `__init__.py`.
 - **Checklist**: Slug uniqueness, registration, tests, capability assignment.
 
-Cross-link from **[`docs/llm-docs/skills/breathecode-api-index/SKILL.md`](docs/llm-docs/skills/breathecode-api-index/SKILL.md)** only if that index already lists related monitoring skills (optional small “See also” — do not bloat the index).
+Cross-link from **[`docs/LLM-DOCS/skills/breathecode-staff-api-index/SKILL.md`](docs/LLM-DOCS/skills/breathecode-staff-api-index/SKILL.md)** only if that index already lists related monitoring skills (optional small “See also” — do not bloat the index).
 
 ## Optional follow-ups
 

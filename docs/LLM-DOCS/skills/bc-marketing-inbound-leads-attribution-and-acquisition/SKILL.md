@@ -2,7 +2,7 @@
 name: bc-marketing-inbound-leads-attribution-and-acquisition
 description: Use when implementing or analyzing inbound signups, attribution, and acquisition across marketing FormEntry and auth UserInvite flows; do NOT use for generic student login/session troubleshooting or post-enrollment academic operations.
 requires:
-  - breathecode-api-index
+  - breathecode-staff-api-index
 ---
 
 # Skill: Inbound Leads, Attribution, and Acquisition

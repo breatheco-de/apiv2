@@ -30,7 +30,7 @@ todos:
     dependencies:
       - tests
   - id: index-and-cross-skill
-    content: Update breathecode-api-index if cross-domain workflow; update bc-provisioning-manage-vps-server to reference new skill for configuring credentials
+    content: Update breathecode-staff-api-index if cross-domain workflow; update bc-provisioning-manage-vps-server to reference new skill for configuring credentials
     status: pending
     dependencies:
       - skill-doc
@@ -105,7 +105,7 @@ isProject: false
 
 ### 2.4 Index and cross-skill
 
-- **Index:** [docs/llm-docs/skills/breathecode-api-index/SKILL.md](docs/llm-docs/skills/breathecode-api-index/SKILL.md): provisioning domain already has `bc-provisioning-`*. Add cross-domain row if needed (e.g. "Configure academy VPS provisioning" → load bc-provisioning-settings-and-credentials).
+- **Index:** [docs/LLM-DOCS/skills/breathecode-staff-api-index/SKILL.md](docs/LLM-DOCS/skills/breathecode-staff-api-index/SKILL.md): provisioning domain already has `bc-provisioning-`*. Add cross-domain row if needed (e.g. "Configure academy VPS provisioning" → load bc-provisioning-settings-and-credentials).
 - **bc-provisioning-manage-vps-server:** Update "When to Use" / Concepts so that configuring credentials or profiles directs to bc-provisioning-settings-and-credentials. Update Endpoints table to use `academy/provisioningprofile` (no academy_id in path) if the API is migrated.
 
 ---
