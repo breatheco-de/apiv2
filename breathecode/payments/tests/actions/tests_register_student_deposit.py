@@ -455,3 +455,155 @@ def test_register_student_deposit_last_installment_with_overpayment(
     assert exc_info.value.slug == "overpayment-on-last-installment"
     assert database.list_of("payments.CreditLedgerEntry") == []
     assert database.list_of("payments.PlanFinancing")[0]["status"] == "ACTIVE"
+
+
+def test_register_student_deposit_rejects_when_credit_already_covers_installment(
+    database: capy.Database, monkeypatch: pytest.MonkeyPatch, utc_now
+):
+    """
+    When the accumulated credit already covers the next installment entirely,
+    a manual deposit must be rejected — the charge task will consume the credit automatically.
+
+    Scenario: 4-installment plan at $300/month.
+    - Installment 1 paid: $300 (exact).
+    - Installment 2 paid: $900 → closes installment 2 + $600 credit added.
+    - Attempt to deposit $300 for installment 3 → must be rejected.
+    """
+    monkeypatch.setattr(actions.timezone, "now", MagicMock(return_value=utc_now))
+    monkeypatch.setattr(tasks.renew_plan_financing_consumables, "delay", MagicMock())
+    monkeypatch.setattr(actions, "reschedule_billing_tasks", MagicMock())
+
+    model = database.create(
+        country=1,
+        city=1,
+        academy=1,
+        user=1,
+        plan={"is_renewable": False},
+        currency=1,
+        proof_of_payment=2,
+        payment_method={"currency_id": 1, "is_credit_card": False, "is_crypto": False},
+        bag={"was_delivered": True},
+        invoice={
+            "amount": 300,
+            "paid_at": utc_now - relativedelta(months=1),
+            "status": "FULFILLED",
+            "externally_managed": True,
+        },
+        plan_financing={
+            "academy_id": 1,
+            "user_id": 1,
+            "monthly_price": 300,
+            "how_many_installments": 4,
+            "next_payment_at": utc_now + relativedelta(months=1),
+            "valid_until": utc_now + relativedelta(months=3),
+            "plan_expires_at": utc_now + relativedelta(months=12),
+            "status": "ACTIVE",
+            "currency_id": 1,
+        },
+    )
+    model.plan_financing.invoices.add(model.invoice)
+    model.plan_financing.plans.add(model.plan)
+
+    # Simulate $600 credit already accumulated (e.g. from overpayment on installment 2).
+    CreditLedgerEntry.objects.create(
+        user=model.plan_financing.user,
+        scope=CreditLedgerEntry.Scope.PLAN_FINANCING,
+        plan_financing=model.plan_financing,
+        amount=600.0,
+        entry_type=CreditLedgerEntry.EntryType.CREDIT_ADDED,
+        notes="overpayment on installment 2",
+    )
+
+    with pytest.raises(ValidationException) as exc_info:
+        actions.register_student_deposit(
+            {
+                "plan_financing": model.plan_financing.id,
+                "amount": 300,
+                "payment_method": model.payment_method.id,
+            },
+            model.proof_of_payment[1],
+            model.academy.id,
+            "en",
+        )
+
+    assert exc_info.value.slug == "installment-already-covered-by-credit"
+    # Only the seeded credit entry should exist — no new ones.
+    assert len(database.list_of("payments.CreditLedgerEntry")) == 1
+    assert database.list_of("payments.PlanFinancing")[0]["status"] == "ACTIVE"
+
+
+def test_register_student_deposit_intermediate_overpayment_adds_credit(
+    database: capy.Database, monkeypatch: pytest.MonkeyPatch, utc_now
+):
+    """
+    On an intermediate installment, paying more than still_owed is allowed.
+    The surplus beyond still_owed is recorded as CREDIT_ADDED for future installments.
+
+    Scenario: 4-installment plan at $300/month, $100 credit already accumulated.
+    still_owed = $300 - $100 = $200. Depositing $250 closes the installment
+    and adds $50 as new credit (250 - 200 = 50).
+    """
+    monkeypatch.setattr(actions.timezone, "now", MagicMock(return_value=utc_now))
+    monkeypatch.setattr(tasks.renew_plan_financing_consumables, "delay", MagicMock())
+    monkeypatch.setattr(actions, "reschedule_billing_tasks", MagicMock())
+
+    model = database.create(
+        country=1,
+        city=1,
+        academy=1,
+        user=1,
+        plan={"is_renewable": False},
+        currency=1,
+        proof_of_payment=2,
+        payment_method={"currency_id": 1, "is_credit_card": False, "is_crypto": False},
+        bag={"was_delivered": True},
+        invoice={
+            "amount": 300,
+            "paid_at": utc_now - relativedelta(months=1),
+            "status": "FULFILLED",
+            "externally_managed": True,
+        },
+        plan_financing={
+            "academy_id": 1,
+            "user_id": 1,
+            "monthly_price": 300,
+            "how_many_installments": 4,
+            "next_payment_at": utc_now + relativedelta(months=1),
+            "valid_until": utc_now + relativedelta(months=3),
+            "plan_expires_at": utc_now + relativedelta(months=12),
+            "status": "ACTIVE",
+            "currency_id": 1,
+        },
+    )
+    model.plan_financing.invoices.add(model.invoice)
+    model.plan_financing.plans.add(model.plan)
+
+    # $100 partial credit already on record.
+    CreditLedgerEntry.objects.create(
+        user=model.plan_financing.user,
+        scope=CreditLedgerEntry.Scope.PLAN_FINANCING,
+        plan_financing=model.plan_financing,
+        amount=100.0,
+        entry_type=CreditLedgerEntry.EntryType.CREDIT_ADDED,
+        notes="prior partial deposit",
+    )
+
+    result = actions.register_student_deposit(
+        {
+            "plan_financing": model.plan_financing.id,
+            "amount": 250,  # still_owed = 200, surplus = 50 → new credit
+            "payment_method": model.payment_method.id,
+        },
+        model.proof_of_payment[1],
+        model.academy.id,
+        "en",
+    )
+
+    credits = database.list_of("payments.CreditLedgerEntry")
+    assert result.allocation.installment_applied is True
+    assert result.allocation.credit_entry_type == CreditLedgerEntry.EntryType.CREDIT_ADDED
+    assert abs(result.allocation.credit_entry_amount - 50) < 1e-6
+    # Total credit: 100 (prior) + 50 (new) = 150
+    assert abs(result.credit_balance - 150) < 1e-6
+    assert len(credits) == 2
+    assert database.list_of("payments.PlanFinancing")[0]["status"] == "ACTIVE"

@@ -3161,8 +3161,30 @@ def register_student_deposit(
     credit_balance = get_credit_balance(plan_financing)
 
     # ── Determine allocation ──────────────────────────────────────────────────
+    # For every installment: how much cash is actually needed after applying credit.
+    still_owed = max(monthly_price - credit_balance, 0)
+
+    if still_owed < 1e-9:
+        # The accumulated credit already covers this installment (and possibly more).
+        # No manual deposit is needed — the automatic charge task will consume the credit.
+        raise ValidationException(
+            translation(
+                lang,
+                en=(
+                    f"This installment is already covered by the accumulated credit balance "
+                    f"of {currency.format_price(credit_balance)}. No deposit is needed."
+                ),
+                es=(
+                    f"Esta cuota ya está cubierta por el crédito acumulado "
+                    f"de {currency.format_price(credit_balance)}. No se necesita depósito."
+                ),
+            ),
+            slug="installment-already-covered-by-credit",
+            code=409,
+        )
+
     if remaining_installments == 1:
-        still_owed = max(monthly_price - credit_balance, 0)
+        # Last installment: overpayment rejected — there are no future installments for extra credit.
         if amount > still_owed + 1e-9:
             raise ValidationException(
                 translation(
@@ -3187,14 +3209,16 @@ def register_student_deposit(
             credit_entry_amount = amount
             credit_entry_type = CreditLedgerEntry.EntryType.CREDIT_ADDED
     else:
-        # Intermediate installment.
-        if amount >= monthly_price - 1e-9:
+        # Intermediate installment: overpayment is allowed — surplus becomes credit for future installments.
+        if amount >= still_owed - 1e-9:
+            # Closes the installment; any amount beyond still_owed becomes new credit.
             installment_applied = True
             credit_consumed = 0.0
-            overpay = amount - monthly_price
+            overpay = amount - still_owed
             credit_entry_amount = overpay if overpay > 1e-9 else 0.0
             credit_entry_type = CreditLedgerEntry.EntryType.CREDIT_ADDED if credit_entry_amount else None
         else:
+            # Partial payment — does not close the installment.
             installment_applied = False
             credit_consumed = 0.0
             credit_entry_amount = amount
