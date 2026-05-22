@@ -435,7 +435,16 @@ def get_leads(request, id=None):
 
     academy = request.GET.get("academy", None)
     if academy is not None:
-        items = items.filter(academy__slug__in=academy.split(","))
+        academy_values = [value.strip() for value in academy.split(",") if value.strip()]
+        academy_ids = [int(value) for value in academy_values if value.isnumeric()]
+        academy_slugs = [value for value in academy_values if not value.isnumeric()]
+
+        if academy_ids and academy_slugs:
+            items = items.filter(Q(academy__id__in=academy_ids) | Q(academy__slug__in=academy_slugs))
+        elif academy_ids:
+            items = items.filter(academy__id__in=academy_ids)
+        else:
+            items = items.filter(academy__slug__in=academy_slugs)
 
     start = request.GET.get("start", None)
     if start is not None:
