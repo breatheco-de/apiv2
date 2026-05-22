@@ -69,7 +69,7 @@ The frontmatter `description` is read by the skill registry to decide whether to
   - **Request**: Show a full example request body (for POST/PUT/PATCH) with realistic values for every required field.
   - **Response**: Show a full example response body (or the relevant subset) so the agent knows the shape and key fields to use in later steps.
 - Do not document endpoints that belong in a different skill.
-- **GET/list endpoints:** State whether the response is paginated. By convention (see API index), list endpoints are paginated; if a GET endpoint does **not** support pagination, say so explicitly.
+- **GET/list endpoints:** State whether the response is paginated. By convention (see `breathecode-staff-api-index` or `breathecode-student-api-index`, depending on persona), list endpoints are paginated; if a GET endpoint does **not** support pagination, say so explicitly.
 - **Paths containing `/academy/`:** Document that the request must include the **`Academy`** header with the academy ID (staff-only).
 - **Translated errors:** If the endpoint returns translated errors, mention that clients can send **`Accept-Language`** (e.g. `en`, `es`) to receive messages in that language.
 

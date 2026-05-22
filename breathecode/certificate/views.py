@@ -439,7 +439,7 @@ class CertificateCohortView(APIView):
         cohort__users = []
         for cohort_user in cohort_users:
             cohort = cohort_user.cohort
-            if cohort.stage != "ENDED" or cohort.never_ends is not False:
+            if not cohort.never_ends and cohort.stage != "ENDED":
                 raise ValidationException(
                     "Cohort stage must be ENDED or never ends", code=400, slug="cohort-stage-must-be-ended"
                 )

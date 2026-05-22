@@ -966,15 +966,66 @@ After a `PlanFinancing` exists, staff can register a later external/manual payme
 }
 ```
 
-Backend behavior:
+The `amount` field now accepts **any positive value** — greater than, equal to, or less than `monthly_price`. The system handles the difference using the `InstallmentCredit` credit ledger.
+
+#### Deposit Scenarios
+
+| `amount` vs `monthly_price` | Effect on installment | Ledger entry | `next_payment_at` |
+|---|---|---|---|
+| `amount == monthly_price` | Installment closed | None | Advances |
+| `amount > monthly_price` | Installment closed | `CREDIT_ADDED: +(amount − monthly_price)` | Advances |
+| `amount < monthly_price` | Not closed | `CREDIT_ADDED: +amount` | Does **not** advance; `warning` returned |
+
+On the **last installment** (`remaining_installments == 1`), any surplus above the amount still owed is reported as `excess_amount` in the response but is **not** added as credit.
+
+#### API Response Shape
+
+```json
+{
+  "deposit": { "id": 1, "amount": 1500, "status": "APPLIED", "..." },
+  "installment_applied": true,
+  "credit_entry": { "amount": 300, "entry_type": "CREDIT_ADDED" },
+  "credit_consumed": 0,
+  "excess_amount": 0,
+  "credit_balance": 300,
+  "remaining_installments": 2,
+  "warning": null
+}
+```
+
+- `credit_entry` is `null` when the deposit is exactly equal to the monthly price.
+- `warning` is a localized string when the payment is partial (not enough to close the installment) or when the last installment was overpaid.
+
+#### Reading Credit Balance and History
+
+To display credit information in the Replit admin panel before making a deposit:
+
+```
+GET /v1/payments/academy/planfinancing/{id}
+```
+
+The response includes:
+- `credit_balance` — current spendable credit (sum of all `InstallmentCredit` entries).
+- `remaining_installments` — installments still pending.
+- `credit_entries` — chronological list of all credit movements.
+
+#### How Accumulated Credit Is Consumed in Automatic Charges
+
+When the `charge_plan_financing` Celery task runs:
+
+1. It computes `credit_balance = SUM(InstallmentCredit.amount)` for the financing.
+2. If `credit_balance >= amount_owed`: the installment is closed without hitting Stripe; a `CREDIT_CONSUMED` entry is created.
+3. If `0 < credit_balance < amount_owed`: the Stripe charge is reduced by `credit_balance`; a `CREDIT_CONSUMED` entry records the consumed portion.
+4. If `credit_balance == 0`: the current Stripe flow runs unchanged.
+
+Backend behavior for a successful deposit:
 
 - Creates an externally managed `Bag` and fulfilled `Invoice`.
 - Creates a `StudentDeposit` with status `APPLIED`.
 - Links the `Invoice` and `StudentDeposit` to the target `PlanFinancing`.
 - Marks the bag as delivered.
-- Advances `PlanFinancing.next_payment_at` by one monthly billing cycle.
-- Sets `PlanFinancing.status` to `ACTIVE` when installments remain, or `FULLY_PAID` when all future installments are covered.
-- Regenerates plan financing consumables and reschedules the next charge/renewal notification when needed.
+- **Only when the installment is fully applied**: advances `PlanFinancing.next_payment_at` by one monthly billing cycle, sets `PlanFinancing.status` to `ACTIVE` (or `FULLY_PAID`), regenerates consumables, and reschedules charges.
+- **When a ledger entry is needed**: creates an `InstallmentCredit` record linked to the deposit.
 
 Restrictions:
 
@@ -992,6 +1043,7 @@ The staff assignment and manual deposit flows use these records for auditability
 - `Invoice`: stores the fulfilled externally managed payment.
 - `PlanFinancing`: stores installment configuration, current status, next payment date, initial payment amount, notes, and grace period.
 - `StudentDeposit`: stores the deposit/payment trace. It has status `HELD`, `APPLIED`, or `REFUNDED`; current staff assignment flows create `APPLIED` deposits.
+- `InstallmentCredit`: ledger of all credit movements for a `PlanFinancing`. Each row has a signed `amount` (positive = credit added, negative = credit consumed), an `entry_type` (`CREDIT_ADDED`, `CREDIT_CONSUMED`, `CREDIT_EXCESS`), and an optional `source_deposit` FK. The current credit balance is always `SUM(amount)` — there is no denormalised cache field.
 
 ---
 

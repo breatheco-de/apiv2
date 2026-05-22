@@ -296,3 +296,146 @@ def test_clone_course_slug_conflict(client):
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert "slug" in response.json()
 
+
+def _course_list_payload(response):
+    data = response.json()
+    if isinstance(data, list):
+        return data
+    if isinstance(data, dict) and "results" in data:
+        return data["results"]
+    raise AssertionError(repr(data))
+
+
+@pytest.mark.django_db
+def test_list_academy_courses_multi_academy(client):
+    academy_a = _create_academy(slug="list-a", name="List A")
+    academy_b = _create_academy(slug="list-b", name="List B")
+    user = _create_user_with_capability(academy_a)
+    role = ProfileAcademy.objects.filter(user=user, academy=academy_a).first().role
+    ProfileAcademy.objects.create(user=user, academy=academy_b, role=role)
+
+    Course.objects.create(
+        slug="course-only-a",
+        academy=academy_a,
+        icon_url="https://assets.test/a.png",
+        technologies="python",
+        visibility="PUBLIC",
+    )
+    Course.objects.create(
+        slug="course-only-b",
+        academy=academy_b,
+        icon_url="https://assets.test/b.png",
+        technologies="react",
+        visibility="PUBLIC",
+    )
+
+    url = reverse("marketing:academy_course")
+    client.force_authenticate(user=user)
+    response = client.get(url, HTTP_Academy=f"{academy_a.id},{academy_b.id}")
+
+    assert response.status_code == status.HTTP_200_OK
+    slugs = {row["slug"] for row in _course_list_payload(response)}
+    assert slugs == {"course-only-a", "course-only-b"}
+    body = response.json()
+    if isinstance(body, dict):
+        assert "academy_scope" not in body
+
+
+@pytest.mark.django_db
+def test_list_academy_courses_read_aggregate_partial(client):
+    academy_a = _create_academy(slug="partial-a", name="Partial A")
+    academy_b = _create_academy(slug="partial-b", name="Partial B")
+    user = _create_user_with_capability(academy_a)
+
+    Course.objects.create(
+        slug="partial-course-a",
+        academy=academy_a,
+        icon_url="https://assets.test/pa.png",
+        technologies="python",
+        visibility="PUBLIC",
+    )
+    Course.objects.create(
+        slug="partial-course-b",
+        academy=academy_b,
+        icon_url="https://assets.test/pb.png",
+        technologies="react",
+        visibility="PUBLIC",
+    )
+
+    url = reverse("marketing:academy_course")
+    client.force_authenticate(user=user)
+    response = client.get(url, HTTP_Academy=f"{academy_a.id},{academy_b.id}")
+
+    assert response.status_code == status.HTTP_200_OK
+    body = response.json()
+    assert isinstance(body, dict)
+    assert "academy_scope" in body
+    assert body["academy_scope"]["resolution"] == "partial"
+    assert set(body["academy_scope"]["requested_academy_ids"]) == {academy_a.id, academy_b.id}
+    assert body["academy_scope"]["applied_academy_ids"] == [academy_a.id]
+    slugs = {row["slug"] for row in body["results"]}
+    assert slugs == {"partial-course-a"}
+
+
+@pytest.mark.django_db
+def test_list_academy_courses_forbidden_no_matching_academy(client):
+    academy_a = _create_academy(slug="forbid-a", name="Forbid A")
+    academy_other = _create_academy(slug="forbid-other", name="Forbid Other")
+    user = _create_user_with_capability(academy_a)
+
+    url = reverse("marketing:academy_course")
+    client.force_authenticate(user=user)
+    response = client.get(url, HTTP_Academy=str(academy_other.id))
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_list_academy_courses_includes_private_excludes_deleted(client):
+    academy = _create_academy(slug="vis-academy", name="Vis Academy")
+    user = _create_user_with_capability(academy)
+
+    Course.objects.create(
+        slug="staff-private-course",
+        academy=academy,
+        icon_url="https://assets.test/priv.png",
+        technologies="python",
+        visibility="PRIVATE",
+    )
+    deleted = Course.objects.create(
+        slug="staff-deleted-course",
+        academy=academy,
+        icon_url="https://assets.test/del.png",
+        technologies="python",
+        visibility="PUBLIC",
+    )
+    Course.objects.filter(pk=deleted.pk).update(status="DELETED")
+
+    url = reverse("marketing:academy_course")
+    client.force_authenticate(user=user)
+    response = client.get(url, HTTP_Academy=str(academy.id))
+
+    assert response.status_code == status.HTTP_200_OK
+    slugs = {row["slug"] for row in _course_list_payload(response)}
+    assert "staff-private-course" in slugs
+    assert "staff-deleted-course" not in slugs
+
+
+@pytest.mark.django_db
+def test_get_academy_course_by_identifier_returns_405(client):
+    academy = _create_academy(slug="method-academy", name="Method Academy")
+    user = _create_user_with_capability(academy)
+    course = Course.objects.create(
+        slug="method-course",
+        academy=academy,
+        icon_url="https://assets.test/m.png",
+        technologies="python",
+        visibility="PUBLIC",
+    )
+
+    url = reverse("marketing:academy_course_id", kwargs={"course_identifier": course.slug})
+    client.force_authenticate(user=user)
+    response = client.get(url, HTTP_Academy=str(academy.id))
+
+    assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
+

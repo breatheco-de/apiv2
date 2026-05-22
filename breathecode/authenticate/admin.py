@@ -284,6 +284,7 @@ class ProfileAcademyAdmin(admin.ModelAdmin):
         colors = {
             "ACTIVE": "bg-success",
             "INVITED": "bg-error",
+            "DELETED": "bg-warning",
         }
 
         return format_html(

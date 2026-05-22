@@ -17,6 +17,7 @@ from breathecode.payments.models import (
     Currency,
     EventTypeSet,
     FinancingOption,
+    CreditLedgerEntry,
     MentorshipServiceSet,
     PaymentMethod,
     Plan,
@@ -1069,6 +1070,19 @@ class GetStudentDepositSerializer(serpy.Serializer):
     academy = GetAcademySmallSerializer(many=False)
 
 
+class CreditLedgerEntrySerializer(serpy.Serializer):
+    id = serpy.Field()
+    scope = serpy.Field()
+    amount = serpy.Field()
+    entry_type = serpy.Field()
+    notes = serpy.Field()
+    created_at = serpy.Field()
+    source_deposit_id = serpy.Field()
+
+
+# Backwards-compatible alias.
+
+
 class GetInvoiceSerializer(GetInvoiceSmallSerializer):
     id = serpy.Field()
     amount = serpy.Field()
@@ -1182,9 +1196,25 @@ class GetPlanFinancingSerializer(GetAbstractIOweYouSerializer):
     grace_period_duration = serpy.Field()
     grace_period_duration_unit = serpy.Field()
     student_deposits = serpy.MethodField()
+    credit_balance = serpy.MethodField()
+    remaining_installments = serpy.MethodField()
+    credit_entries = serpy.MethodField()
 
     def get_student_deposits(self, obj):
         return GetStudentDepositSerializer(obj.student_deposits.all(), many=True).data
+
+    def get_credit_balance(self, obj):
+        from breathecode.payments.actions import get_credit_balance
+
+        return get_credit_balance(obj)
+
+    def get_remaining_installments(self, obj):
+        from breathecode.payments.actions import get_remaining_installments
+
+        return get_remaining_installments(obj)
+
+    def get_credit_entries(self, obj):
+        return CreditLedgerEntrySerializer(obj.credit_entries.order_by("created_at"), many=True).data
 
 
 class GetSubscriptionHookSerializer(GetAbstractIOweYouSerializer):

@@ -1,19 +1,22 @@
 ---
-name: breathecode-api-index
-description: Always load this skill first when working with the BreatheCode API. It maps user requests to the correct domain skill(s) to load next. Do NOT use this skill to execute API calls directly — it only routes to other skills.
+name: breathecode-staff-api-index
+description: Load first for academy-scoped BreatheCode API work (/academy/, Academy header, staff capabilities). Maps requests to domain skills. Do NOT use for pure learner self-service without staff context — use breathecode-student-api-index instead.
 requires: []
 ---
 
-# BreatheCode API Index
+# BreatheCode Staff API Index
 
-This skill is the entry point for all BreatheCode API interactions. Its only job is to help you identify which domain skill(s) to load before taking any action. Do not attempt to call the API using only this skill — always load the relevant domain skill(s) first.
+This skill is the entry point for **staff and academy-scoped** BreatheCode API work. Its only job is to help you identify which domain skill(s) to load before taking any action. Do not attempt to call the API using only this skill — always load the relevant domain skill(s) first.
 
 ## When to Use
 
-- Load this skill at the start of every BreatheCode API task, before loading any other skill.
-- Use it whenever the user's request is ambiguous and you are unsure which domain applies.
-- Use it when a task spans multiple domains to identify all required skills upfront.
+- Load this skill at the start of tasks that involve **academy administration**, **`Academy` header**, paths under **`/academy/`**, or staff capabilities.
+- Use it when the request is ambiguous and may span multiple **staff** domains.
 - Do NOT use this as a substitute for the domain skill — always proceed to load the specific skill after consulting this index.
+
+## Related index
+
+If the session is **learner-only** (authenticated student using `me` / `user/me` flows, no staff capabilities), load [`breathecode-student-api-index`](../breathecode-student-api-index/SKILL.md) instead of this file.
 
 ---
 
@@ -39,7 +42,7 @@ This skill is the entry point for all BreatheCode API interactions. Its only job
 | **certificate** | Certificate emission, specialties, certificate-syllabus associations | `bc-certificate-*` |
 | **events** | Workshops, live classes, event RSVPs, event checkins | `bc-events-*` |
 | **feedback** | NPS surveys, student satisfaction studies, feedback forms | `bc-feedback-*` |
-| **marketing** | URL shortener, incoming leads, lead scoring, UTM tracking | `bc-marketing-*` |
+| **marketing** | URL shortener, incoming leads, lead scoring, UTM tracking, **academy-scoped marketing courses** (list/create/clone under `/v1/marketing/academy/course`) | `bc-marketing-*` |
 | **media** | Images, videos, documents used in LMS content, asset management | `bc-media-*` |
 | **mentorship** | Mentors, mentor availability, session scheduling, session notes | `bc-mentorship-*` |
 | **monitoring** | Platform monitoring endpoints, report retrieval APIs, monitoring webhooks, and operational status resources | `bc-monitoring-*` |
@@ -75,7 +78,7 @@ Some user requests touch multiple domains. Load ALL listed skills before proceed
 | Configure academy Slack integration and manage sync health | `bc-notify-manage-academy-slackintegration` + `bc-admissions-*` (students/cohorts drive Slack mappings) + `bc-authenticate-*` (Slack OAuth endpoints live in auth) |
 | Build or debug a frontend dashboard that reads monitoring reports | `bc-monitoring-read-reports-api` + `bc-authenticate-*` (academy-scoped capability and header requirements drive access outcomes) |
 | Read acquisition monitoring insights (funnel tiers, top assets, top workshops, attribution mix) | `bc-monitoring-read-report-acquisition` + `bc-authenticate-*` (academy-scoped capability and `Academy` header drive access and scope) |
-| Create a marketing course from scratch or by cloning another course | `bc-marketing-create-or-clone-course` + `bc-authenticate-*` (requires academy-scoped `crud_course` capability and `Academy` header; clone requires source-academy capability too) |
+| Create a marketing course from scratch or by cloning another course | `bc-marketing-create-or-clone-course` + `bc-authenticate-*` (staff list: `GET /v1/marketing/academy/course` with comma-separated numeric `Academy` ids and `crud_course` read-aggregate; create/clone: `POST` with `Academy` header; clone requires `crud_course` on source course academy too) |
 | Diagnose why graduation/certificate auto-issuance did not happen for a student or cohort | `bc-certificate-manage-and-assign-specialties` + `bc-admissions-*` (use `GET /v1/certificate/diagnostic` with `kind=graduation|certificate`, plus academy-scoped capability/header) |
 | Align or extend syllabus design with the school skills framework (job role stages, skills on the go) | `bc-admissions-*` (syllabus, cohorts) + `bc-talentdevelopment-manage-skills` (career path, stages, `stage_skill`, domains) |
 | Cancel a user subscription and optionally issue a refund | `bc-payments-cancel-subscription-and-refund` + [`docs/llm-docs/BC_REFUNDS.md`](../../BC_REFUNDS.md) (use the skill for actor-specific flow and endpoint order, then use BC_REFUNDS for refund payload semantics and validations) |
@@ -114,7 +117,7 @@ Assume these conventions for all BreatheCode API endpoints unless a domain skill
 
 - **Rule:** Any endpoint whose path contains `/academy/` (after the app prefix, e.g. `/v1/admissions/academy/...`) is for **staff** (academy-scoped operations).
 - **Required header:** Send the **`Academy`** header with the academy ID (e.g. `Academy: 1`). For endpoints documented with read aggregation, the same header may accept a comma-separated list (e.g. `Academy: 1,2,3`) and the response may include partial-scope metadata. Missing it returns an error (e.g. "Missing academy_id... or 'Academy' header").
-- **Examples:** `/v1/admissions/academy/cohort/user`, `/v1/assessment/academy/user/assessment`, `/v1/assignments/academy/coderevision/<id>`.
+- **Examples:** `/v1/admissions/academy/cohort/user`, `/v1/assessment/academy/user/assessment`, `/v1/assignments/academy/coderevision/<id>`, `/v1/marketing/academy/course`.
 
 ### Error responses
 
