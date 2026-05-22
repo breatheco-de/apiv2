@@ -415,6 +415,7 @@ class AcademyPlanSyncFinancingExpirationView(APIView):
         updated = []
         reactivated = []
         charged = []
+        consumables_renewed = []
 
         for financing in financings:
             first_invoice = financing.invoices.order_by("paid_at").first()
@@ -424,6 +425,9 @@ class AcademyPlanSyncFinancingExpirationView(APIView):
             new_plan_expires_at = first_invoice.paid_at + delta
 
             was_expired = financing.status == PlanFinancing.Status.EXPIRED
+            had_wrong_expires_at = (
+                financing.plan_expires_at is not None and financing.plan_expires_at < utc_now
+            )
             financing.plan_expires_at = new_plan_expires_at
 
             if was_expired and new_plan_expires_at > utc_now:
@@ -433,15 +437,20 @@ class AcademyPlanSyncFinancingExpirationView(APIView):
             financing.save()
             updated.append(financing.id)
 
-            if was_expired and new_plan_expires_at > utc_now:
-                tasks.charge_plan_financing.delay(financing.id)
-                charged.append(financing.id)
+            if (was_expired or had_wrong_expires_at) and new_plan_expires_at > utc_now:
+                if financing.next_payment_at <= utc_now:
+                    tasks.charge_plan_financing.delay(financing.id)
+                    charged.append(financing.id)
+                else:
+                    tasks.renew_plan_financing_consumables.delay(financing.id)
+                    consumables_renewed.append(financing.id)
 
         return Response(
             {
                 "updated_financings": updated,
                 "reactivated_financings": reactivated,
                 "enqueued_for_charge": charged,
+                "enqueued_for_consumable_renewal": consumables_renewed,
             },
             status=status.HTTP_200_OK,
         )
