@@ -1,5 +1,5 @@
 """
-Test /activecampaign
+Test /crmacademy
 """
 
 from django.urls.base import reverse_lazy
@@ -15,6 +15,7 @@ def get_serializer(active_campaign_academy, academy, event_attendancy_automation
         "id": active_campaign_academy.id,
         "ac_key": active_campaign_academy.ac_key,
         "ac_url": active_campaign_academy.ac_url,
+        "status_page_url": active_campaign_academy.status_page_url,
         "duplicate_leads_delta_avoidance": str(active_campaign_academy.duplicate_leads_delta_avoidance.total_seconds()),
         "sync_status": active_campaign_academy.sync_status,
         "sync_message": active_campaign_academy.sync_message,
@@ -31,16 +32,12 @@ def get_serializer(active_campaign_academy, academy, event_attendancy_automation
     }
 
 
-class ActiveCampaignTestSuite(MarketingTestCase):
-    """Test /activecampaign"""
+class CrmAcademyTestSuite(MarketingTestCase):
+    """Test /crmacademy"""
 
-    """
-    🔽🔽🔽 without Auth
-    """
-
-    def test_active_campaign_without_auth(self):
-        """Test /activecampaign without auth"""
-        url = reverse_lazy("marketing:activecampaign")
+    def test_crm_academy_without_auth(self):
+        """Test /crmacademy without auth"""
+        url = reverse_lazy("marketing:crm_academy")
         response = self.client.get(url)
         json = response.json()
         expected = {"detail": "Authentication credentials were not provided.", "status_code": 401}
@@ -49,13 +46,9 @@ class ActiveCampaignTestSuite(MarketingTestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(self.all_active_campaign_academy_dict(), [])
 
-    """
-    🔽🔽🔽 without capability
-    """
-
     def test_without_capability(self):
-        """Test /activecampaign without data"""
-        url = reverse_lazy("marketing:activecampaign")
+        """Test /crmacademy without capability"""
+        url = reverse_lazy("marketing:crm_academy")
         self.generate_models(
             authenticate=True,
             academy=True,
@@ -69,13 +62,9 @@ class ActiveCampaignTestSuite(MarketingTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    """
-    🔽🔽🔽 without academy headers
-    """
-
     def test_without_academy_header(self):
-        """Test /activecampaign without data"""
-        url = reverse_lazy("marketing:activecampaign")
+        """Test /crmacademy without academy header"""
+        url = reverse_lazy("marketing:crm_academy")
         self.generate_models(
             authenticate=True,
             academy=True,
@@ -91,13 +80,9 @@ class ActiveCampaignTestSuite(MarketingTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    """
-    🔽🔽🔽 without data
-    """
-
     def test_without_data(self):
-        """Test /activecampaign without data"""
-        url = reverse_lazy("marketing:activecampaign")
+        """Test /crmacademy without CRM academy record"""
+        url = reverse_lazy("marketing:crm_academy")
         self.generate_models(
             authenticate=True,
             academy=True,
@@ -108,18 +93,34 @@ class ActiveCampaignTestSuite(MarketingTestCase):
         self.headers(academy=1)
         response = self.client.get(url)
         json = response.json()
-        expected = {"detail": "Active Campaign Academy not found", "status_code": 404}
+        expected = {"detail": "CRM academy not found", "status_code": 404}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.all_active_campaign_academy_dict(), [])
 
-    """
-    🔽🔽🔽 with data
-    """
+    def test_crm_academy(self):
+        """Test GET /crmacademy"""
+        url = reverse_lazy("marketing:crm_academy")
+        model = self.generate_models(
+            authenticate=True,
+            academy=True,
+            profile_academy=True,
+            active_campaign_academy=True,
+            capability="read_lead",
+            role="potato",
+        )
+        self.headers(academy=1)
+        response = self.client.get(url)
+        json = response.json()
 
-    def test_active_campaign(self):
-        """Test /activecampaign"""
+        expected = get_serializer(model.active_campaign_academy, academy=model.academy)
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_crm_academy_deprecated_alias(self):
+        """Test GET /activecampaign deprecated alias"""
         url = reverse_lazy("marketing:activecampaign")
         model = self.generate_models(
             authenticate=True,
@@ -138,14 +139,10 @@ class ActiveCampaignTestSuite(MarketingTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    """
-    🔽🔽🔽 Post without academy
-    """
-
-    def test_post_active_campaign_without_academy(self):
-        """Test /activecampaign"""
-        url = reverse_lazy("marketing:activecampaign")
-        model = self.generate_models(
+    def test_post_crm_academy_without_academy(self):
+        """Test POST /crmacademy without academy header"""
+        url = reverse_lazy("marketing:crm_academy")
+        self.generate_models(
             authenticate=True,
             academy=True,
             profile_academy=True,
@@ -164,14 +161,10 @@ class ActiveCampaignTestSuite(MarketingTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    """
-    🔽🔽🔽 Post
-    """
-
-    def test_post_active_campaign(self):
-        """Test /activecampaign"""
-        url = reverse_lazy("marketing:activecampaign")
-        model = self.generate_models(
+    def test_post_crm_academy(self):
+        """Test POST /crmacademy"""
+        url = reverse_lazy("marketing:crm_academy")
+        self.generate_models(
             authenticate=True,
             academy=True,
             profile_academy=True,
@@ -197,6 +190,7 @@ class ActiveCampaignTestSuite(MarketingTestCase):
             "sync_message": None,
             "sync_status": "INCOMPLETED",
             "duplicate_leads_delta_avoidance": "00:30:00",
+            "status_page_url": None,
             **data,
         }
 

@@ -102,6 +102,7 @@ class ActiveCampaignAcademyBigSerializer(serpy.Serializer):
     id = serpy.Field()
     ac_key = serpy.Field()
     ac_url = serpy.Field()
+    status_page_url = serpy.Field()
     academy = AcademySmallSerializer()
     duplicate_leads_delta_avoidance = serpy.Field()
     sync_status = serpy.Field()

@@ -165,7 +165,7 @@ HOOK_EVENTS_METADATA = {
     },
     "form_entry.won_or_lost": {
         "action": "marketing.FormEntry.won_or_lost",
-        "description": "Triggered when a lead is marked as won or lost",
+        "description": "Triggered when a lead won status changes from or to WON, LOST, None",
         # app auto-derived: "marketing"
         # Signal name doesn't match action - must be explicit
         "signal": "breathecode.marketing.signals.form_entry_won_or_lost",
