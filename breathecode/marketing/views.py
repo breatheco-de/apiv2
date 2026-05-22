@@ -939,17 +939,15 @@ class AcademyLeadView(APIView, GenerateLookupsMixin):
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
-class ActiveCampaignView(APIView, GenerateLookupsMixin):
-    """
-    List all snippets, or create a new snippet.
-    """
+class CrmAcademyView(APIView, GenerateLookupsMixin):
+    """CRM academy config for an academy (vendor-agnostic)."""
 
     @capable_of("read_lead")
     def get(self, request, academy_id=None):
 
         ac_academy = ActiveCampaignAcademy.objects.filter(academy__id=academy_id).first()
         if ac_academy is None:
-            raise ValidationException("Active Campaign Academy not found", 404)
+            raise ValidationException("CRM academy not found", 404)
 
         serializer = ActiveCampaignAcademyBigSerializer(ac_academy)
         return Response(serializer.data, status=200)
@@ -967,11 +965,13 @@ class ActiveCampaignView(APIView, GenerateLookupsMixin):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of("crud_lead")
-    def put(self, request, ac_id, academy_id=None):
+    def put(self, request, crm_academy_id, academy_id=None):
 
-        ac_academy = ActiveCampaignAcademy.objects.filter(id=ac_id, academy__id=academy_id).first()
+        ac_academy = ActiveCampaignAcademy.objects.filter(id=crm_academy_id, academy__id=academy_id).first()
         if ac_academy is None:
-            raise ValidationException(f"Active Campaign {ac_id} not found", slug="active-campaign-not-found")
+            raise ValidationException(
+                f"CRM academy {crm_academy_id} not found", slug="active-campaign-not-found"
+            )
         serializer = ActiveCampaignAcademySerializer(
             ac_academy, data=request.data, context={"request": request, "academy": academy_id}
         )
