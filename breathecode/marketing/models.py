@@ -55,6 +55,12 @@ CRM_VENDORS = (
 class ActiveCampaignAcademy(models.Model):
     ac_key = models.CharField(max_length=150)
     ac_url = models.URLField()
+    status_page_url = models.URLField(
+        blank=True,
+        null=True,
+        default=None,
+        help_text="Public status page URL where the CRM vendor reports uptime and downtime",
+    )
     event_attendancy_automation = models.ForeignKey(
         "Automation", on_delete=models.CASCADE, blank=True, null=True, default=None
     )

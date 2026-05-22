@@ -414,7 +414,6 @@ class AcademyPlanSyncFinancingExpirationView(APIView):
 
         updated = []
         reactivated = []
-        enqueued = []
         charged = []
 
         for financing in financings:
@@ -435,8 +434,6 @@ class AcademyPlanSyncFinancingExpirationView(APIView):
             updated.append(financing.id)
 
             if was_expired and new_plan_expires_at > utc_now:
-                tasks.build_service_stock_scheduler_from_plan_financing.delay(financing.id)
-                enqueued.append(financing.id)
                 tasks.charge_plan_financing.delay(financing.id)
                 charged.append(financing.id)
 
@@ -444,7 +441,6 @@ class AcademyPlanSyncFinancingExpirationView(APIView):
             {
                 "updated_financings": updated,
                 "reactivated_financings": reactivated,
-                "enqueued_for_consumable_rebuild": enqueued,
                 "enqueued_for_charge": charged,
             },
             status=status.HTTP_200_OK,
