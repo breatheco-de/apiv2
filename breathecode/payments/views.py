@@ -355,6 +355,102 @@ class AcademyPlanView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class AcademyPlanSyncFinancingExpirationView(APIView):
+    """
+    POST: Recalculate plan_expires_at for all PlanFinancings linked to the given plan
+    based on the plan's current time_of_life / time_of_life_unit.
+
+    Use this endpoint to fix users whose consumables stopped renewing because an admin
+    changed the plan's time_of_life / time_of_life_unit after PlanFinancings were already
+    created.
+
+    For each affected PlanFinancing the endpoint will:
+      1. Recalculate plan_expires_at = first_invoice.paid_at + delta(time_of_life, time_of_life_unit).
+      2. If the financing was wrongly marked EXPIRED and the new expiration is in the future,
+         reactivate it to ACTIVE.
+      3. Enqueue build_service_stock_scheduler_from_plan_financing so consumables are rebuilt.
+
+    Required permission: crud_subscription
+    """
+
+    @capable_of("crud_subscription")
+    def post(self, request, plan_id=None, plan_slug=None, academy_id=None):
+        lang = get_user_language(request)
+
+        plan = (
+            Plan.objects.filter(
+                Q(id=plan_id) | Q(slug=plan_slug, slug__isnull=False),
+                Q(owner__id=academy_id) | Q(owner__isnull=True),
+            )
+            .exclude(status="DELETED")
+            .first()
+        )
+        if not plan:
+            raise ValidationException(
+                translation(lang, en="Plan not found", es="Plan no existe", slug="not-found"),
+                code=404,
+            )
+
+        if not plan.time_of_life or not plan.time_of_life_unit:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Plan does not have time_of_life and time_of_life_unit set, cannot sync expiration",
+                    es="El plan no tiene time_of_life y time_of_life_unit configurados, no se puede sincronizar la expiración",
+                    slug="plan-missing-time-of-life",
+                ),
+                code=400,
+            )
+
+        delta = actions.calculate_relative_delta(plan.time_of_life, plan.time_of_life_unit)
+        utc_now = timezone.now()
+
+        exclude_statuses = [
+            PlanFinancing.Status.CANCELLED,
+            PlanFinancing.Status.DEPRECATED,
+        ]
+
+        financings = PlanFinancing.objects.filter(plans=plan).exclude(status__in=exclude_statuses)
+
+        updated = []
+        reactivated = []
+        enqueued = []
+        charged = []
+
+        for financing in financings:
+            first_invoice = financing.invoices.order_by("paid_at").first()
+            if not first_invoice or not first_invoice.paid_at:
+                continue
+
+            new_plan_expires_at = first_invoice.paid_at + delta
+
+            was_expired = financing.status == PlanFinancing.Status.EXPIRED
+            financing.plan_expires_at = new_plan_expires_at
+
+            if was_expired and new_plan_expires_at > utc_now:
+                financing.status = PlanFinancing.Status.ACTIVE
+                reactivated.append(financing.id)
+
+            financing.save()
+            updated.append(financing.id)
+
+            if was_expired and new_plan_expires_at > utc_now:
+                tasks.build_service_stock_scheduler_from_plan_financing.delay(financing.id)
+                enqueued.append(financing.id)
+                tasks.charge_plan_financing.delay(financing.id)
+                charged.append(financing.id)
+
+        return Response(
+            {
+                "updated_financings": updated,
+                "reactivated_financings": reactivated,
+                "enqueued_for_consumable_rebuild": enqueued,
+                "enqueued_for_charge": charged,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
 class AcademyFinancingOptionView(APIView):
     """Manage financing options for academy plans"""
 
