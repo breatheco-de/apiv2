@@ -258,6 +258,11 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
     if "user" not in extras:
         extras["user"] = user
 
+    if scheduler.consumables.filter(valid_until=scheduler.valid_until).exists():
+        raise AbortTask(
+            f"Consumable with valid_until {scheduler.valid_until} already exists for scheduler {scheduler.id}, skipping to avoid duplicate"
+        )
+
     consumable = Consumable(
         service_item=service_item,
         unit_type=service_item.unit_type,
