@@ -1077,6 +1077,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
     unique_payment_negotiated_amount = serializers.FloatField(write_only=True, required=False, allow_null=True)
     grace_period_duration = serializers.IntegerField(write_only=True, required=False, min_value=0)
     grace_period_duration_unit = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    financing_option_id = serializers.IntegerField(write_only=True, required=False, min_value=1)
 
     id = serializers.IntegerField(read_only=True)
 
@@ -1106,6 +1107,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
             "unique_payment_negotiated_amount",
             "grace_period_duration",
             "grace_period_duration_unit",
+            "financing_option_id",
         )
         list_serializer_class = StudentPOSTListSerializer
 
@@ -1206,6 +1208,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
             "unique_payment_negotiated_amount",
             "grace_period_duration",
             "grace_period_duration_unit",
+            "financing_option_id",
         )
         financing_request_keys = financing_field_names + ("negotiated_invoice_amount",)
         has_financing_fields = any(k in data for k in financing_request_keys)
@@ -1248,6 +1251,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
             grace_unit = data.get("grace_period_duration_unit") or "MONTH"
             if isinstance(grace_unit, str) and grace_unit.strip() == "":
                 grace_unit = "MONTH"
+            financing_option_id = data.get("financing_option_id")
 
             student_plan_access = validate_student_invite_plan_access_config(
                 plans=plans_loaded,
@@ -1257,6 +1261,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                 unique_payment_negotiated_amount=unique_amt,
                 grace_period_duration=int(grace_dur),
                 grace_period_duration_unit=grace_unit,
+                financing_option_id=financing_option_id,
                 lang=lang,
             )
 
