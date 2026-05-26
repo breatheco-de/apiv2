@@ -18,6 +18,7 @@ from breathecode.payments.models import (
     Consumable,
     ConsumptionSession,
     Coupon,
+    CreditLedgerEntry,
     CreditNote,
     Currency,
     EventTypeSet,
@@ -709,6 +710,15 @@ class StudentDepositAdmin(admin.ModelAdmin):
     list_filter = ("status", "academy", "currency", "applied_at", "refunded_at")
     search_fields = ("user__email", "user__first_name", "user__last_name", "invoice__id", "plan_financing__id")
     raw_id_fields = ("user", "academy", "invoice", "plan_financing", "currency")
+
+
+@admin.register(CreditLedgerEntry)
+class CreditLedgerEntryAdmin(admin.ModelAdmin):
+    list_display = ("id", "user", "scope", "entry_type", "amount", "plan_financing", "subscription", "source_deposit", "created_at")
+    list_filter = ("scope", "entry_type", "plan_financing__academy")
+    search_fields = ("user__email", "user__first_name", "user__last_name", "plan_financing__id")
+    raw_id_fields = ("user", "plan_financing", "subscription", "source_deposit")
+    readonly_fields = ("created_at",)
 
 
 @admin.register(PlanFinancingTeam)
