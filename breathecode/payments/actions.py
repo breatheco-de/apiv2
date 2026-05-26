@@ -2834,16 +2834,27 @@ def validate_and_create_subscriptions(
 
     plan = plans[0]
 
-    if (option := plan.financing_options.filter(how_many_months=how_many_installments).first()) is None:
-        raise ValidationException(
-            translation(
-                lang,
-                en=f"Financing option not found for {how_many_installments} installments",
-                es=f"Opción de financiamiento no encontrada para {how_many_installments} cuotas",
-                slug="financing-option-not-found",
-            ),
-            code=404,
-        )
+    financing_option_id = data.get("financing_option_id")
+    if financing_option_id is not None:
+        try:
+            financing_option_id = int(financing_option_id)
+        except (TypeError, ValueError):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="financing_option_id must be an integer",
+                    es="financing_option_id debe ser un entero",
+                ),
+                slug="invalid-financing-option-id",
+                code=400,
+            )
+
+    option = get_plan_financing_option(
+        plan,
+        how_many_installments,
+        financing_option_id=financing_option_id,
+        lang=lang,
+    )
 
     conversion_info = data["conversion_info"] if "conversion_info" in data else None
     validate_conversion_info(conversion_info, lang)
@@ -5523,6 +5534,79 @@ def _conversion_info_for_build_plan_financing_task(conversion_info: Any) -> str 
     return json.dumps(conversion_info)
 
 
+def get_plan_financing_option(
+    plan: Plan,
+    how_many_installments: int,
+    financing_option_id: int | None = None,
+    lang: str = "en",
+) -> FinancingOption:
+    """
+    Resolve a plan's financing option for a given installment count.
+
+    When multiple financing options share the same ``how_many_months``, callers must pass
+    ``financing_option_id`` to avoid picking an arbitrary option via ``.first()``.
+    """
+    if financing_option_id is not None:
+        option = plan.financing_options.filter(id=financing_option_id).first()
+        if option is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Financing option {financing_option_id} is not linked to plan {plan.slug}",
+                    es=f"La opción de financiamiento {financing_option_id} no está vinculada al plan {plan.slug}",
+                ),
+                slug="financing-option-not-found",
+                code=404,
+            )
+        if option.how_many_months != how_many_installments:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=(
+                        f"Financing option {financing_option_id} has {option.how_many_months} installments, "
+                        f"expected {how_many_installments}"
+                    ),
+                    es=(
+                        f"La opción de financiamiento {financing_option_id} tiene {option.how_many_months} cuotas, "
+                        f"se esperaban {how_many_installments}"
+                    ),
+                ),
+                slug="financing-option-installment-mismatch",
+                code=400,
+            )
+        return option
+
+    options = plan.financing_options.filter(how_many_months=how_many_installments)
+    count = options.count()
+    if count == 0:
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Financing option not found for {how_many_installments} installments (plan {plan.slug})",
+                es=f"No hay opción de financiamiento para {how_many_installments} cuotas (plan {plan.slug})",
+            ),
+            slug="financing-option-not-found",
+            code=404,
+        )
+    if count > 1:
+        raise ValidationException(
+            translation(
+                lang,
+                en=(
+                    f"Multiple financing options found for {how_many_installments} installments on plan {plan.slug}. "
+                    "Pass financing_option_id."
+                ),
+                es=(
+                    f"Hay varias opciones de financiamiento para {how_many_installments} cuotas en el plan {plan.slug}. "
+                    "Envía financing_option_id."
+                ),
+            ),
+            slug="ambiguous-financing-option",
+            code=400,
+        )
+    return options.first()
+
+
 def validate_student_invite_plan_access_config(
     *,
     plans: list[Plan],
@@ -5532,6 +5616,7 @@ def validate_student_invite_plan_access_config(
     unique_payment_negotiated_amount: float | None = None,
     grace_period_duration: int,
     grace_period_duration_unit: str,
+    financing_option_id: int | None = None,
     lang: str,
 ) -> dict[str, Any]:
     """
@@ -5639,18 +5724,14 @@ def validate_student_invite_plan_access_config(
         )
 
     for p in plans:
-        if p.financing_options.filter(how_many_months=how_many_installments).first() is None:
-            raise ValidationException(
-                translation(
-                    lang,
-                    en=f"Financing option not found for {how_many_installments} installments (plan {p.slug})",
-                    es=f"No hay opción de financiamiento para {how_many_installments} cuotas (plan {p.slug})",
-                ),
-                slug="financing-option-not-found",
-                code=404,
-            )
+        get_plan_financing_option(
+            p,
+            how_many_installments,
+            financing_option_id=financing_option_id,
+            lang=lang,
+        )
 
-    return {
+    payload: dict[str, Any] = {
         "how_many_installments": how_many_installments,
         "initial_payment_amount": initial_payment_amount,
         "initial_payment_notes": initial_payment_notes,
@@ -5658,6 +5739,9 @@ def validate_student_invite_plan_access_config(
         "grace_period_duration": grace_period_duration,
         "grace_period_duration_unit": grace_period_duration_unit,
     }
+    if financing_option_id is not None:
+        payload["financing_option_id"] = financing_option_id
+    return payload
 
 
 def resolve_student_plan_access_from_invite(user_invite: UserInvite) -> dict[str, Any]:
@@ -5677,7 +5761,14 @@ def resolve_student_plan_access_from_invite(user_invite: UserInvite) -> dict[str
     unique_raw = raw.get("unique_payment_negotiated_amount")
     if unique_raw is None:
         unique_raw = raw.get("negotiated_invoice_amount")
-    return {
+    financing_option_id = raw.get("financing_option_id")
+    if financing_option_id is not None:
+        try:
+            financing_option_id = int(financing_option_id)
+        except (TypeError, ValueError):
+            financing_option_id = None
+
+    resolved: dict[str, Any] = {
         "how_many_installments": int(raw.get("how_many_installments") or 1),
         "initial_payment_amount": raw.get("initial_payment_amount"),
         "initial_payment_notes": raw.get("initial_payment_notes"),
@@ -5685,6 +5776,9 @@ def resolve_student_plan_access_from_invite(user_invite: UserInvite) -> dict[str
         "grace_period_duration": int(raw.get("grace_period_duration") or 0),
         "grace_period_duration_unit": unit,
     }
+    if financing_option_id is not None:
+        resolved["financing_option_id"] = financing_option_id
+    return resolved
 
 
 def create_invited_plan_financing_for_user(
@@ -5703,6 +5797,7 @@ def create_invited_plan_financing_for_user(
     unique_payment_negotiated_amount: float | None = None,
     grace_period_duration: int = 0,
     grace_period_duration_unit: str = MONTH,
+    financing_option_id: int | None = None,
     conversion_info: Any = None,
 ) -> None:
     """
@@ -5766,17 +5861,12 @@ def create_invited_plan_financing_for_user(
                 code=400,
             )
 
-    financing_option = plan.financing_options.filter(how_many_months=how_many_installments).first()
-    if not financing_option:
-        raise ValidationException(
-            translation(
-                lang,
-                en="Financing option not found for this plan and installment count",
-                es="No se encontró opción de financiamiento para este plan y número de cuotas",
-            ),
-            slug="financing-option-not-found",
-            code=404,
-        )
+    financing_option = get_plan_financing_option(
+        plan,
+        how_many_installments,
+        financing_option_id=financing_option_id,
+        lang=lang,
+    )
 
     if initial_payment_amount is not None and unique_payment_negotiated_amount is not None:
         raise ValidationException(
