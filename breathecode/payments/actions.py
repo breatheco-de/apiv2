@@ -3464,16 +3464,25 @@ def register_student_deposit(
         )
 
     # ── Build warning message ─────────────────────────────────────────────────
+    # Credit after this deposit (credit_entry_amount is positive for CREDIT_ADDED, 0 or negative otherwise).
+    new_credit_balance = credit_balance + (credit_entry_amount if credit_entry_type == CreditLedgerEntry.EntryType.CREDIT_ADDED else 0.0)
+
     warning: Optional[str] = None
-    if not installment_applied:
+    if not installment_applied and new_credit_balance < monthly_price - 1e-9:
+        # Total accumulated credit is still not enough to cover a full installment.
+        # The next automatic charge may fail and trigger cancellation.
         warning = translation(
             lang,
             en=(
-                f"Partial payment recorded. Full installment required before "
+                f"Partial payment recorded. The total accumulated credit "
+                f"({currency.format_price(new_credit_balance)}) is still less than the installment amount "
+                f"({currency.format_price(monthly_price)}). Full payment must be received before "
                 f"{plan_financing.next_payment_at.date()} to avoid cancellation."
             ),
             es=(
-                f"Pago parcial registrado. Se requiere el pago completo de la cuota antes del "
+                f"Pago parcial registrado. El crédito acumulado total "
+                f"({currency.format_price(new_credit_balance)}) aún es menor al valor de la cuota "
+                f"({currency.format_price(monthly_price)}). Se requiere el pago completo antes del "
                 f"{plan_financing.next_payment_at.date()} para evitar la cancelación."
             ),
         )
