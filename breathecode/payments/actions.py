@@ -3437,9 +3437,6 @@ def register_student_deposit(
     bag.was_delivered = True
     bag.save()
     if installment_applied:
-        # Only installment-closing deposits are added to the plan's billing history.
-        # Credit-only deposits (pre-payments) are tracked via StudentDeposit.invoice;
-        # the corresponding billing cycle invoice is created later by the charge task.
         plan_financing.invoices.add(invoice)
 
     utc_now = timezone.now()
