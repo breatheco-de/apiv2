@@ -3364,38 +3364,29 @@ def register_student_deposit(
     # For every installment: how much cash is actually needed after applying credit.
     still_owed = max(monthly_price - credit_balance, 0)
 
-    if still_owed < 1e-9:
-        # The accumulated credit already covers this installment (and possibly more).
-        # No manual deposit is needed — the automatic charge task will consume the credit.
+    # Total amount the plan can still absorb (all remaining installments minus existing credit).
+    total_remaining = monthly_price * remaining_installments
+    max_deposit = max(total_remaining - credit_balance, 0)
+
+    if amount > max_deposit + 1e-9:
         raise ValidationException(
             translation(
                 lang,
-                en=(
-                    f"This installment is already covered by the accumulated credit balance "
-                    f"of {currency.format_price(credit_balance)}. No deposit is needed."
-                ),
-                es=(
-                    f"Esta cuota ya está cubierta por el crédito acumulado "
-                    f"de {currency.format_price(credit_balance)}. No se necesita depósito."
-                ),
+                en=f"Amount {currency.format_price(amount)} exceeds the maximum deposit allowed "
+                f"of {currency.format_price(max_deposit)} for this plan "
+                f"({remaining_installments} installment(s) × {currency.format_price(monthly_price)} "
+                f"minus {currency.format_price(credit_balance)} existing credit).",
+                es=f"El monto {currency.format_price(amount)} supera el máximo permitido "
+                f"de {currency.format_price(max_deposit)} para este plan "
+                f"({remaining_installments} cuota(s) × {currency.format_price(monthly_price)} "
+                f"menos {currency.format_price(credit_balance)} de crédito existente).",
             ),
-            slug="installment-already-covered-by-credit",
-            code=409,
+            slug="overpayment-exceeds-plan-total",
         )
 
+    # At this point amount <= max_deposit, so no overpayment beyond the plan total is possible.
+    credit_consumed = 0.0
     if remaining_installments == 1:
-        # Last installment: overpayment rejected — there are no future installments for extra credit.
-        if amount > still_owed + 1e-9:
-            raise ValidationException(
-                translation(
-                    lang,
-                    en=f"Amount {currency.format_price(amount)} exceeds the remaining balance "
-                    f"of {currency.format_price(still_owed)} for the last installment.",
-                    es=f"El monto {currency.format_price(amount)} supera el saldo pendiente "
-                    f"de {currency.format_price(still_owed)} para la última cuota.",
-                ),
-                slug="overpayment-on-last-installment",
-            )
         if amount >= still_owed:
             # Exact payment — closes the plan.
             installment_applied = True
@@ -3405,22 +3396,24 @@ def register_student_deposit(
         else:
             # Partial towards the last installment.
             installment_applied = False
-            credit_consumed = 0.0
             credit_entry_amount = amount
             credit_entry_type = CreditLedgerEntry.EntryType.CREDIT_ADDED
     else:
-        # Intermediate installment: overpayment is allowed — surplus becomes credit for future installments.
-        if amount >= still_owed - 1e-9:
+        if still_owed < 1e-9:
+            # Current installment already covered by existing credit.
+            # Full deposit amount becomes pre-payment credit for upcoming installments.
+            installment_applied = False
+            credit_entry_amount = amount
+            credit_entry_type = CreditLedgerEntry.EntryType.CREDIT_ADDED
+        elif amount >= still_owed - 1e-9:
             # Closes the installment; any amount beyond still_owed becomes new credit.
             installment_applied = True
-            credit_consumed = 0.0
             overpay = amount - still_owed
             credit_entry_amount = overpay if overpay > 1e-9 else 0.0
             credit_entry_type = CreditLedgerEntry.EntryType.CREDIT_ADDED if credit_entry_amount else None
         else:
             # Partial payment — does not close the installment.
             installment_applied = False
-            credit_consumed = 0.0
             credit_entry_amount = amount
             credit_entry_type = CreditLedgerEntry.EntryType.CREDIT_ADDED
 
