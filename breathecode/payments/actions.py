@@ -3447,7 +3447,8 @@ def register_student_deposit(
     )
     bag.was_delivered = True
     bag.save()
-    plan_financing.invoices.add(invoice)
+    if installment_applied:
+        plan_financing.invoices.add(invoice)
 
     utc_now = timezone.now()
     deposit = StudentDeposit.objects.create(
