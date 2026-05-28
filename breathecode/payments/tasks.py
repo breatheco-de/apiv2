@@ -49,7 +49,6 @@ from .models import (
     ProofOfPayment,
     Service,
     ServiceStockScheduler,
-    StudentDeposit,
     Subscription,
     SubscriptionBillingTeam,
     SubscriptionSeat,
@@ -1221,49 +1220,20 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
             if utc_now - last_invoice.paid_at < timedelta(days=cooldown_days):
                 raise AbortTask(f"PlanFinancing with id {plan_financing_id} was paid earlier")
 
-            if plan_financing.initial_payment_amount is not None:
-                paid_future_installments = max(invoices.count() - 1, 0)
-                remaining_installments = installments - paid_future_installments
-            else:
-                remaining_installments = installments - invoices.count()
+            # installments_paid is the authoritative counter of closed billing cycles.
+            remaining_installments = installments - plan_financing.installments_paid
 
             if remaining_installments > 0:
                 # ── Credit-first: consume CreditLedgerEntry balance before hitting Stripe ────────
                 credit_balance = actions.get_credit_balance(plan_financing)
                 amount_owed = float(amount or 0)
                 _credit_to_consume = 0.0
+                credit_covered = False
 
                 if credit_balance >= amount_owed - 1e-9 and amount_owed > 0:
-                    # Credit covers the full installment — create an externally-managed invoice.
-                    plans = plan_financing.plans.all()
-                    currency = plan_financing.currency
-                    credit_breakdown = {
-                        "plans": {
-                            plan.slug: {
-                                "amount": amount_owed,
-                                "currency": currency.code if currency else "USD",
-                                "type": "CREDIT_APPLIED",
-                            }
-                            for plan in plans
-                        },
-                        "service-items": {},
-                    }
-                    credit_bag, credit_invoice = actions.create_externally_managed_bag_and_invoice(
-                        user=plan_financing.user,
-                        academy=plan_financing.academy,
-                        currency=currency,
-                        amount=amount_owed,
-                        payment_method=None,
-                        proof_of_payment=None,
-                        lang=settings.lang,
-                        bag_type=Bag.Type.CHARGE,
-                        plans=plans,
-                        how_many_installments=0,
-                        amount_breakdown=credit_breakdown,
-                    )
-                    credit_bag.was_delivered = True
-                    credit_bag.save()
-                    plan_financing.invoices.add(credit_invoice)
+                    # Credit covers the full installment.
+                    # No new invoice — the cash was already documented when the user deposited.
+                    # We record the ledger consumption and increment the authoritative counter.
                     CreditLedgerEntry.objects.create(
                         user=plan_financing.user,
                         scope=CreditLedgerEntry.Scope.PLAN_FINANCING,
@@ -1272,8 +1242,8 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                         entry_type=CreditLedgerEntry.EntryType.CREDIT_CONSUMED,
                         notes="Automatic charge covered by accumulated credit",
                     )
-                    invoice = credit_invoice
-                    bag = credit_bag
+                    plan_financing.installments_paid += 1
+                    credit_covered = True
 
                 else:
                     if credit_balance > 1e-9 and amount_owed > 0:
@@ -1363,38 +1333,38 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                             notes="Partial credit applied to reduce automatic charge",
                         )
 
+                    plan_financing.invoices.add(invoice)
+                    plan_financing.installments_paid += 1
+
+                    if bag:
+                        bag.was_delivered = True
+                        bag.save()
+
+                    notify_actions.send_email_message(
+                        "message",
+                        invoice.user.email,
+                        {
+                            "SUBJECT": translation(
+                                settings.lang,
+                                en="Your installment at 4Geeks was successfully charged",
+                                es="Tu cuota en 4Geeks fue cobrada exitosamente",
+                            ),
+                            "MESSAGE": translation(
+                                settings.lang,
+                                en=f"The amount was {invoice.currency.format_price(invoice.amount)}",
+                                es=f"El monto fue {invoice.currency.format_price(invoice.amount)}",
+                            ),
+                            "BUTTON": translation(settings.lang, en="See the invoice", es="Ver la factura"),
+                            "LINK": f"{get_app_url()}/paymentmethod",
+                        },
+                        academy=plan_financing.academy,
+                    )
+
+                # Re-derive remaining after incrementing installments_paid.
+                remaining_installments = installments - plan_financing.installments_paid
+
                 if utc_now > plan_financing.valid_until:
-                    remaining_installments -= 1
                     plan_financing.valid_until = utc_now + relativedelta(months=remaining_installments)
-
-                elif remaining_installments > 0:
-                    remaining_installments -= 1
-
-                plan_financing.invoices.add(invoice)
-
-                value = invoice.currency.format_price(invoice.amount)
-
-                subject = translation(
-                    settings.lang,
-                    en="Your installment at 4Geeks was successfully charged",
-                    es="Tu cuota en 4Geeks fue cobrada exitosamente",
-                )
-
-                message = translation(settings.lang, en=f"The amount was {value}", es=f"El monto fue {value}")
-
-                button = translation(settings.lang, en="See the invoice", es="Ver la factura")
-
-                notify_actions.send_email_message(
-                    "message",
-                    invoice.user.email,
-                    {
-                        "SUBJECT": subject,
-                        "MESSAGE": message,
-                        "BUTTON": button,
-                        "LINK": f"{get_app_url()}/paymentmethod",
-                    },
-                    academy=plan_financing.academy,
-                )
 
             delta = relativedelta(months=1)
 
@@ -1405,11 +1375,6 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
             plan_financing.status = "ACTIVE" if remaining_installments > 0 else "FULLY_PAID"
             plan_financing.status_message = None
             plan_financing.save()
-
-            # if this charge but the client paid all its installments, there hasn't been a new bag created
-            if bag:
-                bag.was_delivered = True
-                bag.save()
 
             renew_plan_financing_consumables.delay(plan_financing.id)
 
@@ -2000,20 +1965,9 @@ def build_plan_financing(
     financing.save()
     financing.invoices.add(invoice)
 
-    if initial_payment_amount is not None:
-        StudentDeposit.objects.get_or_create(
-            invoice=invoice,
-            defaults={
-                "user": bag.user,
-                "academy": bag.academy,
-                "plan_financing": financing,
-                "amount": initial_payment_amount,
-                "currency": invoice.currency,
-                "status": StudentDeposit.Status.APPLIED,
-                "notes": initial_payment_notes,
-                "applied_at": timezone.now(),
-            },
-        )
+    if initial_payment_amount is not None and invoice.invoice_kind != Invoice.InvoiceKind.MANUAL_DEPOSIT:
+        invoice.invoice_kind = Invoice.InvoiceKind.MANUAL_DEPOSIT
+        invoice.save(update_fields=["invoice_kind"])
 
     bag.was_delivered = True
     bag.save()

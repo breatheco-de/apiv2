@@ -1812,6 +1812,10 @@ class Invoice(models.Model):
         REFUNDED = "REFUNDED", "Refunded"
         DISPUTED_AS_FRAUD = "DISPUTED_AS_FRAUD", "Disputed as fraud"
 
+    class InvoiceKind(models.TextChoices):
+        GENERAL = "GENERAL", "General"
+        MANUAL_DEPOSIT = "MANUAL_DEPOSIT", "Manual deposit"
+
     amount = models.FloatField(
         default=0, help_text="If amount is 0, transaction will not be sent to stripe or any other payment processor."
     )
@@ -1822,6 +1826,13 @@ class Invoice(models.Model):
     )
     status = models.CharField(
         max_length=18, choices=Status, default=Status.PENDING, db_index=True, help_text="Invoice status"
+    )
+    invoice_kind = models.CharField(
+        max_length=20,
+        choices=InvoiceKind.choices,
+        default=InvoiceKind.GENERAL,
+        db_index=True,
+        help_text="Business origin/classification for this invoice",
     )
 
     bag = models.ForeignKey("Bag", on_delete=models.CASCADE, help_text="Bag", related_name="invoices")
@@ -2317,6 +2328,15 @@ class PlanFinancing(AbstractIOweYou):
         default=0, help_text="How many installments to collect and build the plan financing"
     )
 
+    installments_paid = models.PositiveIntegerField(
+        default=0,
+        help_text=(
+            "Number of billing cycles that have been fully closed, regardless of the payment method "
+            "(cash, Stripe, or internal credit). This is the single source of truth for installment "
+            "progress. plan_financing.invoices contains only real cash receipts."
+        ),
+    )
+
     initial_payment_amount = models.FloatField(
         null=True,
         blank=True,
@@ -2603,55 +2623,6 @@ class PlanFinancingSeat(models.Model):
         return self.team
 
 
-class StudentDeposit(models.Model):
-    """Trace an initial or manual deposit made by a student."""
-
-    if TYPE_CHECKING:
-        objects: TypedManager["StudentDeposit"]
-
-    class Status(models.TextChoices):
-        HELD = "HELD", "Held"
-        APPLIED = "APPLIED", "Applied"
-        REFUNDED = "REFUNDED", "Refunded"
-
-    user = models.ForeignKey(User, on_delete=models.CASCADE, help_text="Student who made the deposit")
-    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, help_text="Academy that received the deposit")
-    invoice = models.OneToOneField(
-        Invoice,
-        on_delete=models.CASCADE,
-        related_name="student_deposit",
-        help_text="Invoice that records this deposit payment",
-    )
-    plan_financing = models.ForeignKey(
-        PlanFinancing,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        default=None,
-        related_name="student_deposits",
-        help_text="Plan financing where this deposit was applied",
-    )
-    amount = models.FloatField(help_text="Deposit amount")
-    currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Deposit currency")
-    status = models.CharField(
-        max_length=8, choices=Status.choices, default=Status.HELD, db_index=True, help_text="Deposit status"
-    )
-    notes = models.CharField(
-        max_length=250,
-        null=True,
-        blank=True,
-        default=None,
-        help_text="Optional staff notes about this deposit",
-    )
-    applied_at = models.DateTimeField(null=True, blank=True, default=None, help_text="When the deposit was applied")
-    refunded_at = models.DateTimeField(null=True, blank=True, default=None, help_text="When the deposit was refunded")
-    created_at = models.DateTimeField(auto_now_add=True, editable=False)
-    updated_at = models.DateTimeField(auto_now=True, editable=False)
-
-    def __str__(self) -> str:
-        return f"{self.user.email} - {self.amount} {self.currency.code} ({self.status})"
-
-
 class CreditLedgerEntry(models.Model):
     """
     Generic ledger of credit movements for any billable entity (PlanFinancing, Subscription, or global).
@@ -2723,14 +2694,14 @@ class CreditLedgerEntry(models.Model):
         db_index=True,
         help_text="Type of credit movement",
     )
-    source_deposit = models.ForeignKey(
-        StudentDeposit,
+    source_invoice = models.ForeignKey(
+        Invoice,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         default=None,
         related_name="credit_entries",
-        help_text="StudentDeposit that originated this credit movement (when applicable)",
+        help_text="Invoice that originated this credit movement (manual deposits, automatic adjustments, etc.)",
     )
     notes = models.CharField(
         max_length=250,

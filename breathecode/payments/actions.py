@@ -69,7 +69,6 @@ from .models import (
     ProofOfPayment,
     Service,
     ServiceItem,
-    StudentDeposit,
     Subscription,
     SubscriptionBillingTeam,
     SubscriptionSeat,
@@ -2578,9 +2577,16 @@ def create_externally_managed_bag_and_invoice(
     how_many_installments: int = 1,
     chosen_period: Optional[str] = None,
     amount_breakdown: Optional[dict] = None,
+    externally_managed: bool = True,
+    invoice_kind: str = Invoice.InvoiceKind.GENERAL,
     **bag_extra: Any,
 ) -> Tuple[Bag, Invoice]:
-    """Create Bag and Invoice (externally_managed, proof, payment_method); attach plans or service_items. Return (bag, invoice)."""
+    """Create Bag and Invoice; attach plans or service_items. Return (bag, invoice).
+
+    Set ``externally_managed=False`` for system-generated invoices (e.g. credit-applied charges)
+    that have no external payment method — the Invoice model requires a payment_method whenever
+    externally_managed is True.
+    """
     utc_now = timezone.now()
     bag = Bag()
     bag.type = bag_type
@@ -2619,7 +2625,8 @@ def create_externally_managed_bag_and_invoice(
         academy=academy,
         status=Invoice.Status.FULFILLED,
         currency=currency,
-        externally_managed=True,
+        externally_managed=externally_managed,
+        invoice_kind=invoice_kind,
         proof=proof_of_payment,
         payment_method=payment_method,
         amount_breakdown=amount_breakdown,
@@ -3205,7 +3212,7 @@ class DepositAllocation:
 class DepositResult:
     """Full result returned by register_student_deposit."""
 
-    deposit: StudentDeposit
+    invoice: Invoice
     allocation: DepositAllocation
     credit_balance: float
     remaining_installments: int
@@ -3214,9 +3221,7 @@ class DepositResult:
 
 def get_remaining_installments(plan_financing: PlanFinancing) -> int:
     """Return the number of installments still pending on a PlanFinancing."""
-    fulfilled = plan_financing.invoices.filter(status=Invoice.Status.FULFILLED, bag__was_delivered=True)
-    paid = max(fulfilled.count() - 1, 0) if plan_financing.initial_payment_amount is not None else fulfilled.count()
-    return max(plan_financing.how_many_installments - paid, 0)
+    return max(plan_financing.how_many_installments - int(plan_financing.installments_paid or 0), 0)
 
 
 def get_credit_balance(plan_financing: PlanFinancing) -> float:
@@ -3238,7 +3243,7 @@ def register_student_deposit(
     proof_of_payment: ProofOfPayment,
     academy_id: int,
     lang: Optional[str] = None,
-) -> StudentDeposit:
+) -> DepositResult:
     """
     Register a manual student deposit and apply it to the next installment of a plan financing.
     """
@@ -3406,11 +3411,22 @@ def register_student_deposit(
             credit_entry_amount = amount
             credit_entry_type = CreditLedgerEntry.EntryType.CREDIT_ADDED
         elif amount >= still_owed - 1e-9:
-            # Closes the installment; any amount beyond still_owed becomes new credit.
+            # Closes the installment.
+            # Net credit change = amount - monthly_price:
+            #   - Negative: existing credit was partially consumed (user paid less than full price).
+            #   - Zero: exact payment with credit covering the gap, old credit zeroed out.
+            #   - Positive: overpayment, surplus becomes new credit.
             installment_applied = True
-            overpay = amount - still_owed
-            credit_entry_amount = overpay if overpay > 1e-9 else 0.0
-            credit_entry_type = CreditLedgerEntry.EntryType.CREDIT_ADDED if credit_entry_amount else None
+            net = amount - monthly_price
+            if net > 1e-9:
+                credit_entry_amount = net
+                credit_entry_type = CreditLedgerEntry.EntryType.CREDIT_ADDED
+            elif net < -1e-9:
+                credit_entry_amount = net  # negative — ledger stores signed amounts
+                credit_entry_type = CreditLedgerEntry.EntryType.CREDIT_CONSUMED
+            else:
+                credit_entry_amount = 0.0
+                credit_entry_type = None
         else:
             # Partial payment — does not close the installment.
             installment_applied = False
@@ -3444,24 +3460,19 @@ def register_student_deposit(
         plans=plans,
         how_many_installments=0,
         amount_breakdown=amount_breakdown,
+        invoice_kind=Invoice.InvoiceKind.MANUAL_DEPOSIT,
     )
     bag.was_delivered = True
     bag.save()
     if installment_applied:
+        # Only installment-closing manual payments enter the plan's billing history.
         plan_financing.invoices.add(invoice)
+        PlanFinancing.objects.filter(pk=plan_financing.pk).update(
+            installments_paid=F("installments_paid") + 1
+        )
+        plan_financing.refresh_from_db(fields=["installments_paid"])
 
     utc_now = timezone.now()
-    deposit = StudentDeposit.objects.create(
-        user=plan_financing.user,
-        academy=academy,
-        invoice=invoice,
-        plan_financing=plan_financing,
-        amount=amount,
-        currency=currency,
-        status=StudentDeposit.Status.APPLIED,
-        notes=notes,
-        applied_at=utc_now,
-    )
 
     # ── Persist ledger entry ──────────────────────────────────────────────────
     if credit_entry_type is not None:
@@ -3471,7 +3482,7 @@ def register_student_deposit(
             plan_financing=plan_financing,
             amount=credit_entry_amount,
             entry_type=credit_entry_type,
-            source_deposit=deposit,
+            source_invoice=invoice,
             notes=notes,
         )
 
@@ -3539,7 +3550,7 @@ def register_student_deposit(
     )
 
     return DepositResult(
-        deposit=deposit,
+        invoice=invoice,
         allocation=allocation,
         credit_balance=new_credit_balance,
         remaining_installments=remaining_installments,
@@ -4668,6 +4679,49 @@ def _apply_refund_entitlements(invoice: Invoice, items_to_refund: dict[str, floa
         ).delete()
 
 
+def _reverse_credit_for_refunded_invoice(invoice: Invoice) -> None:
+    """
+    Reverse remaining credit that originated from a refunded invoice.
+    """
+    # New source of truth: entries tied directly to the invoice.
+    invoice_added_entries = (
+        CreditLedgerEntry.objects.filter(
+            source_invoice=invoice,
+            scope=CreditLedgerEntry.Scope.PLAN_FINANCING,
+            entry_type=CreditLedgerEntry.EntryType.CREDIT_ADDED,
+        )
+        .values("plan_financing_id")
+        .annotate(total_added=Sum("amount"))
+    )
+
+    totals_by_plan: dict[int, float] = {}
+    for row in list(invoice_added_entries):
+        plan_id = row["plan_financing_id"]
+        if not plan_id:
+            continue
+        totals_by_plan[plan_id] = float(totals_by_plan.get(plan_id, 0.0) + float(row["total_added"] or 0.0))
+
+    for plan_id, total_added in totals_by_plan.items():
+        plan_financing = PlanFinancing.objects.filter(id=plan_id).first()
+        if not plan_financing or total_added <= 1e-9:
+            continue
+
+        current_balance = get_credit_balance(plan_financing)
+        reversible = min(total_added, current_balance)
+        if reversible <= 1e-9:
+            continue
+
+        CreditLedgerEntry.objects.create(
+            user=invoice.user,
+            scope=CreditLedgerEntry.Scope.PLAN_FINANCING,
+            plan_financing=plan_financing,
+            amount=-reversible,
+            entry_type=CreditLedgerEntry.EntryType.CREDIT_CONSUMED,
+            source_invoice=invoice,
+            notes=f"Credit reversal for refunded invoice #{invoice.id}",
+        )
+
+
 def process_refund(
     invoice: Invoice,
     amount: float | None,
@@ -4728,6 +4782,7 @@ def process_refund(
     )
 
     _apply_refund_entitlements(invoice, items_to_refund)
+    _reverse_credit_for_refunded_invoice(invoice)
     return credit_note
 
 
@@ -4768,6 +4823,7 @@ def process_refund_record_external(
     )
 
     _apply_refund_entitlements(invoice, items_to_refund)
+    _reverse_credit_for_refunded_invoice(invoice)
     return credit_note
 
 

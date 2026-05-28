@@ -67,16 +67,16 @@ def test_register_student_deposit_applies_payment_to_plan_financing(
     )
 
     invoices = database.list_of("payments.Invoice")
-    deposits = database.list_of("payments.StudentDeposit")
     financing = database.list_of("payments.PlanFinancing")[0]
 
-    assert result.deposit.id == deposits[0]["id"]
+    assert result.invoice.id == invoices[1]["id"]
     assert result.allocation.installment_applied is True
     assert result.allocation.credit_entry_type is None
     assert result.warning is None
     assert len(invoices) == 2
     assert invoices[1]["amount"] == 1200
     assert invoices[1]["externally_managed"] is True
+    assert invoices[1]["invoice_kind"] == "MANUAL_DEPOSIT"
     assert invoices[1]["amount_breakdown"] == {
         "plans": {
             model.plan.slug: {
@@ -87,14 +87,6 @@ def test_register_student_deposit_applies_payment_to_plan_financing(
         },
         "service-items": {},
     }
-    assert deposits[0]["user_id"] == model.user.id
-    assert deposits[0]["academy_id"] == model.academy.id
-    assert deposits[0]["invoice_id"] == invoices[1]["id"]
-    assert deposits[0]["plan_financing_id"] == model.plan_financing.id
-    assert deposits[0]["amount"] == 1200
-    assert deposits[0]["status"] == "APPLIED"
-    assert deposits[0]["notes"] == "Cash payment"
-    assert deposits[0]["applied_at"] == utc_now
     assert financing["status"] == "ACTIVE"
     assert financing["status_message"] is None
     assert financing["next_payment_at"] == model.plan_financing.next_payment_at + relativedelta(months=1)
@@ -233,10 +225,8 @@ def test_register_student_deposit_rejects_when_no_installments_remaining(
 
     assert exc.value.detail == "no-remaining-installments"
     invoices = database.list_of("payments.Invoice")
-    deposits = database.list_of("payments.StudentDeposit")
     financing = database.list_of("payments.PlanFinancing")[0]
     assert len(invoices) == 1
-    assert deposits == []
     assert financing["status"] == "ACTIVE"
     assert financing["next_payment_at"] == model.plan_financing.next_payment_at
     assert actions.reschedule_billing_tasks.call_args_list == []
