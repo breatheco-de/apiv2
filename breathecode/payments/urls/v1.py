@@ -17,6 +17,7 @@ from ..views import (
     AcademyInvoiceRefundView,
     AcademyInvoiceRecordRefundView,
     AcademyInvoiceView,
+    AcademyUserCreditLedgerView,
     AcademyPaymentMethodView,
     AcademyPaymentSettingsView,
     AcademyPlanFinancingView,
@@ -218,6 +219,11 @@ urlpatterns = [
     path("me/invoice/<int:invoice_id>", MeInvoiceView.as_view()),
     path("academy/invoice", AcademyInvoiceView.as_view(), name="academy_invoice"),
     path("academy/invoice/<int:invoice_id>", AcademyInvoiceView.as_view(), name="academy_invoice_id"),
+    path(
+        "academy/user/<int:user_id>/credit-ledger",
+        AcademyUserCreditLedgerView.as_view(),
+        name="academy_user_credit_ledger",
+    ),
     path(
         "academy/invoice/<int:invoice_id>/refund", AcademyInvoiceRefundView.as_view(), name="academy_invoice_id_refund"
     ),

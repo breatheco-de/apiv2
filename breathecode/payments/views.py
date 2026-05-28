@@ -52,6 +52,7 @@ from breathecode.payments.models import (
     Consumable,
     ConsumptionSession,
     Coupon,
+    CreditLedgerEntry,
     Currency,
     EventTypeSet,
     FinancialReputation,
@@ -94,6 +95,7 @@ from breathecode.payments.serializers import (
     GetFinancingOptionSerializer,
     GetInvoiceSerializer,
     GetInvoiceSmallSerializer,
+    GetUserCreditLedgerEntrySerializer,
     GetMentorshipServiceSetSerializer,
     GetMentorshipServiceSetSmallSerializer,
     GetPaymentMethod,
@@ -2976,6 +2978,56 @@ class AcademyInvoiceView(APIView):
         items = handler.queryset(items)
         serializer = GetInvoiceSmallSerializer(items, many=True)
 
+        return handler.response(serializer.data)
+
+
+class AcademyUserCreditLedgerView(APIView):
+    extensions = APIViewExtensions(sort="-created_at", paginate=True)
+
+    @capable_of("read_invoice")
+    def get(self, request, user_id, academy_id=None):
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+
+        user = User.objects.filter(id=user_id).first()
+        if not user:
+            raise ValidationException(
+                translation(lang, en="User not found", es="Usuario no encontrado", slug="user-not-found"),
+                code=404,
+            )
+
+        items = CreditLedgerEntry.objects.select_related(
+            "user",
+            "plan_financing",
+            "source_invoice",
+            "subscription",
+        ).prefetch_related("plan_financing__plans")
+        items = items.filter(user_id=user_id)
+
+        # Keep academy scope for academy endpoints.
+        items = items.filter(
+            Q(plan_financing__academy_id=academy_id)
+            | Q(subscription__academy_id=academy_id)
+            | Q(source_invoice__academy_id=academy_id)
+        ).distinct()
+
+        if scope := request.GET.get("scope"):
+            items = items.filter(scope=scope)
+
+        if financing_id := request.GET.get("plan_financing"):
+            items = items.filter(plan_financing_id=financing_id)
+
+        if invoice_id := request.GET.get("invoice"):
+            items = items.filter(source_invoice_id=invoice_id)
+
+        date_start, date_end = parse_date_range_from_request(request, lang)
+        if date_start is not None:
+            items = items.filter(created_at__gte=date_start)
+        if date_end is not None:
+            items = items.filter(created_at__lte=date_end)
+
+        items = handler.queryset(items)
+        serializer = GetUserCreditLedgerEntrySerializer(items, many=True)
         return handler.response(serializer.data)
 
 
