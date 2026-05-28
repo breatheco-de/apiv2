@@ -41,6 +41,7 @@ def plan_financing_item(data={}):
         "externally_managed": False,
         "next_charge_pull_applied": False,
         "how_many_installments": 0,
+        "installments_paid": 1,
         "country_code": "",
         "currency_id": 1,
         "conversion_info": None,
@@ -360,6 +361,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         financing = self.bc.database.list_of("payments.PlanFinancing")[0]
         next_payment_at = model.invoice.paid_at + relativedelta(months=4)
         assert financing["how_many_installments"] == 4
+        assert financing["installments_paid"] == 0
         assert financing["monthly_price"] == 1200
         assert financing["initial_payment_amount"] == 5000
         assert financing["initial_payment_notes"] == "Staff discount approved"
@@ -370,17 +372,8 @@ class PaymentsTestSuite(PaymentsTestCase):
             tzinfo=None
         )
 
-        deposits = self.bc.database.list_of("payments.StudentDeposit")
-        assert len(deposits) == 1
-        assert deposits[0]["user_id"] == model.user.id
-        assert deposits[0]["academy_id"] == model.academy.id
-        assert deposits[0]["invoice_id"] == model.invoice.id
-        assert deposits[0]["plan_financing_id"] == financing["id"]
-        assert deposits[0]["amount"] == 5000
-        assert deposits[0]["currency_id"] == model.invoice.currency.id
-        assert deposits[0]["status"] == "APPLIED"
-        assert deposits[0]["notes"] == "Staff discount approved"
-        assert deposits[0]["applied_at"] == UTC_NOW
+        invoice = self.bc.database.list_of("payments.Invoice")[0]
+        assert invoice["invoice_kind"] == "MANUAL_DEPOSIT"
 
     @patch("logging.Logger.info", MagicMock())
     @patch("logging.Logger.error", MagicMock())

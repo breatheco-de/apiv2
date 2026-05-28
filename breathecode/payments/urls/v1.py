@@ -17,6 +17,7 @@ from ..views import (
     AcademyInvoiceRefundView,
     AcademyInvoiceRecordRefundView,
     AcademyInvoiceView,
+    AcademyUserCreditLedgerView,
     AcademyPaymentMethodView,
     AcademyPaymentSettingsView,
     AcademyPlanFinancingView,
@@ -24,6 +25,7 @@ from ..views import (
     AcademyPlanServiceStockSchedulersRegenerateView,
     AcademyPlanSpecificServiceItemView,
     AcademyPlanSubscriptionView,
+    AcademyPlanSyncFinancingExpirationView,
     AcademyPlanView,
     AcademyPublishableKeyView,
     AcademyServiceItemView,
@@ -96,6 +98,16 @@ urlpatterns = [
     path("academy/plan", AcademyPlanView.as_view(), name="academy_plan"),
     path("academy/plan/<int:plan_id>", AcademyPlanView.as_view(), name="academy_plan_id"),
     path("academy/plan/<slug:plan_slug>", AcademyPlanView.as_view(), name="academy_plan_slug"),
+    path(
+        "academy/plan/<int:plan_id>/sync/financing/expiration",
+        AcademyPlanSyncFinancingExpirationView.as_view(),
+        name="academy_plan_id_sync_financing_expiration",
+    ),
+    path(
+        "academy/plan/<slug:plan_slug>/sync/financing/expiration",
+        AcademyPlanSyncFinancingExpirationView.as_view(),
+        name="academy_plan_slug_sync_financing_expiration",
+    ),
     path("academy/financingoption", AcademyFinancingOptionView.as_view(), name="academy_financingoption"),
     path(
         "academy/financingoption/<int:financing_option_id>",
@@ -207,6 +219,11 @@ urlpatterns = [
     path("me/invoice/<int:invoice_id>", MeInvoiceView.as_view()),
     path("academy/invoice", AcademyInvoiceView.as_view(), name="academy_invoice"),
     path("academy/invoice/<int:invoice_id>", AcademyInvoiceView.as_view(), name="academy_invoice_id"),
+    path(
+        "academy/user/<int:user_id>/credit-ledger",
+        AcademyUserCreditLedgerView.as_view(),
+        name="academy_user_credit_ledger",
+    ),
     path(
         "academy/invoice/<int:invoice_id>/refund", AcademyInvoiceRefundView.as_view(), name="academy_invoice_id_refund"
     ),
