@@ -1120,10 +1120,6 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
             payment_settings = AcademyPaymentSettings.objects.filter(academy=plan_financing.academy).first()
             early_renewal_window_days = payment_settings.early_renewal_window_days if payment_settings else 2
-            if early_renewal_window_days == 0:
-                cooldown_days = 5
-            else:
-                cooldown_days = early_renewal_window_days
 
             # Check if plan financing has deleted or discontinued plans
             if plan_financing.plans.filter(status__in=[Plan.Status.DISCONTINUED, Plan.Status.DELETED]).exists():
@@ -1180,7 +1176,6 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
             invoices = plan_financing.invoices.filter(bag__was_delivered=True).order_by("created_at")
             first_invoice = invoices.first()
-            last_invoice = invoices.filter(bag__was_delivered=True).last()
 
             if first_invoice is None:
                 msg = f"No invoices found for PlanFinancing with id {plan_financing_id}"
@@ -1190,9 +1185,10 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
                 raise AbortTask(msg)
 
-            if plan_financing.initial_payment_amount is not None:
-                amount = plan_financing.monthly_price
-            else:
+            # Contract source of truth: monthly_price.
+            amount = float(plan_financing.monthly_price or 0)
+            if amount <= 0:
+                # Legacy fallback for old records where monthly_price was not reliably populated.
                 # Derive the display price per installment from the first invoice amount, but exclude reward coupons.
                 amount = first_invoice.amount
                 coupons = first_invoice.bag.coupons.all() if first_invoice.bag else []
@@ -1216,9 +1212,6 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                         amount += v
 
             installments = plan_financing.how_many_installments
-
-            if utc_now - last_invoice.paid_at < timedelta(days=cooldown_days):
-                raise AbortTask(f"PlanFinancing with id {plan_financing_id} was paid earlier")
 
             # installments_paid is the authoritative counter of closed billing cycles.
             remaining_installments = installments - plan_financing.installments_paid

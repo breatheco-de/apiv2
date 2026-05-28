@@ -7,7 +7,7 @@ from dateutil.relativedelta import relativedelta
 from capyc.rest_framework.exceptions import ValidationException
 
 from breathecode.payments import actions, tasks
-from breathecode.payments.models import CreditLedgerEntry
+from breathecode.payments.models import AcademyPaymentSettings, CreditLedgerEntry
 
 
 @pytest.fixture(autouse=True)
@@ -90,7 +90,7 @@ def test_register_student_deposit_applies_payment_to_plan_financing(
     assert financing["status"] == "ACTIVE"
     assert financing["status_message"] is None
     assert financing["next_payment_at"] == model.plan_financing.next_payment_at + relativedelta(months=1)
-    assert financing["valid_until"] == model.plan_financing.valid_until + relativedelta(months=1)
+    assert financing["valid_until"] == financing["next_payment_at"]
     assert tasks.renew_plan_financing_consumables.delay.call_args_list == [call(model.plan_financing.id)]
     assert actions.reschedule_billing_tasks.call_args_list == [
         call(plan_financing_id=model.plan_financing.id)
@@ -598,11 +598,12 @@ def test_register_student_deposit_intermediate_overpayment_adds_credit(
 ):
     """
     On an intermediate installment, paying more than still_owed is allowed.
-    The surplus beyond still_owed is recorded as CREDIT_ADDED for future installments.
+    FIFO policy applies when an installment closes with existing credit:
+    consume prior credit first, then add only the deposit surplus as new credit.
 
     Scenario: 4-installment plan at $300/month, $100 credit already accumulated.
-    still_owed = $300 - $100 = $200. Depositing $250 closes the installment
-    and adds $50 as new credit (250 - 200 = 50).
+    still_owed = $300 - $100 = $200. Depositing $250 closes the installment,
+    consumes $100 prior credit, and adds $50 new credit.
     """
     monkeypatch.setattr(actions.timezone, "now", MagicMock(return_value=utc_now))
     monkeypatch.setattr(tasks.renew_plan_financing_consumables, "delay", MagicMock())
@@ -662,11 +663,18 @@ def test_register_student_deposit_intermediate_overpayment_adds_credit(
 
     credits = database.list_of("payments.CreditLedgerEntry")
     assert result.allocation.installment_applied is True
-    assert result.allocation.credit_entry_type == CreditLedgerEntry.EntryType.CREDIT_ADDED
-    assert abs(result.allocation.credit_entry_amount - 50) < 1e-6
-    # Total credit: 100 (prior) + 50 (new) = 150
-    assert abs(result.credit_balance - 150) < 1e-6
-    assert len(credits) == 2
+    assert result.allocation.credit_entry_type is None
+    assert result.allocation.credit_entry_amount == pytest.approx(0, abs=1e-6)
+    assert result.allocation.credit_consumed == pytest.approx(100, abs=1e-6)
+    assert result.allocation.credit_added == pytest.approx(50, abs=1e-6)
+    # Net credit: 100 (prior) - 100 (consumed) + 50 (new) = 50
+    assert abs(result.credit_balance - 50) < 1e-6
+    assert len(credits) == 3
+    consumed = [c for c in credits if c["entry_type"] == "CREDIT_CONSUMED"]
+    added = [c for c in credits if c["entry_type"] == "CREDIT_ADDED"]
+    assert len(consumed) == 1
+    assert consumed[0]["amount"] == pytest.approx(-100, abs=1e-6)
+    assert len(added) == 2
     assert database.list_of("payments.PlanFinancing")[0]["status"] == "ACTIVE"
 
 
@@ -741,3 +749,127 @@ def test_register_student_deposit_rejects_when_deposit_exceeds_plan_total(
     assert exc_info.value.slug == "overpayment-exceeds-plan-total"
     assert len(database.list_of("payments.CreditLedgerEntry")) == 1
     assert database.list_of("payments.PlanFinancing")[0]["status"] == "ACTIVE"
+
+
+def test_register_student_deposit_outside_early_window_adds_credit_only(
+    database: capy.Database, monkeypatch: pytest.MonkeyPatch, utc_now
+):
+    """
+    Outside early renewal window, deposits are deferred as credit and must NOT close installments.
+    """
+    monkeypatch.setattr(actions.timezone, "now", MagicMock(return_value=utc_now))
+    monkeypatch.setattr(tasks.renew_plan_financing_consumables, "delay", MagicMock())
+    monkeypatch.setattr(actions, "reschedule_billing_tasks", MagicMock())
+
+    model = database.create(
+        country=1,
+        city=1,
+        academy=1,
+        user=1,
+        plan={"is_renewable": False},
+        currency=1,
+        proof_of_payment=2,
+        payment_method={"currency_id": 1, "is_credit_card": False, "is_crypto": False},
+        bag={"was_delivered": True},
+        invoice={
+            "amount": 300,
+            "paid_at": utc_now - relativedelta(months=1),
+            "status": "FULFILLED",
+            "externally_managed": True,
+        },
+        plan_financing={
+            "academy_id": 1,
+            "user_id": 1,
+            "monthly_price": 300,
+            "how_many_installments": 4,
+            "next_payment_at": utc_now + relativedelta(days=10),
+            "valid_until": utc_now + relativedelta(months=3),
+            "plan_expires_at": utc_now + relativedelta(months=12),
+            "status": "ACTIVE",
+            "currency_id": 1,
+        },
+    )
+    model.plan_financing.invoices.add(model.invoice)
+    model.plan_financing.plans.add(model.plan)
+    AcademyPaymentSettings.objects.create(academy=model.academy, early_renewal_window_days=3)
+
+    result = actions.register_student_deposit(
+        {
+            "plan_financing": model.plan_financing.id,
+            "amount": 300,
+            "payment_method": model.payment_method.id,
+        },
+        model.proof_of_payment[1],
+        model.academy.id,
+        "en",
+    )
+
+    financing = database.list_of("payments.PlanFinancing")[0]
+    assert result.allocation.installment_applied is False
+    assert result.allocation.credit_added == pytest.approx(300, abs=1e-6)
+    assert result.credit_balance == pytest.approx(300, abs=1e-6)
+    assert financing["next_payment_at"] == model.plan_financing.next_payment_at
+    assert tasks.renew_plan_financing_consumables.delay.call_args_list == []
+    assert actions.reschedule_billing_tasks.call_args_list == []
+
+
+def test_register_student_deposit_inside_early_window_can_close_installment(
+    database: capy.Database, monkeypatch: pytest.MonkeyPatch, utc_now
+):
+    """
+    Inside early renewal window, a deposit that reaches installment amount can close the installment.
+    """
+    monkeypatch.setattr(actions.timezone, "now", MagicMock(return_value=utc_now))
+    monkeypatch.setattr(tasks.renew_plan_financing_consumables, "delay", MagicMock())
+    monkeypatch.setattr(actions, "reschedule_billing_tasks", MagicMock())
+
+    model = database.create(
+        country=1,
+        city=1,
+        academy=1,
+        user=1,
+        plan={"is_renewable": False},
+        currency=1,
+        proof_of_payment=2,
+        payment_method={"currency_id": 1, "is_credit_card": False, "is_crypto": False},
+        bag={"was_delivered": True},
+        invoice={
+            "amount": 300,
+            "paid_at": utc_now - relativedelta(months=1),
+            "status": "FULFILLED",
+            "externally_managed": True,
+        },
+        plan_financing={
+            "academy_id": 1,
+            "user_id": 1,
+            "monthly_price": 300,
+            "how_many_installments": 4,
+            "next_payment_at": utc_now + relativedelta(days=2),
+            "valid_until": utc_now + relativedelta(months=3),
+            "plan_expires_at": utc_now + relativedelta(months=12),
+            "status": "ACTIVE",
+            "currency_id": 1,
+        },
+    )
+    model.plan_financing.invoices.add(model.invoice)
+    model.plan_financing.plans.add(model.plan)
+    AcademyPaymentSettings.objects.create(academy=model.academy, early_renewal_window_days=3)
+
+    result = actions.register_student_deposit(
+        {
+            "plan_financing": model.plan_financing.id,
+            "amount": 300,
+            "payment_method": model.payment_method.id,
+        },
+        model.proof_of_payment[1],
+        model.academy.id,
+        "en",
+    )
+
+    financing = database.list_of("payments.PlanFinancing")[0]
+    assert result.allocation.installment_applied is True
+    assert result.allocation.credit_added == pytest.approx(0, abs=1e-6)
+    assert result.credit_balance == pytest.approx(0, abs=1e-6)
+    assert financing["next_payment_at"] == model.plan_financing.next_payment_at + relativedelta(months=1)
+    assert tasks.renew_plan_financing_consumables.delay.call_args_list == [call(model.plan_financing.id)]
+    assert actions.reschedule_billing_tasks.call_args_list == [call(plan_financing_id=model.plan_financing.id)]

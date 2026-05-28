@@ -16,14 +16,38 @@ def setup(db):
     yield
 
 
-def _make_deposit_result(invoice, *, installment_applied=True, credit_entry_amount=0.0,
-                         credit_entry_type=None, credit_consumed=0.0,
-                         credit_balance=0.0, remaining_installments=1, warning=None):
+def _make_deposit_result(
+    invoice,
+    *,
+    installment_applied=True,
+    credit_entry_amount=0.0,
+    credit_entry_type=None,
+    credit_consumed=0.0,
+    credit_entries=None,
+    credit_added=0.0,
+    credit_balance=0.0,
+    remaining_installments=1,
+    warning=None,
+):
+    if credit_entries is None and credit_entry_type is not None:
+        credit_entries = [{"amount": credit_entry_amount, "entry_type": credit_entry_type}]
+    elif credit_entries is None:
+        credit_entries = []
+
+    if credit_added == 0.0 and credit_entries:
+        credit_added = sum(
+            float(entry.get("amount", 0.0))
+            for entry in credit_entries
+            if entry.get("entry_type") == CreditLedgerEntry.EntryType.CREDIT_ADDED
+        )
+
     allocation = DepositAllocation(
         installment_applied=installment_applied,
+        credit_added=credit_added,
         credit_entry_amount=credit_entry_amount,
         credit_entry_type=credit_entry_type,
         credit_consumed=credit_consumed,
+        credit_entries=credit_entries,
         invoice_amount=invoice.amount,
     )
     return DepositResult(
@@ -101,6 +125,8 @@ def test_success_returns_201_with_rich_response(bc: Breathecode, client, patch):
     assert "invoice" in data
     assert "installment_applied" in data
     assert "credit_entry" in data
+    assert "credit_entries" in data
+    assert "credit_added" in data
     assert "credit_balance" in data
     assert "remaining_installments" in data
     assert "warning" in data
@@ -108,6 +134,8 @@ def test_success_returns_201_with_rich_response(bc: Breathecode, client, patch):
     assert data["invoice"]["id"] == model.invoice.id
     assert data["installment_applied"] is True
     assert data["credit_entry"] is None
+    assert data["credit_entries"] == []
+    assert data["credit_added"] == 0.0
     assert data["credit_balance"] == 0.0
     assert data["remaining_installments"] == 1
     assert data["warning"] is None
@@ -162,6 +190,8 @@ def test_response_includes_credit_entry_when_overpayment(bc: Breathecode, client
     data = response.json()
     assert data["installment_applied"] is True
     assert data["credit_entry"] == {"amount": 300.0, "entry_type": "CREDIT_ADDED"}
+    assert data["credit_entries"] == [{"amount": 300.0, "entry_type": "CREDIT_ADDED"}]
+    assert data["credit_added"] == 300.0
     assert data["credit_balance"] == 300.0
     assert data["remaining_installments"] == 2
     assert data["warning"] is None
@@ -209,5 +239,7 @@ def test_response_includes_warning_when_partial_payment(bc: Breathecode, client,
     data = response.json()
     assert data["installment_applied"] is False
     assert data["credit_entry"] == {"amount": 200.0, "entry_type": "CREDIT_ADDED"}
+    assert data["credit_entries"] == [{"amount": 200.0, "entry_type": "CREDIT_ADDED"}]
+    assert data["credit_added"] == 200.0
     assert data["credit_balance"] == 200.0
     assert data["warning"] is not None

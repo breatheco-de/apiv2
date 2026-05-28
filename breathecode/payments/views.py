@@ -6561,6 +6561,8 @@ class AcademyStudentDepositView(APIView):
             "invoice": GetInvoiceSmallSerializer(result.invoice, many=False).data,
             "installment_applied": alloc.installment_applied,
             "credit_entry": credit_entry_data,
+            "credit_entries": alloc.credit_entries,
+            "credit_added": alloc.credit_added,
             "credit_consumed": alloc.credit_consumed,
             "credit_balance": result.credit_balance,
             "remaining_installments": result.remaining_installments,
