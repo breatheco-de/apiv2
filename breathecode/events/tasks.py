@@ -12,10 +12,11 @@ import breathecode.notify.actions as notify_actions
 from breathecode.admissions.models import CohortTimeSlot
 from breathecode.events.actions import ensure_livekit_room_for_event
 from breathecode.services.eventbrite import Eventbrite
+from breathecode.services.luma import Luma
 from breathecode.utils import TaskPriority
 from breathecode.utils.datetime_integer import DatetimeInteger
 
-from .models import Event, EventCheckin, EventbriteWebhook, EventContext, LiveClass, Organization
+from .models import Event, EventCheckin, EventbriteWebhook, EventContext, LiveClass, LumaWebhook, Organization
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +76,40 @@ def async_eventbrite_webhook(self, eventbrite_webhook_id):
         status = "error"
 
     logger.debug(f"Eventbrite status: {status}")
+
+
+@shared_task(bind=True, priority=TaskPriority.ACADEMY.value)
+def async_luma_webhook(self, luma_webhook_id):
+    logger.debug("Starting async_luma_webhook")
+    status = "ok"
+
+    webhook = LumaWebhook.objects.filter(id=luma_webhook_id).first()
+    if not webhook:
+        logger.debug(f"Luma webhook {luma_webhook_id} not found")
+        return
+
+    organization = Organization.objects.filter(id=webhook.organization_id).first()
+
+    if organization:
+        try:
+            client = Luma()
+            client.execute_action(luma_webhook_id)
+        except Exception as e:
+            logger.debug("Luma exception")
+            logger.debug(str(e))
+            status = "error"
+
+    else:
+        message = f"Organization {webhook.organization_id} doesn't exist"
+
+        webhook.status = "ERROR"
+        webhook.status_text = message
+        webhook.save()
+
+        logger.debug(message)
+        status = "error"
+
+    logger.debug(f"Luma status: {status}")
 
 
 @shared_task(bind=True, priority=TaskPriority.ACADEMY.value)

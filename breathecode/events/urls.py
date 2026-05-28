@@ -80,6 +80,7 @@ from .views import (
     PublicLiveClassView,
     UserEventCheckinView,
     eventbrite_webhook,
+    luma_webhook,
     get_events,
     join_event,
     join_live_class,
@@ -154,6 +155,7 @@ urlpatterns = [
     path("academy/checkin", AcademyEventCheckinView.as_view(), name="academy_checkin"),
     path("academy/checkin.csv", AcademyEventCheckinView.as_view(), name="academy_checkin_csv"),
     path("eventbrite/webhook/<int:organization_id>", eventbrite_webhook, name="eventbrite_webhook_id"),
+    path("luma/webhook/<int:organization_id>", luma_webhook, name="luma_webhook_id"),
     path("live-workshop-status", live_workshop_status, name="live_workshop_status"),
     path("event/<int:event_id>/livekit/token", LiveKitTokenView.as_view(), name="event_livekit_token"),
 ]

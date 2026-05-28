@@ -842,12 +842,99 @@ def get_ical_cohort_description(item: Cohort):
     return description
 
 
+def register_event_attendee_from_external(
+    *,
+    event,
+    email: str,
+    first_name: str,
+    last_name: str,
+    utm_source: str,
+    campaign: str,
+    organization,
+):
+    from django.contrib.auth.models import User
+
+    from breathecode.events.models import EventCheckin
+    from breathecode.marketing.actions import add_to_active_campaign, set_optional
+    from breathecode.marketing.models import ActiveCampaignAcademy
+    from breathecode.marketing.tasks import add_event_tags_to_student
+
+    if organization.academy is None:
+        raise Exception("Organization not have one Academy")
+
+    academy_id = organization.academy.id
+    local_attendee = User.objects.filter(email=email).first()
+
+    if not EventCheckin.objects.filter(email=email, event=event).count():
+        checkin = EventCheckin(
+            email=email, status="PENDING", event=event, attendee=local_attendee, utm_source=utm_source
+        )
+        checkin.save()
+
+    elif not EventCheckin.objects.filter(email=email, event=event, attendee=local_attendee).count():
+        checkin = EventCheckin.objects.filter(email=email, event=event).first()
+        checkin.attendee = local_attendee
+        checkin.save()
+    else:
+        checkin = EventCheckin.objects.filter(email=email, event=event).first()
+
+    contact = {
+        "email": email,
+        "first_name": first_name,
+        "last_name": last_name,
+    }
+
+    custom = {
+        "academy": event.academy.slug,
+        "source": utm_source,
+        "campaign": campaign,
+        "language": event.lang,
+    }
+
+    contact = set_optional(contact, "utm_location", custom, "academy")
+    contact = set_optional(contact, "utm_source", custom, "source")
+    contact = set_optional(contact, "utm_campaign", custom, "campaign")
+
+    if event.lang:
+        contact = set_optional(contact, "utm_language", custom, "language")
+
+    academy = ActiveCampaignAcademy.objects.filter(academy__id=academy_id).first()
+    if academy is None:
+        message = "ActiveCampaignAcademy doesn't exist"
+        raise Exception(message)
+
+    automation_id = (
+        ActiveCampaignAcademy.objects.filter(academy__id=academy_id)
+        .values_list("event_attendancy_automation__id", flat=True)
+        .first()
+    )
+
+    if automation_id:
+        add_to_active_campaign(contact, academy_id, automation_id)
+    else:
+        message = "Automation for event registration doesn't exist"
+        raise Exception(message)
+
+    add_event_tags_to_student.delay(event.id, email=email)
+
+    return checkin, local_attendee
+
+
 @functools.lru_cache(maxsize=1)
 def is_eventbrite_enabled():
     if "ENV" in os.environ and os.environ["ENV"] == "test":
         return True
 
     return os.getenv("EVENTBRITE", "0") == "1"
+
+
+@functools.lru_cache(maxsize=1)
+def is_luma_enabled():
+    if "ENV" in os.environ and os.environ["ENV"] == "test":
+        return True
+
+    value = os.getenv("LUMA_EVENT_PROCESSING", "1").strip().lower()
+    return value not in ("0", "false", "no", "off")
 
 
 def build_room_name(event: Event) -> str:

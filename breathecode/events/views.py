@@ -37,6 +37,7 @@ from breathecode.events.caches import EventCache, LiveClassCache
 from breathecode.renderers import PlainTextRenderer
 from breathecode.services.daily.client import DailyClient
 from breathecode.services.eventbrite import Eventbrite
+from breathecode.services.luma import Luma
 from breathecode.services.livekit.client import LiveKitAdmin
 from breathecode.utils import (
     DatetimeInteger,
@@ -95,7 +96,12 @@ from .serializers import (
     PUTEventCheckinSerializer,
     VenueSerializer,
 )
-from .tasks import async_eventbrite_webhook, mark_live_class_as_started, send_event_suspended_notification
+from .tasks import (
+    async_eventbrite_webhook,
+    async_luma_webhook,
+    mark_live_class_as_started,
+    send_event_suspended_notification,
+)
 
 logger = logging.getLogger(__name__)
 MONDAY = 0
@@ -1883,6 +1889,49 @@ class AcademyEventCheckinView(APIView):
             },
             status=202,
         )
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+@renderer_classes([PlainTextRenderer])
+def luma_webhook(request, organization_id):
+    import json
+
+    from django.http import HttpResponseForbidden
+
+    if actions.is_luma_enabled() is False:
+        return Response(
+            "Luma event processing is disabled, set LUMA_EVENT_PROCESSING=1 to enable (enabled by default)",
+            content_type="text/plain",
+        )
+
+    raw_body = request.body
+    organization = Organization.objects.filter(id=organization_id).first()
+    if not organization or not organization.luma_webhook_secret:
+        return HttpResponseForbidden("Forbidden")
+
+    signature_header = request.headers.get("Webhook-Signature") or request.META.get("HTTP_WEBHOOK_SIGNATURE")
+    if not Luma.verify_webhook_signature(organization.luma_webhook_secret, signature_header, raw_body):
+        return HttpResponseForbidden("Forbidden")
+
+    try:
+        payload = json.loads(raw_body.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return HttpResponseForbidden("Forbidden")
+
+    headers = {
+        "Webhook-Id": request.headers.get("Webhook-Id") or request.META.get("HTTP_WEBHOOK_ID"),
+    }
+
+    webhook = Luma.add_webhook_to_log(payload, organization_id, headers)
+
+    if webhook:
+        async_luma_webhook.delay(webhook.id)
+    else:
+        logger.debug("One request cannot be parsed, maybe you should update `Luma.add_webhook_to_log`")
+        logger.debug(payload)
+
+    return Response("ok", content_type="text/plain")
 
 
 @api_view(["POST"])

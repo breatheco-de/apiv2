@@ -9,5 +9,14 @@ class EventsQueriesMixin:
         """Generate queries"""
         return {
             "module": "events",
-            "models": ["Organization", "Organizer", "Venue", "EventType", "Event", "EventCheckin", "EventbriteWebhook"],
+            "models": [
+                "Organization",
+                "Organizer",
+                "Venue",
+                "EventType",
+                "Event",
+                "EventCheckin",
+                "EventbriteWebhook",
+                "LumaWebhook",
+            ],
         }

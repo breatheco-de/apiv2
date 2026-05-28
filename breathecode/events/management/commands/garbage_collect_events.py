@@ -2,7 +2,7 @@ from datetime import timedelta
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from ...models import Event, EventbriteWebhook, FINISHED
+from ...models import Event, EventbriteWebhook, FINISHED, LumaWebhook
 
 
 class Command(BaseCommand):
@@ -52,6 +52,31 @@ class Command(BaseCommand):
             )
         )
 
+    def delete_old_luma_webhooks(self):
+        """Delete old LumaWebhook records (done after 30 days, errored after 60 days)."""
+        utc_now = timezone.now()
+        how_many_days_with_error = 60
+        how_many_days_with_done = 30
+
+        webhooks = LumaWebhook.objects.filter(
+            created_at__lte=utc_now - timedelta(days=how_many_days_with_done), status="DONE"
+        )
+        count_done = webhooks.count()
+        webhooks.delete()
+
+        webhooks = LumaWebhook.objects.filter(
+            created_at__lte=utc_now - timedelta(days=how_many_days_with_error)
+        ).exclude(status="DONE")
+        count_error = webhooks.count()
+        webhooks.delete()
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Successfully deleted {str(count_done)} done, and {str(count_error)} errored LumaWebhook's"
+            )
+        )
+
     def handle(self, *args, **options):
         self.end_past_events()
         self.delete_old_webhooks()
+        self.delete_old_luma_webhooks()
