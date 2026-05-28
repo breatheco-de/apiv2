@@ -397,6 +397,15 @@ class InvoiceForm(forms.ModelForm):
         }
 
 
+class CreditLedgerEntryFromInvoiceInline(admin.TabularInline):
+    model = CreditLedgerEntry
+    fk_name = "source_invoice"
+    extra = 0
+    can_delete = False
+    fields = ("id", "scope", "entry_type", "amount", "plan_financing", "subscription", "notes", "created_at")
+    readonly_fields = ("id", "scope", "entry_type", "amount", "plan_financing", "subscription", "notes", "created_at")
+
+
 @admin.display(description="Recalculate amount breakdown")
 def recalculate_invoice_breakdown(modeladmin, request, queryset):
     from django.contrib import messages
@@ -433,7 +442,7 @@ class InvoiceAdmin(admin.ModelAdmin):
     search_fields = ["id", "status", "user__email"]
     raw_id_fields = ["user", "currency", "bag", "academy"]
     actions = [recalculate_invoice_breakdown]
-    inlines = [CreditNoteInline]
+    inlines = [CreditNoteInline, CreditLedgerEntryFromInvoiceInline]
 
     fieldsets = (
         (
@@ -585,6 +594,26 @@ class PlanFinancingInvoiceInline(admin.TabularInline):
         return obj.invoice.paid_at
 
 
+class PlanFinancingCreditLedgerInline(admin.TabularInline):
+    model = CreditLedgerEntry
+    fk_name = "plan_financing"
+    extra = 0
+    can_delete = False
+    raw_id_fields = ("source_invoice", "subscription", "user")
+    fields = (
+        "id",
+        "user",
+        "scope",
+        "entry_type",
+        "amount",
+        "source_invoice",
+        "subscription",
+        "notes",
+        "created_at",
+    )
+    readonly_fields = fields
+
+
 @admin.register(PlanFinancing)
 class PlanFinancingAdmin(admin.ModelAdmin):
     list_display = (
@@ -677,7 +706,7 @@ class PlanFinancingAdmin(admin.ModelAdmin):
             },
         ),
     )
-    inlines = [PlanFinancingInvoiceInline]
+    inlines = [PlanFinancingInvoiceInline, PlanFinancingCreditLedgerInline]
     actions = [renew_plan_financing_consumables, charge_plan_financing, regenerate_service_stock_schedulers]
 
     def grace_period(self, obj):

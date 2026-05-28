@@ -1081,6 +1081,7 @@ class GetInvoiceSerializer(GetInvoiceSmallSerializer):
     refunded_at = serpy.Field()
     amount_breakdown = serpy.Field()
     credit_notes = serpy.MethodField()
+    credit_entries = serpy.MethodField()
     standalone_consumables = serpy.MethodField()
     payment_method = serpy.MethodField()
     proof = serpy.MethodField()
@@ -1111,6 +1112,9 @@ class GetInvoiceSerializer(GetInvoiceSmallSerializer):
         consumables_qs = obj.standalone_consumables.select_related("service_item__service", "user")
         consumables = list(consumables_qs)
         return GetConsumableForInvoiceSerializer(consumables, many=True).data
+
+    def get_credit_entries(self, obj):
+        return CreditLedgerEntrySerializer(obj.credit_entries.order_by("created_at"), many=True).data
 
     def get_payment_method(self, obj):
         if obj.payment_method_id and obj.payment_method:
