@@ -2758,6 +2758,31 @@ class AcademyPlanFinancingView(APIView):
         return Response({"detail": "Plan financing updated successfully"}, status=status.HTTP_200_OK)
 
 
+class AcademyPlanFinancingPaymentScheduleView(APIView):
+    @capable_of("read_invoice")
+    def get(self, request, financing_id, academy_id=None):
+        lang = get_user_language(request)
+        plan_financing = (
+            PlanFinancing.objects.select_related("currency")
+            .prefetch_related("invoices", "credit_entries")
+            .filter(id=financing_id, academy_id=academy_id)
+            .first()
+        )
+        if not plan_financing:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Plan financing not found",
+                    es="No existe el plan de financiamiento",
+                    slug="not-found",
+                ),
+                code=404,
+            )
+
+        payload = actions.get_plan_financing_payment_schedule(plan_financing, lang=lang)
+        return Response(payload, status=status.HTTP_200_OK)
+
+
 class MeInvoiceView(APIView):
     extensions = APIViewExtensions(sort="-id", paginate=True)
 
