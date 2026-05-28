@@ -579,8 +579,15 @@ class PlanFinancingInvoiceInline(admin.TabularInline):
     extra = 0
     can_delete = False
     raw_id_fields = ("invoice",)
-    fields = ("invoice", "invoice_amount", "invoice_status", "invoice_paid_at")
-    readonly_fields = ("invoice_amount", "invoice_status", "invoice_paid_at")
+    fields = (
+        "invoice",
+        "invoice_amount",
+        "invoice_status",
+        "invoice_paid_at",
+        "credit_added",
+        "credit_consumed",
+    )
+    readonly_fields = ("invoice_amount", "invoice_status", "invoice_paid_at", "credit_added", "credit_consumed", "credit_notes")
     verbose_name = "Associated invoice"
     verbose_name_plural = "Associated invoices"
 
@@ -592,6 +599,26 @@ class PlanFinancingInvoiceInline(admin.TabularInline):
 
     def invoice_paid_at(self, obj):
         return obj.invoice.paid_at
+
+    def credit_added(self, obj):
+        total = sum(
+            e.amount
+            for e in obj.invoice.credit_entries.filter(entry_type=CreditLedgerEntry.EntryType.CREDIT_ADDED)
+        )
+        return total if total else "-"
+
+    def credit_consumed(self, obj):
+        total = sum(
+            abs(e.amount)
+            for e in obj.invoice.credit_entries.filter(entry_type=CreditLedgerEntry.EntryType.CREDIT_CONSUMED)
+        )
+        return total if total else "-"
+
+    def credit_notes(self, obj):
+        notes = [e.notes.strip() for e in obj.invoice.credit_entries.all() if e.notes and e.notes.strip()]
+        if not notes:
+            return "-"
+        return " | ".join(dict.fromkeys(notes))
 
 
 class PlanFinancingCreditLedgerInline(admin.TabularInline):
