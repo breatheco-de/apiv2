@@ -2745,6 +2745,21 @@ def validate_and_create_subscriptions(
         )
 
     initial_payment_notes = data.get("initial_payment_notes", None)
+    if (
+        unique_payment_negotiated_amount is not None
+        and how_many_installments == 1
+        and not str(initial_payment_notes or "").strip()
+    ):
+        raise ValidationException(
+            translation(
+                lang,
+                en="initial_payment_notes is required when using unique_payment_negotiated_amount for one payment plans",
+                es="initial_payment_notes es obligatorio al usar unique_payment_negotiated_amount en planes de un pago",
+                slug="negotiated-amount-notes-required",
+            ),
+            code=400,
+        )
+    initial_payment_notes = format_note_made_by_user(initial_payment_notes, staff_user.id)
 
     try:
         grace_period_duration = int(data.get("grace_period_duration", 0) or 0)
@@ -5611,6 +5626,23 @@ def _conversion_info_for_build_plan_financing_task(conversion_info: Any) -> str 
     return json.dumps(conversion_info)
 
 
+def format_note_made_by_user(note: str | None, user_id: int | None) -> str | None:
+    """
+    Normalize notes to: "Note made by user <user_id>: <note>".
+    """
+    normalized = str(note or "").strip()
+    if not normalized:
+        return None
+
+    if normalized.startswith("Note made by user "):
+        return normalized[:250]
+
+    if user_id is None:
+        return normalized[:250]
+
+    return f"Note made by user {user_id}: {normalized}"[:250]
+
+
 def validate_student_invite_plan_access_config(
     *,
     plans: list[Plan],
@@ -5621,6 +5653,7 @@ def validate_student_invite_plan_access_config(
     grace_period_duration: int,
     grace_period_duration_unit: str,
     lang: str,
+    note_author_user_id: int | None = None,
 ) -> dict[str, Any]:
     """
     Validate optional plan-access fields for POST /v1/auth/academy/student (same financing rules as staff subscription).
@@ -5726,6 +5759,21 @@ def validate_student_invite_plan_access_config(
             code=400,
         )
 
+    if (
+        unique_payment_negotiated_amount is not None
+        and how_many_installments == 1
+        and not str(initial_payment_notes or "").strip()
+    ):
+        raise ValidationException(
+            translation(
+                lang,
+                en="initial_payment_notes is required when using unique_payment_negotiated_amount for one payment plans",
+                es="initial_payment_notes es obligatorio al usar unique_payment_negotiated_amount en planes de un pago",
+            ),
+            slug="negotiated-amount-notes-required",
+            code=400,
+        )
+
     for p in plans:
         if p.financing_options.filter(how_many_months=how_many_installments).first() is None:
             raise ValidationException(
@@ -5737,6 +5785,8 @@ def validate_student_invite_plan_access_config(
                 slug="financing-option-not-found",
                 code=404,
             )
+
+    initial_payment_notes = format_note_made_by_user(initial_payment_notes, note_author_user_id)
 
     return {
         "how_many_installments": how_many_installments,
@@ -5892,6 +5942,22 @@ def create_invited_plan_financing_for_user(
                 slug="invalid-unique-payment-negotiated-amount",
                 code=400,
             )
+
+    if (
+        uniq_negotiated is not None
+        and how_many_installments == 1
+        and not str(initial_payment_notes or "").strip()
+    ):
+        raise ValidationException(
+            translation(
+                lang,
+                en="initial_payment_notes is required when using unique_payment_negotiated_amount for one payment plans",
+                es="initial_payment_notes es obligatorio al usar unique_payment_negotiated_amount en planes de un pago",
+            ),
+            slug="negotiated-amount-notes-required",
+            code=400,
+        )
+    initial_payment_notes = format_note_made_by_user(initial_payment_notes, author.id if author else user.id)
 
     installment_amount = catalog_installment_amount
     if uniq_negotiated is not None:

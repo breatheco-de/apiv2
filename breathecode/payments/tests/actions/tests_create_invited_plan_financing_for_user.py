@@ -141,6 +141,7 @@ class CreateInvitedPlanFinancingForUserTestSuite(PaymentsTestCase):
             author=None,
             lang="en",
             unique_payment_negotiated_amount=8500,
+            initial_payment_notes="One-payment negotiated by staff",
         )
         bag = Bag.objects.filter(user=model.user, type="INVITED").first()
         invoice = Invoice.objects.filter(bag=bag).first()
@@ -153,7 +154,33 @@ class CreateInvitedPlanFinancingForUserTestSuite(PaymentsTestCase):
 
         kw = tasks.build_plan_financing.delay.call_args.kwargs
         self.assertEqual(kw.get("principal_amount"), 8500)
+        self.assertEqual(kw.get("initial_payment_notes"), "Note made by user 1: One-payment negotiated by staff")
         self.assertNotIn("initial_payment_amount", kw)
+
+    @patch("breathecode.payments.tasks.build_plan_financing.delay", MagicMock())
+    def test_unique_payment_negotiated_amount_requires_notes_for_one_payment(self):
+        model = self.bc.database.create(
+            user=1,
+            academy=1,
+            currency=1,
+            cohort={"available_as_saas": True},
+            cohort_set=1,
+            cohort_set_cohort=1,
+            financing_option={"how_many_months": 1, "monthly_price": 9500},
+            plan={"is_renewable": False, "time_of_life": 1, "time_of_life_unit": "MONTH", "status": "ACTIVE"},
+        )
+        with self.assertRaises(ValidationException) as cm:
+            create_invited_plan_financing_for_user(
+                user=model.user,
+                plan=model.plan,
+                academy=model.academy,
+                cohort=model.cohort,
+                payment_method=None,
+                author=None,
+                lang="en",
+                unique_payment_negotiated_amount=8500,
+            )
+        self.assertEqual(getattr(cm.exception, "slug", None), "negotiated-amount-notes-required")
 
     def test_plan_cohort_mismatch_raises(self):
         """Raises when plan's cohort_set does not include the cohort."""
