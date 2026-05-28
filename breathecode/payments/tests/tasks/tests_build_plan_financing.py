@@ -41,6 +41,7 @@ def plan_financing_item(data={}):
         "externally_managed": False,
         "next_charge_pull_applied": False,
         "how_many_installments": 0,
+        "installments_paid": 1,
         "country_code": "",
         "currency_id": 1,
         "conversion_info": None,
@@ -360,6 +361,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         financing = self.bc.database.list_of("payments.PlanFinancing")[0]
         next_payment_at = model.invoice.paid_at + relativedelta(months=4)
         assert financing["how_many_installments"] == 4
+        assert financing["installments_paid"] == 0
         assert financing["monthly_price"] == 1200
         assert financing["initial_payment_amount"] == 5000
         assert financing["initial_payment_notes"] == "Staff discount approved"

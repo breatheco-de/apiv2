@@ -5077,6 +5077,7 @@ def build_plan_addons_financings(bag: Bag, invoice: Invoice, lang: str, conversi
         financing = PlanFinancing.objects.create(
             user=bag.user,
             how_many_installments=1,
+            installments_paid=1,
             next_payment_at=utc_now + relativedelta(months=1),
             academy=bag.academy,
             selected_cohort_set=plan.cohort_set,
