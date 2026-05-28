@@ -7,7 +7,7 @@ from rest_framework.request import Request
 
 from breathecode.payments import actions
 from breathecode.payments.actions import DepositAllocation, DepositResult
-from breathecode.payments.models import CreditLedgerEntry, StudentDeposit
+from breathecode.payments.models import CreditLedgerEntry
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
 
@@ -16,7 +16,7 @@ def setup(db):
     yield
 
 
-def _make_deposit_result(deposit, *, installment_applied=True, credit_entry_amount=0.0,
+def _make_deposit_result(invoice, *, installment_applied=True, credit_entry_amount=0.0,
                          credit_entry_type=None, credit_consumed=0.0,
                          credit_balance=0.0, remaining_installments=1, warning=None):
     allocation = DepositAllocation(
@@ -24,10 +24,10 @@ def _make_deposit_result(deposit, *, installment_applied=True, credit_entry_amou
         credit_entry_amount=credit_entry_amount,
         credit_entry_type=credit_entry_type,
         credit_consumed=credit_consumed,
-        invoice_amount=deposit.amount,
+        invoice_amount=invoice.amount,
     )
     return DepositResult(
-        deposit=deposit,
+        invoice=invoice,
         allocation=allocation,
         credit_balance=credit_balance,
         remaining_installments=remaining_installments,
@@ -76,17 +76,7 @@ def test_success_returns_201_with_rich_response(bc: Breathecode, client, patch):
         currency=1,
         academy=1,
     )
-    deposit = StudentDeposit.objects.create(
-        user=model.user,
-        academy=model.academy,
-        invoice=model.invoice,
-        plan_financing=model.plan_financing,
-        amount=1200,
-        currency=model.currency,
-        status=StudentDeposit.Status.APPLIED,
-        applied_at=utc_now,
-    )
-    result = _make_deposit_result(deposit, installment_applied=True, credit_balance=0.0, remaining_installments=1)
+    result = _make_deposit_result(model.invoice, installment_applied=True, credit_balance=0.0, remaining_installments=1)
     proof = MagicMock()
     patch(proof=proof, result=result)
     client.force_authenticate(user=model.user)
@@ -108,15 +98,14 @@ def test_success_returns_201_with_rich_response(bc: Breathecode, client, patch):
     data = response.json()
 
     # top-level keys
-    assert "deposit" in data
+    assert "invoice" in data
     assert "installment_applied" in data
     assert "credit_entry" in data
     assert "credit_balance" in data
     assert "remaining_installments" in data
     assert "warning" in data
 
-    assert data["deposit"]["id"] == deposit.id
-    assert data["deposit"]["status"] == deposit.status
+    assert data["invoice"]["id"] == model.invoice.id
     assert data["installment_applied"] is True
     assert data["credit_entry"] is None
     assert data["credit_balance"] == 0.0
@@ -149,18 +138,8 @@ def test_response_includes_credit_entry_when_overpayment(bc: Breathecode, client
         currency=1,
         academy=1,
     )
-    deposit = StudentDeposit.objects.create(
-        user=model.user,
-        academy=model.academy,
-        invoice=model.invoice,
-        plan_financing=model.plan_financing,
-        amount=1500,
-        currency=model.currency,
-        status=StudentDeposit.Status.APPLIED,
-        applied_at=utc_now,
-    )
     result = _make_deposit_result(
-        deposit,
+        model.invoice,
         installment_applied=True,
         credit_entry_amount=300.0,
         credit_entry_type=CreditLedgerEntry.EntryType.CREDIT_ADDED,
@@ -205,18 +184,8 @@ def test_response_includes_warning_when_partial_payment(bc: Breathecode, client,
         currency=1,
         academy=1,
     )
-    deposit = StudentDeposit.objects.create(
-        user=model.user,
-        academy=model.academy,
-        invoice=model.invoice,
-        plan_financing=model.plan_financing,
-        amount=200,
-        currency=model.currency,
-        status=StudentDeposit.Status.APPLIED,
-        applied_at=utc_now,
-    )
     result = _make_deposit_result(
-        deposit,
+        model.invoice,
         installment_applied=False,
         credit_entry_amount=200.0,
         credit_entry_type=CreditLedgerEntry.EntryType.CREDIT_ADDED,

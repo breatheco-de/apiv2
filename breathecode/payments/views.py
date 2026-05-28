@@ -102,7 +102,6 @@ from breathecode.payments.serializers import (
     GetPlanSerializer,
     GetServiceItemWithFeaturesSerializer,
     GetServiceSerializer,
-    GetStudentDepositSerializer,
     GetSubscriptionSerializer,
     MentorshipServiceSetSerializer,
     PaymentMethodSerializer,
@@ -6406,7 +6405,7 @@ class AcademyStudentDepositView(APIView):
             }
 
         response_data = {
-            "deposit": GetStudentDepositSerializer(result.deposit, many=False).data,
+            "invoice": GetInvoiceSmallSerializer(result.invoice, many=False).data,
             "installment_applied": alloc.installment_applied,
             "credit_entry": credit_entry_data,
             "credit_consumed": alloc.credit_consumed,

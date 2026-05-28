@@ -46,7 +46,6 @@ from breathecode.payments.models import (
     ServiceItemFeature,
     ServiceStockScheduler,
     ServiceTranslation,
-    StudentDeposit,
     Subscription,
     SubscriptionBillingTeam,
     SubscriptionSeat,
@@ -586,15 +585,6 @@ class PlanFinancingInvoiceInline(admin.TabularInline):
         return obj.invoice.paid_at
 
 
-class StudentDepositInline(admin.TabularInline):
-    model = StudentDeposit
-    extra = 0
-    can_delete = False
-    raw_id_fields = ("invoice", "currency")
-    fields = ("invoice", "amount", "currency", "status", "applied_at", "refunded_at", "notes")
-    readonly_fields = ("invoice", "amount", "currency", "status", "applied_at", "refunded_at", "notes")
-
-
 @admin.register(PlanFinancing)
 class PlanFinancingAdmin(admin.ModelAdmin):
     list_display = (
@@ -605,6 +595,7 @@ class PlanFinancingAdmin(admin.ModelAdmin):
         "monthly_price",
         "initial_payment_amount",
         "how_many_installments",
+        "installments_paid",
         "grace_period",
         "next_payment_at",
         "valid_until",
@@ -637,6 +628,7 @@ class PlanFinancingAdmin(admin.ModelAdmin):
                     "initial_payment_amount",
                     "initial_payment_notes",
                     "how_many_installments",
+                    "installments_paid",
                     "next_payment_at",
                     "valid_until",
                     "plan_expires_at",
@@ -685,7 +677,7 @@ class PlanFinancingAdmin(admin.ModelAdmin):
             },
         ),
     )
-    inlines = [PlanFinancingInvoiceInline, StudentDepositInline]
+    inlines = [PlanFinancingInvoiceInline]
     actions = [renew_plan_financing_consumables, charge_plan_financing, regenerate_service_stock_schedulers]
 
     def grace_period(self, obj):
@@ -704,20 +696,22 @@ class PlanFinancingAdmin(admin.ModelAdmin):
         return format_html("<br>".join(rows))
 
 
-@admin.register(StudentDeposit)
-class StudentDepositAdmin(admin.ModelAdmin):
-    list_display = ("id", "user", "academy", "amount", "currency", "status", "invoice", "plan_financing", "applied_at")
-    list_filter = ("status", "academy", "currency", "applied_at", "refunded_at")
-    search_fields = ("user__email", "user__first_name", "user__last_name", "invoice__id", "plan_financing__id")
-    raw_id_fields = ("user", "academy", "invoice", "plan_financing", "currency")
-
-
 @admin.register(CreditLedgerEntry)
 class CreditLedgerEntryAdmin(admin.ModelAdmin):
-    list_display = ("id", "user", "scope", "entry_type", "amount", "plan_financing", "subscription", "source_deposit", "created_at")
+    list_display = (
+        "id",
+        "user",
+        "scope",
+        "entry_type",
+        "amount",
+        "plan_financing",
+        "subscription",
+        "source_invoice",
+        "created_at",
+    )
     list_filter = ("scope", "entry_type", "plan_financing__academy")
     search_fields = ("user__email", "user__first_name", "user__last_name", "plan_financing__id")
-    raw_id_fields = ("user", "plan_financing", "subscription", "source_deposit")
+    raw_id_fields = ("user", "plan_financing", "subscription", "source_invoice")
     readonly_fields = ("created_at",)
 
 
