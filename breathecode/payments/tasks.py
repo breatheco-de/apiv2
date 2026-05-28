@@ -257,6 +257,11 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
     if "user" not in extras:
         extras["user"] = user
 
+    if scheduler.consumables.filter(valid_until=scheduler.valid_until).exists():
+        raise AbortTask(
+            f"Consumable with valid_until {scheduler.valid_until} already exists for scheduler {scheduler.id}, skipping to avoid duplicate"
+        )
+
     consumable = Consumable(
         service_item=service_item,
         unit_type=service_item.unit_type,
@@ -1103,6 +1108,9 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
             if plan_financing.status in statuses and (
                 plan_financing.plan_expires_at < utc_now and plan_financing.valid_until < utc_now
             ):
+                plan_financing.status = PlanFinancing.Status.EXPIRED
+                plan_financing.status_message = "Plan financing has reached its expiration date"
+                plan_financing.save()
                 raise AbortTask(f"PlanFinancing with id {plan_financing_id} is over")
 
             if plan_financing.next_payment_at > utc_now:

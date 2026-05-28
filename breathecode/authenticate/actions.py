@@ -1670,6 +1670,7 @@ def accept_invite_action(data=None, token=None, lang="en"):
             unique_payment_negotiated_amount=access.get("unique_payment_negotiated_amount"),
             grace_period_duration=access["grace_period_duration"],
             grace_period_duration_unit=access["grace_period_duration_unit"],
+            financing_option_id=access.get("financing_option_id"),
         )
 
     for user_invite in pending_invites:
