@@ -1920,9 +1920,12 @@ def build_plan_financing(
     # Must use next_payment_at (includes grace) so valid_until shifts with grace; do not anchor only to paid_at.
     valid_until = next_payment_at + relativedelta(months=max(months - 1, 0))
 
+    initial_installments_paid = 0 if initial_payment_amount is not None else 1
+
     financing = PlanFinancing.objects.create(
         user=bag.user,
         how_many_installments=bag.how_many_installments,
+        installments_paid=initial_installments_paid,
         next_payment_at=next_payment_at,
         academy=bag.academy,
         selected_cohort_set=cohort_set,
