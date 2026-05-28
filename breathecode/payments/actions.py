@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime, timedelta
 from decimal import ROUND_FLOOR, Decimal
 from functools import lru_cache
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Literal, Optional, Tuple, Type, TypedDict, Union
 
 import redis
@@ -3191,10 +3191,12 @@ class DepositAllocation:
     """Describes how a single deposit amount was allocated."""
 
     installment_applied: bool
-    credit_entry_amount: float
-    credit_entry_type: Optional[str]
-    credit_consumed: float
-    invoice_amount: float
+    credit_added: float = 0.0
+    credit_entry_amount: float = 0.0
+    credit_entry_type: Optional[str] = None
+    credit_consumed: float = 0.0
+    credit_entries: list[dict[str, Any]] = field(default_factory=list)
+    invoice_amount: float = 0.0
 
 
 @dataclass
@@ -3353,6 +3355,11 @@ def register_student_deposit(
         )
 
     credit_balance = get_credit_balance(plan_financing)
+    utc_now = timezone.now()
+    payment_settings = AcademyPaymentSettings.objects.filter(academy=plan_financing.academy).first()
+    early_renewal_window_days = payment_settings.early_renewal_window_days if payment_settings else 0
+    renewal_window_start = plan_financing.next_payment_at - timedelta(days=early_renewal_window_days)
+    is_within_early_window = utc_now >= renewal_window_start
 
     # ── Determine allocation ──────────────────────────────────────────────────
     # For every installment: how much cash is actually needed after applying credit.
@@ -3379,48 +3386,39 @@ def register_student_deposit(
         )
 
     # At this point amount <= max_deposit, so no overpayment beyond the plan total is possible.
+    # Window policy:
+    # - Outside early window: always treat manual deposit as deferred credit (do not close installment).
+    # - Inside early window: FIFO policy to close the current installment when possible.
     credit_consumed = 0.0
-    if remaining_installments == 1:
-        if amount >= still_owed:
-            # Exact payment — closes the plan.
-            installment_applied = True
-            credit_consumed = credit_balance
-            credit_entry_amount = -credit_balance if credit_balance > 1e-9 else 0.0
-            credit_entry_type = CreditLedgerEntry.EntryType.CREDIT_CONSUMED if credit_entry_amount else None
-        else:
-            # Partial towards the last installment.
-            installment_applied = False
-            credit_entry_amount = amount
-            credit_entry_type = CreditLedgerEntry.EntryType.CREDIT_ADDED
+    credit_added = 0.0
+    installment_applied = False
+
+    if not is_within_early_window:
+        credit_added = amount
     else:
-        if still_owed < 1e-9:
-            # Current installment already covered by existing credit.
-            # Full deposit amount becomes pre-payment credit for upcoming installments.
-            installment_applied = False
-            credit_entry_amount = amount
-            credit_entry_type = CreditLedgerEntry.EntryType.CREDIT_ADDED
-        elif amount >= still_owed - 1e-9:
-            # Closes the installment.
-            # Net credit change = amount - monthly_price:
-            #   - Negative: existing credit was partially consumed (user paid less than full price).
-            #   - Zero: exact payment with credit covering the gap, old credit zeroed out.
-            #   - Positive: overpayment, surplus becomes new credit.
-            installment_applied = True
-            net = amount - monthly_price
-            if net > 1e-9:
-                credit_entry_amount = net
-                credit_entry_type = CreditLedgerEntry.EntryType.CREDIT_ADDED
-            elif net < -1e-9:
-                credit_entry_amount = net  # negative — ledger stores signed amounts
-                credit_entry_type = CreditLedgerEntry.EntryType.CREDIT_CONSUMED
+        # FIFO policy:
+        # - When closing an installment, consume existing credit first.
+        # - Any deposit surplus becomes new credit.
+        # - If an installment is already fully covered by existing credit and future installments remain,
+        #   manual deposit stays as credit (do not close another installment in this call).
+        if remaining_installments == 1:
+            if amount >= still_owed - 1e-9:
+                installment_applied = True
+                credit_consumed = min(credit_balance, monthly_price)
             else:
-                credit_entry_amount = 0.0
-                credit_entry_type = None
+                credit_added = amount
         else:
-            # Partial payment — does not close the installment.
-            installment_applied = False
-            credit_entry_amount = amount
-            credit_entry_type = CreditLedgerEntry.EntryType.CREDIT_ADDED
+            if still_owed < 1e-9:
+                credit_added = amount
+            elif amount >= still_owed - 1e-9:
+                installment_applied = True
+                credit_consumed = min(credit_balance, monthly_price)
+                deposit_used_for_installment = max(monthly_price - credit_consumed, 0.0)
+                credit_added = max(amount - deposit_used_for_installment, 0.0)
+            else:
+                credit_added = amount
+
+    created_credit_entries: list[dict[str, Any]] = []
 
     # ── Build breakdown type label ────────────────────────────────────────────
     breakdown_type = "MANUAL_DEPOSIT_INSTALLMENT" if installment_applied else "MANUAL_DEPOSIT_CREDIT"
@@ -3461,23 +3459,52 @@ def register_student_deposit(
         )
         plan_financing.refresh_from_db(fields=["installments_paid"])
 
-    utc_now = timezone.now()
-
-    # ── Persist ledger entry ──────────────────────────────────────────────────
-    if credit_entry_type is not None:
+    # ── Persist ledger entry/entries (FIFO) ───────────────────────────────────
+    if credit_consumed > 1e-9:
+        amount_consumed = -credit_consumed
         CreditLedgerEntry.objects.create(
             user=plan_financing.user,
             scope=CreditLedgerEntry.Scope.PLAN_FINANCING,
             plan_financing=plan_financing,
-            amount=credit_entry_amount,
-            entry_type=credit_entry_type,
+            amount=amount_consumed,
+            entry_type=CreditLedgerEntry.EntryType.CREDIT_CONSUMED,
             source_invoice=invoice,
             notes=notes,
         )
+        created_credit_entries.append(
+            {
+                "amount": amount_consumed,
+                "entry_type": CreditLedgerEntry.EntryType.CREDIT_CONSUMED,
+            }
+        )
+
+    if credit_added > 1e-9:
+        CreditLedgerEntry.objects.create(
+            user=plan_financing.user,
+            scope=CreditLedgerEntry.Scope.PLAN_FINANCING,
+            plan_financing=plan_financing,
+            amount=credit_added,
+            entry_type=CreditLedgerEntry.EntryType.CREDIT_ADDED,
+            source_invoice=invoice,
+            notes=notes,
+        )
+        created_credit_entries.append(
+            {
+                "amount": credit_added,
+                "entry_type": CreditLedgerEntry.EntryType.CREDIT_ADDED,
+            }
+        )
+
+    # Backward-compatible compact view for callers that still expect one movement.
+    if len(created_credit_entries) == 1:
+        credit_entry_amount = float(created_credit_entries[0]["amount"])
+        credit_entry_type = str(created_credit_entries[0]["entry_type"])
+    else:
+        credit_entry_amount = 0.0
+        credit_entry_type = None
 
     # ── Build warning message ─────────────────────────────────────────────────
-    # Credit after this deposit (credit_entry_amount is positive for CREDIT_ADDED, 0 or negative otherwise).
-    new_credit_balance = credit_balance + (credit_entry_amount if credit_entry_type == CreditLedgerEntry.EntryType.CREDIT_ADDED else 0.0)
+    new_credit_balance = credit_balance - credit_consumed + credit_added
 
     warning: Optional[str] = None
     if not installment_applied and new_credit_balance < monthly_price - 1e-9:
@@ -3509,12 +3536,9 @@ def register_student_deposit(
             delta += relativedelta(months=1)
 
         plan_financing.next_payment_at += delta
-        if plan_financing.valid_until:
-            if utc_now > plan_financing.valid_until:
-                plan_financing.valid_until = utc_now + relativedelta(months=remaining_installments)
-            else:
-                # Keep contract end aligned when paying before due.
-                plan_financing.valid_until += delta
+        plan_financing.valid_until = plan_financing.next_payment_at + relativedelta(
+            months=max(remaining_installments - 1, 0)
+        )
         plan_financing.status = (
             PlanFinancing.Status.ACTIVE if remaining_installments > 0 else PlanFinancing.Status.FULLY_PAID
         )
@@ -3532,9 +3556,11 @@ def register_student_deposit(
 
     allocation = DepositAllocation(
         installment_applied=installment_applied,
+        credit_added=credit_added,
         credit_entry_amount=credit_entry_amount,
         credit_entry_type=credit_entry_type,
         credit_consumed=credit_consumed,
+        credit_entries=created_credit_entries,
         invoice_amount=amount,
     )
 
