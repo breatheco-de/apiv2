@@ -3451,9 +3451,11 @@ def register_student_deposit(
     )
     bag.was_delivered = True
     bag.save()
+    # Every manual deposit invoice represents real cash received for this financing.
+    # Link all of them for complete payment-history/audit visibility.
+    plan_financing.invoices.add(invoice)
     if installment_applied:
-        # Only installment-closing manual payments enter the plan's billing history.
-        plan_financing.invoices.add(invoice)
+        # installments_paid remains the only source of truth for closed billing cycles.
         PlanFinancing.objects.filter(pk=plan_financing.pk).update(
             installments_paid=F("installments_paid") + 1
         )

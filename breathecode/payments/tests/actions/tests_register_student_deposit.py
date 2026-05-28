@@ -299,6 +299,7 @@ def test_register_student_deposit_partial_payment_adds_credit_and_warns(
     assert "150" in result.warning or "partial" in result.warning.lower() or "parcial" in result.warning.lower()
     assert len(credits) == 1
     assert credits[0]["entry_type"] == "CREDIT_ADDED"
+    assert model.plan_financing.invoices.filter(id=result.invoice.id).exists()
     # next_payment_at must NOT have advanced
     assert financing["next_payment_at"] == model.plan_financing.next_payment_at
     assert tasks.renew_plan_financing_consumables.delay.call_args_list == []
@@ -521,6 +522,7 @@ def test_register_student_deposit_allows_prepayment_when_installment_already_cov
     # Total credit: 600 (prior) + 300 (new) = 900
     assert abs(result.credit_balance - 900) < 1e-6
     assert len(credits) == 2
+    assert model.plan_financing.invoices.filter(id=result.invoice.id).exists()
     assert database.list_of("payments.PlanFinancing")[0]["status"] == "ACTIVE"
 
 
@@ -808,6 +810,7 @@ def test_register_student_deposit_outside_early_window_adds_credit_only(
     assert result.allocation.installment_applied is False
     assert result.allocation.credit_added == pytest.approx(300, abs=1e-6)
     assert result.credit_balance == pytest.approx(300, abs=1e-6)
+    assert model.plan_financing.invoices.filter(id=result.invoice.id).exists()
     assert financing["next_payment_at"] == model.plan_financing.next_payment_at
     assert tasks.renew_plan_financing_consumables.delay.call_args_list == []
     assert actions.reschedule_billing_tasks.call_args_list == []
