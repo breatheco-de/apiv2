@@ -1061,7 +1061,33 @@ class CreditLedgerEntrySerializer(serpy.Serializer):
     entry_type = serpy.Field()
     notes = serpy.Field()
     created_at = serpy.Field()
+    user_id = serpy.Field()
+    plan_financing_id = serpy.Field()
+    subscription_id = serpy.Field()
     source_invoice_id = serpy.Field()
+
+
+class GetUserCreditLedgerEntrySerializer(CreditLedgerEntrySerializer):
+    user = GetUserSmallSerializer(many=False)
+    source_invoice = GetInvoiceSmallSerializer(many=False, required=False)
+    plan_financing = serpy.MethodField()
+    plans = serpy.MethodField()
+
+    def get_plan_financing(self, obj):
+        if not obj.plan_financing:
+            return None
+        return {
+            "id": obj.plan_financing.id,
+            "status": obj.plan_financing.status,
+            "how_many_installments": obj.plan_financing.how_many_installments,
+            "installments_paid": obj.plan_financing.installments_paid,
+            "next_payment_at": obj.plan_financing.next_payment_at,
+        }
+
+    def get_plans(self, obj):
+        if not obj.plan_financing:
+            return []
+        return GetPlanSmallTinySerializer(obj.plan_financing.plans.all(), many=True).data
 
 
 # Backwards-compatible alias.
