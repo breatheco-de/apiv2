@@ -1263,6 +1263,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                 grace_period_duration_unit=grace_unit,
                 financing_option_id=financing_option_id,
                 lang=lang,
+                note_author_user_id=(self.context.get("request").user.id if self.context.get("request") else None),
             )
 
             if initial_amt is not None and float(initial_amt) > 0 and not data.get("payment_method"):
