@@ -3254,6 +3254,132 @@ def get_credit_balance(plan_financing: PlanFinancing) -> float:
     return float(result or 0)
 
 
+def _is_credit_only_manual_deposit_invoice(invoice: Invoice) -> bool:
+    breakdown = invoice.amount_breakdown or {}
+    plans = breakdown.get("plans", {}) if isinstance(breakdown, dict) else {}
+    if not isinstance(plans, dict):
+        return False
+    for item in plans.values():
+        if isinstance(item, dict) and item.get("type") == "MANUAL_DEPOSIT_CREDIT":
+            return True
+    return False
+
+
+def get_plan_financing_payment_schedule(plan_financing: PlanFinancing, *, lang: str = "en") -> dict[str, Any]:
+    """
+    Build dynamic payment schedule and KPI summary for a PlanFinancing.
+    """
+    utc_now = timezone.now()
+    installments = int(plan_financing.how_many_installments or 0)
+    installments_paid = min(max(int(plan_financing.installments_paid or 0), 0), max(installments, 0))
+    remaining_installments = max(installments - installments_paid, 0)
+    monthly_price = float(plan_financing.monthly_price or 0)
+
+    fulfilled_invoices = list(
+        plan_financing.invoices.filter(status=Invoice.Status.FULFILLED).order_by("paid_at", "id")
+    )
+
+    paid_so_far = 0.0
+    for invoice in fulfilled_invoices:
+        paid_so_far += max(float(invoice.amount or 0) - float(invoice.amount_refunded or 0), 0)
+
+    initial_payment_amount = float(plan_financing.initial_payment_amount or 0)
+    negotiated_total = initial_payment_amount + (monthly_price * installments)
+    pending_amount = max(negotiated_total - paid_so_far, 0.0)
+    credit_balance = get_credit_balance(plan_financing)
+    next_payment_due = plan_financing.next_payment_at if remaining_installments > 0 else None
+
+    first_due_date = None
+    if installments > 0 and plan_financing.next_payment_at:
+        first_due_date = plan_financing.next_payment_at - relativedelta(months=installments_paid)
+    elif installments > 0 and plan_financing.valid_until:
+        first_due_date = plan_financing.valid_until - relativedelta(months=max(installments - 1, 0))
+    elif installments > 0:
+        first_due_date = plan_financing.created_at
+
+    closure_dates: list[datetime] = []
+    for invoice in fulfilled_invoices:
+        if _is_credit_only_manual_deposit_invoice(invoice):
+            continue
+        closure_dates.append(invoice.paid_at or invoice.created_at)
+
+    auto_credit_consumed = (
+        CreditLedgerEntry.objects.filter(
+            plan_financing=plan_financing,
+            scope=CreditLedgerEntry.Scope.PLAN_FINANCING,
+            entry_type=CreditLedgerEntry.EntryType.CREDIT_CONSUMED,
+            source_invoice__isnull=True,
+        )
+        .order_by("created_at", "id")
+    )
+    for entry in auto_credit_consumed:
+        if entry.notes and "Automatic charge covered by accumulated credit" in entry.notes:
+            closure_dates.append(entry.created_at)
+
+    closure_dates = sorted(closure_dates)
+    if len(closure_dates) < installments_paid:
+        for invoice in fulfilled_invoices:
+            dt = invoice.paid_at or invoice.created_at
+            if dt not in closure_dates:
+                closure_dates.append(dt)
+                if len(closure_dates) >= installments_paid:
+                    break
+        closure_dates = sorted(closure_dates)
+
+    if first_due_date:
+        while len(closure_dates) < installments_paid:
+            closure_dates.append(first_due_date + relativedelta(months=len(closure_dates)))
+
+    closure_dates = closure_dates[:installments_paid]
+    schedule: list[dict[str, Any]] = []
+    on_time_count = 0
+
+    if installments > 0 and first_due_date:
+        for idx in range(1, installments + 1):
+            due_date = first_due_date + relativedelta(months=idx - 1)
+            paid_at = closure_dates[idx - 1] if idx <= installments_paid else None
+
+            if paid_at is not None:
+                is_on_time = paid_at <= due_date
+                status = "PAID_ON_TIME" if is_on_time else "PAID_LATE"
+                if is_on_time:
+                    on_time_count += 1
+                paid_amount = monthly_price
+            else:
+                status = "OVERDUE" if due_date < utc_now else "PENDING"
+                paid_amount = 0.0
+
+            schedule.append(
+                {
+                    "installment_number": idx,
+                    "due_date": due_date,
+                    "expected_amount": monthly_price,
+                    "paid_amount": paid_amount,
+                    "paid_at": paid_at,
+                    "status": status,
+                }
+            )
+
+    on_time_rate = None
+    if installments_paid > 0:
+        on_time_rate = round((on_time_count / installments_paid) * 100, 2)
+
+    return {
+        "summary": {
+            "paid_so_far": paid_so_far,
+            "on_time_rate": on_time_rate,
+            "pending_amount": pending_amount,
+            "negotiated_total": negotiated_total,
+            "next_payment_due": next_payment_due,
+            "payments_made": installments_paid,
+            "total_payments": installments,
+            "current_credit": credit_balance,
+            "currency": plan_financing.currency.code if plan_financing.currency else None,
+        },
+        "schedule": schedule,
+    }
+
+
 @transaction.atomic
 def register_student_deposit(
     request: dict | WSGIRequest | AsyncRequest | HttpRequest | Request,
