@@ -2764,7 +2764,7 @@ class AcademyPlanFinancingPaymentScheduleView(APIView):
         lang = get_user_language(request)
         plan_financing = (
             PlanFinancing.objects.select_related("currency")
-            .prefetch_related("invoices", "credit_entries")
+            .prefetch_related("invoices", "credit_entries", "plans")
             .filter(id=financing_id, academy_id=academy_id)
             .first()
         )
