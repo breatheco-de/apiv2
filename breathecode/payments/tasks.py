@@ -382,13 +382,13 @@ def renew_plan_financing_consumables(
     ]:
         raise AbortTask(f"The plan financing {plan_financing.id} is cancelled, deprecated or expired")
 
-    # Check if plan financing has deleted or discontinued plans
-    if plan_financing.plans.filter(status__in=[Plan.Status.DISCONTINUED, Plan.Status.DELETED]).exists():
-        plan_financing.status = PlanFinancing.Status.DEPRECATED
-        plan_financing.save()
+    # A discontinued catalog plan must not invalidate an already-signed financing contract.
+    # Deleted plans stop consumable renewals, but financing status must not be forced to DEPRECATED
+    # because the model explicitly forbids that status.
+    if plan_financing.plans.filter(status=Plan.Status.DELETED).exists():
         raise AbortTask(
-            f"The plan financing {plan_financing.id} has deleted/discontinued plans, "
-            "marked as deprecated, consumables will not be renewed"
+            f"The plan financing {plan_financing.id} has deleted plans, "
+            "consumables will not be renewed"
         )
 
     utc_now = timezone.now()
@@ -1121,11 +1121,67 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
             payment_settings = AcademyPaymentSettings.objects.filter(academy=plan_financing.academy).first()
             early_renewal_window_days = payment_settings.early_renewal_window_days if payment_settings else 2
 
-            # Check if plan financing has deleted or discontinued plans
-            if plan_financing.plans.filter(status__in=[Plan.Status.DISCONTINUED, Plan.Status.DELETED]).exists():
-                plan_financing.status = PlanFinancing.Status.DEPRECATED
-                plan_financing.save()
+            # Inform about discontinued catalog plans without stopping contractual financing charges.
+            if plan_financing.plans.filter(status=Plan.Status.DISCONTINUED).exists():
+                notification_cache_key = f"plan-financing-discontinued-notified:{plan_financing.id}"
+                if not cache.get(notification_cache_key):
+                    plan = plan_financing.plans.first()
+                    link = None
 
+                    if plan and (offer := PlanOffer.objects.filter(original_plan=plan).first()):
+                        link = f"{get_app_url()}/checkout?plan={offer.suggested_plan.slug}"
+
+                    subject = translation(
+                        settings.lang,
+                        en=f"Your 4Geeks plan financing to {plan.slug if plan else 'plan'} has been discontinued",
+                        es=f"Tu financiamiento 4Geeks a {plan.slug if plan else 'plan'} ha sido descontinuado",
+                    )
+
+                    obj = {"SUBJECT": subject}
+
+                    if link:
+                        button = translation(
+                            settings.lang,
+                            en="See suggested plan",
+                            es="Ver plan sugerido",
+                        )
+                        obj["LINK"] = link
+                        obj["BUTTON"] = button
+
+                        message = translation(
+                            settings.lang,
+                            en="Your plan financing contract remains active and charges will continue as scheduled. This catalog plan has been discontinued and may be removed in the future, so we are sharing suggested alternatives.",
+                            es="Tu contrato de financiamiento sigue activo y los cobros continuaran segun lo programado. Este plan del catalogo fue descontinuado y podria eliminarse en el futuro, por eso te compartimos alternativas sugeridas.",
+                        )
+                    else:
+                        message = translation(
+                            settings.lang,
+                            en="Your plan financing contract remains active and charges will continue as scheduled. This catalog plan has been discontinued and may be removed in the future.",
+                            es="Tu contrato de financiamiento sigue activo y los cobros continuaran segun lo programado. Este plan del catalogo fue descontinuado y podria eliminarse en el futuro.",
+                        )
+
+                    obj["MESSAGE"] = message
+
+                    try:
+                        notify_actions.send_email_message(
+                            "message",
+                            plan_financing.user.email,
+                            obj,
+                            academy=plan_financing.academy,
+                        )
+                        cache.set(notification_cache_key, True, 60 * 60 * 24 * 365)
+                    except Exception as e:
+                        logger.error(
+                            "Failed sending discontinued plan financing warning for %s: %s",
+                            plan_financing.id,
+                            str(e),
+                            exc_info=True,
+                        )
+
+            # A discontinued catalog plan must not invalidate an already-signed financing contract.
+            # Deleted plans stop future charges, but financing status must not be forced to DEPRECATED
+            # because the model explicitly forbids that status.
+            if plan_financing.plans.filter(status=Plan.Status.DELETED).exists():
                 # Send notification to user
                 plan = plan_financing.plans.first()
                 link = None
@@ -1135,8 +1191,8 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
                 subject = translation(
                     settings.lang,
-                    en=f"Your 4Geeks plan financing to {plan.slug if plan else 'plan'} has been discontinued",
-                    es=f"Tu financiamiento 4Geeks a {plan.slug if plan else 'plan'} ha sido descontinuado",
+                    en=f"Your 4Geeks plan financing to {plan.slug if plan else 'plan'} is no longer available",
+                    es=f"Tu financiamiento 4Geeks a {plan.slug if plan else 'plan'} ya no esta disponible",
                 )
 
                 obj = {
@@ -1154,25 +1210,33 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
                     message = translation(
                         settings.lang,
-                        en="We regret to inform you that your 4Geeks plan financing has been discontinued. Please check our suggested plans for alternatives.",
-                        es="Lamentamos informarte que tu financiamiento 4Geeks ha sido descontinuado. Por favor, revisa nuestros planes sugeridos para alternativas.",
+                        en="We regret to inform you that your 4Geeks plan financing is no longer available. Please check our suggested plans for alternatives.",
+                        es="Lamentamos informarte que tu financiamiento 4Geeks ya no esta disponible. Por favor, revisa nuestros planes sugeridos para alternativas.",
                     )
                 else:
                     message = translation(
                         settings.lang,
-                        en="We regret to inform you that your 4Geeks plan financing has been discontinued.",
-                        es="Lamentamos informarte que tu financiamiento 4Geeks ha sido descontinuado.",
+                        en="We regret to inform you that your 4Geeks plan financing is no longer available.",
+                        es="Lamentamos informarte que tu financiamiento 4Geeks ya no esta disponible.",
                     )
 
                 obj["MESSAGE"] = message
 
-                notify_actions.send_email_message(
-                    "message",
-                    plan_financing.user.email,
-                    obj,
-                    academy=plan_financing.academy,
-                )
-                raise AbortTask(f"PlanFinancing with id {plan_financing.id} has deleted/discontinued plans")
+                try:
+                    notify_actions.send_email_message(
+                        "message",
+                        plan_financing.user.email,
+                        obj,
+                        academy=plan_financing.academy,
+                    )
+                except Exception as e:
+                    logger.error(
+                        "Failed sending deleted plan financing notification for %s: %s",
+                        plan_financing.id,
+                        str(e),
+                        exc_info=True,
+                    )
+                raise AbortTask(f"PlanFinancing with id {plan_financing.id} has deleted plans")
 
             invoices = plan_financing.invoices.filter(bag__was_delivered=True).order_by("created_at")
             first_invoice = invoices.first()

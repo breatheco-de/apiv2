@@ -1196,3 +1196,42 @@ class PaymentsTestSuite(PaymentsTestCase):
         assert len(financing_tasks) >= 1
         assert financing_tasks[0]["arguments"]["args"] == [1]
         assert financing_tasks[0]["status"] == "PENDING"
+
+    @patch("logging.Logger.info", MagicMock())
+    @patch("logging.Logger.error", MagicMock())
+    @patch("breathecode.notify.actions.send_email_message", MagicMock())
+    @patch("breathecode.payments.tasks.renew_plan_financing_consumables.delay", MagicMock())
+    @patch("mixer.main.LOGGER.info", MagicMock())
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test_plan_financing_process_to_charge_with_discontinued_plan(self):
+        delta = relativedelta(months=random.randint(1, 12))
+        plan_financing = {
+            "valid_until": UTC_NOW + delta,
+            "next_payment_at": UTC_NOW - delta,
+            "monthly_price": (random.random() * 99) + 1,
+            "plan_expires_at": UTC_NOW + relativedelta(months=random.randint(1, 12)),
+        }
+        plan = {"is_renewable": False, "status": "DISCONTINUED"}
+        invoice = {"paid_at": UTC_NOW - relativedelta(hours=24, seconds=1)}
+        bag = {"how_many_installments": 3}
+
+        with patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW - relativedelta(months=2))):
+            model = self.bc.database.create(
+                academy=1, plan_financing=plan_financing, invoice=invoice, plan=plan, bag=bag
+            )
+
+        with patch(
+            "breathecode.payments.services.stripe.Stripe.pay",
+            MagicMock(side_effect=fake_stripe_pay(paid_at=UTC_NOW, academy=model.academy)),
+        ):
+            logging.Logger.info.call_args_list = []
+            logging.Logger.error.call_args_list = []
+            charge_plan_financing.delay(1)
+
+        # Financing must continue charging even if catalog plan is discontinued.
+        self.assertEqual(logging.Logger.error.call_args_list, [])
+        self.assertEqual(len(self.bc.database.list_of("payments.Invoice")), 2)
+        self.assertEqual(self.bc.database.list_of("payments.PlanFinancing")[0]["status"], "ACTIVE")
+        self.assertEqual(len(notify_actions.send_email_message.call_args_list), 2)
+        discontinued_warning_payload = notify_actions.send_email_message.call_args_list[0].args[2]
+        self.assertIn("discontinued", discontinued_warning_payload["SUBJECT"].lower())
