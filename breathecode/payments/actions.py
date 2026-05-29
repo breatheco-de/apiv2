@@ -3288,6 +3288,7 @@ def get_plan_financing_payment_schedule(plan_financing: PlanFinancing, *, lang: 
     pending_amount = max(negotiated_total - paid_so_far, 0.0)
     credit_balance = get_credit_balance(plan_financing)
     next_payment_due = plan_financing.next_payment_at if remaining_installments > 0 else None
+    primary_plan = plan_financing.plans.order_by("id").first()
 
     first_due_date = None
     if installments > 0 and plan_financing.next_payment_at:
@@ -3340,7 +3341,9 @@ def get_plan_financing_payment_schedule(plan_financing: PlanFinancing, *, lang: 
             paid_at = closure_dates[idx - 1] if idx <= installments_paid else None
 
             if paid_at is not None:
-                is_on_time = paid_at <= due_date
+                # Business rule: payment on the same calendar day counts as on time,
+                # even if it was registered later than the due hour.
+                is_on_time = paid_at.date() <= due_date.date()
                 status = "PAID_ON_TIME" if is_on_time else "PAID_LATE"
                 if is_on_time:
                     on_time_count += 1
@@ -3366,6 +3369,8 @@ def get_plan_financing_payment_schedule(plan_financing: PlanFinancing, *, lang: 
 
     return {
         "summary": {
+            "plan_financing_id": plan_financing.id,
+            "plan_slug": primary_plan.slug if primary_plan else None,
             "paid_so_far": paid_so_far,
             "on_time_rate": on_time_rate,
             "pending_amount": pending_amount,
