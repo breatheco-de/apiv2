@@ -2745,6 +2745,21 @@ def validate_and_create_subscriptions(
         )
 
     initial_payment_notes = data.get("initial_payment_notes", None)
+    if (
+        unique_payment_negotiated_amount is not None
+        and how_many_installments == 1
+        and not str(initial_payment_notes or "").strip()
+    ):
+        raise ValidationException(
+            translation(
+                lang,
+                en="initial_payment_notes is required when using unique_payment_negotiated_amount for one payment plans",
+                es="initial_payment_notes es obligatorio al usar unique_payment_negotiated_amount en planes de un pago",
+                slug="negotiated-amount-notes-required",
+            ),
+            code=400,
+        )
+    initial_payment_notes = format_note_made_by_user(initial_payment_notes, staff_user.id)
 
     try:
         grace_period_duration = int(data.get("grace_period_duration", 0) or 0)
@@ -3237,6 +3252,137 @@ def get_credit_balance(plan_financing: PlanFinancing) -> float:
         scope=CreditLedgerEntry.Scope.PLAN_FINANCING,
     ).aggregate(total=Sum("amount"))["total"]
     return float(result or 0)
+
+
+def _is_credit_only_manual_deposit_invoice(invoice: Invoice) -> bool:
+    breakdown = invoice.amount_breakdown or {}
+    plans = breakdown.get("plans", {}) if isinstance(breakdown, dict) else {}
+    if not isinstance(plans, dict):
+        return False
+    for item in plans.values():
+        if isinstance(item, dict) and item.get("type") == "MANUAL_DEPOSIT_CREDIT":
+            return True
+    return False
+
+
+def get_plan_financing_payment_schedule(plan_financing: PlanFinancing, *, lang: str = "en") -> dict[str, Any]:
+    """
+    Build dynamic payment schedule and KPI summary for a PlanFinancing.
+    """
+    utc_now = timezone.now()
+    installments = int(plan_financing.how_many_installments or 0)
+    installments_paid = min(max(int(plan_financing.installments_paid or 0), 0), max(installments, 0))
+    remaining_installments = max(installments - installments_paid, 0)
+    monthly_price = float(plan_financing.monthly_price or 0)
+
+    fulfilled_invoices = list(
+        plan_financing.invoices.filter(status=Invoice.Status.FULFILLED).order_by("paid_at", "id")
+    )
+
+    paid_so_far = 0.0
+    for invoice in fulfilled_invoices:
+        paid_so_far += max(float(invoice.amount or 0) - float(invoice.amount_refunded or 0), 0)
+
+    initial_payment_amount = float(plan_financing.initial_payment_amount or 0)
+    negotiated_total = initial_payment_amount + (monthly_price * installments)
+    pending_amount = max(negotiated_total - paid_so_far, 0.0)
+    credit_balance = get_credit_balance(plan_financing)
+    next_payment_due = plan_financing.next_payment_at if remaining_installments > 0 else None
+    primary_plan = plan_financing.plans.order_by("id").first()
+
+    first_due_date = None
+    if installments > 0 and plan_financing.next_payment_at:
+        first_due_date = plan_financing.next_payment_at - relativedelta(months=installments_paid)
+    elif installments > 0 and plan_financing.valid_until:
+        first_due_date = plan_financing.valid_until - relativedelta(months=max(installments - 1, 0))
+    elif installments > 0:
+        first_due_date = plan_financing.created_at
+
+    closure_dates: list[datetime] = []
+    for invoice in fulfilled_invoices:
+        if _is_credit_only_manual_deposit_invoice(invoice):
+            continue
+        closure_dates.append(invoice.paid_at or invoice.created_at)
+
+    auto_credit_consumed = (
+        CreditLedgerEntry.objects.filter(
+            plan_financing=plan_financing,
+            scope=CreditLedgerEntry.Scope.PLAN_FINANCING,
+            entry_type=CreditLedgerEntry.EntryType.CREDIT_CONSUMED,
+            source_invoice__isnull=True,
+        )
+        .order_by("created_at", "id")
+    )
+    for entry in auto_credit_consumed:
+        if entry.notes and "Automatic charge covered by accumulated credit" in entry.notes:
+            closure_dates.append(entry.created_at)
+
+    closure_dates = sorted(closure_dates)
+    if len(closure_dates) < installments_paid:
+        for invoice in fulfilled_invoices:
+            dt = invoice.paid_at or invoice.created_at
+            if dt not in closure_dates:
+                closure_dates.append(dt)
+                if len(closure_dates) >= installments_paid:
+                    break
+        closure_dates = sorted(closure_dates)
+
+    if first_due_date:
+        while len(closure_dates) < installments_paid:
+            closure_dates.append(first_due_date + relativedelta(months=len(closure_dates)))
+
+    closure_dates = closure_dates[:installments_paid]
+    schedule: list[dict[str, Any]] = []
+    on_time_count = 0
+
+    if installments > 0 and first_due_date:
+        for idx in range(1, installments + 1):
+            due_date = first_due_date + relativedelta(months=idx - 1)
+            paid_at = closure_dates[idx - 1] if idx <= installments_paid else None
+
+            if paid_at is not None:
+                # Business rule: payment on the same calendar day counts as on time,
+                # even if it was registered later than the due hour.
+                is_on_time = paid_at.date() <= due_date.date()
+                status = "PAID_ON_TIME" if is_on_time else "PAID_LATE"
+                if is_on_time:
+                    on_time_count += 1
+                paid_amount = monthly_price
+            else:
+                status = "OVERDUE" if due_date < utc_now else "PENDING"
+                paid_amount = 0.0
+
+            schedule.append(
+                {
+                    "installment_number": idx,
+                    "due_date": due_date,
+                    "expected_amount": monthly_price,
+                    "paid_amount": paid_amount,
+                    "paid_at": paid_at,
+                    "status": status,
+                }
+            )
+
+    on_time_rate = None
+    if installments_paid > 0:
+        on_time_rate = round((on_time_count / installments_paid) * 100, 2)
+
+    return {
+        "summary": {
+            "plan_financing_id": plan_financing.id,
+            "plan_slug": primary_plan.slug if primary_plan else None,
+            "paid_so_far": paid_so_far,
+            "on_time_rate": on_time_rate,
+            "pending_amount": pending_amount,
+            "negotiated_total": negotiated_total,
+            "next_payment_due": next_payment_due,
+            "payments_made": installments_paid,
+            "total_payments": installments,
+            "current_credit": credit_balance,
+            "currency": plan_financing.currency.code if plan_financing.currency else None,
+        },
+        "schedule": schedule,
+    }
 
 
 @transaction.atomic
@@ -5622,6 +5768,23 @@ def _conversion_info_for_build_plan_financing_task(conversion_info: Any) -> str 
     return json.dumps(conversion_info)
 
 
+def format_note_made_by_user(note: str | None, user_id: int | None) -> str | None:
+    """
+    Normalize notes to: "Note made by user <user_id>: <note>".
+    """
+    normalized = str(note or "").strip()
+    if not normalized:
+        return None
+
+    if normalized.startswith("Note made by user "):
+        return normalized[:250]
+
+    if user_id is None:
+        return normalized[:250]
+
+    return f"Note made by user {user_id}: {normalized}"[:250]
+
+
 def get_plan_financing_option(
     plan: Plan,
     how_many_installments: int,
@@ -5706,6 +5869,7 @@ def validate_student_invite_plan_access_config(
     grace_period_duration_unit: str,
     financing_option_id: int | None = None,
     lang: str,
+    note_author_user_id: int | None = None,
 ) -> dict[str, Any]:
     """
     Validate optional plan-access fields for POST /v1/auth/academy/student (same financing rules as staff subscription).
@@ -5811,6 +5975,21 @@ def validate_student_invite_plan_access_config(
             code=400,
         )
 
+    if (
+        unique_payment_negotiated_amount is not None
+        and how_many_installments == 1
+        and not str(initial_payment_notes or "").strip()
+    ):
+        raise ValidationException(
+            translation(
+                lang,
+                en="initial_payment_notes is required when using unique_payment_negotiated_amount for one payment plans",
+                es="initial_payment_notes es obligatorio al usar unique_payment_negotiated_amount en planes de un pago",
+            ),
+            slug="negotiated-amount-notes-required",
+            code=400,
+        )
+
     for p in plans:
         get_plan_financing_option(
             p,
@@ -5819,6 +5998,7 @@ def validate_student_invite_plan_access_config(
             lang=lang,
         )
 
+    initial_payment_notes = format_note_made_by_user(initial_payment_notes, note_author_user_id)
     payload: dict[str, Any] = {
         "how_many_installments": how_many_installments,
         "initial_payment_amount": initial_payment_amount,
@@ -5982,6 +6162,22 @@ def create_invited_plan_financing_for_user(
                 slug="invalid-unique-payment-negotiated-amount",
                 code=400,
             )
+
+    if (
+        uniq_negotiated is not None
+        and how_many_installments == 1
+        and not str(initial_payment_notes or "").strip()
+    ):
+        raise ValidationException(
+            translation(
+                lang,
+                en="initial_payment_notes is required when using unique_payment_negotiated_amount for one payment plans",
+                es="initial_payment_notes es obligatorio al usar unique_payment_negotiated_amount en planes de un pago",
+            ),
+            slug="negotiated-amount-notes-required",
+            code=400,
+        )
+    initial_payment_notes = format_note_made_by_user(initial_payment_notes, author.id if author else user.id)
 
     installment_amount = catalog_installment_amount
     if uniq_negotiated is not None:
