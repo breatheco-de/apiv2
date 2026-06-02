@@ -852,6 +852,16 @@ class POSTEventCheckinSerializer(serializers.ModelSerializer):
                     validated_data["phone"] = profile_academy.phone
 
             if not validated_data.get("phone") and attendee is not None:
+                profile_academy = (
+                    ProfileAcademy.objects.filter(user=attendee)
+                    .exclude(phone__isnull=True)
+                    .exclude(phone="")
+                    .first()
+                )
+                if profile_academy:
+                    validated_data["phone"] = profile_academy.phone
+
+            if not validated_data.get("phone") and attendee is not None:
                 profile = Profile.objects.filter(user=attendee).first()
                 if profile and profile.phone:
                     validated_data["phone"] = profile.phone
