@@ -387,6 +387,7 @@ class EventCheckin(models.Model):
     email = models.EmailField(max_length=150)
 
     attendee = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True, default=None)
+    phone = models.CharField(max_length=17, blank=True, null=True, default=None)
     event = models.ForeignKey(Event, on_delete=models.CASCADE)
     status = models.CharField(max_length=9, choices=CHECKIN_STATUS, default=PENDING)
 
