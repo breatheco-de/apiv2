@@ -319,10 +319,14 @@ def create_hook_receiver(event_name, event_config):
             except Exception as e:
                 logger.error(f"Failed to serialize {event_name}: {e}")
 
-        # Determine academy override if available
+        # Determine academy override if available.
+        # Some models (e.g. EventCheckin) don't have direct academy relation
+        # and require resolving academy through the related event.
         academy_override = None
-        if hasattr(instance, "academy"):
+        if hasattr(instance, "academy") and instance.academy is not None:
             academy_override = instance.academy
+        elif hasattr(instance, "event") and getattr(instance.event, "academy", None) is not None:
+            academy_override = instance.event.academy
 
         # Process the hook event
         HookManager.process_model_event(
