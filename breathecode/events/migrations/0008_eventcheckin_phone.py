@@ -4,13 +4,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("events", "0006_academyeventsettings"),
+        ("events", "0007_eventcheckin_utm_location"),
     ]
 
     operations = [
         migrations.AddField(
             model_name="eventcheckin",
-            name="utm_location",
-            field=models.CharField(blank=True, default=None, max_length=70, null=True),
+            name="phone",
+            field=models.CharField(blank=True, default=None, max_length=17, null=True),
         ),
     ]

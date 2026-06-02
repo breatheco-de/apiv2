@@ -13,7 +13,7 @@ from slugify import slugify
 import breathecode.activity.tasks as tasks_activity
 from breathecode.admissions.models import Academy
 from breathecode.admissions.serializers import UserPublicSerializer
-from breathecode.authenticate.models import Profile, ProfileTranslation
+from breathecode.authenticate.models import Profile, ProfileAcademy, ProfileTranslation
 from breathecode.events import actions as events_actions
 from breathecode.marketing.actions import validate_marketing_tags
 from breathecode.registry.models import Asset
@@ -36,6 +36,7 @@ class UserSerializer(serpy.Serializer):
 
 
 class EventUserSerializer(UserSerializer):
+    email = serpy.Field()
     phone = serpy.MethodField()
 
     def get_phone(self, obj):
@@ -402,6 +403,7 @@ class GetLiveClassJoinSerializer(GetLiveClassSerializer):
 class EventCheckinSerializer(serpy.Serializer):
     id = serpy.Field()
     email = serpy.Field()
+    phone = serpy.Field()
     status = serpy.Field()
     created_at = serpy.Field()
     attended_at = serpy.Field()
@@ -412,6 +414,7 @@ class EventCheckinSerializer(serpy.Serializer):
 class EventHookCheckinSerializer(serpy.Serializer):
     id = serpy.Field()
     email = serpy.Field()
+    phone = serpy.Field()
     status = serpy.Field()
     utm_url = serpy.Field()
     utm_source = serpy.Field()
@@ -845,6 +848,25 @@ class POSTEventCheckinSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
+        if not validated_data.get("phone"):
+            attendee = validated_data.get("attendee")
+            event = validated_data.get("event")
+
+            if attendee is not None and event is not None and event.academy_id is not None:
+                profile_academy = (
+                    ProfileAcademy.objects.filter(user=attendee, academy_id=event.academy_id)
+                    .exclude(phone__isnull=True)
+                    .exclude(phone="")
+                    .first()
+                )
+                if profile_academy:
+                    validated_data["phone"] = profile_academy.phone
+
+            if not validated_data.get("phone") and attendee is not None:
+                profile = Profile.objects.filter(user=attendee).first()
+                if profile and profile.phone:
+                    validated_data["phone"] = profile.phone
+
         event_checkin = super().create(validated_data)
 
         tasks_activity.add_activity.delay(
