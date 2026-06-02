@@ -417,6 +417,7 @@ class EventHookCheckinSerializer(serpy.Serializer):
     utm_source = serpy.Field()
     utm_campaign = serpy.Field()
     utm_medium = serpy.Field()
+    utm_location = serpy.Field()
     created_at = serpy.Field()
     attended_at = serpy.Field()
     attendee = EventUserSerializer(required=False)
