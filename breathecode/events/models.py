@@ -393,6 +393,7 @@ class EventCheckin(models.Model):
     utm_medium = models.CharField(max_length=70, blank=True, null=True, default=None)
     utm_campaign = models.CharField(max_length=70, blank=True, null=True, default=None)
     utm_source = models.CharField(max_length=70, blank=True, null=True, default=None)
+    utm_location = models.CharField(max_length=70, blank=True, null=True, default=None)
     utm_url = models.CharField(max_length=2000, null=True, default=None, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
