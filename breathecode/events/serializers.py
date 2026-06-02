@@ -35,6 +35,16 @@ class UserSerializer(serpy.Serializer):
     last_name = serpy.Field()
 
 
+class EventUserSerializer(UserSerializer):
+    phone = serpy.MethodField()
+
+    def get_phone(self, obj):
+        profile = Profile.objects.filter(user=obj).first()
+        if profile:
+            return profile.phone
+        return None
+
+
 class ProfileTranslationSerializer(serpy.Serializer):
     bio = serpy.Field()
     lang = serpy.Field()
@@ -395,7 +405,7 @@ class EventCheckinSerializer(serpy.Serializer):
     status = serpy.Field()
     created_at = serpy.Field()
     attended_at = serpy.Field()
-    attendee = UserSerializer(required=False)
+    attendee = EventUserSerializer(required=False)
     event = EventTinySerializer()
 
 
@@ -409,7 +419,7 @@ class EventHookCheckinSerializer(serpy.Serializer):
     utm_medium = serpy.Field()
     created_at = serpy.Field()
     attended_at = serpy.Field()
-    attendee = UserSerializer(required=False)
+    attendee = EventUserSerializer(required=False)
     event = EventJoinSmallSerializer()
     user_language = serpy.MethodField()
 
