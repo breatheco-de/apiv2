@@ -1889,6 +1889,12 @@ class Invoice(models.Model):
         default=None,
         help_text="Breakdown of how the invoice amount is divided across plans, plan addons, and service items",
     )
+    invoice_notes = models.TextField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Staff notes or payment context associated with this invoice.",
+    )
 
     coinbase_charge_id = models.CharField(
         max_length=40, null=True, default=None, blank=True, help_text="Coinbase charge id"
@@ -2346,16 +2352,6 @@ class PlanFinancing(AbstractIOweYou):
             "(i.e. a negotiated split: upfront + future installments). Set this only when the first payment amount "
             "differs from the recurring installment amount. Keep it null for standard installment plans (even if the "
             "first installment is paid immediately) and for negotiated single-pay purchases."
-        ),
-    )
-    initial_payment_notes = models.CharField(
-        max_length=250,
-        null=True,
-        blank=True,
-        default=None,
-        help_text=(
-            "Staff justification/notes for negotiated payment terms. Used when staff agrees on a discounted "
-            "single-pay amount, or when staff negotiates an upfront amount plus future installments."
         ),
     )
     grace_period_duration = models.PositiveIntegerField(

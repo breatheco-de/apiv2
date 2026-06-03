@@ -439,7 +439,7 @@ class InvoiceAdmin(admin.ModelAdmin):
     form = InvoiceForm
     list_display = ("id", "amount", "currency", "paid_at", "status", "stripe_id", "user", "academy")
     list_filter = ["status", "academy"]
-    search_fields = ["id", "status", "user__email"]
+    search_fields = ["id", "status", "user__email", "invoice_notes"]
     raw_id_fields = ["user", "currency", "bag", "academy"]
     actions = [recalculate_invoice_breakdown]
     inlines = [CreditNoteInline, CreditLedgerEntryFromInvoiceInline]
@@ -455,6 +455,7 @@ class InvoiceAdmin(admin.ModelAdmin):
                     "currency",
                     "amount",
                     "amount_breakdown",
+                    "invoice_notes",
                     "status",
                     "paid_at",
                     "refunded_at",
@@ -584,10 +585,19 @@ class PlanFinancingInvoiceInline(admin.TabularInline):
         "invoice_amount",
         "invoice_status",
         "invoice_paid_at",
+        "invoice_notes",
         "credit_added",
         "credit_consumed",
     )
-    readonly_fields = ("invoice_amount", "invoice_status", "invoice_paid_at", "credit_added", "credit_consumed", "credit_notes")
+    readonly_fields = (
+        "invoice_amount",
+        "invoice_status",
+        "invoice_paid_at",
+        "invoice_notes",
+        "credit_added",
+        "credit_consumed",
+        "credit_notes",
+    )
     verbose_name = "Associated invoice"
     verbose_name_plural = "Associated invoices"
 
@@ -599,6 +609,9 @@ class PlanFinancingInvoiceInline(admin.TabularInline):
 
     def invoice_paid_at(self, obj):
         return obj.invoice.paid_at
+
+    def invoice_notes(self, obj):
+        return obj.invoice.invoice_notes or "-"
 
     def credit_added(self, obj):
         total = sum(
@@ -682,7 +695,6 @@ class PlanFinancingAdmin(admin.ModelAdmin):
                     "externally_managed",
                     "monthly_price",
                     "initial_payment_amount",
-                    "initial_payment_notes",
                     "how_many_installments",
                     "installments_paid",
                     "next_payment_at",

@@ -34,6 +34,7 @@ def format_invoice_item(data={}):
         "currency_id": 1,
         "externally_managed": False,
         "id": 1,
+        "invoice_notes": None,
         "paid_at": UTC_NOW,
         "payment_method_id": None,
         "proof_id": None,
