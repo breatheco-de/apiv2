@@ -146,6 +146,7 @@ class CreateInvitedPlanFinancingForUserTestSuite(PaymentsTestCase):
         bag = Bag.objects.filter(user=model.user, type="INVITED").first()
         invoice = Invoice.objects.filter(bag=bag).first()
         self.assertEqual(invoice.amount, 8500)
+        self.assertEqual(invoice.invoice_notes, "Note made by user 1: One-payment negotiated by staff")
         self.assertEqual(
             invoice.amount_breakdown["plans"][model.plan.slug]["type"],
             "UNIQUE_PAYMENT_NEGOTIATED",
@@ -187,6 +188,7 @@ class CreateInvitedPlanFinancingForUserTestSuite(PaymentsTestCase):
         bag = Bag.objects.filter(user=model.user, type="INVITED").first()
         invoice = Invoice.objects.filter(bag=bag).first()
         self.assertEqual(invoice.amount, 0)
+        self.assertEqual(invoice.invoice_notes, "Note made by user 1: Prework paid at course start")
 
         from breathecode.payments import tasks
 
@@ -202,6 +204,32 @@ class CreateInvitedPlanFinancingForUserTestSuite(PaymentsTestCase):
             principal_amount=1200,
             initial_payment_amount=0,
         )
+
+    def test_initial_payment_amount_requires_notes(self):
+        model = self.bc.database.create(
+            user=1,
+            academy=1,
+            currency=1,
+            cohort={"available_as_saas": True},
+            cohort_set=1,
+            cohort_set_cohort=1,
+            financing_option={"how_many_months": 1, "monthly_price": 1200},
+            plan={"is_renewable": False, "time_of_life": 1, "time_of_life_unit": "MONTH", "status": "ACTIVE"},
+        )
+
+        with self.assertRaises(ValidationException) as cm:
+            create_invited_plan_financing_for_user(
+                user=model.user,
+                plan=model.plan,
+                academy=model.academy,
+                cohort=model.cohort,
+                payment_method=None,
+                author=model.user,
+                lang="en",
+                initial_payment_amount=0,
+            )
+
+        self.assertEqual(getattr(cm.exception, "slug", None), "initial-payment-notes-required")
 
     @patch("breathecode.payments.tasks.build_plan_financing.delay", MagicMock())
     def test_unique_payment_negotiated_amount_requires_notes_for_one_payment(self):

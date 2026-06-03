@@ -2745,6 +2745,17 @@ def validate_and_create_subscriptions(
         )
 
     initial_payment_notes = data.get("initial_payment_notes", None)
+    if initial_payment_amount is not None and not str(initial_payment_notes or "").strip():
+        raise ValidationException(
+            translation(
+                lang,
+                en="initial_payment_notes is required when using initial_payment_amount",
+                es="initial_payment_notes es obligatorio al usar initial_payment_amount",
+                slug="initial-payment-notes-required",
+            ),
+            code=400,
+        )
+
     if (
         unique_payment_negotiated_amount is not None
         and how_many_installments == 1
@@ -2963,6 +2974,9 @@ def validate_and_create_subscriptions(
         how_many_installments=how_many_installments,
         amount_breakdown=amount_breakdown,
     )
+    if initial_payment_notes is not None:
+        invoice.invoice_notes = initial_payment_notes
+        invoice.save(update_fields=["invoice_notes"])
 
     # Create reward coupons for sellers if coupons were used
     if coupons and original_price > 0:
@@ -5975,6 +5989,17 @@ def validate_student_invite_plan_access_config(
             code=400,
         )
 
+    if initial_payment_amount is not None and not str(initial_payment_notes or "").strip():
+        raise ValidationException(
+            translation(
+                lang,
+                en="initial_payment_notes is required when using initial_payment_amount",
+                es="initial_payment_notes es obligatorio al usar initial_payment_amount",
+            ),
+            slug="initial-payment-notes-required",
+            code=400,
+        )
+
     if (
         unique_payment_negotiated_amount is not None
         and how_many_installments == 1
@@ -6177,6 +6202,16 @@ def create_invited_plan_financing_for_user(
             slug="negotiated-amount-notes-required",
             code=400,
         )
+    if initial_payment_amount is not None and not str(initial_payment_notes or "").strip():
+        raise ValidationException(
+            translation(
+                lang,
+                en="initial_payment_notes is required when using initial_payment_amount",
+                es="initial_payment_notes es obligatorio al usar initial_payment_amount",
+            ),
+            slug="initial-payment-notes-required",
+            code=400,
+        )
     initial_payment_notes = format_note_made_by_user(initial_payment_notes, author.id if author else user.id)
 
     installment_amount = catalog_installment_amount
@@ -6236,6 +6271,7 @@ def create_invited_plan_financing_for_user(
         "payment_method": payment_method,
         "externally_managed": externally_managed,
         "proof": proof,
+        "invoice_notes": initial_payment_notes,
     }
     if uniq_negotiated is not None:
         invoice_kw["amount_breakdown"] = {

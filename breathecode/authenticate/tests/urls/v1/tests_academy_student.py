@@ -1226,11 +1226,19 @@ class StudentPostTestSuite(AuthTestCase):
             capability="crud_student",
             profile_academy=1,
             currency=1,
-            payment_method=1,
             cohort_set=1,
             cohort_set_cohort=1,
             financing_option={"how_many_months": 1, "monthly_price": 1200},
             plan={"is_renewable": False, "time_of_life": 1, "time_of_life_unit": "MONTH", "status": "ACTIVE"},
+        )
+        from breathecode.payments.models import PaymentMethod
+
+        payment_method = PaymentMethod.objects.create(
+            academy=model.academy,
+            currency=model.currency,
+            title="Manual transfer",
+            description="Manual transfer",
+            lang="en",
         )
         self.bc.request.authenticate(model.user[0])
 
@@ -1243,7 +1251,7 @@ class StudentPostTestSuite(AuthTestCase):
             "user": model.user[1].id,
             "cohort": [model.cohort.id],
             "plans": [model.plan.id],
-            "payment_method": model.payment_method.id,
+            "payment_method": payment_method.id,
             "how_many_installments": 1,
             "initial_payment_amount": 0,
             "initial_payment_notes": "Prework paid at course start",
@@ -1264,6 +1272,7 @@ class StudentPostTestSuite(AuthTestCase):
         bag = Bag.objects.filter(user=model.user[1], type="INVITED").first()
         invoice = Invoice.objects.filter(bag=bag).first()
         self.assertEqual(invoice.amount, 0)
+        self.assertEqual(invoice.invoice_notes, "Note made by user 1: Prework paid at course start")
         tasks.build_plan_financing.delay.assert_called_once_with(
             bag.id,
             invoice.id,
@@ -1276,6 +1285,66 @@ class StudentPostTestSuite(AuthTestCase):
             principal_amount=1200,
             initial_payment_amount=0,
         )
+
+    @patch("breathecode.payments.tasks.build_plan_financing.delay", MagicMock())
+    @patch("breathecode.notify.actions.send_email_message", MagicMock())
+    @patch("random.getrandbits", MagicMock(side_effect=getrandbits))
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test_academy_student__post__with_initial_payment_requires_notes(self):
+        roles = [{"name": "konan", "slug": "konan"}, {"name": "student", "slug": "student"}]
+
+        model = self.bc.database.create(
+            role=roles,
+            user=2,
+            cohort={"available_as_saas": True},
+            capability="crud_student",
+            profile_academy=1,
+            currency=1,
+            cohort_set=1,
+            cohort_set_cohort=1,
+            financing_option={"how_many_months": 1, "monthly_price": 1200},
+            plan={"is_renewable": False, "time_of_life": 1, "time_of_life_unit": "MONTH", "status": "ACTIVE"},
+        )
+        from breathecode.payments.models import PaymentMethod
+
+        payment_method = PaymentMethod.objects.create(
+            academy=model.academy,
+            currency=model.currency,
+            title="Manual transfer",
+            description="Manual transfer",
+            lang="en",
+        )
+        self.bc.request.authenticate(model.user[0])
+
+        url = reverse_lazy("authenticate:academy_student")
+        data = {
+            "first_name": "Kenny",
+            "last_name": "McKornick",
+            "invite": True,
+            "email": model.user[1].email,
+            "user": model.user[1].id,
+            "cohort": [model.cohort.id],
+            "plans": [model.plan.id],
+            "payment_method": payment_method.id,
+            "how_many_installments": 1,
+            "initial_payment_amount": 0,
+            "grace_period_duration": 2,
+            "grace_period_duration_unit": "WEEK",
+            "financing_option_id": model.financing_option.id,
+        }
+
+        response = self.client.post(url, data, format="json", headers={"academy": 1})
+        json = response.json()
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(json, {"detail": "initial-payment-notes-required", "status_code": 400})
+
+        from breathecode.payments import tasks
+        from breathecode.payments.models import Bag, Invoice
+
+        self.assertEqual(Bag.objects.filter(user=model.user[1], type="INVITED").count(), 0)
+        self.assertEqual(Invoice.objects.filter(user=model.user[1]).count(), 0)
+        self.assertEqual(tasks.build_plan_financing.delay.call_args_list, [])
 
     """
     🔽🔽🔽 POST data without user

@@ -46,7 +46,6 @@ def plan_financing_item(data={}):
         "currency_id": 1,
         "conversion_info": None,
         "initial_payment_amount": None,
-        "initial_payment_notes": None,
         "grace_period_duration": 0,
         "grace_period_duration_unit": "MONTH",
         "auto_recharge_enabled": False,
@@ -364,7 +363,6 @@ class PaymentsTestSuite(PaymentsTestCase):
         assert financing["installments_paid"] == 0
         assert financing["monthly_price"] == 1200
         assert financing["initial_payment_amount"] == 5000
-        assert financing["initial_payment_notes"] == "Staff discount approved"
         assert financing["grace_period_duration"] == 4
         assert financing["grace_period_duration_unit"] == "MONTH"
         assert financing["next_payment_at"].replace(tzinfo=None) == next_payment_at.replace(tzinfo=None)
@@ -374,6 +372,7 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         invoice = self.bc.database.list_of("payments.Invoice")[0]
         assert invoice["invoice_kind"] == "MANUAL_DEPOSIT"
+        assert invoice["invoice_notes"] == "Staff discount approved"
 
     @patch("logging.Logger.error", MagicMock())
     @patch.object(timezone, "now", MagicMock(return_value=UTC_NOW))
@@ -405,7 +404,6 @@ class PaymentsTestSuite(PaymentsTestCase):
         assert financing["installments_paid"] == 0
         assert financing["monthly_price"] == 1200
         assert financing["initial_payment_amount"] == 0
-        assert financing["initial_payment_notes"] == "Prework paid at course start"
         assert financing["grace_period_duration"] == 2
         assert financing["grace_period_duration_unit"] == "WEEK"
         assert financing["next_payment_at"].replace(tzinfo=None) == next_payment_at.replace(tzinfo=None)
@@ -413,6 +411,7 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         invoice = self.bc.database.list_of("payments.Invoice")[0]
         assert invoice["invoice_kind"] == "MANUAL_DEPOSIT"
+        assert invoice["invoice_notes"] == "Prework paid at course start"
 
     @patch("logging.Logger.info", MagicMock())
     @patch("logging.Logger.error", MagicMock())
