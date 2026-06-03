@@ -1926,7 +1926,8 @@ def build_plan_financing(
     if not (invoice := Invoice.objects.filter(id=invoice_id, status="FULFILLED").first()):
         raise RetryTask(f"Invoice with id {invoice_id} not found")
 
-    if not is_free and not invoice.amount:
+    zero_initial_payment = initial_payment_amount is not None and principal_amount is not None
+    if not is_free and not invoice.amount and not zero_initial_payment:
         raise AbortTask(f"An invoice without amount is prohibited (id: {invoice_id})")
 
     utc_now = timezone.now()

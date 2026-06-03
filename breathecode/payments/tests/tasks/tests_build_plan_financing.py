@@ -375,6 +375,45 @@ class PaymentsTestSuite(PaymentsTestCase):
         invoice = self.bc.database.list_of("payments.Invoice")[0]
         assert invoice["invoice_kind"] == "MANUAL_DEPOSIT"
 
+    @patch("logging.Logger.error", MagicMock())
+    @patch.object(timezone, "now", MagicMock(return_value=UTC_NOW))
+    @patch("breathecode.payments.tasks.build_service_stock_scheduler_from_plan_financing.delay", MagicMock())
+    def test_subscription_was_created__with_zero_initial_payment(self):
+        bag = {
+            "status": "PAID",
+            "was_delivered": False,
+            "chosen_period": "NO_SET",
+            "how_many_installments": 1,
+        }
+        invoice = {"status": "FULFILLED", "amount": 0}
+        plan = {"is_renewable": False}
+
+        model = self.bc.database.create(bag=bag, invoice=invoice, plan=plan)
+
+        build_plan_financing.delay(
+            1,
+            1,
+            principal_amount=1200,
+            initial_payment_amount=0,
+            initial_payment_notes="Prework paid at course start",
+            grace_period_duration=2,
+            grace_period_duration_unit="WEEK",
+        )
+
+        financing = self.bc.database.list_of("payments.PlanFinancing")[0]
+        next_payment_at = model.invoice.paid_at + relativedelta(weeks=2)
+        assert financing["installments_paid"] == 0
+        assert financing["monthly_price"] == 1200
+        assert financing["initial_payment_amount"] == 0
+        assert financing["initial_payment_notes"] == "Prework paid at course start"
+        assert financing["grace_period_duration"] == 2
+        assert financing["grace_period_duration_unit"] == "WEEK"
+        assert financing["next_payment_at"].replace(tzinfo=None) == next_payment_at.replace(tzinfo=None)
+        assert logging.Logger.error.call_args_list == []
+
+        invoice = self.bc.database.list_of("payments.Invoice")[0]
+        assert invoice["invoice_kind"] == "MANUAL_DEPOSIT"
+
     @patch("logging.Logger.info", MagicMock())
     @patch("logging.Logger.error", MagicMock())
     @patch.object(timezone, "now", MagicMock(return_value=UTC_NOW))

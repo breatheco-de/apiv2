@@ -158,6 +158,52 @@ class CreateInvitedPlanFinancingForUserTestSuite(PaymentsTestCase):
         self.assertNotIn("initial_payment_amount", kw)
 
     @patch("breathecode.payments.tasks.build_plan_financing.delay", MagicMock())
+    def test_zero_initial_payment_schedules_build_with_initial_payment_kwarg(self):
+        model = self.bc.database.create(
+            user=1,
+            academy=1,
+            currency=1,
+            cohort={"available_as_saas": True},
+            cohort_set=1,
+            cohort_set_cohort=1,
+            financing_option={"how_many_months": 1, "monthly_price": 1200},
+            plan={"is_renewable": False, "time_of_life": 1, "time_of_life_unit": "MONTH", "status": "ACTIVE"},
+        )
+
+        create_invited_plan_financing_for_user(
+            user=model.user,
+            plan=model.plan,
+            academy=model.academy,
+            cohort=model.cohort,
+            payment_method=None,
+            author=model.user,
+            lang="en",
+            initial_payment_amount=0,
+            initial_payment_notes="Prework paid at course start",
+            grace_period_duration=2,
+            grace_period_duration_unit="WEEK",
+        )
+
+        bag = Bag.objects.filter(user=model.user, type="INVITED").first()
+        invoice = Invoice.objects.filter(bag=bag).first()
+        self.assertEqual(invoice.amount, 0)
+
+        from breathecode.payments import tasks
+
+        tasks.build_plan_financing.delay.assert_called_once_with(
+            bag.id,
+            invoice.id,
+            is_free=False,
+            conversion_info=None,
+            cohorts=[model.cohort.slug],
+            grace_period_duration=2,
+            grace_period_duration_unit="WEEK",
+            initial_payment_notes="Note made by user 1: Prework paid at course start",
+            principal_amount=1200,
+            initial_payment_amount=0,
+        )
+
+    @patch("breathecode.payments.tasks.build_plan_financing.delay", MagicMock())
     def test_unique_payment_negotiated_amount_requires_notes_for_one_payment(self):
         model = self.bc.database.create(
             user=1,
