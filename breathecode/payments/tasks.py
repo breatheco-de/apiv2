@@ -1926,8 +1926,13 @@ def build_plan_financing(
     if not (invoice := Invoice.objects.filter(id=invoice_id, status="FULFILLED").first()):
         raise RetryTask(f"Invoice with id {invoice_id} not found")
 
-    if not is_free and not invoice.amount:
+    zero_initial_payment = initial_payment_amount is not None and principal_amount is not None
+    if not is_free and not invoice.amount and not zero_initial_payment:
         raise AbortTask(f"An invoice without amount is prohibited (id: {invoice_id})")
+
+    if initial_payment_notes is not None:
+        invoice.invoice_notes = initial_payment_notes
+        invoice.save(update_fields=["invoice_notes"])
 
     utc_now = timezone.now()
     months = bag.how_many_installments
@@ -1992,7 +1997,6 @@ def build_plan_financing(
         plan_expires_at=invoice.paid_at + delta,
         monthly_price=monthly_price,
         initial_payment_amount=initial_payment_amount,
-        initial_payment_notes=initial_payment_notes,
         grace_period_duration=grace_period_duration,
         grace_period_duration_unit=grace_period_duration_unit,
         status="ACTIVE",
