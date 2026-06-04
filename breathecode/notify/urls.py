@@ -1,9 +1,73 @@
+"""
+URL Configuration for Notify App
+
+This module defines URL patterns following REST conventions with some specific exceptions
+for the BreatheCode API v2.
+
+REST Naming Conventions:
+========================
+
+1. Resource-based URLs:
+   - Use plural nouns for collections: /me/notifications, /slack/teams
+   - Use singular nouns for individual resources: /hook/<id>
+
+2. HTTP Methods:
+   - GET /me/notification - List current user's notifications
+   - POST /me/notification - Create new notification
+   - GET /me/notification/<id> - Get specific notification
+   - PUT/PATCH /me/notification/<id> - Update specific notification
+   - DELETE /me/notification/<id> - Delete specific notification
+
+3. Nested Resources:
+   - /hook/subscribe - Webhook subscriptions
+   - /hook/<id>/sample - Sample data for specific hook
+   - /slack/command - Slack command endpoints
+
+4. Actions (Non-REST exceptions):
+   - /preview/<slug> - Preview notification template (GET)
+   - /preview/slack/<slug> - Preview Slack template (GET)
+   - /test/email/<email> - Test email delivery (GET)
+   - /slack/interaction - Process Slack interactions (POST)
+
+5. Special Endpoints:
+   - /me/* - Current user's notifications
+   - /hook/* - Webhook-related endpoints
+   - /slack/* - Slack integration endpoints
+   - /preview/* - Template preview endpoints
+   - /test/* - Testing endpoints
+
+6. URL Naming:
+   - Use snake_case for URL names: me_notification
+   - Include resource type and ID when applicable
+   - Be descriptive but concise
+
+Examples:
+- me_notification - Get/update current user's notifications
+- slack_command - Slack command endpoint
+- slack_team - Slack team management
+"""
+
 from django.urls import path
 
 from .views import (
+    AcademySlackTeamCredentialsView,
+    AcademySlackTeamSyncChannelsView,
+    AcademySlackTeamSyncCohortView,
+    AcademySlackTeamSyncStatusView,
+    AcademySlackTeamSyncUserView,
+    AcademySlackTeamSyncUsersView,
+    AcademyHookErrorsView,
+    AcademyHooksView,
+    AcademyNotifySettingsView,
+    AcademyNotifyVariablesView,
     HooksView,
+    NotificationTemplatePreviewView,
+    NotificationTemplatesView,
+    NotificationTemplateView,
     NotificationsView,
     SlackTeamsView,
+    get_academy_sample_data,
+    get_hook_events,
     get_sample_data,
     preview_slack_template,
     preview_template,
@@ -14,15 +78,72 @@ from .views import (
 
 app_name = "notify"
 urlpatterns = [
+    # Template preview endpoints (legacy)
     path("preview/<slug>", preview_template),
     path("preview/slack/<slug>", preview_slack_template),
     path("test/email/<email>", test_email),
+    # Notification template management (requires read_notification capability)
+    path("academy/template", NotificationTemplatesView.as_view(), name="academy_template"),
+    path("academy/template/<str:slug>", NotificationTemplateView.as_view(), name="academy_template_slug"),
+    path(
+        "academy/template/<str:slug>/preview",
+        NotificationTemplatePreviewView.as_view(),
+        name="academy_template_slug_preview",
+    ),
+    # Academy notification settings
+    path("academy/settings", AcademyNotifySettingsView.as_view(), name="academy_notify_settings"),
+    path("academy/variables", AcademyNotifyVariablesView.as_view(), name="academy_notify_variables"),
+    # Slack integration endpoints
     path("slack/interaction", process_interaction),
-    path("hook/subscribe", HooksView.as_view()),
-    path("hook/subscribe/<int:hook_id>", HooksView.as_view()),
-    path("hook/sample", get_sample_data),
-    path("hook/<int:hook_id>/sample", get_sample_data),
     path("slack/command", slack_command, name="slack_command"),
     path("slack/team", SlackTeamsView.as_view(), name="slack_team"),
+    path(
+        "academy/slack/team/<int:team_id>/credentials",
+        AcademySlackTeamCredentialsView.as_view(),
+        name="academy_slack_team_id_credentials",
+    ),
+    path("academy/slack/team/<int:team_id>/sync/users", AcademySlackTeamSyncUsersView.as_view(), name="academy_slack_team_id_sync_users"),
+    path(
+        "academy/slack/team/<int:team_id>/sync/channels",
+        AcademySlackTeamSyncChannelsView.as_view(),
+        name="academy_slack_team_id_sync_channels",
+    ),
+    path(
+        "academy/slack/team/<int:team_id>/sync/status",
+        AcademySlackTeamSyncStatusView.as_view(),
+        name="academy_slack_team_id_sync_status",
+    ),
+    path(
+        "academy/slack/team/<int:team_id>/sync/user/<str:slack_user_id>",
+        AcademySlackTeamSyncUserView.as_view(),
+        name="academy_slack_team_id_sync_user_id",
+    ),
+    path(
+        "academy/slack/team/<int:team_id>/sync/cohort/<int:cohort_id>",
+        AcademySlackTeamSyncCohortView.as_view(),
+        name="academy_slack_team_id_sync_cohort_id",
+    ),
+    # Webhook endpoints
+    path("hook/event", get_hook_events, name="hook_event"),
+    # Legacy endpoints (backward compatibility)
+    path("hook/subscribe", HooksView.as_view()),
+    path("hook/subscribe/<int:hook_id>", HooksView.as_view()),
+    # User-specific endpoints (consistent with /me/ pattern)
+    path("hook/me/subscribe", HooksView.as_view(), name="hook_me_subscribe"),
+    path("hook/me/subscribe/<int:hook_id>", HooksView.as_view(), name="hook_me_subscribe_id"),
+    # Academy token endpoints
+    path("hook/academy/subscribe", AcademyHooksView.as_view(), name="hook_academy_subscribe"),
+    path("hook/academy/subscribe/<int:hook_id>", AcademyHooksView.as_view(), name="hook_academy_subscribe_id"),
+    path("hook/academy/sample", get_academy_sample_data, name="hook_academy_sample"),
+    path("hook/academy/sample/<int:hook_id>", get_academy_sample_data, name="hook_academy_sample_id"),
+    path("hook/academy/error", AcademyHookErrorsView.as_view(), name="hook_academy_error"),
+    # Sample data endpoints
+    # Legacy endpoints (backward compatibility)
+    path("hook/sample", get_sample_data),
+    path("hook/<int:hook_id>/sample", get_sample_data),
+    # User-specific endpoints (consistent with /me/ pattern)
+    path("hook/me/sample", get_sample_data, name="hook_me_sample"),
+    path("hook/me/sample/<int:hook_id>", get_sample_data, name="hook_me_sample_id"),
+    # User notification endpoints
     path("me/notification", NotificationsView.as_view(), name="me_notification"),
 ]

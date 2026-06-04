@@ -32,6 +32,7 @@ def get_serializer(self, event_type, cohort, data={}):
         "starting_at": self.bc.datetime.to_iso_string(event_type.starting_at),
         "ending_at": self.bc.datetime.to_iso_string(event_type.ending_at),
         "hash": event_type.hash,
+        "remote_meeting_url": event_type.remote_meeting_url,
         **data,
     }
 

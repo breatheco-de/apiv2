@@ -10,12 +10,12 @@ from django.utils.html import format_html
 # from breathecode.admissions.admin import SyllabusVersionAdmin
 from breathecode.services.seo import SEOAnalyzer
 from breathecode.utils.admin import change_field
+from breathecode.utils.admin.widgets import PrettyJSONWidget
 
 from .actions import (
     AssetThumbnailGenerator,
     add_syllabus_translations,
     get_user_from_github_username,
-    process_asset_config,
     push_to_github,
     scan_asset_originality,
 )
@@ -29,6 +29,7 @@ from .models import (
     AssetImage,
     AssetKeyword,
     AssetTechnology,
+    ContentSite,
     ContentVariable,
     CredentialsOriginality,
     KeywordCluster,
@@ -71,6 +72,16 @@ def remove_gitpod(modeladmin, request, queryset):
     queryset.update(gitpod=False)
 
 
+@admin.display(description="Set graded to True")
+def set_graded_true(modeladmin, request, queryset):
+    queryset.update(graded=True)
+
+
+@admin.display(description="Set graded to False")
+def set_graded_false(modeladmin, request, queryset):
+    queryset.update(graded=False)
+
+
 @admin.display(description="Make it an EXTERNAL resource (new window)")
 def make_external(modeladmin, request, queryset):
     queryset.update(external=True)
@@ -84,7 +95,8 @@ def make_internal(modeladmin, request, queryset):
 def process_config_object(modeladmin, request, queryset):
     assets = queryset.all()
     for a in assets:
-        process_asset_config(a, a.config)
+        if a.config:
+            a.apply_learn_config(a.config)
 
 
 def pull_content_from_github(modeladmin, request, queryset):
@@ -361,6 +373,9 @@ class AssetForm(forms.ModelForm):
     class Meta:
         model = Asset
         fields = "__all__"
+        widgets = {
+            "config": PrettyJSONWidget(),
+        }
 
     def __init__(self, *args, **kwargs):
         super(AssetForm, self).__init__(*args, **kwargs)
@@ -495,6 +510,25 @@ class AcademySlugFilter(admin.SimpleListFilter):
         return queryset
 
 
+class SyncStatusFilter(admin.SimpleListFilter):
+
+    title = "Sync Status"
+
+    parameter_name = "sync_status_filter"
+
+    def lookups(self, request, model_admin):
+
+        from .models import ASSET_SYNC_STATUS
+
+        return ASSET_SYNC_STATUS
+
+    def queryset(self, request, queryset):
+
+        if self.value():
+            return queryset.filter(sync_status=self.value())
+        return queryset
+
+
 # Register your models here.
 @admin.register(Asset)
 class AssetAdmin(admin.ModelAdmin):
@@ -502,14 +536,15 @@ class AssetAdmin(admin.ModelAdmin):
     search_fields = ["title", "slug", "author__email", "url"]
     filter_horizontal = ("technologies", "all_translations", "seo_keywords", "assets_related")
     list_display = ("main", "current_status", "alias", "techs", "url_path")
-    readonly_fields = ["flag_seed"]
+    readonly_fields = ["flag_seed", "github_activity_log"]
     list_filter = [
         "asset_type",
         "status",
-        "sync_status",
+        SyncStatusFilter,
         "test_status",
         "lang",
         "external",
+        "graded",
         AssessmentFilter,
         WithKeywordFilter,
         WithDescription,
@@ -524,6 +559,8 @@ class AssetAdmin(admin.ModelAdmin):
             async_test_asset_integrity,
             add_gitpod,
             remove_gitpod,
+            set_graded_true,
+            set_graded_false,
             process_config_object,
             pull_content_from_github,
             pull_content_from_github_override_meta,
@@ -895,6 +932,14 @@ class AssetErrorLogAdmin(admin.ModelAdmin):
 class AssetCategoryAdmin(admin.ModelAdmin):
     search_fields = ["slug", "title"]
     list_display = ("slug", "title", "academy")
+    raw_id_fields = ["academy"]
+    list_filter = ["academy"]
+
+
+@admin.register(ContentSite)
+class ContentSiteAdmin(admin.ModelAdmin):
+    search_fields = ["title", "domain_url"]
+    list_display = ("title", "domain_url", "academy")
     raw_id_fields = ["academy"]
     list_filter = ["academy"]
 

@@ -43,9 +43,11 @@ class LinkedServicesMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
             or is_valid(app_optional_scope)
             or is_valid(first_party_webhook_log)
         ):
+            # Pre-seed HMAC private key so App.clean() does not call generate_auth_keys (Ed25519 / OS entropy can fail on Windows CI).
             kargs = {
                 "public_key": None,
-                "private_key": "",
+                "private_key": "a" * 128,
+                "algorithm": "HMAC_SHA512",
             }
 
             models["app"] = create_models(app, "linked_services.App", **kargs)

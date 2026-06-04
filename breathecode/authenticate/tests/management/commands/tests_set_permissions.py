@@ -31,7 +31,7 @@ PERMISSIONS = [
 ]
 
 GROUPS = [
-    {"name": "Admin", "permissions": [x["codename"] for x in PERMISSIONS], "inherit": []},
+    {"name": "System Admin", "permissions": [x["codename"] for x in PERMISSIONS], "inherit": []},
     {
         "name": "Default",
         "permissions": ["delete_job", "get_my_profile", "create_my_profile", "update_my_profile"],
@@ -151,13 +151,13 @@ class TokenTestSuite(AuthTestCase):
         ]
 
         assert self.bc.database.list_of("auth.Group") == [
-            {"id": 1, "name": "Admin"},
+            {"id": 1, "name": "System Admin"},
             {"id": 2, "name": "Default"},
             {"id": 3, "name": "Student"},
             {"id": 4, "name": "Legacy"},
         ]
 
-        assert sort_by_id(self.bc.format.to_dict(Group.objects.filter(name="Admin").first().permissions.all())) == [
+        assert sort_by_id(self.bc.format.to_dict(Group.objects.filter(name="System Admin").first().permissions.all())) == [
             {
                 "codename": "delete_job",
                 "content_type_id": self.latest_content_type_id + 1,
@@ -277,7 +277,7 @@ class TokenTestSuite(AuthTestCase):
         ]
         groups = [
             {
-                "name": "Admin",
+                "name": "System Admin",
                 "permissions": permission_ids,
             },
             {
@@ -335,13 +335,13 @@ class TokenTestSuite(AuthTestCase):
         ]
 
         assert sort_by_id(self.bc.database.list_of("auth.Group")) == [
-            {"id": 1, "name": "Admin"},
+            {"id": 1, "name": "System Admin"},
             {"id": 2, "name": "Default"},
             {"id": 3, "name": "Student"},
             {"id": 4, "name": "Legacy"},
         ]
 
-        assert sort_by_id(self.bc.format.to_dict(Group.objects.filter(name="Admin").first().permissions.all())) == [
+        assert sort_by_id(self.bc.format.to_dict(Group.objects.filter(name="System Admin").first().permissions.all())) == [
             {
                 "codename": "delete_job",
                 "content_type_id": self.latest_content_type_id + 1,

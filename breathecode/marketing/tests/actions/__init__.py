@@ -1,0 +1,4 @@
+"""
+Tests for marketing actions
+"""
+

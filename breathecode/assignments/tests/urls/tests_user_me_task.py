@@ -27,6 +27,7 @@ def db_item(data={}):
         "associated_slug": "live-ball-onto-go",
         "cohort_id": 1,
         "delivered_at": None,
+        "delivered_flags": [],
         "description": "",
         "github_url": None,
         "id": 1,
@@ -46,7 +47,30 @@ def db_item(data={}):
     }
 
 
+def get_list_serializer(self, task):
+    """Matches TaskUserSmallSerializer (GET /user/me/task without task_id)."""
+    return {
+        "id": task.id,
+        "title": task.title,
+        "task_status": str(task.task_status),
+        "associated_slug": task.associated_slug,
+        "description": task.description,
+        "revision_status": str(task.revision_status),
+        "github_url": task.github_url,
+        "live_url": task.live_url,
+        "task_type": task.task_type,
+        "opened_at": self.bc.datetime.to_iso_string(task.opened_at) if task.opened_at else task.opened_at,
+        "read_at": self.bc.datetime.to_iso_string(task.read_at) if task.read_at else task.read_at,
+        "reviewed_at": self.bc.datetime.to_iso_string(task.reviewed_at) if task.reviewed_at else task.reviewed_at,
+        "delivered_at": self.bc.datetime.to_iso_string(task.delivered_at) if task.delivered_at else task.delivered_at,
+        "cohort": {"id": task.cohort.id, "name": task.cohort.name, "slug": task.cohort.slug},
+        "created_at": self.bc.datetime.to_iso_string(task.created_at),
+        "updated_at": self.bc.datetime.to_iso_string(task.updated_at),
+    }
+
+
 def get_serializer(self, task, user):
+    """Matches TaskGETSerializer (single task or legacy expectations with user + telemetry)."""
     return {
         "associated_slug": task.associated_slug,
         "created_at": self.bc.datetime.to_iso_string(task.created_at),
@@ -54,8 +78,8 @@ def get_serializer(self, task, user):
         "github_url": task.github_url,
         "id": task.id,
         "live_url": task.live_url,
-        "revision_status": task.revision_status,
-        "task_status": task.task_status,
+        "revision_status": str(task.revision_status),
+        "task_status": str(task.task_status),
         "task_type": task.task_type,
         "title": task.title,
         "assignment_telemetry": task.telemetry.telemetry if task.telemetry else None,
@@ -76,6 +100,7 @@ def post_serializer(data={}):
         "cohort": 1,
         "created_at": "2024-04-25T01:09:44.447234Z",
         "delivered_at": None,
+        "delivered_flags": [],
         "description": "",
         "github_url": None,
         "id": 1,
@@ -104,12 +129,13 @@ def put_serializer(self, task, data={}):
         "github_url": task.github_url,
         "id": task.id,
         "live_url": task.live_url,
-        "revision_status": task.revision_status,
-        "task_status": task.task_status,
+        "revision_status": str(task.revision_status),
+        "task_status": str(task.task_status),
         "task_type": task.task_type,
         "title": task.title,
         "rigobot_repository_id": task.rigobot_repository_id,
         "attachments": [],
+        "delivered_flags": task.delivered_flags if task.delivered_flags is not None else [],
         "subtasks": task.subtasks,
         "telemetry": task.telemetry,
         "opened_at": self.bc.datetime.to_iso_string(task.opened_at) if task.opened_at else task.opened_at,
@@ -185,7 +211,7 @@ class MediaTestSuite(AssignmentsTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        expected = [get_serializer(self, model.task, model.user)]
+        expected = [get_list_serializer(self, model.task)]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -207,7 +233,7 @@ class MediaTestSuite(AssignmentsTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        expected = [get_serializer(self, task, model.user) for task in model.task]
+        expected = [get_list_serializer(self, task) for task in model.task]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -231,7 +257,7 @@ class MediaTestSuite(AssignmentsTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        expected = [get_serializer(self, task, model.user) for task in model.task]
+        expected = [get_list_serializer(self, task) for task in model.task]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -759,7 +785,7 @@ def test_post__created(
 ):
     url = reverse_lazy("assignments:user_me_task")
 
-    model = database.create(user=1, cohort=1, city=1, country=1)
+    model = database.create(user=1, cohort=1, cohort_user=1, city=1, country=1)
     client.force_authenticate(model.user)
 
     data = {

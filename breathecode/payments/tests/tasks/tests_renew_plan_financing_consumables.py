@@ -234,3 +234,33 @@ class PaymentsTestSuite(PaymentsTestCase):
             self.bc.database.list_of("payments.ServiceStockScheduler"),
             self.bc.format.to_dict(model.service_stock_scheduler),
         )
+
+    @patch("logging.Logger.info", MagicMock())
+    @patch("logging.Logger.error", MagicMock())
+    @patch("breathecode.payments.tasks.renew_consumables.delay", MagicMock())
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test_discontinued_plan_financing_still_renews_consumables(self):
+        plan_financing = {
+            "next_payment_at": UTC_NOW + relativedelta(minutes=3),
+            "valid_until": UTC_NOW + relativedelta(minutes=3),
+            "plan_expires_at": UTC_NOW + relativedelta(minutes=3),
+            "monthly_price": random.random() * 99.99 + 0.01,
+        }
+        plan = {"is_renewable": False, "status": "DISCONTINUED"}
+        model = self.bc.database.create(
+            plan_financing=plan_financing,
+            service_stock_scheduler=[{"subscription_handler_id": None, "plan_handler_id": 1}],
+            plan=plan,
+            service_item=1,
+            plan_service_item={"plan_id": 1, "service_item_id": 1},
+            plan_service_item_handler={"handler_id": 1},
+        )
+
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
+        renew_plan_financing_consumables.delay(1)
+
+        self.assertEqual(logging.Logger.error.call_args_list, [])
+        self.assertEqual(tasks.renew_consumables.delay.call_args_list, [call(1)])
+        self.assertEqual(self.bc.database.list_of("payments.PlanFinancing")[0]["status"], "ACTIVE")

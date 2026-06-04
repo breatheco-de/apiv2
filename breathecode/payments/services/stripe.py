@@ -1,6 +1,6 @@
 import math
 import os
-from typing import Union
+from typing import Any, Union
 
 import stripe
 from capyc.core.i18n import translation
@@ -20,6 +20,7 @@ from breathecode.payments.models import (
     SubscriptionBillingTeam,
     SubscriptionSeat,
 )
+from breathecode.payments.actions import calculate_invoice_breakdown
 from breathecode.utils import getLogger
 
 logger = getLogger(__name__)
@@ -57,7 +58,7 @@ class Stripe:
 
         The API key is determined in the following order of precedence:
         1. `api_key` parameter if provided.
-        2. Academy-specific `pos_api_key` from `AcademyPaymentSettings` if `academy` is provided
+        2. Academy-specific `stripe_api_key` from `AcademyPaymentSettings` if `academy` is provided
            and `api_key` is not.
         3. `STRIPE_API_KEY` environment variable as a fallback.
 
@@ -72,9 +73,9 @@ class Stripe:
 
         # If academy is provided and no explicit api_key, try to get academy-specific settings
         if academy and not api_key:
-            academy_settings = AcademyPaymentSettings.objects.filter(academy=academy).only("pos_api_key").first()
+            academy_settings = AcademyPaymentSettings.objects.filter(academy=academy).only("stripe_api_key").first()
             if academy_settings:
-                self.api_key = academy_settings.pos_api_key
+                self.api_key = academy_settings.stripe_api_key
 
         # Fallback to environment variable if no api_key is set yet
         if not self.api_key:
@@ -149,15 +150,38 @@ class Stripe:
                               if the token is invalid.
         """
         stripe.api_key = self.api_key
+        error = None
+        details = {}
 
-        contact = PaymentContact.objects.filter(user=user, academy=self.academy).first()
-        if not contact:
-            contact = self.add_contact(user)
+        try:
+            contact = PaymentContact.objects.filter(user=user, academy=self.academy).first()
+            if not contact:
+                contact = self.add_contact(user)
 
-        def callback():
-            return stripe.Customer.modify(contact.stripe_id, source=token)
+            def callback():
+                try:
+                    customer = stripe.Customer.modify(contact.stripe_id, source=token)
+                except stripe.error.StripeError:
+                    contact.delete()
+                    new_contact = self.add_contact(user)
+                    customer = stripe.Customer.modify(new_contact.stripe_id, source=token)
+                if not customer.get("default_source"):
+                    return None
+                return stripe.Customer.retrieve_source(customer.id, customer.default_source)
 
-        return self._i18n_validations(callback)
+            source = self._i18n_validations(callback)
+
+            details = {
+                "card_last4": source.last4,
+                "card_brand": source.brand,
+                "card_exp_month": source.exp_month,
+                "card_exp_year": source.exp_year,
+            }
+
+        except Exception as e:
+            error = str(e)
+
+        return error, details
 
     def add_contact(self, user: User) -> PaymentContact:
         """
@@ -330,6 +354,7 @@ class Stripe:
         description: str = "",
         subscription_billing_team: SubscriptionBillingTeam | None = None,
         subscription_seat: SubscriptionSeat | None = None,
+        amount_breakdown: dict | None = None,
     ) -> Invoice:
         """
         Processes a payment for a given user and bag.
@@ -400,49 +425,103 @@ class Stripe:
             status="FULFILLED",
             subscription_billing_team=subscription_billing_team,
             subscription_seat=subscription_seat,
+            amount_breakdown=amount_breakdown,
         )
         invoice.currency = currency
         invoice.bag = bag
         invoice.academy = bag.academy
-
         invoice.save()
+
+        # Breakdown will be calculated later when bag is fully configured
+        # (in PayView after bag.chosen_period and bag.how_many_installments are set)
 
         return invoice
 
-    def refund_payment(self, invoice: Invoice) -> Invoice:
+    def refund_payment(self, invoice: Invoice, amount: float | None = None) -> dict[str, Any]:
         """
         Refunds a payment associated with a given invoice.
 
         This method creates a Stripe refund for the charge ID stored in the invoice.
-        The invoice status is updated to "REFUNDED", and refund details are saved.
+        Supports both full and partial refunds.
 
         Args:
             invoice (Invoice): The invoice object representing the payment to be refunded.
                                It must have a `stripe_id` (charge ID).
+            amount (float, optional): Amount to refund. If None, refunds full amount.
 
         Returns:
-            Invoice: The updated Invoice object with refund details.
+            dict: Dictionary containing refund information with keys:
+                - 'refund': Stripe refund object
+                - 'refunded_amount': Amount refunded
+                - 'invoice': Updated invoice object
 
         Raises:
             PaymentException: If there's an issue with the Stripe refund process.
         """
         stripe.api_key = self.api_key
 
-        # Ensure the user associated with the invoice has a contact, though Stripe refund
-        # primarily needs the charge ID. This might be for consistency or future use.
+        # Validate refund amount doesn't exceed available
+        already_refunded = invoice.amount_refunded or 0
+        available_to_refund = invoice.amount - already_refunded
+
+        if amount is None:
+            amount = available_to_refund
+        elif amount > available_to_refund:
+            raise PaymentException(
+                translation(
+                    self.lang,
+                    en=f"Refund amount ({amount}) exceeds available amount to refund ({available_to_refund}). "
+                    f"Already refunded: {already_refunded}, Invoice total: {invoice.amount}",
+                    es=f"El monto del reembolso ({amount}) excede el monto disponible para reembolsar ({available_to_refund}). "
+                    f"Ya reembolsado: {already_refunded}, Total de la factura: {invoice.amount}",
+                    slug="refund-amount-exceeds-available",
+                ),
+                code=400,
+            )
+
+        if amount <= 0:
+            raise PaymentException(
+                translation(
+                    self.lang,
+                    en="Refund amount must be greater than 0",
+                    es="El monto del reembolso debe ser mayor que 0",
+                    slug="invalid-refund-amount",
+                ),
+                code=400,
+            )
+
+        # Ensure the user associated with the invoice has a contact
         self.add_contact(invoice.user)
 
         def callback():
-            return stripe.Refund.create(charge=invoice.stripe_id)
+            refund_params = {"charge": invoice.stripe_id}
+            if amount is not None:
+                refund_params["amount"] = int(amount * 100)
+            return stripe.Refund.create(**refund_params)
 
         refund = self._i18n_validations(callback)
 
-        invoice.refund_stripe_id = refund["id"]
-        invoice.refunded_at = timezone.now()
-        invoice.status = "REFUNDED"
+        refunded_amount = refund["amount"] / 100
+
+        if invoice.refund_stripe_id:
+            invoice.amount_refunded = (invoice.amount_refunded or 0) + refunded_amount
+        else:
+            invoice.refund_stripe_id = refund["id"]
+            invoice.amount_refunded = refunded_amount
+
+        if invoice.amount_refunded >= invoice.amount:
+            invoice.status = "REFUNDED"
+            invoice.refunded_at = timezone.now()
+        elif invoice.amount_refunded > 0:
+            invoice.status = "PARTIALLY_REFUNDED"
+
         invoice.save()
 
-        return invoice
+        return {
+            "refund": refund,
+            "refunded_amount": refunded_amount,
+            "invoice": invoice,
+        }
 
     def create_payment_link(self, price_id: str, quantity: int) -> tuple[str, str]:
         """
@@ -478,68 +557,85 @@ class Stripe:
         payment_link_object = self._i18n_validations(callback)
         return payment_link_object["id"], payment_link_object["url"]
 
-    def update_all_payment_methods(
-        self,
-        user: User,
-        token: str = None,
-        card_number: str = None,
-        exp_month: int = None,
-        exp_year: int = None,
-        cvc: str = None,
-    ) -> tuple[bool, list[str], dict]:
+    def has_payment_method(self, user: User) -> bool:
         """
-        Update payment method for all payment contacts of a user.
+        Check if a user has a payment method on file with Stripe.
+
+        This is a quick check that verifies if the user has a Stripe customer
+        record and if that customer has a default payment source.
 
         Args:
-            user: The user whose payment contacts will be updated
-            token: [Optional] token from Stripe.js. If not provided, will be created from card details
-            card_number: [Optional] card number if token is not provided
-            exp_month: [Optional] expiration month if token is not provided
-            exp_year: [Optional] expiration year if token is not provided
-            cvc: [Optional] CVC if token is not provided
+            user (User): The user to check.
 
         Returns:
-            tuple: (success: bool, errors: list[str], details: dict)
-            - success: True if at least one contact was updated successfully
-            - errors: List of error messages for failed updates
-            - details: Dictionary with information about the updated payment methods
+            bool: True if user has a payment method, False otherwise.
         """
-        contacts = PaymentContact.objects.filter(user=user)
-        if not contacts.exists():
-            return False, ["No payment contacts found for this user"], {}
+        stripe.api_key = self.api_key
 
-        any_success = False
-        errors = []
-        details = {}
+        contact = PaymentContact.objects.filter(user=user, academy=self.academy).first()
+        if not contact:
+            return False
 
-        for contact in contacts:
-            try:
-                # Get the academy's Stripe API key
-                academy = contact.academy
-                s = Stripe(academy=academy)
-                s.set_language(self.language)
+        try:
 
-                # Create new token for this contact
-                token = s.create_card_token(card_number, exp_month, exp_year, cvc)
+            def callback():
+                return stripe.Customer.retrieve(contact.stripe_id)
 
-                # Update payment method
-                customer = s.add_payment_method(user, token)
+            customer = self._i18n_validations(callback)
+            return customer.get("default_source") is not None
 
-                # Get card details from customer's default source
-                stripe.api_key = s.api_key
-                source = stripe.Customer.retrieve_source(customer.id, customer.default_source)
+        except Exception as e:
+            logger.error(f"Error checking payment method for user {user.id}: {str(e)}")
+            return False
 
-                details[academy.name] = {
-                    "card_last4": source.last4,
-                    "card_brand": source.brand,
-                    "card_exp_month": source.exp_month,
-                    "card_exp_year": source.exp_year,
+    def get_payment_method_info(self, user: User) -> dict | None:
+        """
+        Retrieve payment method information for a user from Stripe.
+
+        Fetches the default payment source details from Stripe for the given user.
+        Returns masked card information (last 4 digits, brand, expiration).
+
+        Args:
+            user (User): The user whose payment method info to retrieve.
+
+        Returns:
+            dict | None: A dictionary containing payment method details if found:
+                {
+                    "has_payment_method": True,
+                    "card_last4": "4242",
+                    "card_brand": "Visa",
+                    "card_exp_month": 12,
+                    "card_exp_year": 2025
                 }
+                Returns None if no payment method exists or an error occurs.
+        """
+        stripe.api_key = self.api_key
 
-                any_success = True
+        contact = PaymentContact.objects.filter(user=user, academy=self.academy).first()
+        if not contact:
+            return None
 
-            except Exception as e:
-                errors.append(str(e))
-                continue
+        try:
 
-        return any_success, errors, details
+            def callback():
+                customer = stripe.Customer.retrieve(contact.stripe_id)
+                if not customer.get("default_source"):
+                    return None
+                return stripe.Customer.retrieve_source(customer.id, customer.default_source)
+
+            source = self._i18n_validations(callback)
+
+            if not source:
+                return None
+
+            return {
+                "has_payment_method": True,
+                "card_last4": source.last4,
+                "card_brand": source.brand,
+                "card_exp_month": source.exp_month,
+                "card_exp_year": source.exp_year,
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting payment method info for user {user.id}: {str(e)}")
+            return None

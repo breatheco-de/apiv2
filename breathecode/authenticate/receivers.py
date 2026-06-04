@@ -3,17 +3,21 @@ from typing import Type
 
 from django.contrib.auth.models import Group, User
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models.signals import post_delete, post_save, pre_delete
+from django.db.models.signals import post_delete, post_save, pre_delete, pre_save
 from django.dispatch import receiver
 from task_manager.django.actions import schedule_task
 
 from breathecode.admissions.models import CohortUser
 from breathecode.admissions.signals import student_edu_status_updated
 from breathecode.authenticate import tasks
-from breathecode.authenticate.models import ProfileAcademy, UserInvite
+from breathecode.payments.models import Service
+from breathecode.payments.models import Consumable
+from breathecode.payments.signals import grant_service_permissions
+from breathecode.authenticate.models import ADD, GithubAcademyUser, ProfileAcademy, SYNCHED, UserInvite
 from breathecode.authenticate.signals import (
     cohort_user_deleted,
     invite_status_updated,
+    invite_email_validated,
     user_info_deleted,
     user_info_updated,
     profile_academy_role_changed,
@@ -26,21 +30,40 @@ from .tasks import async_add_to_organization, async_remove_from_organization
 logger = logging.getLogger(__name__)
 
 
-@receiver(post_save, sender=[User, ProfileAcademy, MentorProfile, SubscriptionSeat])
+@receiver(post_save, sender=User)
+@receiver(post_save, sender=ProfileAcademy)
+@receiver(post_save, sender=MentorProfile)
+@receiver(post_save, sender=SubscriptionSeat)
 def update_user_group(sender, instance, created: bool, **_):
     # redirect to other signal to be able to mock it
     user_info_updated.send_robust(sender=sender, instance=instance, created=created)
 
 
-@receiver(user_info_updated, sender=[User, ProfileAcademy, MentorProfile, SubscriptionSeat])
+@receiver(user_info_updated)
 def set_user_group(sender, instance, created: bool, **_):
     from breathecode.payments import actions as payments_actions
 
     group = None
     groups = None
 
+    # Only run on creation for most models
     if not created:
-        return
+        # Special case: For ProfileAcademy, also run when status changes to ACTIVE
+        # This handles the two-step creation pattern: create as INVITED, then update to ACTIVE
+        if sender == ProfileAcademy:
+            # Check if status just changed to ACTIVE (handles two-step invite acceptance)
+            status_changed_to_active = (
+                hasattr(instance, "_ProfileAcademy__old_status")
+                and instance._ProfileAcademy__old_status != "ACTIVE"
+                and instance.status == "ACTIVE"
+            )
+            if not status_changed_to_active:
+                return
+        elif sender == SubscriptionSeat:
+            if not getattr(instance, "user", None):
+                return
+        else:
+            return
 
     # prevent errors with migrations
     try:
@@ -48,8 +71,11 @@ def set_user_group(sender, instance, created: bool, **_):
             group = Group.objects.filter(name="Student").first()
             groups = instance.user.groups
 
-            for plan in instance.billing_team.plans.all():
-                payments_actions.grant_student_capabilities(instance.user, plan)
+            # Only grant capabilities when the user is missing the Student group.
+            # This keeps the fix focused and avoids heavy re-processing on every seat update.
+            if group and not instance.user.groups.filter(name="Student").exists():
+                for plan in instance.billing_team.plans.all():
+                    payments_actions.grant_student_capabilities(instance.user, plan)
 
         if sender == User:
             group = Group.objects.filter(name="Default").first()
@@ -73,6 +99,7 @@ def set_user_group(sender, instance, created: bool, **_):
             groups = instance.user.groups
 
         if groups and group:
+            # Use add() which is idempotent - won't duplicate if already in group
             groups.add(group)
 
     # this prevent a bug with migrations
@@ -214,4 +241,124 @@ def handle_profile_academy_role_change(instance, old_role, new_role, **kwargs):
         instance.user.groups.add(new_group)
         logger.info(
             f"Added user {instance.user.id} to group {new_group_name} (role changed from {old_role.slug} to {new_role.slug})"
+        )
+
+
+@receiver(invite_email_validated, sender=UserInvite)
+def sync_email_validation_across_invites(sender, instance, **kwargs):
+    """
+    When an invite's email is validated, automatically validate all other invites with the same email.
+    This ensures consistency across all invites for the same email address.
+
+    This receiver is triggered by the custom signal 'invite_email_validated' which is sent
+    from the UserInvite model when is_email_validated changes from False to True.
+    """
+    if not instance.email:
+        return
+
+    other_invites = UserInvite.objects.filter(email=instance.email, is_email_validated=False).exclude(id=instance.id)
+
+    if not other_invites.exists():
+        return
+
+    updated_count = other_invites.update(
+        is_email_validated=True, email_quality=instance.email_quality, email_status=instance.email_status
+    )
+
+    logger.info(
+        f"Email validation synced: {updated_count} invites with email '{instance.email}' "
+        f"were automatically validated based on invite {instance.id}"
+    )
+
+
+@receiver(grant_service_permissions, sender=Consumable)
+def provision_github_copilot_on_service_granted(sender, instance: Consumable, **kwargs):
+    service = getattr(instance.service_item, "service", None)
+    if not service:
+        return
+
+    if getattr(service, "consumer", None) != Service.Consumer.GITHUB_COPILOT:
+        return
+
+    user = instance.subscription_seat.user if instance.subscription_seat else instance.user
+    if not user:
+        return
+
+    academy_id = None
+    if instance.subscription and instance.subscription.academy_id:
+        academy_id = instance.subscription.academy_id
+    elif instance.plan_financing and instance.plan_financing.academy_id:
+        academy_id = instance.plan_financing.academy_id
+
+    logger.info(
+        "[COPILOT grant_service_permissions] consumable_id=%s user_id=%s academy_id=%s slug=%s -> provision task",
+        instance.id,
+        user.id,
+        academy_id,
+        service.slug,
+    )
+    tasks.provision_github_copilot_task.delay(user.id, academy_id=academy_id)
+
+
+@receiver(pre_save, sender=GithubAcademyUser)
+def github_academy_user_copilot_track_prev(sender, instance: GithubAcademyUser, **kwargs):
+    update_fields = kwargs.get("update_fields")
+    if update_fields and set(update_fields).issubset({"storage_log", "updated_at"}):
+        return
+
+    if not instance.pk:
+        instance._copilot_prev_good = False
+        logger.info(
+            "[COPILOT GithubAcademyUser pre_save] new row academy_id=%s user_id=%s action=%s status=%s",
+            instance.academy_id,
+            instance.user_id,
+            instance.storage_action,
+            instance.storage_status,
+        )
+        return
+    prev = GithubAcademyUser.objects.filter(pk=instance.pk).only("storage_status", "storage_action").first()
+    instance._copilot_prev_good = bool(
+        prev and prev.storage_status == SYNCHED and prev.storage_action == ADD
+    )
+    logger.info(
+        "[COPILOT GithubAcademyUser pre_save] id=%s prev_good=%s -> new action=%s status=%s",
+        instance.pk,
+        instance._copilot_prev_good,
+        instance.storage_action,
+        instance.storage_status,
+    )
+
+
+@receiver(post_save, sender=GithubAcademyUser)
+def github_academy_user_copilot_react(sender, instance: GithubAcademyUser, created: bool, **kwargs):
+    update_fields = kwargs.get("update_fields")
+    if update_fields and set(update_fields).issubset({"storage_log", "updated_at"}):
+        return
+
+    if not instance.user_id:
+        return
+
+    prev_good = getattr(instance, "_copilot_prev_good", False)
+    now_good = instance.storage_status == SYNCHED and instance.storage_action == ADD
+
+    if prev_good and not now_good:
+        async_result = tasks.deferred_github_copilot_remove_if_still_revoked.apply_async(
+            args=[instance.user_id, instance.academy_id],
+            countdown=7200,
+        )
+        logger.info(
+            "[COPILOT GithubAcademyUser post_save] id=%s user_id=%s academy_id=%s lost_eligibility -> deferred revoke 2h celery_task_id=%s",
+            instance.id,
+            instance.user_id,
+            instance.academy_id,
+            async_result.id,
+        )
+    elif now_good and (created or not prev_good):
+        async_result = tasks.provision_github_copilot_task.delay(instance.user_id, academy_id=instance.academy_id)
+        logger.info(
+            "[COPILOT GithubAcademyUser post_save] id=%s user_id=%s academy_id=%s eligible -> provision task_id=%s",
+            instance.id,
+            instance.user_id,
+            instance.academy_id,
+            async_result.id,
         )

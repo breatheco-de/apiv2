@@ -1,5 +1,6 @@
 import logging
 
+import pytz
 from celery import shared_task
 from dateutil.relativedelta import relativedelta
 from django.utils import timezone
@@ -7,12 +8,15 @@ from linked_services.django.service import Service
 from task_manager.core.exceptions import AbortTask, RetryTask
 from task_manager.django.decorators import task
 
+import breathecode.notify.actions as notify_actions
 from breathecode.admissions.models import CohortTimeSlot
+from breathecode.events.actions import ensure_livekit_room_for_event
 from breathecode.services.eventbrite import Eventbrite
+from breathecode.services.luma import Luma
 from breathecode.utils import TaskPriority
 from breathecode.utils.datetime_integer import DatetimeInteger
 
-from .models import Event, EventbriteWebhook, EventContext, LiveClass, Organization
+from .models import Event, EventCheckin, EventbriteWebhook, EventContext, LiveClass, LumaWebhook, Organization
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +79,40 @@ def async_eventbrite_webhook(self, eventbrite_webhook_id):
 
 
 @shared_task(bind=True, priority=TaskPriority.ACADEMY.value)
+def async_luma_webhook(self, luma_webhook_id):
+    logger.debug("Starting async_luma_webhook")
+    status = "ok"
+
+    webhook = LumaWebhook.objects.filter(id=luma_webhook_id).first()
+    if not webhook:
+        logger.debug(f"Luma webhook {luma_webhook_id} not found")
+        return
+
+    organization = Organization.objects.filter(id=webhook.organization_id).first()
+
+    if organization:
+        try:
+            client = Luma()
+            client.execute_action(luma_webhook_id)
+        except Exception as e:
+            logger.debug("Luma exception")
+            logger.debug(str(e))
+            status = "error"
+
+    else:
+        message = f"Organization {webhook.organization_id} doesn't exist"
+
+        webhook.status = "ERROR"
+        webhook.status_text = message
+        webhook.save()
+
+        logger.debug(message)
+        status = "error"
+
+    logger.debug(f"Luma status: {status}")
+
+
+@shared_task(bind=True, priority=TaskPriority.ACADEMY.value)
 def build_live_classes_from_timeslot(self, timeslot_id: int):
     logger.info(f"Starting build_live_classes_from_timeslot with id {timeslot_id}")
 
@@ -118,6 +156,8 @@ def build_live_classes_from_timeslot(self, timeslot_id: int):
         logger.error(f"{timeslot.recurrency_type} is not a valid or not implemented recurrency_type")
         return
 
+    tz = pytz.timezone(timeslot.timezone)
+
     while True:
 
         if ending_at > until_date:
@@ -136,8 +176,10 @@ def build_live_classes_from_timeslot(self, timeslot_id: int):
             if not timeslot.recurrent:
                 break
 
-        starting_at += delta
-        ending_at += delta
+        naive_starting = starting_at.replace(tzinfo=None) + delta
+        naive_ending = ending_at.replace(tzinfo=None) + delta
+        starting_at = tz.localize(naive_starting)
+        ending_at = tz.localize(naive_ending)
 
     live_classes.delete()
 
@@ -272,3 +314,205 @@ def generate_event_recap(event_id: int, **kwargs):
         context.status_text = error_msg[:255]
         context.save()
         raise RetryTask(error_msg)
+
+
+@shared_task(bind=True, priority=TaskPriority.ACADEMY.value)
+def create_livekit_room_for_event(self, event_id: int):
+    """Pre-create a LiveKit room for the given event and store the meeting URL.
+
+    This does not block HTTP views and follows the Celery rule to only handle one instance by id.
+    """
+    logger.info(f"Starting create_livekit_room_for_event for event {event_id}")
+
+    event = Event.objects.filter(id=event_id).first()
+    if not event:
+        logger.error(f"Event {event_id} not found")
+        AbortTask(f"Event {event_id} not found")
+
+    if not getattr(event, "online_event", False):
+        logger.info(f"Event {event_id} is not an online event; skipping room creation")
+        AbortTask(f"Event {event_id} is not an online event; skipping room creation")
+
+    try:
+        url = ensure_livekit_room_for_event(event)
+        if url and not getattr(event, "live_stream_url", None):
+            event.live_stream_url = url
+            event.save(update_fields=["live_stream_url"])
+    except Exception as e:
+        logger.error(f"Failed to create LiveKit room for event {event_id}: {e}")
+        AbortTask(f"Failed to create LiveKit room for event {event_id}: {e}")
+
+
+@task(priority=TaskPriority.NOTIFICATION.value)
+def send_event_suspended_notification(event_id: int, suspension_reason: str = None, **kwargs):
+    """
+    Send email notifications to all attendees when an event is suspended.
+    
+    Args:
+        event_id: The ID of the suspended event
+        suspension_reason: Optional reason for the suspension to include in the email
+    """
+    logger.info(f"Starting send_event_suspended_notification for event {event_id}")
+
+    event = Event.objects.filter(id=event_id).first()
+    if not event:
+        raise AbortTask(f"Event {event_id} not found. Task cannot continue.")
+
+    if event.status != "SUSPENDED":
+        logger.warning(f"Event {event_id} is not suspended, skipping notification")
+        return
+
+    # Get all EventCheckin records for this event that have email addresses
+    checkins = EventCheckin.objects.filter(event=event).exclude(email__isnull=True).exclude(email="")
+
+    if not checkins.exists():
+        logger.info(f"No attendees found for event {event_id}")
+        return
+
+    # Prepare email content based on event language
+    lang = (event.lang or "en").lower()
+    if lang not in ["en", "es"]:
+        lang = "en"
+
+    # Build message with optional reason
+    if suspension_reason:
+        # Include custom reason in message
+        base_message_en = f"We regret to inform you that the event '{event.title or f'Event {event.id}'}' has been suspended."
+        reason_section_en = f"<br><br><strong>Reason:</strong> {suspension_reason}<br><br>"
+        footer_en = "If you have any questions or concerns, please contact support for assistance.<br><br>We apologize for any inconvenience this may cause."
+        message_en = base_message_en + reason_section_en + footer_en
+
+        # Similar for Spanish
+        base_message_es = f"Lamentamos informarle que el evento '{event.title or f'Evento {event.id}'}' ha sido suspendido."
+        reason_section_es = f"<br><br><strong>Razón:</strong> {suspension_reason}<br><br>"
+        footer_es = "Si tiene alguna pregunta o inquietud, por favor contacte a soporte para asistencia.<br><br>Nos disculpamos por cualquier inconveniente que esto pueda causar."
+        message_es = base_message_es + reason_section_es + footer_es
+    else:
+        # Use default generic message
+        message_en = (
+            f"We regret to inform you that the event '{event.title or f'Event {event.id}'}' has been suspended for reasons that are out of our hands.<br><br>"
+            f"If you have any questions or concerns, please contact support for assistance.<br><br>"
+            f"We apologize for any inconvenience this may cause."
+        )
+        message_es = (
+            f"Lamentamos informarle que el evento '{event.title or f'Evento {event.id}'}' ha sido suspendido por razones fuera de nuestro control.<br><br>"
+            f"Si tiene alguna pregunta o inquietud, por favor contacte a soporte para asistencia.<br><br>"
+            f"Nos disculpamos por cualquier inconveniente que esto pueda causar."
+        )
+
+    messages = {
+        "en": {
+            "subject": f"Event Suspended: {event.title or f'Event {event.id}'}",
+            "message": message_en,
+        },
+        "es": {
+            "subject": f"Evento Suspendido: {event.title or f'Evento {event.id}'}",
+            "message": message_es,
+        },
+    }
+
+    selected_lang = messages.get(lang, messages["en"])
+
+    # Send email to each attendee
+    for checkin in checkins:
+        try:
+            data = {
+                "SUBJECT": selected_lang["subject"],
+                "MESSAGE": selected_lang["message"],
+            }
+
+            notify_actions.send_email_message(
+                "message", checkin.email, data, academy=event.academy
+            )
+            logger.debug(f"Sent suspension notification to {checkin.email} for event {event_id}")
+        except Exception as e:
+            logger.error(f"Failed to send suspension notification to {checkin.email} for event {event_id}: {e}")
+
+    logger.info(f"Completed sending suspension notifications for event {event_id}")
+
+
+@task(priority=TaskPriority.MARKETING.value)
+def run_event_checkin_marketing_task(
+    event_id: int,
+    email: str,
+    first_name: str = "",
+    last_name: str = "",
+    utm_source: str | None = None,
+    campaign: str | None = None,
+    **_kwargs,
+):
+    from breathecode.events.actions import run_event_checkin_marketing
+
+    event = Event.objects.filter(id=event_id).select_related("academy").first()
+    if event is None:
+        raise AbortTask(f"Event {event_id} not found")
+
+    run_event_checkin_marketing(
+        event=event,
+        email=email,
+        first_name=first_name,
+        last_name=last_name,
+        utm_source=utm_source,
+        campaign=campaign,
+    )
+
+
+@task(priority=TaskPriority.ACADEMY.value)
+def process_bulk_event_checkin_upload(job_id: str, **_kwargs):
+    from breathecode.events.bulk_event_checkin_manager import (
+        get_bulk_job_state,
+        process_bulk_event_checkin_row,
+        update_bulk_job_state,
+    )
+
+    state = get_bulk_job_state(job_id)
+    if state is None:
+        raise AbortTask(f"Bulk job {job_id} not found or expired")
+    if state.get("status") != "pending":
+        raise AbortTask(f"Bulk job {job_id} status is {state.get('status')}, expected pending")
+
+    checkins_list = state.get("checkins") or []
+    event_id = state.get("event_id")
+    academy_id = state.get("academy_id")
+    run_marketing = bool(state.get("run_marketing"))
+    if not checkins_list or not event_id or not academy_id:
+        raise AbortTask(f"Bulk job {job_id} missing checkins, event_id, or academy_id in state")
+
+    logger.info(
+        "Starting process_bulk_event_checkin_upload for job_id=%s event_id=%s total=%s",
+        job_id,
+        event_id,
+        len(checkins_list),
+    )
+
+    update_bulk_job_state(job_id, status="processing")
+    results = list(state.get("results") or [])
+    processed = state.get("processed", 0)
+
+    for index, row_data in enumerate(checkins_list):
+        try:
+            result = process_bulk_event_checkin_row(
+                event_id=event_id,
+                academy_id=academy_id,
+                row_data=row_data,
+                run_marketing=run_marketing,
+            )
+        except Exception as e:
+            logger.exception("process_bulk_event_checkin_row failed at index %s", index)
+            result = {
+                "index": index,
+                "email": (row_data.get("email") or "").strip().lower(),
+                "first_name": row_data.get("first_name"),
+                "last_name": row_data.get("last_name"),
+                "classification": "NEW_CHECKIN",
+                "status": "failed",
+                "message": str(e),
+                "slug": "unexpected-error",
+            }
+        result["index"] = index
+        results.append(result)
+        processed += 1
+        update_bulk_job_state(job_id, processed=processed, results=results)
+
+    update_bulk_job_state(job_id, status="completed", processed=processed, results=results)
+    logger.info("Completed process_bulk_event_checkin_upload for job_id=%s processed=%s", job_id, processed)

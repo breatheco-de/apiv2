@@ -28,6 +28,7 @@ def generate_user_invite(data: dict) -> dict:
         "academy_id": None,
         "author_id": None,
         "cohort_id": None,
+        "course_id": None,
         "email": None,
         "is_email_validated": False,
         "conversion_info": None,
@@ -41,6 +42,8 @@ def generate_user_invite(data: dict) -> dict:
         "role_id": None,
         "sent_at": None,
         "status": "PENDING",
+        "subscription_seat_id": None,
+        "syllabus_id": None,
         "token": "",
         "process_message": "",
         "process_status": "PENDING",
@@ -51,6 +54,7 @@ def generate_user_invite(data: dict) -> dict:
         "longitude": None,
         "email_quality": None,
         "email_status": None,
+        "expires_at": None,
         **data,
     }
 
@@ -883,7 +887,7 @@ class StudentPostTestSuite(AuthTestCase):
         data = {"role": role, "user": model["user"].id, "first_name": "Kenny", "last_name": "McKornick"}
         response = self.client.post(url, data, headers={"academy": 1})
         json = response.json()
-        expected = {"detail": "already-exists", "status_code": 400}
+        expected = {"detail": "already-exists-with-non-student-role", "status_code": 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -1159,15 +1163,28 @@ class StudentPostTestSuite(AuthTestCase):
     🔽🔽🔽 POST data with User and Cohort in body
     """
 
+    @patch("breathecode.payments.tasks.build_plan_financing.delay", MagicMock())
     @patch("breathecode.notify.actions.send_email_message", MagicMock())
     @patch("random.getrandbits", MagicMock(side_effect=getrandbits))
     @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
-    def test_academy_student__post__with_user__it_ignore_the_param_plans(self):
-        """Test /academy/:id/member"""
+    def test_academy_student__post__with_user_and_plans_creates_bag_and_plan_financing(self):
+        """Test that adding plans to existing user creates Bag and PlanFinancing (no longer raises)."""
 
         roles = [{"name": "konan", "slug": "konan"}, {"name": "student", "slug": "student"}]
 
-        model = self.bc.database.create(role=roles, user=2, cohort=1, capability="crud_student", profile_academy=1)
+        model = self.bc.database.create(
+            role=roles,
+            user=2,
+            cohort={"available_as_saas": True},
+            capability="crud_student",
+            profile_academy=1,
+            currency=1,
+            cohort_set=1,
+            cohort_set_cohort=1,
+            financing_option={"how_many_months": 1, "monthly_price": 1},
+            plan={"is_renewable": False, "time_of_life": 1, "time_of_life_unit": "MONTH", "status": "ACTIVE"},
+        )
+        plan = self.bc.database.get("payments.Plan", 1, dict=False)
         self.bc.request.authenticate(model.user[0])
 
         url = reverse_lazy("authenticate:academy_student")
@@ -1178,112 +1195,156 @@ class StudentPostTestSuite(AuthTestCase):
             "email": "dude@dude.dude",
             "user": 2,
             "cohort": [1],
-            "plans": [1],
+            "plans": [plan.id],
         }
 
         response = self.client.post(url, data, format="json", headers={"academy": 1})
         json = response.json()
 
-        created_at = UTC_NOW.replace(tzinfo=None).isoformat(timespec="microseconds") + "Z"
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIn("id", json)
+        self.assertEqual(json["email"], model.user[1].email)
 
-        expected = {
-            "address": None,
-            "email": model.user[1].email,
+        from breathecode.payments.models import Bag, Invoice
+
+        bags = Bag.objects.filter(user=model.user[1], type="INVITED")
+        self.assertEqual(bags.count(), 1)
+        invoices = Invoice.objects.filter(bag=bags.first())
+        self.assertEqual(invoices.count(), 1)
+
+    @patch("breathecode.payments.tasks.build_plan_financing.delay", MagicMock())
+    @patch("breathecode.notify.actions.send_email_message", MagicMock())
+    @patch("random.getrandbits", MagicMock(side_effect=getrandbits))
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test_academy_student__post__with_user_and_zero_initial_payment_plan_financing(self):
+        roles = [{"name": "konan", "slug": "konan"}, {"name": "student", "slug": "student"}]
+
+        model = self.bc.database.create(
+            role=roles,
+            user=2,
+            cohort={"available_as_saas": True},
+            capability="crud_student",
+            profile_academy=1,
+            currency=1,
+            cohort_set=1,
+            cohort_set_cohort=1,
+            financing_option={"how_many_months": 1, "monthly_price": 1200},
+            plan={"is_renewable": False, "time_of_life": 1, "time_of_life_unit": "MONTH", "status": "ACTIVE"},
+        )
+        from breathecode.payments.models import PaymentMethod
+
+        payment_method = PaymentMethod.objects.create(
+            academy=model.academy,
+            currency=model.currency,
+            title="Manual transfer",
+            description="Manual transfer",
+            lang="en",
+        )
+        self.bc.request.authenticate(model.user[0])
+
+        url = reverse_lazy("authenticate:academy_student")
+        data = {
             "first_name": "Kenny",
             "last_name": "McKornick",
-            "phone": "",
-            "status": "INVITED",
-            "id": 2,
-            "created_at": created_at,
-            "role": {
-                "id": "student",
-                "slug": "student",
-                "name": "student",
-            },
-            "user": {
-                "id": model.user[1].id,
-                "email": model.user[1].email,
-                "first_name": model.user[1].first_name,
-                "last_name": model.user[1].last_name,
-                "profile": None,
-            },
-            "academy": {
-                "id": model.academy.id,
-                "name": model.academy.name,
-                "slug": model.academy.slug,
-            },
+            "invite": True,
+            "email": model.user[1].email,
+            "user": model.user[1].id,
+            "cohort": [model.cohort.id],
+            "plans": [model.plan.id],
+            "payment_method": payment_method.id,
+            "how_many_installments": 1,
+            "initial_payment_amount": 0,
+            "initial_payment_notes": "Prework paid at course start",
+            "grace_period_duration": 2,
+            "grace_period_duration_unit": "WEEK",
+            "financing_option_id": model.financing_option.id,
         }
 
-        self.assertEqual(json, expected)
+        response = self.client.post(url, data, format="json", headers={"academy": 1})
+        json = response.json()
+
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(
-            self.bc.database.list_of("authenticate.ProfileAcademy"),
-            [
-                self.bc.format.to_dict(model.profile_academy),
-                {
-                    "academy_id": 1,
-                    "address": None,
-                    "email": model.user[1].email,
-                    "first_name": "Kenny",
-                    "id": 2,
-                    "last_name": "McKornick",
-                    "phone": "",
-                    "role_id": "student",
-                    "status": "INVITED",
-                    "user_id": 2,
-                },
-            ],
+        self.assertIn("id", json)
+
+        from breathecode.payments import tasks
+        from breathecode.payments.models import Bag, Invoice
+
+        bag = Bag.objects.filter(user=model.user[1], type="INVITED").first()
+        invoice = Invoice.objects.filter(bag=bag).first()
+        self.assertEqual(invoice.amount, 0)
+        self.assertEqual(invoice.invoice_notes, "Note made by user 1: Prework paid at course start")
+        tasks.build_plan_financing.delay.assert_called_once_with(
+            bag.id,
+            invoice.id,
+            is_free=False,
+            conversion_info=None,
+            cohorts=[model.cohort.slug],
+            grace_period_duration=2,
+            grace_period_duration_unit="WEEK",
+            initial_payment_notes="Note made by user 1: Prework paid at course start",
+            principal_amount=1200,
+            initial_payment_amount=0,
         )
 
-        token = self.bc.database.get("authenticate.Token", 1, dict=False)
-        querystr = urllib.parse.urlencode(
-            {
-                "callback": os.getenv("APP_URL", "")[:-1]
-                + f'?{urllib.parse.urlencode(
-            {
-                "utm_medium": "academy",
-                "utm_source": model.academy.slug,
-            }
-        )}',
-                "token": token,
-            }
-        )
-        url = os.getenv("API_URL") + "/v1/auth/academy/html/invite?" + querystr
+    @patch("breathecode.payments.tasks.build_plan_financing.delay", MagicMock())
+    @patch("breathecode.notify.actions.send_email_message", MagicMock())
+    @patch("random.getrandbits", MagicMock(side_effect=getrandbits))
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test_academy_student__post__with_initial_payment_requires_notes(self):
+        roles = [{"name": "konan", "slug": "konan"}, {"name": "student", "slug": "student"}]
 
-        self.assertEqual(self.bc.database.list_of("authenticate.UserInvite"), [])
-        assert actions.send_email_message.call_args_list == [
-            call(
-                "academy_invite",
-                model.user[1].email,
-                {
-                    "subject": f"Invitation to study at {model.academy.name}",
-                    "invites": [
-                        {
-                            "id": 2,
-                            "academy": {
-                                "id": 1,
-                                "name": model.academy.name,
-                                "slug": model.academy.slug,
-                                "timezone": None,
-                            },
-                            "role": "student",
-                            "created_at": UTC_NOW,
-                        }
-                    ],
-                    "user": {
-                        "id": 2,
-                        "email": model.user[1].email,
-                        "first_name": model.user[1].first_name,
-                        "last_name": model.user[1].last_name,
-                        "github": None,
-                        "profile": None,
-                    },
-                    "LINK": url,
-                },
-                academy=model.academy,
-            ),
-        ]
-        self.assertEqual(self.bc.database.list_of("payments.Plan"), [])
+        model = self.bc.database.create(
+            role=roles,
+            user=2,
+            cohort={"available_as_saas": True},
+            capability="crud_student",
+            profile_academy=1,
+            currency=1,
+            cohort_set=1,
+            cohort_set_cohort=1,
+            financing_option={"how_many_months": 1, "monthly_price": 1200},
+            plan={"is_renewable": False, "time_of_life": 1, "time_of_life_unit": "MONTH", "status": "ACTIVE"},
+        )
+        from breathecode.payments.models import PaymentMethod
+
+        payment_method = PaymentMethod.objects.create(
+            academy=model.academy,
+            currency=model.currency,
+            title="Manual transfer",
+            description="Manual transfer",
+            lang="en",
+        )
+        self.bc.request.authenticate(model.user[0])
+
+        url = reverse_lazy("authenticate:academy_student")
+        data = {
+            "first_name": "Kenny",
+            "last_name": "McKornick",
+            "invite": True,
+            "email": model.user[1].email,
+            "user": model.user[1].id,
+            "cohort": [model.cohort.id],
+            "plans": [model.plan.id],
+            "payment_method": payment_method.id,
+            "how_many_installments": 1,
+            "initial_payment_amount": 0,
+            "grace_period_duration": 2,
+            "grace_period_duration_unit": "WEEK",
+            "financing_option_id": model.financing_option.id,
+        }
+
+        response = self.client.post(url, data, format="json", headers={"academy": 1})
+        json = response.json()
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(json, {"detail": "initial-payment-notes-required", "status_code": 400})
+
+        from breathecode.payments import tasks
+        from breathecode.payments.models import Bag, Invoice
+
+        self.assertEqual(Bag.objects.filter(user=model.user[1], type="INVITED").count(), 0)
+        self.assertEqual(Invoice.objects.filter(user=model.user[1]).count(), 0)
+        self.assertEqual(tasks.build_plan_financing.delay.call_args_list, [])
 
     """
     🔽🔽🔽 POST data without user
@@ -1390,9 +1451,9 @@ class StudentPostTestSuite(AuthTestCase):
                 "dude@dude.dude",
                 {
                     "email": "dude@dude.dude",
-                    "subject": "Welcome to " + model.academy.name,
+                    "subject": f"{model.academy.name} is inviting you to {model.academy.slug}.4Geeks.com",
                     "LINK": url,
-                    "FIST_NAME": "Kenny",
+                    "FIRST_NAME": "Kenny",
                 },
                 academy=model.academy,
             )
@@ -1557,9 +1618,9 @@ class StudentPostTestSuite(AuthTestCase):
                 "dude@dude.dude",
                 {
                     "email": "dude@dude.dude",
-                    "subject": "Welcome to " + model.academy.name,
+                    "subject": f"{model.academy.name} is inviting you to {model.academy.slug}.4Geeks.com",
                     "LINK": url,
-                    "FIST_NAME": "Kenny",
+                    "FIRST_NAME": "Kenny",
                 },
                 academy=model.academy,
             ),
@@ -1752,9 +1813,9 @@ class StudentPostTestSuite(AuthTestCase):
                 "dude2@dude.dude",
                 {
                     "email": "dude2@dude.dude",
-                    "subject": "Welcome to " + model.academy.name,
+                    "subject": f"{model.academy.name} is inviting you to {model.academy.slug}.4Geeks.com",
                     "LINK": url,
-                    "FIST_NAME": "Kenny",
+                    "FIRST_NAME": "Kenny",
                 },
                 academy=model.academy,
             )

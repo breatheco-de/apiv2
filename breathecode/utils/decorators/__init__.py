@@ -1,3 +1,4 @@
+from .academy_has_feature import *  # noqa: F401
 from .capable_of import *  # noqa: F401
 from .consume import *  # noqa: F401
 from .has_permission import *  # noqa: F401
@@ -7,3 +8,4 @@ from .task import *  # noqa: F401
 from .validate_captcha import *  # noqa: F401
 from .validate_captcha_challenge import *  # noqa: F401
 from .superuser_required import *  # noqa: F401
+from .service_deprovisioner import *  # noqa: F401

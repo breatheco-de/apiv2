@@ -36,8 +36,11 @@ def process_syllabus_asset_slug_updated(sender, **kwargs):
 @receiver(assignment_status_updated, sender=Task)
 def process_cohort_history_log(sender: Type[Task], instance: Task, **kwargs: Any):
     logger.info("Procesing Cohort history log for cohort: " + str(instance.id))
-
-    tasks.set_cohort_user_assignments.delay(instance.id)
+    if instance.cohort is not None:
+        tasks.set_cohort_user_assignments.delay(instance.id)
+    else:
+        logger.info("No cohort found for assignment: " + str(instance.id))
+        return
 
 
 # @receiver(status_updated, sender=RepositoryDeletionOrder)

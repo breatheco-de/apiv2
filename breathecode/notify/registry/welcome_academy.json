@@ -1,0 +1,50 @@
+{
+    "slug": "welcome_academy",
+    "name": "Welcome to Academy",
+    "description": "Welcome email sent to new academy members after accepting invitation",
+    "category": "academy",
+    "channels": {
+        "email": {
+            "template_path": "welcome_academy",
+            "default_subject": "{COMPANY_NAME} is inviting you to {DOMAIN_NAME}"
+        }
+    },
+    "variables": [
+        {
+            "name": "FIRST_NAME",
+            "description": "First name of the user",
+            "source": "User model first_name field",
+            "example": "Jane",
+            "required": true
+        },
+        {
+            "name": "LINK",
+            "description": "URL to accept the invitation and access the platform",
+            "source": "Generated invitation acceptance URL",
+            "example": "{API_URL}/v1/auth/member/invite/<TOKEN>",
+            "required": true
+        },
+        {
+            "name": "subject",
+            "description": "Email subject line with academy name",
+            "source": "Formatted with academy name",
+            "example": "{COMPANY_NAME} is inviting you to {DOMAIN_NAME}",
+            "required": true
+        },
+        {
+            "name": "TRACKER_URL",
+            "description": "Complete URL for email open tracking pixel",
+            "source": "Generated from API_URL + invite tracking endpoint",
+            "example": "https://api.4geeks.com/v1/auth/invite/track/open/123",
+            "required": true
+        },
+        {
+            "name": "PLATFORM_DESCRIPTION",
+            "description": "Description of the platform shown in welcome email",
+            "source": "Academy.platform_description or default value",
+            "example": "An award winning platform to learn and improve your AI related skills.",
+            "required": false
+        }
+    ]
+}
+

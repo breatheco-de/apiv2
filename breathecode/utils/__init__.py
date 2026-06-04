@@ -18,6 +18,7 @@ from .ndb import *  # noqa: F401
 from .num_to_roman import *  # noqa: F401
 from .object import *  # noqa: F401
 from .permissions import *  # noqa: F401
+from .request import *  # noqa: F401
 from .response_207 import *  # noqa: F401
 from .script_notification import *  # noqa: F401
 from .serpy import *  # noqa: F401

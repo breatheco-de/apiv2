@@ -2,7 +2,7 @@ services:
   redis:
     image: redis:alpine
     ports:
-      - "6379:6379"
+      - "6380:6379"  # 6380 on host to avoid conflict with local Redis
 
   postgres:
     image: postgres:alpine
@@ -13,9 +13,7 @@ services:
       - POSTGRES_PASSWORD=pass
       - POSTGRES_DB=breathecode
     ports:
-      - "5432:5432"
-
-
+      - "5433:5432"  # 5433 on host to avoid conflict with local Postgres
 
   rabbitmq:
     image: rabbitmq:4
@@ -28,6 +26,20 @@ services:
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
 
+  # api:
+  #   build: .
+  #   ports:
+  #     - "8000:8000"
+  #   environment:
+  #     - ENV=development
+  #     - APP_URL=http://localhost:8000
+  #     - DATABASE_URL=postgres://user:pass@postgres:5432/breathecode
+  #     - REDIS_URL=redis://redis:6379
+  #     - CELERY_BROKER_URL=amqp://user:pass@rabbitmq:5672//
+  #   depends_on:
+  #     - postgres
+  #     - redis
+  #     - rabbitmq
 
 volumes:
   postgres_data:

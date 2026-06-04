@@ -10,6 +10,7 @@ cohort_user_created = emisor.signal("cohort_user_created")
 cohort_stage_updated = emisor.signal("cohort_stage_updated")
 
 academy_saved = emisor.signal("academy_saved")
+academy_reseller_changed = emisor.signal("academy_reseller_changed")
 
 # happens when any asset gets update inside the syllabus json for any version
 syllabus_asset_slug_updated = emisor.signal("syllabus_asset_slug_updated")

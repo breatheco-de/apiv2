@@ -4,6 +4,8 @@ import logging
 import os
 import urllib.parse
 
+from asgiref.sync import async_to_sync
+from django import forms
 from django.contrib import admin, messages
 from django.contrib.admin import SimpleListFilter
 from django.contrib.admin.models import LogEntry
@@ -14,20 +16,25 @@ from django.utils.html import format_html
 
 import breathecode.marketing.actions as marketing_actions
 from breathecode.utils.admin import change_field
+from breathecode.utils.admin.widgets import PrettyJSONWidget
 from breathecode.utils.datetime_integer import from_now
 
 from . import tasks
 from .actions import (
     delete_tokens,
     generate_academy_token,
+    get_app_url,
+    get_invite_url,
     reset_password,
     set_gitpod_user_expiration,
     sync_organization_members,
+    sync_with_rigobot,
 )
 from .models import (
     AcademyAuthSettings,
     AcademyProxy,
     Capability,
+    CredentialsDiscord,
     CredentialsFacebook,
     CredentialsGithub,
     CredentialsGoogle,
@@ -97,6 +104,13 @@ class CredentialsFacebookAdmin(admin.ModelAdmin):
     list_display = ("facebook_id", "user", "email", "academy", "expires_at")
 
 
+@admin.register(CredentialsDiscord)
+class CredentialsDiscordAdmin(admin.ModelAdmin):
+    list_display = ("discord_id", "user", "created_at", "updated_at")
+    search_fields = ["user__first_name", "user__last_name", "user__email", "discord_id"]
+    raw_id_fields = ["user"]
+
+
 @admin.register(Token)
 class TokenAdmin(admin.ModelAdmin):
     list_display = ("key", "token_type", "expires_at", "user")
@@ -122,17 +136,27 @@ def accept_all_users_from_waiting_list(modeladmin, request, queryset: QuerySet[U
 
 def validate_email(modeladmin, request, queryset: QuerySet[UserInvite]):
     for x in queryset:
-        email_status = marketing_actions.validate_email(x.email, "en")
+        email_status = marketing_actions.validate_email_local(x.email, "en")
         x.email_quality = email_status["score"]
         x.email_status = email_status
         x.save()
 
 
+class UserInviteForm(forms.ModelForm):
+    class Meta:
+        model = UserInvite
+        fields = "__all__"
+        widgets = {
+            "welcome_video": PrettyJSONWidget(),
+        }
+
+
 @admin.register(UserInvite)
 class UserInviteAdmin(admin.ModelAdmin):
+    form = UserInviteForm
     search_fields = ["email", "first_name", "last_name", "user__email"]
-    raw_id_fields = ["user", "author", "cohort", "course", "subscription_seat"]
-    list_filter = ["academy", "status", "is_email_validated", "process_status", "role", "country"]
+    raw_id_fields = ["user", "author", "cohort", "course", "subscription_seat", "payment_method"]
+    list_filter = ["academy", "status", "is_email_validated", "process_status", "role", "country", "payment_method"]
     list_display = (
         "email",
         "is_email_validated",
@@ -145,13 +169,15 @@ class UserInviteAdmin(admin.ModelAdmin):
         "invite_url",
         "country",
         "subscription_seat",
+        "payment_method",
+        "welcome_video",
     )
     actions = [accept_selected_users_from_waiting_list, accept_all_users_from_waiting_list, validate_email]
 
     def invite_url(self, obj):
-        params = {"callback": "https://4geeks.com"}
-        querystr = urllib.parse.urlencode(params)
-        url = os.getenv("API_URL") + "/v1/auth/member/invite/" + str(obj.token) + "?" + querystr
+        academy = getattr(obj, "academy", None)
+        callback_url = get_app_url(academy=academy) if academy else "https://4geeks.com"
+        url = get_invite_url(obj.token, academy=academy, callback_url=callback_url)
         return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{url}'>invite url</a>")
 
 
@@ -162,10 +188,50 @@ def clear_user_password(modeladmin, request, queryset):
         u.save()
 
 
+@admin.display(description="Sync with RigoBot")
+def sync_users_with_rigobot(modeladmin, request, queryset):
+    """Sync selected users with RigoBot"""
+    success_count = 0
+    error_count = 0
+    
+    for user in queryset:
+        try:
+            # Get or create token for user
+            token, _ = Token.objects.get_or_create(
+                user=user,
+                token_type='login'
+            )
+            
+            # Sync with RigoBot
+            async_to_sync(sync_with_rigobot)(
+                token_key=token.key,
+                organization="4geeks"
+            )
+            success_count += 1
+            logger.info(f"User {user.email} synced with RigoBot successfully")
+            
+        except Exception as e:
+            logger.error(f"Error syncing user {user.email} with RigoBot: {str(e)}")
+            error_count += 1
+    
+    if success_count > 0:
+        messages.success(
+            request,
+            f"Successfully synced {success_count} user(s) with RigoBot."
+        )
+    
+    if error_count > 0:
+        messages.error(
+            request,
+            f"Failed to sync {error_count} user(s) with RigoBot. Check logs for details."
+        )
+
+
 @admin.register(UserProxy)
 class UserAdmin(UserAdmin):
     list_display = ("username", "email", "first_name", "last_name", "is_staff", "github_login", "google_login")
-    actions = [clean_all_tokens, clean_expired_tokens, send_reset_password, clear_user_password]
+    actions = [clean_all_tokens, clean_expired_tokens, send_reset_password, clear_user_password, sync_users_with_rigobot]
+    ordering = ["-date_joined"]
 
     def get_queryset(self, request):
         self.callback_url = "https://4geeks.com"
@@ -218,6 +284,7 @@ class ProfileAcademyAdmin(admin.ModelAdmin):
         colors = {
             "ACTIVE": "bg-success",
             "INVITED": "bg-error",
+            "DELETED": "bg-warning",
         }
 
         return format_html(
@@ -495,7 +562,7 @@ class AcademyAuthSettingsAdmin(admin.ModelAdmin):
     )
     search_fields = ["academy__slug", "academy__name", "github__username", "academy__id"]
     actions = (clean_errors, activate_github_sync, deactivate_github_sync, sync_github_members)
-    raw_id_fields = ["github_owner", "google_cloud_owner", "github_whitelist_exemption_users"]
+    raw_id_fields = ["github_owner", "google_cloud_owner", "learnpack_owner", "github_whitelist_exemption_users"]
 
     def get_queryset(self, request):
         self.admin_request = request

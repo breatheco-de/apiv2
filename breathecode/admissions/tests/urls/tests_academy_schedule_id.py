@@ -16,7 +16,7 @@ class CertificateTestSuite(AdmissionsTestCase):
 
     def test_academy_schedule_id__without_auth(self):
         """Test /certificate without auth"""
-        url = reverse_lazy("admissions:academy_schedule_id", kwargs={"certificate_id": 1})
+        url = reverse_lazy("admissions:academy_schedule_id", kwargs={"schedule_id": 1})
         response = self.client.put(url)
         json = response.json()
 
@@ -30,7 +30,7 @@ class CertificateTestSuite(AdmissionsTestCase):
     def test_academy_schedule_id__without_capability(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
-        url = reverse_lazy("admissions:academy_schedule_id", kwargs={"certificate_id": 1})
+        url = reverse_lazy("admissions:academy_schedule_id", kwargs={"schedule_id": 1})
         self.generate_models(authenticate=True)
         response = self.client.put(url)
         json = response.json()
@@ -53,7 +53,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         model = self.generate_models(
             authenticate=True, profile_academy=True, capability="crud_certificate", role="potato"
         )
-        url = reverse_lazy("admissions:academy_schedule_id", kwargs={"certificate_id": 1})
+        url = reverse_lazy("admissions:academy_schedule_id", kwargs={"schedule_id": 1})
         response = self.client.put(url)
         json = response.json()
         expected = {
@@ -79,7 +79,7 @@ class CertificateTestSuite(AdmissionsTestCase):
             role="potato",
         )
 
-        url = reverse_lazy("admissions:academy_schedule_id", kwargs={"certificate_id": 1})
+        url = reverse_lazy("admissions:academy_schedule_id", kwargs={"schedule_id": 1})
         data = {
             "slug": "they-killed-kenny",
             "name": "They killed kenny",
@@ -112,7 +112,7 @@ class CertificateTestSuite(AdmissionsTestCase):
             capability="crud_certificate",
             role="potato",
         )
-        url = reverse_lazy("admissions:academy_schedule_id", kwargs={"certificate_id": 1})
+        url = reverse_lazy("admissions:academy_schedule_id", kwargs={"schedule_id": 1})
         data = {
             "slug": "they-killed-kenny",
             "name": "They killed kenny",
@@ -144,7 +144,7 @@ class CertificateTestSuite(AdmissionsTestCase):
             capability="crud_certificate",
             role="potato",
         )
-        url = reverse_lazy("admissions:academy_schedule_id", kwargs={"certificate_id": 1})
+        url = reverse_lazy("admissions:academy_schedule_id", kwargs={"schedule_id": 1})
         data = {"name": "They killed kenny", "description": "Oh my god!"}
         response = self.client.put(url, data, format="json")
         json = response.json()
@@ -183,7 +183,7 @@ class CertificateTestSuite(AdmissionsTestCase):
             capability="crud_certificate",
             role="potato",
         )
-        url = reverse_lazy("admissions:academy_schedule_id", kwargs={"certificate_id": 1})
+        url = reverse_lazy("admissions:academy_schedule_id", kwargs={"schedule_id": 1})
         schedule_type = random.choice(["PART-TIME", "FULL-TIME"])
         data = {
             "name": "They killed kenny",
@@ -229,7 +229,7 @@ class CertificateTestSuite(AdmissionsTestCase):
             capability="crud_certificate",
             role="potato",
         )
-        url = reverse_lazy("admissions:academy_schedule_id", kwargs={"certificate_id": 1})
+        url = reverse_lazy("admissions:academy_schedule_id", kwargs={"schedule_id": 1})
         schedule_type = random.choice(["PART-TIME", "FULL-TIME"])
         data = {
             "name": "They killed kenny",
@@ -264,3 +264,126 @@ class CertificateTestSuite(AdmissionsTestCase):
                 }
             ],
         )
+
+    """
+    🔽🔽🔽 GET single schedule by id
+    """
+
+    def test_academy_schedule_id__get__not_found(self):
+        self.headers(academy=1)
+        self.generate_models(
+            authenticate=True, profile_academy=True, capability="read_certificate", role="potato"
+        )
+        url = reverse_lazy("admissions:academy_schedule_id", kwargs={"schedule_id": 1})
+        response = self.client.get(url)
+        json = response.json()
+        expected = {
+            "detail": "specialty-mode-not-found",
+            "status_code": 404,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(self.all_syllabus_schedule_dict(), [])
+
+    def test_academy_schedule_id__get(self):
+        self.headers(academy=1)
+        model = self.generate_models(
+            authenticate=True,
+            syllabus_schedule=True,
+            profile_academy=True,
+            capability="read_certificate",
+            role="potato",
+            syllabus=True,
+        )
+        url = reverse_lazy("admissions:academy_schedule_id", kwargs={"schedule_id": 1})
+        response = self.client.get(url)
+        json = response.json()
+        expected = {
+            "id": model.syllabus_schedule.id,
+            "name": model.syllabus_schedule.name,
+            "description": model.syllabus_schedule.description,
+            "syllabus": model.syllabus_schedule.syllabus.id,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    """
+    🔽🔽🔽 DELETE single schedule by id
+    """
+
+    def test_academy_schedule_id__delete__without_auth(self):
+        url = reverse_lazy("admissions:academy_schedule_id", kwargs={"schedule_id": 1})
+        response = self.client.delete(url)
+        json = response.json()
+
+        self.assertEqual(
+            json,
+            {"detail": "Authentication credentials were not provided.", "status_code": status.HTTP_401_UNAUTHORIZED},
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(self.all_syllabus_schedule_dict(), [])
+
+    def test_academy_schedule_id__delete__not_found(self):
+        self.headers(academy=1)
+        self.generate_models(
+            authenticate=True, profile_academy=True, capability="crud_certificate", role="potato"
+        )
+        url = reverse_lazy("admissions:academy_schedule_id", kwargs={"schedule_id": 1})
+        response = self.client.delete(url)
+        json = response.json()
+        expected = {
+            "detail": "specialty-mode-not-found",
+            "status_code": 404,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(self.all_syllabus_schedule_dict(), [])
+
+    def test_academy_schedule_id__delete__schedule_of_other_academy(self):
+        self.headers(academy=1)
+        syllabus_schedule = {"academy_id": 2}
+        model = self.generate_models(
+            authenticate=True,
+            syllabus_schedule=syllabus_schedule,
+            academy=2,
+            profile_academy=True,
+            capability="crud_certificate",
+            role="potato",
+        )
+        url = reverse_lazy("admissions:academy_schedule_id", kwargs={"schedule_id": 1})
+        response = self.client.delete(url)
+        json = response.json()
+        expected = {
+            "detail": "specialty-mode-not-found",
+            "status_code": 404,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(
+            self.all_syllabus_schedule_dict(),
+            [
+                {
+                    **self.model_to_dict(model, "syllabus_schedule"),
+                }
+            ],
+        )
+
+    def test_academy_schedule_id__delete(self):
+        self.headers(academy=1)
+        self.generate_models(
+            authenticate=True,
+            syllabus_schedule=True,
+            profile_academy=True,
+            capability="crud_certificate",
+            role="potato",
+            syllabus=True,
+        )
+        url = reverse_lazy("admissions:academy_schedule_id", kwargs={"schedule_id": 1})
+        response = self.client.delete(url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(self.all_syllabus_schedule_dict(), [])

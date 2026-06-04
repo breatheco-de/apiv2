@@ -38,6 +38,11 @@ def service_serializer(service):
         "groups": [],
         "icon_url": service.icon_url,
         "id": service.id,
+        "owner": (
+            {"id": service.owner.id, "name": service.owner.name, "slug": service.owner.slug}
+            if service.owner
+            else None
+        ),
         "private": service.private,
         "session_duration": None,
         "slug": service.slug,

@@ -111,7 +111,7 @@ def test_password_reset__post__with_email__with_user(client, mock_django_render,
     model = database.create(user=1)
     data = {"email": model.user.email}
     response = client.post(url, data)
-    token, created = Token.get_or_create(model.user, token_type="temporal")
+    token, created = Token.get_or_create(model.user, token_type="short")
 
     mock_django_render.assert_called_once()
     call_args, call_kwargs = mock_django_render.call_args
@@ -147,7 +147,7 @@ def test_password_reset__post__with_email_in_uppercase__with_user(
     model = database.create(user=1)
     data = {"email": model.user.email.upper()}
     response = client.post(url, data)
-    token, created = Token.get_or_create(model.user, token_type="temporal")
+    token, created = Token.get_or_create(model.user, token_type="short")
 
     mock_django_render.assert_called_once()
     call_args, call_kwargs = mock_django_render.call_args
@@ -203,7 +203,7 @@ def test_password_reset__post__with_callback__with_email__with_user(client, mock
         "callback": "https://naturo.io/",
     }
     response = client.post(url, data)
-    token, created = Token.get_or_create(model.user, token_type="temporal")
+    token, created = Token.get_or_create(model.user, token_type="short")
 
     assert isinstance(response, HttpResponseRedirect)
     assert response.url == "https://naturo.io/?msg=Check%20your%20email%20for%20a%20password%20reset!"
@@ -237,7 +237,7 @@ def test_password_reset__post__with_callback__with_email_in_uppercase__with_user
         "callback": "https://naturo.io/",
     }
     response = client.post(url, data)
-    token, created = Token.get_or_create(model.user, token_type="temporal")
+    token, created = Token.get_or_create(model.user, token_type="short")
 
     assert isinstance(response, HttpResponseRedirect)
     assert response.url == "https://naturo.io/?msg=Check%20your%20email%20for%20a%20password%20reset!"

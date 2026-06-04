@@ -38,6 +38,9 @@ ENVIRONMENT = os.environ.get("ENV")
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = "5ar3h@ha%y*dc72z=8-ju7@4xqm0o59*@k*c2i=xacmy2r=%4a"
 
+# Encryption key for sensitive fields (e.g. VPS root password). Rotating invalidates existing encrypted values.
+ENCRYPTION_SECRET_KEY = os.environ.get("ENCRYPTION_SECRET_KEY", "")
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = ENVIRONMENT == "development" or ENVIRONMENT == "test"
 
@@ -74,6 +77,7 @@ INSTALLED_APPS = [
     "breathecode.registry",
     "breathecode.mentorship",
     "breathecode.career",
+    "breathecode.talent_development",
     "breathecode.commons",
     "breathecode.payments",
     "breathecode.commission",
@@ -524,31 +528,15 @@ with open(sql_keywords_path, "r") as f:
 
     EXPLORER_SQL_BLACKLIST = tuple(sql_keywords["blacklist"])
 
-# Django Rest Hooks
-HOOK_EVENTS = {
-    # 'any.event.name': 'App.Model.Action' (created/updated/deleted)
-    "form_entry.added": "marketing.FormEntry.created+",
-    "form_entry.changed": "marketing.FormEntry.updated+",
-    "profile_academy.added": "authenticate.ProfileAcademy.created+",
-    "profile_academy.changed": "authenticate.ProfileAcademy.updated+",
-    "cohort_user.added": "admissions.CohortUser.created+",
-    "cohort_user.changed": "admissions.CohortUser.updated+",
-    # and custom events, make sure to trigger them at notify.receivers.py
-    "cohort_user.edu_status_updated": "admissions.CohortUser.edu_status_updated",
-    "cohort.cohort_stage_updated": "admissions.Cohort.cohort_stage_updated",
-    "user_invite.invite_status_updated": "authenticate.UserInvite.invite_status_updated",
-    "asset.asset_status_updated": "registry.Asset.asset_status_updated",
-    "event.event_status_updated": "events.Event.event_status_updated",
-    "event.event_rescheduled": "events.Event.event_rescheduled",
-    "event.new_event_order": "events.EventCheckin.new_event_order",
-    "event.new_event_attendee": "events.EventCheckin.new_event_attendee",
-    "form_entry.won_or_lost": "marketing.FormEntry.won_or_lost",
-    "form_entry.new_deal": "marketing.FormEntry.new_deal",
-    "session.mentorship_session_status": "mentorship.MentorshipSession.mentorship_session_status",
-    "planfinancing.planfinancing_created": "payments.PlanFinancing.planfinancing_created",
-    "subscription.subscription_created": "payments.Subscription.subscription_created",
-    "UserAssessment.userassessment_status_updated": "assessment.UserAssessment.userassessment_status_updated",
-}
+# Django REST Hooks Configuration
+# Webhook events metadata is defined in breathecode.notify.utils.hook_events
+# See breathecode/notify/utils/hook_events.py for the complete webhook events configuration
+from breathecode.notify.utils.hook_events import HOOK_EVENTS_METADATA
+
+# HOOK_EVENTS is generated from HOOK_EVENTS_METADATA for backward compatibility
+# This dict is required by the Django REST Hooks system
+# Format: 'event.name': 'App.Model.Action' (created+/updated+/deleted+ or custom action)
+HOOK_EVENTS = {event_name: metadata["action"] for event_name, metadata in HOOK_EVENTS_METADATA.items()}
 
 # Websocket
 ASGI_APPLICATION = "breathecode.asgi.application"
@@ -570,6 +558,12 @@ heroku_redis_ssl_host = {
 if IS_REDIS_WITH_SSL_ON_HEROKU:
     heroku_redis_ssl_host["address"] += "?ssl_cert_reqs=none"
 
+# Soketi Configuration
+SOKETI_APP_ID = os.environ.get("SOKETI_APP_ID", "")
+SOKETI_KEY = os.environ.get("SOKETI_KEY", "")
+SOKETI_SECRET = os.environ.get("SOKETI_SECRET", "")
+SOKETI_HOST = os.environ.get("SOKETI_HOST", "stream.4geeks.ai")
+SOKETI_PORT = os.environ.get("SOKETI_PORT", "")
 
 MB = 1024 * 1024
 

@@ -1,6 +1,7 @@
 import re
 from urllib.parse import urlparse
 
+from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from django.utils import timezone
 from rest_framework import serializers, status
@@ -10,7 +11,13 @@ from breathecode.admissions.models import Academy
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.marketing.serializers import GetCourseSmallSerializer
 from breathecode.utils import serpy
+from breathecode.utils.validators import language_codes_for_lookup, languages_equivalent
 
+from .utils import (
+    build_request_url_for_activity_log,
+    normalize_github_activity_log,
+    record_github_activity,
+)
 from .models import (
     Asset,
     AssetAlias,
@@ -192,6 +199,7 @@ class AcademyCommentSerializer(serpy.Serializer):
     asset = SmallAsset()
     resolved = serpy.Field()
     delivered = serpy.Field()
+    priority = serpy.Field()
     author = UserSerializer(required=False)
     owner = UserSerializer(required=False)
     created_at = serpy.Field()
@@ -201,6 +209,7 @@ class AcademyErrorSerializer(serpy.Serializer):
     id = serpy.Field()
     asset_type = serpy.Field()
     slug = serpy.Field()
+    priority = serpy.Field()
     status = serpy.Field()
     path = serpy.Field()
     status_text = serpy.Field()
@@ -276,6 +285,8 @@ class AssetSerializer(serpy.Serializer):
     published_at = serpy.Field()
     learnpack_deploy_url = serpy.Field()
     allow_contributions = serpy.Field()
+    learnpack_deploy_url = serpy.Field()
+    learnpack_id = serpy.Field()
 
     translations = serpy.MethodField()
     technologies = serpy.MethodField()
@@ -300,6 +311,11 @@ class AssetSerializer(serpy.Serializer):
     def get_seo_keywords(self, obj):
         _s = list(map(lambda t: t.slug, obj.seo_keywords.all()))
         return _s
+
+
+def _serialize_github_activity_logs(obj):
+    """Normalized list (max 10) of GitHub sync events for API consumers."""
+    return normalize_github_activity_log(obj.github_activity_log)
 
 
 class AcademyAssetSerializer(AssetSerializer):
@@ -330,6 +346,8 @@ class AcademyAssetSerializer(AssetSerializer):
     owner = UserSerializer(required=False)
     config = serpy.Field()
     flag_seed = serpy.Field()
+    dependencies = serpy.Field()
+    github_activity_logs = serpy.MethodField()
 
     created_at = serpy.Field()
     updated_at = serpy.Field()
@@ -339,6 +357,9 @@ class AcademyAssetSerializer(AssetSerializer):
     previous_versions = serpy.MethodField()
 
     academy = serpy.MethodField()
+
+    def get_github_activity_logs(self, obj):
+        return _serialize_github_activity_logs(obj)
 
     def get_academy(self, obj):
         return obj.academy.id if obj.academy else None
@@ -383,6 +404,8 @@ class AssetBigSerializer(AssetMidSerializer):
     author = UserSerializer(required=False)
     owner = UserSerializer(required=False)
 
+    github_activity_logs = serpy.MethodField()
+
     test_status = serpy.Field()
     last_test_at = serpy.Field()
     sync_status = serpy.Field()
@@ -396,6 +419,7 @@ class AssetBigSerializer(AssetMidSerializer):
     delivery_formats = serpy.Field()
     delivery_regex_url = serpy.Field()
     template_url = serpy.Field()
+    is_in_subdirectory = serpy.Field()
     dependencies = serpy.Field()
 
     academy = AcademySmallSerializer(required=False)
@@ -404,6 +428,9 @@ class AssetBigSerializer(AssetMidSerializer):
 
     assets_related = serpy.MethodField()
     superseded_by = AssetTinySerializer(required=False)
+
+    def get_github_activity_logs(self, obj):
+        return _serialize_github_activity_logs(obj)
 
     def get_assets_related(self, obj):
         _assets_related = [AssetSmallSerializer(asset).data for asset in obj.assets_related.filter(lang=obj.lang)]
@@ -468,6 +495,11 @@ class AssetBigAndTechnologyPublishedSerializer(AssetBigSerializer):
 
 class AssetExpandableSerializer(AssetMidSerializer):
 
+    github_activity_logs = serpy.MethodField()
+
+    def get_github_activity_logs(self, obj):
+        return _serialize_github_activity_logs(obj)
+
     def format_technologies(self, obj):
         techs = AssetTechnology.objects.filter(
             id__in=obj.technologies.filter(visibility__in=["PUBLIC", "UNLISTED"], is_deprecated=False)
@@ -497,6 +529,13 @@ class AssetExpandableSerializer(AssetMidSerializer):
 
                 if "telemetry_stats" in self.expand:
                     elem["telemetry_stats"] = obj.telemetry_stats if hasattr(obj, "telemetry_stats") else None
+
+                if "cluster" in self.expand:
+                    first_kw = obj.seo_keywords.first()
+                    if first_kw and first_kw.cluster:
+                        elem["cluster"] = KeywordClusterSmallSerializer(first_kw.cluster).data
+                    else:
+                        elem["cluster"] = None
 
                 if "readme" in self.expand:
                     url = obj.readme_url
@@ -544,7 +583,7 @@ class AssetBigTechnologySerializer(AssetTechnologySerializer):
 
     def get_featured_course(self, obj):
         if obj.featured_course:
-            obj.featured_course.lang = obj.lang or "en"
+            obj.featured_course.lang = obj.lang or "us"
             return GetCourseSmallSerializer(obj.featured_course).data
         return None
 
@@ -648,6 +687,10 @@ class PostAssetSerializer(serializers.ModelSerializer):
             raise ValidationException("Asset is missing a language", slug="no-language")
 
         validated_data["lang"] = validated_data["lang"].lower()
+        
+        # Normalize "en" to "us" (case-insensitive)
+        if validated_data["lang"] == "en":
+            validated_data["lang"] = "us"
 
         # Handle category field validation
         if "category" in data:
@@ -744,6 +787,10 @@ class PostAcademyAssetSerializer(serializers.ModelSerializer):
             raise ValidationException("Asset is missing a language", slug="no-language")
 
         validated_data["lang"] = validated_data["lang"].lower()
+        
+        # Normalize "en" to "us" (case-insensitive)
+        if validated_data["lang"] == "en":
+            validated_data["lang"] = "us"
 
         # Handle category field validation
         if "category" in data:
@@ -998,9 +1045,10 @@ class PutAssetCommentSerializer(serializers.ModelSerializer):
         validated_data = super().validate(data)
         session_user = self.context.get("request").user
 
-        if self.instance.owner is not None and self.instance.owner.id == session_user.id:
-            if "resolved" in data and data["resolved"] != self.instance.resolved:
-                raise ValidationException("You cannot update the resolved property if you are the Asset Comment owner")
+        # TODO: we are not sure if we want this validation yet, we need to discuss it with the team
+        # if self.instance.owner is not None and self.instance.owner.id == session_user.id:
+        #     if "resolved" in data and data["resolved"] != self.instance.resolved:
+        #         raise ValidationException("You cannot update the resolved property if you are the Asset Comment owner")
 
         return validated_data
 
@@ -1131,6 +1179,12 @@ class AssetPUTSerializer(serializers.ModelSerializer):
         lang = self.instance.lang
         if "lang" in data:
             lang = data["lang"]
+        
+        # Normalize "en" to "us" (case-insensitive)
+        if lang and lang.lower() == "en":
+            lang = "us"
+            if "lang" in data:
+                data["lang"] = "us"
 
         category = self.instance.category
         if "category" in data:
@@ -1160,8 +1214,9 @@ class AssetPUTSerializer(serializers.ModelSerializer):
         if category is None:
             raise ValidationException("Asset category cannot be null", status.HTTP_400_BAD_REQUEST)
 
-        if lang != category.lang:
-            translated_category = category.all_translations.filter(lang=lang).first()
+        if not languages_equivalent(lang, category.lang):
+            codes = language_codes_for_lookup(lang)
+            translated_category = category.all_translations.filter(lang__in=codes).first() if codes else None
             if translated_category is None:
                 raise ValidationException(
                     "Asset category is in a different language than the asset itself and we could not find a category translation that matches the same language",
@@ -1173,6 +1228,10 @@ class AssetPUTSerializer(serializers.ModelSerializer):
         return validated_data
 
     def update(self, instance, validated_data):
+        # Scoped academy PUT implies claiming an unclaimed (global) asset for this academy.
+        academy_id = self.context.get("academy_id")
+        if instance.academy_id is None and academy_id is not None:
+            instance.academy_id = int(academy_id)
 
         data = {}
 
@@ -1208,7 +1267,74 @@ class AssetPUTSerializer(serializers.ModelSerializer):
 
                     async_remove_asset_preview_from_cloud.delay(hash)
 
-        return super().update(instance, {**validated_data, **data})
+        # Sync asset fields to config if config exists
+        if instance.config:
+            from breathecode.registry.actions import sync_asset_fields_to_config
+            
+            # Only sync fields that are actually being updated
+            fields_to_sync = {
+                key: validated_data[key] 
+                for key in validated_data 
+                if key in [
+                    "solution_url", "preview", "title", "description", "template_url",
+                    "difficulty", "duration", "gitpod", "agent", "solution_video_url",
+                    "intro_video_url", "delivery_instructions", "delivery_formats",
+                    "delivery_regex_url", "technologies", "interactive"
+                ]
+            }
+            
+            if fields_to_sync:
+                updated_config = sync_asset_fields_to_config(instance, fields_to_sync)
+                if updated_config:
+                    data["config"] = updated_config
+                    # Flag asset as needing resync to GitHub if it has a GitHub URL
+                    if instance.readme_url and "github.com" in instance.readme_url:
+                        data["sync_status"] = "NEEDS_RESYNC"
+                        data["status_text"] = "Config updated locally - needs to be pushed to GitHub"
+
+        # Perform the update first
+        updated_instance = super().update(instance, {**validated_data, **data})
+        
+        # After successful update, trigger push for auto-subscribed assets if NEEDS_RESYNC was set
+        if updated_instance.sync_status == "NEEDS_RESYNC" and updated_instance.is_auto_subscribed:
+            owner_id = None
+            if updated_instance.owner:
+                owner_id = updated_instance.owner.id
+            elif updated_instance.author:
+                owner_id = updated_instance.author.id
+            
+            if owner_id and updated_instance.readme_url and "github.com" in updated_instance.readme_url:
+                if updated_instance.asset_type in ["LESSON", "ARTICLE", "QUIZ"]:
+                    from breathecode.registry.tasks import async_push_to_github_task
+
+                    r = async_push_to_github_task.delay(updated_instance.slug, owner_id=owner_id)
+                    record_github_activity(
+                        updated_instance.slug,
+                        "academy",
+                        action="push_queued",
+                        detail=f"AssetPUTSerializer celery_task_id={r.id}",
+                        status="ok",
+                        http_status=status.HTTP_200_OK,
+                        request_url=build_request_url_for_activity_log(self.context.get("request")),
+                    )
+                elif updated_instance.asset_type in ["PROJECT", "EXERCISE"]:
+                    from breathecode.registry.tasks import async_push_project_or_exercise_to_github
+
+                    r = async_push_project_or_exercise_to_github.delay(
+                        updated_instance.slug,
+                        create_or_update=False,
+                    )
+                    record_github_activity(
+                        updated_instance.slug,
+                        "academy",
+                        action="push_queued",
+                        detail=f"AssetPUTSerializer project/exercise celery_task_id={r.id}",
+                        status="ok",
+                        http_status=status.HTTP_200_OK,
+                        request_url=build_request_url_for_activity_log(self.context.get("request")),
+                    )
+        
+        return updated_instance
 
 
 class AssetPUTMeSerializer(serializers.ModelSerializer):
@@ -1220,6 +1346,8 @@ class AssetPUTMeSerializer(serializers.ModelSerializer):
     visibility = serializers.CharField(required=False)
     asset_type = serializers.CharField(required=False)
     feature = serializers.BooleanField(required=False)
+    # Claim a global asset for an academy (only while asset.academy is null). Owner must belong to that academy.
+    academy_id = serializers.IntegerField(required=False, allow_null=True)
 
     class Meta:
         model = Asset
@@ -1227,6 +1355,42 @@ class AssetPUTMeSerializer(serializers.ModelSerializer):
         list_serializer_class = AssetListSerializer
 
     def validate(self, data):
+
+        session_user = self.context.get("request").user
+        payload_academy_id = data.get("academy_id")
+
+        if "academy_id" in data and payload_academy_id is not None:
+            if self.instance.academy_id is not None:
+                if int(payload_academy_id) != self.instance.academy_id:
+                    raise ValidationException(
+                        translation(
+                            en="You cannot change the academy of an asset that already belongs to an academy.",
+                            es="No puedes cambiar la academia de un asset que ya pertenece a una academia.",
+                        ),
+                        slug="asset-academy-locked",
+                    )
+                data.pop("academy_id", None)
+            else:
+                aid = int(payload_academy_id)
+                if not Academy.objects.filter(id=aid).exists():
+                    raise ValidationException(
+                        translation(
+                            en="The specified academy does not exist.",
+                            es="La academia especificada no existe.",
+                        ),
+                        slug="academy-not-found",
+                    )
+                member = ProfileAcademy.objects.filter(user=session_user, academy__id=aid).first()
+                if member is None:
+                    raise ValidationException(
+                        translation(
+                            en="You must belong to the academy you are assigning to this asset.",
+                            es="Debes pertenecer a la academia que asignas a este asset.",
+                        ),
+                        slug="not-member-of-academy",
+                    )
+        elif "academy_id" in data and payload_academy_id is None:
+            data.pop("academy_id", None)
 
         if "status" in data and data["status"] == "PUBLISHED":
             if self.instance.test_status not in ["OK", "WARNING"]:
@@ -1247,6 +1411,12 @@ class AssetPUTMeSerializer(serializers.ModelSerializer):
         lang = self.instance.lang
         if "lang" in data:
             lang = data["lang"]
+        
+        # Normalize "en" to "us" (case-insensitive)
+        if lang and lang.lower() == "en":
+            lang = "us"
+            if "lang" in data:
+                data["lang"] = "us"
 
         category = self.instance.category
         if "category" in data:
@@ -1277,8 +1447,9 @@ class AssetPUTMeSerializer(serializers.ModelSerializer):
             except Exception:
                 pass
 
-        if category and lang != category.lang:
-            translated_category = category.all_translations.filter(lang=lang).first()
+        if category and not languages_equivalent(lang, category.lang):
+            codes = language_codes_for_lookup(lang)
+            translated_category = category.all_translations.filter(lang__in=codes).first() if codes else None
             if translated_category is None:
                 raise ValidationException(
                     "Asset category is in a different language than the asset itself and we could not find a category translation that matches the same language",
@@ -1290,6 +1461,10 @@ class AssetPUTMeSerializer(serializers.ModelSerializer):
         return validated_data
 
     def update(self, instance, validated_data):
+
+        claim_academy_id = validated_data.pop("academy_id", None)
+        if instance.academy_id is None and claim_academy_id is not None:
+            instance.academy_id = int(claim_academy_id)
 
         data = {}
 
@@ -1325,4 +1500,71 @@ class AssetPUTMeSerializer(serializers.ModelSerializer):
 
                     async_remove_asset_preview_from_cloud.delay(hash)
 
-        return super().update(instance, {**validated_data, **data})
+        # Sync asset fields to config if config exists
+        if instance.config:
+            from breathecode.registry.actions import sync_asset_fields_to_config
+            
+            # Only sync fields that are actually being updated
+            fields_to_sync = {
+                key: validated_data[key] 
+                for key in validated_data 
+                if key in [
+                    "solution_url", "preview", "title", "description", "template_url",
+                    "difficulty", "duration", "gitpod", "agent", "solution_video_url",
+                    "intro_video_url", "delivery_instructions", "delivery_formats",
+                    "delivery_regex_url", "technologies"
+                ]
+            }
+            
+            if fields_to_sync:
+                updated_config = sync_asset_fields_to_config(instance, fields_to_sync)
+                if updated_config:
+                    data["config"] = updated_config
+                    # Flag asset as needing resync to GitHub if it has a GitHub URL
+                    if instance.readme_url and "github.com" in instance.readme_url:
+                        data["sync_status"] = "NEEDS_RESYNC"
+                        data["status_text"] = "Config updated locally - needs to be pushed to GitHub"
+
+        # Perform the update first
+        updated_instance = super().update(instance, {**validated_data, **data})
+        
+        # After successful update, trigger push for auto-subscribed assets if NEEDS_RESYNC was set
+        if updated_instance.sync_status == "NEEDS_RESYNC" and updated_instance.is_auto_subscribed:
+            owner_id = None
+            if updated_instance.owner:
+                owner_id = updated_instance.owner.id
+            elif updated_instance.author:
+                owner_id = updated_instance.author.id
+            
+            if owner_id and updated_instance.readme_url and "github.com" in updated_instance.readme_url:
+                if updated_instance.asset_type in ["LESSON", "ARTICLE", "QUIZ"]:
+                    from breathecode.registry.tasks import async_push_to_github_task
+
+                    r = async_push_to_github_task.delay(updated_instance.slug, owner_id=owner_id)
+                    record_github_activity(
+                        updated_instance.slug,
+                        "academy",
+                        action="push_queued",
+                        detail=f"AssetPUTMeSerializer celery_task_id={r.id}",
+                        status="ok",
+                        http_status=status.HTTP_200_OK,
+                        request_url=build_request_url_for_activity_log(self.context.get("request")),
+                    )
+                elif updated_instance.asset_type in ["PROJECT", "EXERCISE"]:
+                    from breathecode.registry.tasks import async_push_project_or_exercise_to_github
+
+                    r = async_push_project_or_exercise_to_github.delay(
+                        updated_instance.slug,
+                        create_or_update=False,
+                    )
+                    record_github_activity(
+                        updated_instance.slug,
+                        "academy",
+                        action="push_queued",
+                        detail=f"AssetPUTMeSerializer project/exercise celery_task_id={r.id}",
+                        status="ok",
+                        http_status=status.HTTP_200_OK,
+                        request_url=build_request_url_for_activity_log(self.context.get("request")),
+                    )
+        
+        return updated_instance

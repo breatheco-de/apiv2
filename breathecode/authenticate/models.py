@@ -42,13 +42,15 @@ __all__ = [
     "CredentialsFacebook",
     "CredentialsQuickBooks",
     "CredentialsGoogle",
+    "CredentialsDiscord",
     "DeviceId",
     "Token",
 ]
 
-TOKEN_TYPE = ["login", "one_time", "temporal", "permanent"]
+TOKEN_TYPE = ["login", "one_time", "temporal", "permanent", "short"]
 LOGIN_TOKEN_LIFETIME = timezone.timedelta(days=7)
-TEMPORAL_TOKEN_LIFETIME = timezone.timedelta(minutes=10)
+TEMPORAL_TOKEN_LIFETIME = timezone.timedelta(hours=24)
+SHORT_TOKEN_LIFETIME = timezone.timedelta(minutes=15)
 
 
 class UserProxy(User):
@@ -130,9 +132,24 @@ class Role(models.Model):
     slug = models.SlugField(max_length=25, primary_key=True)
     name = models.CharField(max_length=255, blank=True, null=True, default=None)
     capabilities = models.ManyToManyField(Capability)
+    academy = models.ForeignKey(
+        Academy,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="custom_roles",
+        help_text="Null for native (platform) roles; set for academy-owned custom roles.",
+    )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    @property
+    def display_slug(self):
+        """Slug without academy id suffix, for UI display. Native roles return slug as-is."""
+        if self.academy_id is not None and self.slug.endswith(f"_{self.academy_id}"):
+            return self.slug.removesuffix(f"_{self.academy_id}")
+        return self.slug
 
     def __str__(self):
         return f"{self.name} ({self.slug})"
@@ -162,11 +179,13 @@ PROCESS_STATUS = (
 class UserInvite(models.Model):
     _old_status: str
     _email: str
+    _old_is_email_validated: bool
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._old_status = self.status
         self._email = self.email
+        self._old_is_email_validated = self.is_email_validated
 
     email = models.CharField(blank=False, max_length=150, null=True, default=None)
 
@@ -213,6 +232,8 @@ class UserInvite(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
     sent_at = models.DateTimeField(default=None, null=True, blank=True)
+    opened_at = models.DateTimeField(default=None, null=True, blank=True)
+    clicked_at = models.DateTimeField(default=None, null=True, blank=True)
     expires_at = models.DateTimeField(default=None, null=True, blank=True)
 
     country = models.CharField(max_length=30, null=True, default=None, blank=True)
@@ -227,6 +248,24 @@ class UserInvite(models.Model):
     email_quality = models.FloatField(default=None, blank=True, null=True)
     email_status = models.JSONField(default=None, blank=True, null=True)
 
+    welcome_video = models.JSONField(
+        default=None,
+        blank=True,
+        null=True,
+        help_text="Video de bienvenida con preview_image y url. Formato: {'preview_image': 'url', 'url': 'url'}"
+    )
+
+    student_plan_access = models.JSONField(
+        default=None,
+        blank=True,
+        null=True,
+        help_text=(
+            "Agreed-on financing when inviting a student (kept separate from conversion_info / UTMs). "
+            "Keys: how_many_installments, initial_payment_amount, initial_payment_notes, "
+            "grace_period_duration, grace_period_duration_unit."
+        ),
+    )
+
     # link to team membership (optional)
     subscription_seat = models.ForeignKey(
         "payments.SubscriptionSeat",
@@ -235,6 +274,24 @@ class UserInvite(models.Model):
         default=None,
         blank=True,
         help_text="Related subscription seat for team invitations",
+        db_index=True,
+    )
+    plan_financing_seat = models.ForeignKey(
+        "payments.PlanFinancingSeat",
+        on_delete=models.SET_NULL,
+        null=True,
+        default=None,
+        blank=True,
+        help_text="Related plan financing seat for team invitations",
+        db_index=True,
+    )
+    payment_method = models.ForeignKey(
+        "payments.PaymentMethod",
+        on_delete=models.SET_NULL,
+        null=True,
+        default=None,
+        blank=True,
+        help_text="Payment method to use when creating the invoice",
         db_index=True,
     )
 
@@ -270,15 +327,22 @@ class UserInvite(models.Model):
         if status_updated:
             signals.invite_status_updated.send_robust(instance=self, sender=UserInvite)
 
+        email_validation_updated = not created and not self._old_is_email_validated and self.is_email_validated
+        if email_validation_updated:
+            signals.invite_email_validated.send_robust(instance=self, sender=UserInvite)
+
         self._email = self.email
         self._old_status = self.status
+        self._old_is_email_validated = self.is_email_validated
 
 
 INVITED = "INVITED"
 ACTIVE = "ACTIVE"
+DELETED = "DELETED"
 PROFILE_ACADEMY_STATUS = (
     (INVITED, "Invited"),
     (ACTIVE, "Active"),
+    (DELETED, "Deleted"),
 )
 
 
@@ -337,6 +401,10 @@ class ProfileAcademy(models.Model):
             profile_academy_role_changed.send_robust(
                 instance=self, sender=ProfileAcademy, old_role=old_role, new_role=self.role
             )
+
+        # Update tracked fields after save
+        self.__old_status = self.status
+        self.__old_role = self.role
 
 
 class CredentialsGithub(models.Model):
@@ -411,6 +479,78 @@ class AcademyAuthSettings(models.Model):
         related_name="github_whitelist_exemptions",
         help_text="Users that will never be removed from GitHub organization regardless of their cohort status",
     )
+    discord_settings = models.JSONField(
+        default=None, blank=True, null=True, help_text="Discord variables for this academy"
+    )
+    learnpack_owner = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        blank=True,
+        default=None,
+        null=True,
+        related_name="learnpack_academy_auth_settings",
+        help_text="User who owns the LearnPack integration for this academy. Must have FirstPartyCredentials with rigobot id.",
+    )
+    # LearnPack JSON config. Reserved key ``telemetry_webhook_ignore`` (object with optional list fields
+    # ``user_ids``, ``learnpack_package_ids``, ``package_slugs``, ``asset_ids``, ``events``): if any
+    # listed value matches an incoming LearnPack telemetry webhook for this academy, the webhook row is
+    # saved as IGNORED and Celery processing is skipped. Prefer
+    # ``PUT /v1/assignment/academy/learnpack/telemetry-webhook-ignore`` to edit only that subtree; see also
+    # ``AcademyAuthSettingsSerializer.update`` merge behavior when updating ``learnpack_features`` via auth
+    # settings.
+    learnpack_features = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="JSON configuration for LearnPack features. Structure to be defined later.",
+    )
+    learnpack_org_id = models.IntegerField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="LearnPack organization ID for this academy.",
+    )
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        from linked_services.django.models import FirstPartyCredentials
+
+        if self.learnpack_owner is not None:
+            try:
+                credentials = FirstPartyCredentials.objects.get(user=self.learnpack_owner)
+            except FirstPartyCredentials.DoesNotExist:
+                raise ValidationError("User must have FirstPartyCredentials when set as learnpack_owner")
+
+            if not isinstance(credentials.app, dict):
+                raise ValidationError(
+                    "FirstPartyCredentials app field must be a dictionary when user is set as learnpack_owner"
+                )
+
+            if "rigobot" not in credentials.app:
+                raise ValidationError(
+                    "FirstPartyCredentials must have rigobot id in app field when user is set as learnpack_owner"
+                )
+
+            rigobot_id = credentials.app.get("rigobot")
+            if rigobot_id is None:
+                raise ValidationError(
+                    "FirstPartyCredentials must have rigobot id in app field when user is set as learnpack_owner"
+                )
+
+            if isinstance(rigobot_id, str) and rigobot_id.strip() == "":
+                raise ValidationError(
+                    "FirstPartyCredentials must have rigobot id in app field when user is set as learnpack_owner"
+                )
+
+            if isinstance(rigobot_id, int) and rigobot_id <= 0:
+                raise ValidationError(
+                    "FirstPartyCredentials must have a valid rigobot id (> 0) in app field when user is set as learnpack_owner"
+                )
+
+        return super().clean()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
 
     def add_error(self, msg):
         if self.github_error_log is None:
@@ -458,6 +598,9 @@ STORAGE_ACTION = (
 
 
 class GithubAcademyUser(models.Model):
+    """Rolling audit log for sync messages; newest first, max ``STORAGE_LOG_MAX_ENTRIES``."""
+
+    STORAGE_LOG_MAX_ENTRIES = 5
 
     def __init__(self, *args, **kwargs):
         super(GithubAcademyUser, self).__init__(*args, **kwargs)
@@ -492,12 +635,21 @@ class GithubAcademyUser(models.Model):
     def create_log(msg):
         return {"msg": msg, "at": str(timezone.now())}
 
-    def log(self, msg, reset=True):
+    def log(self, msg, reset=False):
+        """
+        Prepend ``msg`` with timestamp. Keeps the first ``STORAGE_LOG_MAX_ENTRIES`` entries (newest first).
 
-        if self.storage_log is None or reset:
+        :param reset: If True, discard previous entries and only store this message.
+        """
+        if reset:
+            self.storage_log = []
+        elif self.storage_log is None or not isinstance(self.storage_log, list):
             self.storage_log = []
 
-        self.storage_log.append(GithubAcademyUser.create_log(msg))
+        self.storage_log.insert(0, GithubAcademyUser.create_log(msg))
+        cap = GithubAcademyUser.STORAGE_LOG_MAX_ENTRIES
+        if len(self.storage_log) > cap:
+            self.storage_log = self.storage_log[:cap]
 
     def save(self, *args, **kwargs):
         has_mutated = False
@@ -610,6 +762,18 @@ class NotFoundAnonGoogleUser(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
 
+class CredentialsDiscord(models.Model):
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    discord_id = models.CharField(max_length=64, unique=True)
+    joined_servers = models.JSONField(default=None, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f"{self.user.email} ({self.discord_id})"
+
+
 class TokenGetOrCreateArgs(TypedDict, total=False):
     hours_length: int
     expires_at: datetime
@@ -639,6 +803,10 @@ class Token(rest_framework.authtoken.models.Token):
         if without_expire_at and self.token_type == "temporal":
             utc_now = timezone.now()
             self.expires_at = utc_now + TEMPORAL_TOKEN_LIFETIME
+
+        if without_expire_at and self.token_type == "short":
+            utc_now = timezone.now()
+            self.expires_at = utc_now + SHORT_TOKEN_LIFETIME
 
         if self.token_type == "one_time" or self.token_type == "permanent":
             self.expires_at = None

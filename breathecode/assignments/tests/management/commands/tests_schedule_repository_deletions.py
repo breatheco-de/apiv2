@@ -17,6 +17,19 @@ from breathecode.assignments import tasks
 from breathecode.assignments.management.commands.schedule_repository_deletions import Command
 from breathecode.registry.models import Asset
 
+# capyc inyecta learnpack_owner=user en AcademyAuthSettings después de los kwargs;
+# hace falta FirstPartyCredentials con rigobot para ese usuario (authenticate.AcademyAuthSettings.clean).
+# Pre-seed HMAC private key (hex) para evitar Ed25519/OS entropy en Windows CI.
+_CAPYC_LEARNPACK_KWARGS = dict(
+    linked_services__app={
+        "slug": "rigobot",
+        "private_key": "a" * 128,
+        "public_key": None,
+        "algorithm": "HMAC_SHA512",
+    },
+    first_party_credentials={"app": {"rigobot": 1}},
+)
+
 
 @pytest.fixture(autouse=True)
 def setup(db, monkeypatch: pytest.MonkeyPatch):
@@ -104,7 +117,14 @@ def test_no_settings(database: capyc.Database):
 
 
 def test_no_repos(database: capyc.Database, patch_get):
-    model = database.create(academy_auth_settings=1, city=1, country=1, user=1, credentials_github=1)
+    model = database.create(
+        **_CAPYC_LEARNPACK_KWARGS,
+        academy_auth_settings=1,
+        city=1,
+        country=1,
+        user=1,
+        credentials_github=1,
+    )
     patch_get(
         [
             {
@@ -125,7 +145,14 @@ def test_no_repos(database: capyc.Database, patch_get):
 
 
 def test_two_repos(database: capyc.Database, patch_get):
-    model = database.create(academy_auth_settings=1, city=1, country=1, user=1, credentials_github=1)
+    model = database.create(
+        **_CAPYC_LEARNPACK_KWARGS,
+        academy_auth_settings=1,
+        city=1,
+        country=1,
+        user=1,
+        credentials_github=1,
+    )
     patch_get(
         [
             {
@@ -189,6 +216,7 @@ def test_two_repos__deleting_repositories(database: capyc.Database, patch_get, s
 
     delta = relativedelta(months=2, hours=1)
     model = database.create(
+        **_CAPYC_LEARNPACK_KWARGS,
         academy_auth_settings=1,
         city=1,
         country=1,
@@ -304,6 +332,7 @@ def test_two_repos__repository_transferred(database: capyc.Database, patch_get, 
 
     delta = relativedelta(months=2, hours=1)
     model = database.create(
+        **_CAPYC_LEARNPACK_KWARGS,
         academy_auth_settings=1,
         city=1,
         country=1,
@@ -391,6 +420,7 @@ def test_two_repos__repository_does_not_exists(database: capyc.Database, patch_g
 
     delta = relativedelta(months=2, hours=1)
     model = database.create(
+        **_CAPYC_LEARNPACK_KWARGS,
         academy_auth_settings=1,
         city=1,
         country=1,
@@ -479,6 +509,7 @@ def test_one_repo__pending__user_not_found(database: capyc.Database, patch_get, 
     delta = relativedelta(months=2, hours=1)
     github_username = "4GeeksAcademy"
     model = database.create(
+        **_CAPYC_LEARNPACK_KWARGS,
         academy_auth_settings={"github_username": github_username},
         city=1,
         country=1,
@@ -559,6 +590,7 @@ def test_one_repo__pending__user_found(
     github_username = "breatheco-de"
     parsed_name = github_username.replace("-", "")
     model = database.create(
+        **_CAPYC_LEARNPACK_KWARGS,
         academy_auth_settings={"github_username": github_username},
         city=1,
         country=1,
@@ -640,6 +672,7 @@ def test_one_repo__pending__user_found__inferred(database: capyc.Database, patch
     delta = relativedelta(months=2, hours=1)
     github_username = "4GeeksAcademy"
     model = database.create(
+        **_CAPYC_LEARNPACK_KWARGS,
         academy_auth_settings={"github_username": github_username},
         city=1,
         country=1,
@@ -724,6 +757,7 @@ def test_one_repo__transferring__repo_found(database: capyc.Database, patch_get,
     delta = relativedelta(months=2, hours=1)
     github_username = "breatheco-de"
     model = database.create(
+        **_CAPYC_LEARNPACK_KWARGS,
         academy_auth_settings={"github_username": github_username},
         city=1,
         country=1,
@@ -792,6 +826,7 @@ def test_one_repo__transferring__repo_not_found(database: capyc.Database, patch_
     delta = relativedelta(months=2, hours=1)
     github_username = "breatheco-de"
     model = database.create(
+        **_CAPYC_LEARNPACK_KWARGS,
         academy_auth_settings={"github_username": github_username},
         city=1,
         country=1,
@@ -858,6 +893,7 @@ def test_one_repo__transferring__repo_not_found(database: capyc.Database, patch_
 
 def test_two_repos_in_the_whitelist(database: capyc.Database, patch_get):
     model = database.create(
+        **_CAPYC_LEARNPACK_KWARGS,
         academy_auth_settings=1,
         city=1,
         country=1,
@@ -927,6 +963,7 @@ def test_two_repos_in_the_whitelist(database: capyc.Database, patch_get):
 
 def test_two_repos_scheduled_and_in_this_execution_was_added_to_the_whitelist(database: capyc.Database, patch_get):
     model = database.create(
+        **_CAPYC_LEARNPACK_KWARGS,
         academy_auth_settings=1,
         city=1,
         country=1,
@@ -1012,6 +1049,7 @@ def test_two_repos_scheduled_and_in_this_execution_was_added_to_the_whitelist(da
 
 def test_two_repos_used_in_subscriptions(database: capyc.Database, patch_get):
     model = database.create(
+        **_CAPYC_LEARNPACK_KWARGS,
         academy_auth_settings=1,
         city=1,
         country=1,
@@ -1077,6 +1115,7 @@ def test_two_repos_used_in_subscriptions(database: capyc.Database, patch_get):
 
 def test_two_repos_scheduled_and_in_this_execution_was_added_to_the_subscriptions(database: capyc.Database, patch_get):
     model = database.create(
+        **_CAPYC_LEARNPACK_KWARGS,
         academy_auth_settings=1,
         city=1,
         country=1,
@@ -1197,6 +1236,7 @@ def test_two_repos_used_in_assets(database: capyc.Database, patch_get, attr, is_
             },
         ]
     model = database.create(
+        **_CAPYC_LEARNPACK_KWARGS,
         academy_auth_settings=1, city=1, country=1, user=1, credentials_github=1, asset=assets, asset_category=1
     )
     patch_get(
@@ -1291,6 +1331,7 @@ def test_two_repos_scheduled_and_in_this_execution_was_added_to_the_assets(
             },
         ]
     model = database.create(
+        **_CAPYC_LEARNPACK_KWARGS,
         academy_auth_settings=1,
         city=1,
         country=1,
@@ -1372,6 +1413,7 @@ def test_one_repo__pending__user_found_via_collaborators(
     github_username = "4GeeksAcademy"
     collaborator_username = "student-user"
     model = database.create(
+        **_CAPYC_LEARNPACK_KWARGS,
         academy_auth_settings={"github_username": github_username},
         city=1,
         country=1,

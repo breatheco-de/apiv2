@@ -1,3 +1,50 @@
+"""
+URL Configuration for Mentorship App
+
+This module defines URL patterns following REST conventions with some specific exceptions
+for the BreatheCode API v2.
+
+REST Naming Conventions:
+========================
+
+1. Resource-based URLs:
+   - Use plural nouns for collections: /academy/mentors, /academy/sessions
+   - Use singular nouns for individual resources: /mentor/<id>
+
+2. HTTP Methods:
+   - GET /academy/mentor - List all academy mentors
+   - POST /academy/mentor - Create new mentor
+   - GET /academy/mentor/<id> - Get specific mentor
+   - PUT/PATCH /academy/mentor/<id> - Update specific mentor
+   - DELETE /academy/mentor/<id> - Delete specific mentor
+
+3. Nested Resources:
+   - /academy/mentor/<id>/session - Sessions for a specific mentor
+   - /academy/service/<id>/session - Sessions for a specific service
+   - /academy/mentor/<id>/bill - Bills for a specific mentor
+
+4. Actions (Non-REST exceptions):
+   - /academy/bill/<id>/html - Render bill as HTML (GET)
+   - /calendly/webhook/<hash> - Calendly webhook (POST)
+
+5. Special Endpoints:
+   - /user/me/* - Current user's mentorship resources
+   - /academy/* - Academy-specific resources
+   - /public/* - Publicly accessible endpoints
+   - /calendly/* - Calendly integration endpoints
+
+6. URL Naming:
+   - Use snake_case for URL names: academy_mentor_id_session
+   - Include resource type and ID when applicable
+   - Be descriptive but concise
+
+Examples:
+- academy_mentor_id_session - Get/update sessions for specific mentor
+- user_session - Get/update current user's sessions
+- academy_service_id_session - Get/update sessions for specific service
+- public_mentor - Get public mentor information
+"""
+
 from django.urls import path
 from .views import (
     ServiceView,

@@ -32,20 +32,23 @@ def get_serializer(self, user_specialty, academy, specialty, user):
         "signed_by": user_specialty.signed_by,
         "signed_by_role": user_specialty.signed_by_role,
         "specialty": {
+            "academy": (
+                {"id": specialty.academy.id, "slug": specialty.academy.slug, "name": specialty.academy.name}
+                if specialty.academy_id
+                else None
+            ),
             "created_at": self.bc.datetime.to_iso_string(specialty.created_at),
             "description": specialty.description,
             "id": specialty.id,
             "logo_url": specialty.logo_url,
             "name": specialty.name,
             "slug": specialty.slug,
+            "status": specialty.status,
+            "metrics": specialty.metrics,
             "syllabus": (
-                {
-                    "id": specialty.syllabus.id if specialty.syllabus else None,
-                    "name": specialty.syllabus.name if specialty.syllabus else None,
-                    "slug": specialty.syllabus.slug if specialty.syllabus else None,
-                }
-                if specialty.syllabus
-                else None
+                (lambda first: {"id": first.id, "name": first.name, "slug": first.slug} if first else None)(
+                    specialty.syllabuses.first()
+                )
             ),
             "syllabuses": [{"id": s.id, "name": s.name, "slug": s.slug} for s in specialty.syllabuses.all()],
             "updated_at": self.bc.datetime.to_iso_string(specialty.updated_at),

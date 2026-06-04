@@ -14,6 +14,18 @@ from breathecode.assignments import tasks
 from breathecode.assignments.management.commands.send_deletion_order_notifications import Command
 from breathecode.registry.models import Asset
 
+# capyc inyecta learnpack_owner=user; AcademyAuthSettings.clean() exige FirstPartyCredentials con rigobot.
+# Pre-seed HMAC private key (hex) para evitar Ed25519/OS entropy en Windows CI.
+_CAPYC_LEARNPACK_KWARGS = dict(
+    linked_services__app={
+        "slug": "rigobot",
+        "private_key": "a" * 128,
+        "public_key": None,
+        "algorithm": "HMAC_SHA512",
+    },
+    first_party_credentials={"app": {"rigobot": 1}},
+)
+
 
 @pytest.fixture(autouse=True)
 def setup(db, monkeypatch: pytest.MonkeyPatch):
@@ -116,6 +128,7 @@ def test_one_repo__pending__user_found(
     github_username = "breatheco-de"
     parsed_name = github_username.replace("-", "")
     model = database.create(
+        **_CAPYC_LEARNPACK_KWARGS,
         academy_auth_settings={"github_username": github_username},
         city=1,
         country=1,
@@ -165,6 +178,7 @@ def test_one_repo__pending__user_found__inferred(
     delta = relativedelta(months=2, hours=1)
     github_username = "4GeeksAcademy"
     model = database.create(
+        **_CAPYC_LEARNPACK_KWARGS,
         academy_auth_settings={"github_username": github_username},
         city=1,
         country=1,

@@ -1,4 +1,5 @@
 import logging
+import os
 from datetime import timedelta
 from typing import Any
 
@@ -12,13 +13,14 @@ from slugify import slugify
 import breathecode.activity.tasks as tasks_activity
 from breathecode.admissions.models import Academy
 from breathecode.admissions.serializers import UserPublicSerializer
-from breathecode.authenticate.models import Profile, ProfileTranslation
+from breathecode.authenticate.models import Profile, ProfileAcademy, ProfileTranslation
+from breathecode.events import actions as events_actions
 from breathecode.marketing.actions import validate_marketing_tags
 from breathecode.registry.models import Asset
 from breathecode.registry.serializers import AssetSmallSerializer
 from breathecode.utils import serpy
 
-from .models import Event, EventbriteWebhook, EventCheckin, EventType, LiveClass, Organization
+from .models import Event, EventbriteWebhook, EventCheckin, EventType, LiveClass, LumaWebhook, Organization, Venue
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +58,12 @@ class ProfileSerializer(serpy.Serializer):
         translations = ProfileTranslation.objects.filter(profile=obj)
         return ProfileTranslationSerializer(translations, many=True).data
 
+class CohortTimeSlotSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    starting_at = serpy.Field()
+    ending_at = serpy.Field()
+    timezone = serpy.Field()
+
 
 class UserBigSerializer(UserSerializer):
     profile = serpy.MethodField()
@@ -85,6 +93,7 @@ class EventTypeSmallSerializer(serpy.Serializer):
 
 class EventTypeSerializer(EventTypeSmallSerializer):
     description = serpy.Field()
+    icon_url = serpy.Field()
     lang = serpy.Field()
     academy = AcademySerializer(required=False)
 
@@ -145,6 +154,7 @@ class OrganizationSmallSerializer(serpy.Serializer):
 class OrganizationBigSerializer(OrganizationSmallSerializer):
     eventbrite_id = serpy.Field()
     eventbrite_key = serpy.Field()
+    luma_calendar_id = serpy.Field()
     updated_at = serpy.Field()
     created_at = serpy.Field()
 
@@ -276,6 +286,8 @@ class EventBigSerializer(EventPublicBigSerializer):
     eventbrite_url = serpy.Field()
     eventbrite_organizer_id = serpy.Field()
     eventbrite_status = serpy.Field()
+    luma_id = serpy.Field()
+    luma_url = serpy.Field()
 
 
 class AcademyEventSmallSerializer(serpy.Serializer):
@@ -302,7 +314,7 @@ class AcademyEventSmallSerializer(serpy.Serializer):
     eventbrite_sync_status = serpy.Field()
     eventbrite_sync_description = serpy.Field()
     tags = serpy.Field()
-    host_user = UserSerializer(required=False)
+    host_user = UserBigSerializer(required=False)
     author = UserSerializer(required=False)
     free_for_all = serpy.Field()
     asset = serpy.MethodField()
@@ -319,15 +331,58 @@ class AcademyEventSmallSerializer(serpy.Serializer):
 
 class GetLiveClassSerializer(serpy.Serializer):
     id = serpy.Field()
+    started_at = serpy.Field()
+    ended_at = serpy.Field()
+    starting_at = serpy.Field()
+    ending_at = serpy.Field()
+    remote_meeting_url = serpy.Field()
+    cohort = serpy.MethodField()
+
+    is_holiday = serpy.Field()
+    is_skipped = serpy.Field()
+
+    def get_cohort(self, obj):
+        if obj.cohort:
+            return CohortSmallSerializer(obj.cohort).data
+        elif obj.cohort_time_slot:
+            return CohortSmallSerializer(obj.cohort_time_slot.cohort).data
+        return None
+
+class GetLiveClassBigSerializer(serpy.Serializer):
+    id = serpy.Field()
     hash = serpy.Field()
     started_at = serpy.Field()
     ended_at = serpy.Field()
     starting_at = serpy.Field()
     ending_at = serpy.Field()
+    remote_meeting_url = serpy.Field()
     cohort = serpy.MethodField()
 
+    is_holiday = serpy.Field()
+    is_skipped = serpy.Field()
+    skipped_reason = serpy.Field()
+
+    cohort_time_slot = CohortTimeSlotSmallSerializer(required=False)
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+
+    student_join_url = serpy.MethodField()
+    staff_join_url = serpy.MethodField()
+
     def get_cohort(self, obj):
-        return CohortSmallSerializer(obj.cohort_time_slot.cohort).data
+        if obj.cohort:
+            return CohortSmallSerializer(obj.cohort).data
+        elif obj.cohort_time_slot:
+            return CohortSmallSerializer(obj.cohort_time_slot.cohort).data
+        return None
+
+    def get_student_join_url(self, obj):
+        api_url = os.getenv("API_URL", "").rstrip("/")
+        return f"{api_url}/v1/events/me/event/liveclass/join/{obj.hash}" if api_url and obj.hash else None
+
+    def get_staff_join_url(self, obj):
+        api_url = os.getenv("API_URL", "").rstrip("/")
+        return f"{api_url}/v1/events/academy/event/liveclass/join/{obj.hash}" if api_url and obj.hash else None
 
 
 class GetLiveClassJoinSerializer(GetLiveClassSerializer):
@@ -340,6 +395,7 @@ class GetLiveClassJoinSerializer(GetLiveClassSerializer):
 class EventCheckinSerializer(serpy.Serializer):
     id = serpy.Field()
     email = serpy.Field()
+    phone = serpy.Field()
     status = serpy.Field()
     created_at = serpy.Field()
     attended_at = serpy.Field()
@@ -350,11 +406,13 @@ class EventCheckinSerializer(serpy.Serializer):
 class EventHookCheckinSerializer(serpy.Serializer):
     id = serpy.Field()
     email = serpy.Field()
+    phone = serpy.Field()
     status = serpy.Field()
     utm_url = serpy.Field()
     utm_source = serpy.Field()
     utm_campaign = serpy.Field()
     utm_medium = serpy.Field()
+    utm_location = serpy.Field()
     created_at = serpy.Field()
     attended_at = serpy.Field()
     attendee = UserSerializer(required=False)
@@ -392,7 +450,21 @@ class EventSerializer(serializers.ModelSerializer):
                 )
             )
 
-        if ("tags" not in data and self.instance.tags == "") or ("tags" in data and data["tags"] == ""):
+        # Get status from data or instance, default to DRAFT if not provided
+        status = data.get("status")
+        if status is None:
+            if self.instance:
+                status = self.instance.status
+            else:
+                status = "DRAFT"  # Default status for new events
+
+        # Get tags from data or instance
+        tags = data.get("tags")
+        if tags is None and self.instance:
+            tags = self.instance.tags
+
+        # Validate that tags are not empty (only if status is not DRAFT)
+        if status != "DRAFT" and (not tags or tags == ""):
             raise ValidationException(
                 translation(
                     lang,
@@ -402,7 +474,9 @@ class EventSerializer(serializers.ModelSerializer):
                 )
             )
 
-        validate_marketing_tags(data["tags"], academy, types=["DISCOVERY"], lang=lang)
+        # Validate marketing tags if tags are provided (even for DRAFT)
+        if tags and tags != "":
+            validate_marketing_tags(tags, academy, types=["DISCOVERY"], lang=lang)
 
         title = data.get("title")
         slug = data.get("slug")
@@ -422,7 +496,14 @@ class EventSerializer(serializers.ModelSerializer):
 
         online_event = data.get("online_event")
         live_stream_url = data.get("live_stream_url")
-        if online_event == True and (live_stream_url is None or live_stream_url == ""):
+        allow_missing_live_stream_url = self.context.get("allow_missing_live_stream_url", False)
+        # Only validate live_stream_url if status is not DRAFT
+        if (
+            status != "DRAFT"
+            and online_event == True
+            and (live_stream_url is None or live_stream_url == "")
+            and not allow_missing_live_stream_url
+        ):
             raise ValidationException(
                 translation(
                     lang,
@@ -443,14 +524,16 @@ class EventSerializer(serializers.ModelSerializer):
                 )
             )
 
-        if "event_type" not in data or data["event_type"] is None:
+        # Only require event_type if status is not DRAFT
+        if status != "DRAFT" and ("event_type" not in data or data["event_type"] is None):
             raise ValidationException(
                 translation(
                     lang, en="Missing event type", es="Debes especificar un tipo de evento", slug="no-event-type"
                 )
             )
 
-        if "lang" in data and data["event_type"].lang != data.get("lang", "en"):
+        # Only validate event_type.lang if event_type exists and lang is provided
+        if "event_type" in data and data["event_type"] and "lang" in data and data["event_type"].lang != data.get("lang", "en"):
             raise ValidationException(
                 translation(
                     lang,
@@ -460,7 +543,7 @@ class EventSerializer(serializers.ModelSerializer):
                 )
             )
 
-        if "event_type" in data:
+        if "event_type" in data and data["event_type"]:
             data["lang"] = data["event_type"].lang
 
         if not self.instance:
@@ -497,8 +580,28 @@ class EventPUTSerializer(serializers.ModelSerializer):
 
         academy = self.context.get("academy_id")
 
+        # Prevent setting status to SUSPENDED via this endpoint
+        # Users must use the dedicated suspend endpoint instead
+        if "status" in data and data["status"] == "SUSPENDED":
+            # Get language from context or use default
+            context_lang = self.context.get("lang", lang)
+            raise ValidationException(
+                translation(
+                    context_lang,
+                    en="Cannot set event status to SUSPENDED using this endpoint. Please use PUT /v1/events/academy/event/{event_id}/suspend instead.",
+                    es="No se puede establecer el estado del evento como SUSPENDED usando este endpoint. Por favor use PUT /v1/events/academy/event/{event_id}/suspend en su lugar.",
+                    slug="use-suspend-endpoint",
+                )
+            )
+
+        # Get status from data or instance (for PUT, instance should always exist)
+        status = data.get("status")
+        if status is None and self.instance:
+            status = self.instance.status
+
         if "tags" in data:
-            if data["tags"] == "":
+            # Only require tags if status is not DRAFT
+            if data["tags"] == "" and status and status != "DRAFT":
                 raise ValidationException(
                     translation(
                         lang,
@@ -508,7 +611,9 @@ class EventPUTSerializer(serializers.ModelSerializer):
                     )
                 )
 
-            validate_marketing_tags(data["tags"], academy, types=["DISCOVERY"], lang=lang)
+            # Validate marketing tags if tags are provided (even for DRAFT)
+            if data["tags"] and data["tags"] != "":
+                validate_marketing_tags(data["tags"], academy, types=["DISCOVERY"], lang=lang)
 
         title = data.get("title")
         slug = data.get("slug")
@@ -532,10 +637,14 @@ class EventPUTSerializer(serializers.ModelSerializer):
 
         online_event = data.get("online_event")
         live_stream_url = data.get("live_stream_url")
+        allow_missing_live_stream_url = self.context.get("allow_missing_live_stream_url", False)
+        # Only validate live_stream_url if status is not DRAFT
         if (
-            online_event == True
+            status != "DRAFT"
+            and online_event == True
             and (live_stream_url is None or live_stream_url == "")
             and (self.instance.live_stream_url is None or self.instance.live_stream_url == "")
+            and not allow_missing_live_stream_url
         ):
             raise ValidationException(
                 translation(
@@ -557,15 +666,17 @@ class EventPUTSerializer(serializers.ModelSerializer):
                 )
             )
 
-        event_type = data["event_type"] if "event_type" in data else self.instance.event_type
-        if not event_type:
+        event_type = data["event_type"] if "event_type" in data else (self.instance.event_type if self.instance else None)
+        # Only require event_type if status is not DRAFT
+        if status != "DRAFT" and not event_type:
             raise ValidationException(
                 translation(
                     lang, en="Missing event type", es="Debes especificar un tipo de evento", slug="no-event-type"
                 )
             )
 
-        if "lang" in data and event_type.lang != data["lang"]:
+        # Only validate event_type.lang if event_type exists and lang is provided
+        if event_type and "lang" in data and event_type.lang != data["lang"]:
             raise ValidationException(
                 translation(
                     lang,
@@ -575,7 +686,9 @@ class EventPUTSerializer(serializers.ModelSerializer):
                 )
             )
 
-        data["lang"] = event_type.lang
+        # Only set lang from event_type if event_type exists
+        if event_type:
+            data["lang"] = event_type.lang
 
         if not self.instance:
             data["slug"] = slug
@@ -600,10 +713,53 @@ class OrganizationSerializer(serializers.ModelSerializer):
         exclude = ()
 
 
+class PostVenueSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Venue
+        fields = [
+            "title",
+            "street_address",
+            "country",
+            "city",
+            "latitude",
+            "longitude",
+            "state",
+            "zip_code",
+            "status",
+        ]
+        extra_kwargs = {
+            "title": {"required": True},
+            "status": {"required": False},
+        }
+
+    def validate(self, data):
+        academy_id = self.context.get("academy_id")
+        if academy_id:
+            data["academy"] = Academy.objects.filter(id=academy_id).first()
+            if not data["academy"]:
+                raise ValidationException(
+                    translation(
+                        self.context.get("lang", "en"),
+                        en=f"Academy {academy_id} not found",
+                        es=f"Academia {academy_id} no encontrada",
+                        slug="academy-not-found",
+                    )
+                )
+        return data
+
+
 class EventbriteWebhookSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = EventbriteWebhook
+        exclude = ()
+
+
+class LumaWebhookSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = LumaWebhook
         exclude = ()
 
 
@@ -691,6 +847,35 @@ class POSTEventCheckinSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
+        if not validated_data.get("phone"):
+            attendee = validated_data.get("attendee")
+            event = validated_data.get("event")
+
+            if attendee is not None and event is not None and event.academy_id is not None:
+                profile_academy = (
+                    ProfileAcademy.objects.filter(user=attendee, academy_id=event.academy_id)
+                    .exclude(phone__isnull=True)
+                    .exclude(phone="")
+                    .first()
+                )
+                if profile_academy:
+                    validated_data["phone"] = profile_academy.phone
+
+            if not validated_data.get("phone") and attendee is not None:
+                profile_academy = (
+                    ProfileAcademy.objects.filter(user=attendee)
+                    .exclude(phone__isnull=True)
+                    .exclude(phone="")
+                    .first()
+                )
+                if profile_academy:
+                    validated_data["phone"] = profile_academy.phone
+
+            if not validated_data.get("phone") and attendee is not None:
+                profile = Profile.objects.filter(user=attendee).first()
+                if profile and profile.phone:
+                    validated_data["phone"] = profile.phone
+
         event_checkin = super().create(validated_data)
 
         tasks_activity.add_activity.delay(
@@ -731,15 +916,21 @@ class EventTypePutSerializer(EventTypeSerializerMixin):
 
 
 class LiveClassSerializer(serializers.ModelSerializer):
+    hash = serializers.CharField(read_only=True)
+    cohort = serializers.IntegerField(required=False, allow_null=True, write_only=True)
 
     class Meta:
         model = LiveClass
         exclude = ()
+        extra_kwargs = {
+            "cohort_time_slot": {"required": False, "allow_null": True},
+            "remote_meeting_url": {"required": False, "allow_blank": True},
+        }
 
     def _validate_started_at(self, data: dict[str, Any]):
         utc_now = timezone.now()
 
-        if not self.instance and "started_at" in data:
+        if not self.instance and "started_at" in data and data["started_at"] is not None:
             raise ValidationException(
                 translation(
                     self.context["lang"],
@@ -854,19 +1045,57 @@ class LiveClassSerializer(serializers.ModelSerializer):
             )
 
     def _validate_cohort(self, data: dict[str, Any]):
-        if "cohort" in data and data["cohort"].academy.id != int(self.context["academy_id"]):
-            raise ValidationException(
-                translation(
-                    self.context["lang"],
-                    en="This cohort does not belong to any of your academies.",
-                    es="Este cohort no pertenece a ninguna de tus academias.",
-                    slug="cohort-not-belong-to-academy",
+        from breathecode.admissions.models import Cohort
+
+        if "cohort" in data and data["cohort"] is not None:
+            cohort_id = data["cohort"]
+            try:
+                cohort = Cohort.objects.get(id=cohort_id, academy__id=int(self.context["academy_id"]))
+                data["cohort"] = cohort
+            except Cohort.DoesNotExist:
+                raise ValidationException(
+                    translation(
+                        self.context["lang"],
+                        en="This cohort does not belong to any of your academies.",
+                        es="Este cohort no pertenece a ninguna de tus academias.",
+                        slug="cohort-not-belong-to-academy",
+                    )
                 )
-            )
 
     def validate(self, data: dict[str, Any]):
         self._validate_started_at(data)
         self._validate_ended_at(data)
         self._validate_cohort(data)
 
+        # Set remote_meeting_url from cohort if not provided
+        if "remote_meeting_url" not in data or not data.get("remote_meeting_url"):
+            if "cohort" in data and data["cohort"] is not None:
+                cohort = data["cohort"]
+                data["remote_meeting_url"] = cohort.online_meeting_url or ""
+            elif not self.instance:
+                # If creating new and no cohort provided, default to empty string
+                data["remote_meeting_url"] = ""
+
         return data
+
+    def create(self, validated_data):
+        utc_now = timezone.now()
+
+        # If creating a live class with past dates, automatically set started_at and ended_at
+        starting_at = validated_data.get("starting_at")
+        ending_at = validated_data.get("ending_at")
+
+        # If starting_at is in the past, automatically set started_at
+        if starting_at and starting_at < utc_now:
+            validated_data["started_at"] = starting_at
+
+        # If ending_at is in the past, automatically set ended_at (but only if started_at is set)
+        if ending_at and ending_at < utc_now:
+            # Get started_at (either from validated_data or just set above)
+            started_at = validated_data.get("started_at")
+            if started_at is not None:
+                # Ensure ended_at is after or equal to started_at
+                if ending_at >= started_at:
+                    validated_data["ended_at"] = ending_at
+
+        return super().create(validated_data)

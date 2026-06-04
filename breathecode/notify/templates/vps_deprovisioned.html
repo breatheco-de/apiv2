@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="content text-center">
+    <h1 class="title" style="margin-bottom: 50px;">Your VPS has been deprovisioned</h1>
+    <p>Your VPS{% if hostname %} ({{ hostname }}){% endif %} has been deprovisioned because no VPS server credits were available at the time of renewal.</p>
+    <p>If you need a VPS again, please ensure you have VPS server credits and request a new one from your academy dashboard.</p>
+</div>
+{% endblock %}

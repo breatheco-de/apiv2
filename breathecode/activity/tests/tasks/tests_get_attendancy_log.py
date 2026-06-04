@@ -243,7 +243,9 @@ class MediaTestSuite(MediaTestCase):
                     "teacher_comments": None,
                     "attendance_ids": attendance_ids,
                     "unattendance_ids": unattendance_ids,
+                    "liveclass_date": None,
                     "updated_at": str(UTC_NOW),
+                    "liveclass_date": None,
                 }
 
             self.assertEqual(
@@ -584,6 +586,7 @@ class MediaTestSuite(MediaTestCase):
                     "teacher_comments": None,
                     "attendance_ids": attendance_ids,
                     "unattendance_ids": unattendance_ids,
+                    "liveclass_date": None,
                     "updated_at": str(UTC_NOW),
                 }
 
@@ -926,6 +929,7 @@ class MediaTestSuite(MediaTestCase):
                     "teacher_comments": None,
                     "attendance_ids": attendance_ids,
                     "unattendance_ids": unattendance_ids,
+                    "liveclass_date": None,
                     "updated_at": str(UTC_NOW),
                 }
 
@@ -1557,6 +1561,7 @@ class MediaTestSuite(MediaTestCase):
                     "teacher_comments": None,
                     "attendance_ids": attendance_ids,
                     "unattendance_ids": unattendance_ids,
+                    "liveclass_date": None,
                     "updated_at": str(UTC_NOW),
                 },
                 day2["label"]: {
@@ -1564,6 +1569,7 @@ class MediaTestSuite(MediaTestCase):
                     "teacher_comments": None,
                     "attendance_ids": attendance_ids,
                     "unattendance_ids": unattendance_ids,
+                    "liveclass_date": None,
                     "updated_at": str(UTC_NOW),
                 },
                 day2["label"]: {
@@ -1571,6 +1577,7 @@ class MediaTestSuite(MediaTestCase):
                     "teacher_comments": None,
                     "attendance_ids": attendance_ids,
                     "unattendance_ids": unattendance_ids,
+                    "liveclass_date": None,
                     "updated_at": str(UTC_NOW),
                 },
                 day3["label"]: {
@@ -1578,6 +1585,7 @@ class MediaTestSuite(MediaTestCase):
                     "teacher_comments": None,
                     "attendance_ids": attendance_ids,
                     "unattendance_ids": unattendance_ids,
+                    "liveclass_date": None,
                     "updated_at": str(UTC_NOW),
                 },
                 day3["label"]: {
@@ -1585,6 +1593,7 @@ class MediaTestSuite(MediaTestCase):
                     "teacher_comments": None,
                     "attendance_ids": attendance_ids,
                     "unattendance_ids": unattendance_ids,
+                    "liveclass_date": None,
                     "updated_at": str(UTC_NOW),
                 },
                 day3["label"]: {
@@ -1592,6 +1601,7 @@ class MediaTestSuite(MediaTestCase):
                     "teacher_comments": None,
                     "attendance_ids": attendance_ids,
                     "unattendance_ids": unattendance_ids,
+                    "liveclass_date": None,
                     "updated_at": str(UTC_NOW),
                 },
             }
@@ -2227,6 +2237,7 @@ class MediaTestSuite(MediaTestCase):
                     "teacher_comments": None,
                     "attendance_ids": attendance_ids,
                     "unattendance_ids": unattendance_ids,
+                    "liveclass_date": None,
                     "updated_at": str(UTC_NOW),
                 },
                 day2["label"]: {
@@ -2234,6 +2245,7 @@ class MediaTestSuite(MediaTestCase):
                     "teacher_comments": None,
                     "attendance_ids": attendance_ids,
                     "unattendance_ids": unattendance_ids,
+                    "liveclass_date": None,
                     "updated_at": str(UTC_NOW),
                 },
                 day2["label"]: {
@@ -2241,6 +2253,7 @@ class MediaTestSuite(MediaTestCase):
                     "teacher_comments": None,
                     "attendance_ids": attendance_ids,
                     "unattendance_ids": unattendance_ids,
+                    "liveclass_date": None,
                     "updated_at": str(UTC_NOW),
                 },
                 day3["label"]: {
@@ -2248,6 +2261,7 @@ class MediaTestSuite(MediaTestCase):
                     "teacher_comments": None,
                     "attendance_ids": attendance_ids,
                     "unattendance_ids": unattendance_ids,
+                    "liveclass_date": None,
                     "updated_at": str(UTC_NOW),
                 },
                 day3["label"]: {
@@ -2255,6 +2269,7 @@ class MediaTestSuite(MediaTestCase):
                     "teacher_comments": None,
                     "attendance_ids": attendance_ids,
                     "unattendance_ids": unattendance_ids,
+                    "liveclass_date": None,
                     "updated_at": str(UTC_NOW),
                 },
                 day3["label"]: {
@@ -2262,6 +2277,7 @@ class MediaTestSuite(MediaTestCase):
                     "teacher_comments": None,
                     "attendance_ids": attendance_ids,
                     "unattendance_ids": unattendance_ids,
+                    "liveclass_date": None,
                     "updated_at": str(UTC_NOW),
                 },
             }
@@ -2896,6 +2912,7 @@ class MediaTestSuite(MediaTestCase):
                     "teacher_comments": None,
                     "attendance_ids": attendance_ids,
                     "unattendance_ids": unattendance_ids,
+                    "liveclass_date": None,
                     "updated_at": str(UTC_NOW),
                 },
                 day2["label"]: {
@@ -2903,6 +2920,7 @@ class MediaTestSuite(MediaTestCase):
                     "teacher_comments": None,
                     "attendance_ids": attendance_ids,
                     "unattendance_ids": unattendance_ids,
+                    "liveclass_date": None,
                     "updated_at": str(UTC_NOW),
                 },
                 day2["label"]: {
@@ -2910,6 +2928,7 @@ class MediaTestSuite(MediaTestCase):
                     "teacher_comments": None,
                     "attendance_ids": attendance_ids,
                     "unattendance_ids": unattendance_ids,
+                    "liveclass_date": None,
                     "updated_at": str(UTC_NOW),
                 },
                 day3["label"]: {
@@ -2917,6 +2936,7 @@ class MediaTestSuite(MediaTestCase):
                     "teacher_comments": None,
                     "attendance_ids": attendance_ids,
                     "unattendance_ids": unattendance_ids,
+                    "liveclass_date": None,
                     "updated_at": str(UTC_NOW),
                 },
                 day3["label"]: {
@@ -2924,6 +2944,7 @@ class MediaTestSuite(MediaTestCase):
                     "teacher_comments": None,
                     "attendance_ids": attendance_ids,
                     "unattendance_ids": unattendance_ids,
+                    "liveclass_date": None,
                     "updated_at": str(UTC_NOW),
                 },
                 day3["label"]: {
@@ -2931,6 +2952,7 @@ class MediaTestSuite(MediaTestCase):
                     "teacher_comments": None,
                     "attendance_ids": attendance_ids,
                     "unattendance_ids": unattendance_ids,
+                    "liveclass_date": None,
                     "updated_at": str(UTC_NOW),
                 },
             }

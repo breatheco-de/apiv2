@@ -3,6 +3,7 @@ import os
 import uuid as uuid_lib
 
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.db import models
 from slugify import slugify
 
@@ -32,6 +33,7 @@ __all__ = [
     "Event",
     "EventCheckin",
     "EventbriteWebhook",
+    "LumaWebhook",
     "EventContext",
 ]
 
@@ -40,6 +42,8 @@ class Organization(models.Model):
     eventbrite_id = models.CharField(unique=True, max_length=30, blank=True)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True)
     eventbrite_key = models.CharField(max_length=255, blank=True, null=True, default=None)
+    luma_calendar_id = models.CharField(max_length=80, blank=True, null=True, default=None)
+    luma_webhook_secret = models.CharField(max_length=255, blank=True, null=True, default=None)
     name = models.CharField(max_length=100, blank=True, null=True, default="")
 
     sync_status = models.CharField(
@@ -159,10 +163,12 @@ class EventType(models.Model):
 
 
 FINISHED = "FINISHED"
+SUSPENDED = "SUSPENDED"
 EVENT_STATUS = (
     (ACTIVE, "Active"),
     (DRAFT, "Draft"),
     (DELETED, "Deleted"),
+    (SUSPENDED, "Suspended"),
     (FINISHED, "Finished"),
 )
 
@@ -253,6 +259,14 @@ class Event(models.Model):
         help_text="This URL should have the URL of the meeting if it is an online event, if it's not online it should be empty.",
     )
 
+    calendar_event_id = models.CharField(
+        max_length=128,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Google Calendar event id linked to this event (created when the event meeting url was automatically created)",
+    )
+
     recording_url = models.URLField(
         max_length=255,
         null=True,
@@ -295,6 +309,8 @@ class Event(models.Model):
     eventbrite_id = models.CharField(unique=True, max_length=80, blank=True, default=None, null=True)
     eventbrite_url = models.CharField(max_length=255, blank=True, default=None, null=True)
     eventbrite_organizer_id = models.CharField(max_length=80, blank=True, default=None, null=True)
+    luma_id = models.CharField(unique=True, max_length=80, blank=True, default=None, null=True)
+    luma_url = models.CharField(max_length=255, blank=True, default=None, null=True)
 
     status = models.CharField(max_length=9, choices=EVENT_STATUS, default=DRAFT, blank=True)
     eventbrite_status = models.CharField(
@@ -376,13 +392,16 @@ class EventCheckin(models.Model):
     email = models.EmailField(max_length=150)
 
     attendee = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True, default=None)
+    phone = models.CharField(max_length=17, blank=True, null=True, default=None)
     event = models.ForeignKey(Event, on_delete=models.CASCADE)
     status = models.CharField(max_length=9, choices=CHECKIN_STATUS, default=PENDING)
 
     utm_medium = models.CharField(max_length=70, blank=True, null=True, default=None)
     utm_campaign = models.CharField(max_length=70, blank=True, null=True, default=None)
     utm_source = models.CharField(max_length=70, blank=True, null=True, default=None)
+    utm_location = models.CharField(max_length=70, blank=True, null=True, default=None)
     utm_url = models.CharField(max_length=2000, null=True, default=None, blank=True)
+    luma_guest_id = models.CharField(max_length=80, blank=True, null=True, default=None)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -390,6 +409,44 @@ class EventCheckin(models.Model):
 
     def __str__(self):
         return self.email
+
+    @staticmethod
+    def get_csv_fields():
+        """
+        Define custom fields for CSV export with user-friendly labels.
+        Returns a list of tuples: (header_name, field_path)
+        Supports:
+        - Simple fields: 'email'
+        - Related fields with dot notation: 'event.slug'
+        - Calculated properties/methods: 'attendee_name'
+        """
+        return [
+            ("ID", "id"),
+            ("Email", "email"),
+            ("Attendee First Name", "attendee.first_name"),
+            ("Attendee Last Name", "attendee.last_name"),
+            ("Attendee Full Name", "attendee_name"),  # Calculated property
+            ("Event ID", "event.id"),
+            ("Event Slug", "event.slug"),
+            ("Event Title", "event.title"),
+            ("Academy", "event.academy.name"),
+            ("Status", "status"),
+            ("Created At", "created_at"),
+            ("Attended At", "attended_at"),
+            ("UTM Source", "utm_source"),
+            ("UTM Medium", "utm_medium"),
+            ("UTM Campaign", "utm_campaign"),
+        ]
+
+    @property
+    def attendee_name(self):
+        """
+        Calculate full name of attendee.
+        Example of a calculated field for CSV export.
+        """
+        if self.attendee:
+            return f"{self.attendee.first_name} {self.attendee.last_name}".strip()
+        return ""
 
     def save(self, *args, **kwargs):
 
@@ -443,6 +500,33 @@ class EventbriteWebhook(models.Model):
         return f"Action {self.action} {self.status} => {self.api_url}"
 
 
+LUMA_WEBHOOK_STATUS = (
+    (PENDING, "Pending"),
+    (DONE, "Done"),
+    (ERROR, "Error"),
+)
+
+
+class LumaWebhook(models.Model):
+    type = models.CharField(max_length=40, blank=True, null=True, default=None)
+    webhook_id = models.CharField(max_length=80, blank=True, null=True, default=None)
+    luma_guest_id = models.CharField(max_length=80, blank=True, null=True, default=None)
+    payload = models.JSONField(blank=True, null=True, default=None)
+    event = models.ForeignKey(Event, on_delete=models.SET_NULL, blank=True, null=True, default=None)
+    attendee = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True, default=None)
+
+    organization_id = models.CharField(max_length=20, blank=True, null=True, default=None)
+
+    status = models.CharField(max_length=9, choices=LUMA_WEBHOOK_STATUS, default=PENDING)
+    status_text = models.CharField(max_length=255, default=None, null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f"Type {self.type} {self.status} => org {self.organization_id}"
+
+
 class LiveClass(models.Model):
     """
     It represents a live class that will be built from a CohortTimeSlot
@@ -452,9 +536,22 @@ class LiveClass(models.Model):
         super(LiveClass, self).__init__(*args, **kwargs)
         self.__old_ended_at = self.ended_at
 
-    cohort_time_slot = models.ForeignKey(CohortTimeSlot, on_delete=models.CASCADE)
+    cohort_time_slot = models.ForeignKey(CohortTimeSlot, on_delete=models.CASCADE, blank=True, null=True)
+    cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, blank=True, null=True)
     log = models.JSONField(default=dict)
-    remote_meeting_url = models.URLField()
+    remote_meeting_url = models.URLField(blank=True, default="")
+
+    is_holiday = models.BooleanField(
+        default=False,
+        help_text="We keep the class on recording even if it's a holiday, to avoid the timeslot and live class being re-added into the calendar)",
+    )
+    is_skipped = models.BooleanField(
+        default=False,
+        help_text="Some classes are skipped, like the ones that are before the kickoff date, on holidays or after the ending date",
+    )
+    skipped_reason = models.CharField(
+        max_length=255, default=None, null=True, blank=True, help_text="Reason for skipping the class"
+    )
 
     # this should be use in the future to create automatically the permalinks
     hash = models.CharField(max_length=40, unique=True)
@@ -485,3 +582,77 @@ class LiveClass(models.Model):
             liveclass_ended.send_robust(instance=self, sender=LiveClass)
 
         return _result
+
+
+class AcademyEventSettings(models.Model):
+    class MeetingProvider(models.TextChoices):
+        DAILY = "daily", "Daily"
+        LIVEKIT = "livekit", "Livekit"
+
+    academy = models.OneToOneField(Academy, on_delete=models.CASCADE)
+
+    default_meeting_provider = models.CharField(
+        max_length=20,
+        choices=MeetingProvider.choices,
+        default=MeetingProvider.DAILY,
+        help_text="Default provider used when creating meeting rooms for events if meeting_provider is not provided.",
+    )
+
+    daily_api_key = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        default=None,
+        help_text="Daily API key",
+    )
+
+    livekit_http_url = models.URLField(
+        blank=True, null=True, default=None, help_text="HTTP URL of the LiveKit server to make requests from the API"
+    )
+    livekit_api_key = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        default=None,
+        help_text="API key to authenticate requests to the LiveKit server",
+    )
+    livekit_api_secret = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        default=None,
+        help_text="API secret to sign tokens for requests to the LiveKit server",
+    )
+    livekit_url = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        default=None,
+        help_text="URL of the LiveKit server for the WebSockets connection from the client",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def clean(self):
+        super().clean()
+
+        livekit_fields = {
+            "livekit_http_url": self.livekit_http_url,
+            "livekit_api_key": self.livekit_api_key,
+            "livekit_api_secret": self.livekit_api_secret,
+            "livekit_url": self.livekit_url,
+        }
+
+        has_any_livekit_field = any(value is not None and value != "" for value in livekit_fields.values())
+
+        if has_any_livekit_field:
+            if not all(value is not None and value != "" for value in livekit_fields.values()):
+                raise ValidationError("If any LiveKit field is configured, all LiveKit fields must be set.")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"AcademyEventSettings({str(self.academy)})"

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="content text-center">
+    <h1 class="title" style="margin-bottom: 50px;">Your VPS is ready</h1>
+    <p>Use the following details to connect to your VPS via SSH:</p>
+    <table style="margin: 20px auto; text-align: left; border-collapse: collapse;">
+        <tr><td style="padding: 8px;"><strong>Hostname / IP:</strong></td><td style="padding: 8px;">{{ hostname|default:ip_address }} {% if ip_address and hostname %}({{ ip_address }}){% endif %}</td></tr>
+        <tr><td style="padding: 8px;"><strong>SSH User:</strong></td><td style="padding: 8px;">{{ ssh_user|default:"root" }}</td></tr>
+        <tr><td style="padding: 8px;"><strong>SSH Port:</strong></td><td style="padding: 8px;">{{ ssh_port|default:"22" }}</td></tr>
+        <tr><td style="padding: 8px;"><strong>Root Password:</strong></td><td style="padding: 8px;">{{ root_password }}</td></tr>
+    </table>
+    <p>Example: <code>ssh {{ ssh_user|default:"root" }}@{{ ip_address|default:hostname }} -p {{ ssh_port|default:"22" }}</code></p>
+    <p style="margin-top: 20px; font-size: 12px; color: #666;">Keep your password secure and do not share it.</p>
+</div>
+{% endblock %}

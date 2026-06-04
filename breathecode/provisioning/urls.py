@@ -1,8 +1,74 @@
+"""
+URL Configuration for Provisioning App
+
+This module defines URL patterns following REST conventions with some specific exceptions
+for the BreatheCode API v2.
+
+REST Naming Conventions:
+========================
+
+1. Resource-based URLs:
+   - Use plural nouns for collections: /academy/bills, /academy/userconsumptions
+   - Use singular nouns for individual resources: /bill/<id>
+
+2. HTTP Methods:
+   - GET /academy/bill - List all academy bills
+   - POST /academy/bill - Create new bill
+   - GET /academy/bill/<id> - Get specific bill
+   - PUT/PATCH /academy/bill/<id> - Update specific bill
+   - DELETE /academy/bill/<id> - Delete specific bill
+
+3. Nested Resources:
+   - /academy/<id>/provisioningprofile - Provisioning profile for specific academy
+   - /me/container/new - Create new container for current user
+   - /me/workspaces - Get current user's workspaces
+
+4. Actions (Non-REST exceptions):
+   - /me/container/new - Redirect to new container (GET)
+   - /public/container/new - Public container creation (GET)
+   - /me/workspaces - Redirect to workspaces (GET)
+   - /bill/html - Render all bills as HTML (GET)
+   - /bill/<id>/html - Render specific bill as HTML (GET)
+
+5. Special Endpoints:
+   - /me/* - Current user's provisioning resources
+   - /public/* - Public provisioning endpoints
+   - /academy/* - Academy-specific resources
+   - /admin/* - Admin-only endpoints
+   - /bill/* - Bill management and rendering
+
+6. URL Naming:
+   - Use snake_case for URL names: academy_bill_id
+   - Include resource type and ID when applicable
+   - Be descriptive but concise
+
+Examples:
+- academy_bill_id - Get/update specific academy bill
+- academy_id_provisioning_profile - Get/update provisioning profile for academy
+- bill_html - Render all bills as HTML
+- bill_id_html - Render specific bill as HTML
+"""
+
 from django.urls import path
 from .views import (
+    AcademyBillConsumptionsView,
     AcademyProvisioningUserConsumptionView,
     AcademyBillView,
+    AcademyVPSByIdView,
+    AcademyVPSRestartView,
+    AcademyVPSView,
+    MeLLMKeyByIdView,
+    MeLLMKeysView,
+    MeVPSByIdView,
+    MeVPSRestartView,
+    MeVPSView,
+    ProvisioningAcademyByIdView,
+    ProvisioningAcademyTestConnectionView,
+    ProvisioningAcademyVendorOptionsView,
+    ProvisioningAcademyView,
+    ProvisioningProfileByIdView,
     ProvisioningProfileView,
+    ProvisioningVendorView,
     UploadView,
     redirect_new_container,
     redirect_new_container_public,
@@ -21,10 +87,46 @@ urlpatterns = [
     path("academy/bill", AcademyBillView.as_view(), name="academy_bill_id"),
     path("academy/bill/<int:bill_id>", AcademyBillView.as_view(), name="academy_bill_id"),
     path(
+        "academy/bill/<int:bill_id>/consumptions",
+        AcademyBillConsumptionsView.as_view(),
+        name="academy_bill_consumptions",
+    ),
+    path("academy/vendor", ProvisioningVendorView.as_view(), name="academy_vendor"),
+    path("academy/provisioningprofile", ProvisioningProfileView.as_view(), name="academy_provisioning_profile"),
+    path(
+        "academy/provisioningprofile/<int:profile_id>",
+        ProvisioningProfileByIdView.as_view(),
+        name="academy_provisioning_profile_id",
+    ),
+    path(
         "academy/<int:academy_id>/provisioningprofile",
         ProvisioningProfileView.as_view(),
         name="academy_id_provisioning_profile",
     ),
+    path("academy/provisioningacademy", ProvisioningAcademyView.as_view(), name="academy_provisioning_academy"),
+    path(
+        "academy/provisioningacademy/<int:provisioning_academy_id>",
+        ProvisioningAcademyByIdView.as_view(),
+        name="academy_provisioning_academy_id",
+    ),
+    path(
+        "academy/provisioningacademy/<int:provisioning_academy_id>/vendor-options",
+        ProvisioningAcademyVendorOptionsView.as_view(),
+        name="academy_provisioning_academy_vendor_options",
+    ),
+    path(
+        "academy/provisioningacademy/<int:provisioning_academy_id>/test-connection",
+        ProvisioningAcademyTestConnectionView.as_view(),
+        name="academy_provisioning_academy_test_connection",
+    ),
+    path("me/vps", MeVPSView.as_view(), name="me_vps"),
+    path("me/vps/<int:vps_id>/restart", MeVPSRestartView.as_view(), name="me_vps_restart"),
+    path("me/vps/<int:vps_id>", MeVPSByIdView.as_view(), name="me_vps_id"),
+    path("academy/vps", AcademyVPSView.as_view(), name="academy_vps"),
+    path("academy/vps/<int:vps_id>/restart", AcademyVPSRestartView.as_view(), name="academy_vps_restart"),
+    path("academy/vps/<int:vps_id>", AcademyVPSByIdView.as_view(), name="academy_vps_id"),
+    path("me/llm/keys", MeLLMKeysView.as_view(), name="me_llm_keys"),
+    path("me/llm/keys/<str:key_id>", MeLLMKeyByIdView.as_view(), name="me_llm_key_by_id"),
     path("bill/html", render_html_all_bills, name="bill_html"),
     path("bill/<int:id>/html", render_html_bill, name="bill_id_html"),
     # path('academy/me/container', ContainerMeView.as_view()),

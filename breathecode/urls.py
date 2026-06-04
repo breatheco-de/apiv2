@@ -1,4 +1,36 @@
-"""breathecode URL Configuration.
+"""
+Main URL Configuration for BreatheCode API v2
+
+This module defines the main URL routing for the BreatheCode API, organizing endpoints
+by version and application modules following REST conventions.
+
+REST Naming Conventions:
+========================
+
+1. Version-based URLs:
+   - /v1/* - Version 1 endpoints (legacy)
+   - /v2/* - Version 2 endpoints (current)
+
+2. Application Modules:
+   - Each app has its own namespace and URL patterns
+   - Apps are mounted under versioned paths: /v1/admissions/, /v1/events/
+
+3. Special Routes:
+   - /s/* - Marketing short links
+   - /mentor/* - Mentorship short links  
+   - /asset/* - Registry asset short links
+   - /start - Provisioning start links
+
+4. Documentation & Admin:
+   - /admin/ - Django admin interface
+   - /swagger/ - API documentation (Swagger UI)
+   - /redoc/ - API documentation (ReDoc)
+   - /openapi.json - OpenAPI schema
+
+5. Development Tools:
+   - /graphql - GraphQL endpoint
+   - /explorer/ - Database explorer
+   - /v1/cypress/ - Cypress testing endpoints (test environment only)
 
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/3.0/topics/http/urls/
@@ -36,6 +68,10 @@ versions = {
         path("media/", include("breathecode.media.urls.v2", namespace="media")),
         path("auth/", include("breathecode.authenticate.urls.v2", namespace="auth")),
         path("payments/", include("breathecode.payments.urls.v2", namespace="payments")),
+        path("marketing/", include("breathecode.marketing.urls.v2", namespace="marketing")),
+    ],
+    "v3": [
+        path("activity/", include("breathecode.activity.urls.v3", namespace="activity")),
     ],
 }
 
@@ -52,12 +88,13 @@ apps = [
     ("v1/assessment/", "breathecode.assessment.urls", "assessment"),
     ("v1/certificate/", "breathecode.certificate.urls", "certificate"),
     ("v1/media/", "breathecode.media.urls.v1", "media"),
-    ("v1/marketing/", "breathecode.marketing.urls", "marketing"),
+    ("v1/marketing/", "breathecode.marketing.urls.v1", "marketing"),
     ("v1/mentorship/", "breathecode.mentorship.urls", "mentorship"),
     ("v1/monitoring/", "breathecode.monitoring.urls", "monitoring"),
     ("v1/provisioning/", "breathecode.provisioning.urls", "provisioning"),
     ("v1/payments/", "breathecode.payments.urls.v1", "payments"),
     ("v1/commission/", "breathecode.commission.urls", "commission"),
+    ("v1/talent/", "breathecode.talent_development.urls", "talent_development"),
     ("s/", "breathecode.marketing.urls_shortner", "marketing_shortner"),
     ("mentor/", "breathecode.mentorship.urls_shortner", "mentorship_shortner"),
     ("asset/", "breathecode.registry.urls_shortner", "registry_shortner"),
@@ -65,6 +102,10 @@ apps = [
 ]
 
 urlpatterns_apps = [path(url, include(urlconf, namespace=namespace)) for url, urlconf, namespace in apps]
+
+# Add alias for v1/notify -> v1/messaging (no namespace to avoid conflicts)
+# All reverse() calls use the "notify" namespace from v1/messaging/ above
+urlpatterns_apps.append(path("v1/notify/", include("breathecode.notify.urls")))
 
 urlpatterns_app_openapi = [mount_app_openapi(url, urlconf, namespace) for url, urlconf, namespace in apps]
 

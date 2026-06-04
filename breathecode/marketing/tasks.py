@@ -22,6 +22,7 @@ from .actions import (
     save_get_geolocal,
     update_deal_custom_fields,
 )
+from .utils.person_name import standardize_person_name
 from .models import (
     AcademyAlias,
     ActiveCampaignAcademy,
@@ -110,7 +111,7 @@ def async_update_deal_custom_fields(formentry_id: str, **_: Any):
     logger.debug("async_update_deal_custom_fields: ok")
 
 
-@task(priority=TaskPriority.REALTIME.value)
+@task(priority=TaskPriority.ACADEMY.value)
 def async_activecampaign_webhook(webhook_id, **_: Any):
     logger.info("Starting async_activecampaign_webhook")
 
@@ -347,9 +348,9 @@ def create_form_entry(csv_upload_id, **item):
     error_message = ""
 
     if "first_name" in item:
-        form_entry.first_name = item["first_name"]
+        form_entry.first_name = standardize_person_name(item["first_name"])
     if "last_name" in item:
-        form_entry.last_name = item["last_name"]
+        form_entry.last_name = standardize_person_name(item["last_name"])
     if "email" in item:
         form_entry.email = item["email"]
     if "location" in item:
@@ -376,18 +377,8 @@ def create_form_entry(csv_upload_id, **item):
         error_message += f"{message}, "
         logger.error(message)
 
-    if form_entry.first_name and not re.findall(r"^[A-Za-zÀ-ÖØ-öø-ÿ ]+$", form_entry.first_name):
-        message = "first name has incorrect characters"
-        error_message += f"{message}, "
-        logger.error(message)
-
     if not form_entry.last_name:
         message = "No last name in form entry"
-        error_message += f"{message}, "
-        logger.error(message)
-
-    if form_entry.last_name and not re.findall(r"^[A-Za-zÀ-ÖØ-öø-ÿ ]+$", form_entry.last_name):
-        message = "last name has incorrect characters"
         error_message += f"{message}, "
         logger.error(message)
 

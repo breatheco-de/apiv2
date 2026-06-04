@@ -2,6 +2,9 @@ import logging
 from datetime import timedelta
 from typing import Type
 
+from django.core.exceptions import ValidationError
+from django.db import models
+from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
 from django.utils import timezone
 
@@ -12,8 +15,8 @@ from breathecode.events.signals import event_status_updated, liveclass_ended
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.mentorship.signals import mentorship_session_saved
 
-from .models import AcademyFeedbackSettings, Answer
-from .signals import survey_answered
+from .models import AcademyFeedbackSettings, Answer, SurveyConfiguration, SurveyResponse, SurveyStudy
+from .signals import survey_answered, survey_response_answered
 from .tasks import (
     process_answer_received,
     process_student_graduation,
@@ -86,3 +89,54 @@ def post_event_ended(sender: Type[Event], instance: Event, **kwargs):
                 logger.debug(
                     f"No event survey template configured for academy {instance.academy.name}, skipping survey"
                 )
+
+
+@receiver(survey_response_answered, sender=SurveyResponse)
+def post_survey_response_answered(sender: Type[SurveyResponse], instance: SurveyResponse, **kwargs):
+    """
+    Trigger webhook when a survey response is answered.
+    This receiver is called after answers are saved to database.
+    """
+    from breathecode.notify.utils.hook_manager import HookManager
+
+    try:
+        logger.info(f"Survey response {instance.id} answered, triggering webhook")
+        academy_override = None
+        if getattr(instance, "survey_config", None) and getattr(instance.survey_config, "academy", None):
+            academy_override = instance.survey_config.academy
+
+        from breathecode.feedback.serializers import SurveyResponseHookSerializer
+
+        def payload_override(hook, _instance):
+            return {"hook": hook.dict(), "data": SurveyResponseHookSerializer(_instance).data}
+
+        HookManager.find_and_fire_hook(
+            "survey.survey_answered",
+            instance,
+            payload_override=payload_override,
+            academy_override=academy_override,
+        )
+    except Exception as e:
+        logger.error(f"Error triggering webhook for survey response {instance.id}: {str(e)}", exc_info=True)
+
+
+@receiver(m2m_changed, sender=SurveyStudy.survey_configurations.through)
+def enforce_survey_study_single_trigger_type(sender, instance: SurveyStudy, action, pk_set, **kwargs):
+    """
+    Prevent SurveyStudy from containing SurveyConfigurations with different trigger_type values.
+    This must hold across API, admin, and scripts.
+    """
+
+    if action != "pre_add" or not pk_set:
+        return
+
+    existing_trigger_types = set(instance.survey_configurations.values_list("trigger_type", flat=True))
+    new_trigger_types = set(SurveyConfiguration.objects.filter(pk__in=pk_set).values_list("trigger_type", flat=True))
+
+    trigger_types = existing_trigger_types | new_trigger_types
+    if len(trigger_types) <= 1:
+        return
+
+    trigger_types_str = ", ".join(sorted([str(x) for x in trigger_types]))
+    raise ValidationError(f"All survey configurations in a study must have the same trigger_type, got: {trigger_types_str}")
+

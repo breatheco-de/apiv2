@@ -34,6 +34,7 @@ def format_invoice_item(data={}):
         "currency_id": 1,
         "externally_managed": False,
         "id": 1,
+        "invoice_notes": None,
         "paid_at": UTC_NOW,
         "payment_method_id": None,
         "proof_id": None,
@@ -67,6 +68,15 @@ def get_serializer(service_item, service, service_item_features=[], data={}):
             "groups": [],
             "icon_url": service.icon_url,
             "id": service.id,
+            "owner": (
+                {
+                    "id": service.owner.id,
+                    "name": service.owner.name,
+                    "slug": service.owner.slug,
+                }
+                if service.owner
+                else None
+            ),
             "private": service.private,
             "session_duration": None,
             "slug": service.slug,

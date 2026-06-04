@@ -29,7 +29,7 @@ from slugify import slugify
 
 
 from breathecode.admissions.models import Academy
-from breathecode.authenticate.actions import get_user_language
+from breathecode.authenticate.actions import aget_user_language, get_user_language
 from breathecode.authenticate.models import ProfileAcademy, User, CredentialsGithub
 from breathecode.notify.actions import send_email_message
 from breathecode.registry.permissions.consumers import asset_by_slug
@@ -37,7 +37,12 @@ from breathecode.services.seo import SEOAnalyzer
 from breathecode.utils import GenerateLookupsMixin, capable_of, consume
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import has_permission
-from breathecode.utils.decorators.capable_of import acapable_of
+from breathecode.utils.decorators.capable_of import (
+    acapable_of,
+    capable_of_many,
+    academy_scope_response_meta,
+    get_academy_ids_from_capability,
+)
 from breathecode.utils.views import render_message
 
 from .actions import (
@@ -50,7 +55,7 @@ from .actions import (
     atest_asset,
     test_asset,
 )
-from .caches import AssetCache, AssetCommentCache, CategoryCache, ContentVariableCache, KeywordCache, TechnologyCache
+from .caches import AssetCache, CategoryCache, ContentVariableCache, KeywordCache, TechnologyCache
 from .models import (
     Asset,
     AssetAlias,
@@ -105,8 +110,23 @@ from .serializers import (
     TechnologyPUTSerializer,
     VariableSmallSerializer,
 )
-from .tasks import async_build_asset_context, async_pull_from_github, async_regenerate_asset_readme
-from .utils import AssetErrorLogType, is_url, prompt_technologies
+from .tasks import (
+    async_build_asset_context,
+    async_pull_from_github,
+    async_regenerate_asset_readme,
+    sync_asset_telemetry_stats,
+)
+from .utils import (
+    AssetErrorLogType,
+    build_request_url_for_activity_log,
+    compute_asset_error_log_dedupe_merge,
+    get_asset_error_log_catalog,
+    is_url,
+    log_outbound_push_from_db,
+    log_pull_outcome_from_db,
+    prompt_technologies,
+    record_github_activity,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -134,6 +154,9 @@ def forward_asset_url(request, asset_slug=None):
             else:
                 return HttpResponseRedirect(redirect_to=url)
 
+        if asset.asset_type == "PROJECT" and asset.is_in_subdirectory and asset.readme_url:
+            return HttpResponseRedirect(redirect_to=asset.readme_url)
+
         validator(asset.url)
         if asset.gitpod:
             return HttpResponseRedirect(redirect_to="https://gitpod.io#" + asset.url)
@@ -142,13 +165,13 @@ def forward_asset_url(request, asset_slug=None):
     except Exception as e:
         logger.error(e)
         msg = f"The url for the {asset.asset_type.lower()} your are trying to open ({asset_slug}) was not found, this error has been reported and will be fixed soon."
-        AssetErrorLog(
+        AssetErrorLog.log_once(
             slug=AssetErrorLogType.INVALID_URL,
             path=asset_slug,
             asset=asset,
             asset_type=asset.asset_type,
             status_text=msg,
-        ).save()
+        )
 
         return render_message(request, msg, academy=asset.academy)
 
@@ -212,6 +235,9 @@ def handle_internal_link(request):
         _parsed = urlparse(file_path)
         _clean_path = _parsed.path
 
+        # Extract filename from path for Content-Disposition header
+        filename = Path(_clean_path).name
+
         # Construct the API URL for the file
         api_url = f"/repos/{org_name}/{repo_name}/contents/{_clean_path}"
         if branch_name:
@@ -242,14 +268,18 @@ def handle_internal_link(request):
         if response.get("content"):
             content_bytes = base64.b64decode(response["content"])
             content_type = ext_map.get(file_extension, "application/octet-stream")
-            return HttpResponse(content_bytes, content_type=content_type)
+            http_response = HttpResponse(content_bytes, content_type=content_type)
+            http_response["Content-Disposition"] = f'attachment; filename="{filename}"'
+            return http_response
 
         download_url = response.get("download_url")
         if download_url:
             r = requests.get(download_url, timeout=30)
             content_bytes = r.content
             content_type = ext_map.get(file_extension, "application/octet-stream")
-            return HttpResponse(content_bytes, content_type=content_type)
+            http_response = HttpResponse(content_bytes, content_type=content_type)
+            http_response["Content-Disposition"] = f'attachment; filename="{filename}"'
+            return http_response
 
         # 3) Fallback: fetch blob by sha via GitHub API
         sha = response.get("sha")
@@ -258,7 +288,9 @@ def handle_internal_link(request):
             if blob and blob.get("content"):
                 content_bytes = base64.b64decode(blob["content"])
                 content_type = ext_map.get(file_extension, "application/octet-stream")
-                return HttpResponse(content_bytes, content_type=content_type)
+                http_response = HttpResponse(content_bytes, content_type=content_type)
+                http_response["Content-Disposition"] = f'attachment; filename="{filename}"'
+                return http_response
 
         return render_message(request, "File content not found", status=404)
 
@@ -647,6 +679,118 @@ def get_config(request, asset_slug):
         )
 
 
+@api_view(["GET"])
+@permission_classes([AllowAny])
+@capable_of("crud_asset")
+def get_asset_meta_from_readme_url(request, academy_id=None):
+    """
+    Extract asset metadata from a GitHub readme URL.
+    
+    This endpoint analyzes a GitHub URL to determine:
+    - What type of asset it is (QUIZ, LESSON, EXERCISE_OR_PROJECT)
+    - Extract metadata from the file (title, description, technologies, etc.)
+    - Detect if learn.json exists
+    
+    Requires: crud_asset capability
+    
+    Query params:
+    - readme_url: The GitHub URL to analyze (required)
+    - token: GitHub token for private repos (optional, will use user's token if authenticated)
+    
+    Returns:
+        200: Asset metadata with all extracted information
+        400: Invalid request (missing readme_url, invalid URL format)
+        401: GitHub authentication required
+        403: Missing crud_asset capability
+        404: Repository or file not found
+        500: Server error
+        
+    Example usage:
+        GET /v1/registry/academy/asset/meta_from_readme_url?readme_url=https://github.com/owner/repo/blob/main/README.md
+        GET /v1/registry/academy/asset/meta_from_readme_url?readme_url=https://github.com/owner/repo/blob/main/quiz.json&token=ghp_xxx
+    """
+    from breathecode.registry.utils import AssetParser
+
+    lang = get_user_language(request)
+    
+    # Get and validate readme_url parameter
+    readme_url = request.GET.get("readme_url")
+    if not readme_url:
+        raise ValidationException(
+            translation(
+                en="Missing readme_url parameter",
+                es="Falta el parámetro readme_url"
+            ),
+            slug="missing-readme-url",
+            code=400
+        )
+    
+    # Validate it's a GitHub URL
+    if "github.com" not in readme_url:
+        raise ValidationException(
+            translation(
+                en="The readme_url must be a GitHub URL",
+                es="El readme_url debe ser una URL de GitHub"
+            ),
+            slug="invalid-github-url",
+            code=400
+        )
+    
+    # Get user's GitHub token (user must be authenticated due to capable_of)
+    github_token = None
+    credentials = CredentialsGithub.objects.filter(user=request.user).first()
+    if credentials:
+        github_token = credentials.token
+    
+    # Use provided token if available (overrides user's token)
+    if "token" in request.GET:
+        github_token = request.GET.get("token")
+    
+    if not github_token:
+        raise ValidationException(
+            translation(
+                en="GitHub credentials not found. Please connect your GitHub account or provide a token",
+                es="Credenciales de GitHub no encontradas. Por favor conecta tu cuenta de GitHub o proporciona un token"
+            ),
+            slug="github-credentials-not-found",
+            code=400
+        )
+    
+    try:
+        # Initialize parser and extract metadata
+        parser = AssetParser(github_token)
+        
+        # Validate URL first
+        is_valid, error_message = parser.validate_readme_url(readme_url)
+        if not is_valid:
+            raise ValidationException(
+                translation(
+                    en=error_message,
+                    es=error_message  # Spanish translation can be added
+                ),
+                slug="invalid-url",
+                code=400
+            )
+        
+        # Parse and extract metadata
+        metadata = parser.parse_readme_url(readme_url)
+        
+        return Response(metadata, status=status.HTTP_200_OK)
+        
+    except ValidationException:
+        raise
+    except Exception as e:
+        logger.exception(e)
+        raise ValidationException(
+            translation(
+                en=f"Error fetching metadata: {str(e)}",
+                es=f"Error al obtener metadatos: {str(e)}"
+            ),
+            slug="fetch-error",
+            code=500
+        )
+
+
 class AssetThumbnailView(APIView):
     """
     get:
@@ -797,9 +941,22 @@ class AssetView(APIView, GenerateLookupsMixin):
         lang = get_user_language(request)
 
         if asset_slug is not None:
-            asset = Asset.get_by_slug(asset_slug, request)
+            # Check if asset_slug is a number (ID) or a string (slug)
+            if asset_slug.isdigit():
+                asset = Asset.objects.filter(id=int(asset_slug)).first()
+            else:
+                asset = Asset.get_by_slug(asset_slug, request)
+            
             if asset is None:
-                raise ValidationException(f"Asset {asset_slug} not found", status.HTTP_404_NOT_FOUND)
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Asset {asset_slug} not found",
+                        es=f"Asset {asset_slug} no encontrado",
+                    ),
+                    status.HTTP_404_NOT_FOUND,
+                    slug="asset-not-found",
+                )
 
             serializer = AssetBigAndTechnologySerializer(asset)
             return handler.response(serializer.data)
@@ -871,10 +1028,10 @@ class AssetView(APIView, GenerateLookupsMixin):
                 lookup["slug__in"] = slugs
 
         if "language" in self.request.GET:
-            param = self.request.GET.get("language")
-            if param == "en":
-                param = "us"
-            lookup["lang"] = param
+            languages = self.request.GET.get("language").split(",")
+            if len(languages) == 1:
+                languages = ["us", "en"] if languages[0] == "en" or languages[0] == "us" else languages
+            lookup["lang__in"] = languages
 
         if "status" not in self.request.GET:
             lookup["status__in"] = ["PUBLISHED"]
@@ -1086,7 +1243,10 @@ class AssetMeView(APIView, GenerateLookupsMixin):
         expand = self.request.GET.get("expand")
 
         if "big" in self.request.GET:
-            serializer = AssetMidSerializer(items, many=True)
+            expand_fields = ["readme"]
+            if expand is not None:
+                expand_fields = list(set(expand_fields + expand.split(",")))
+            serializer = AssetExpandableSerializer(items, many=True, expand=expand_fields)
         elif expand is not None:
             serializer = AssetExpandableSerializer(items, many=True, expand=expand.split(","))
         else:
@@ -1222,6 +1382,15 @@ class AssetMeView(APIView, GenerateLookupsMixin):
             instance = serializer.save()
             # only pull if the readme raw is not already set
             if instance.readme_url and "github.com" in instance.readme_url and instance.readme_raw is None:
+                record_github_activity(
+                    instance.slug,
+                    "academy",
+                    action="pull_queued",
+                    detail="POST create asset (public): initial pull",
+                    status="ok",
+                    http_status=status.HTTP_201_CREATED,
+                    request_url=build_request_url_for_activity_log(request),
+                )
                 async_pull_from_github.delay(instance.slug)
             return Response(AssetBigSerializer(instance).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -1262,6 +1431,9 @@ class AssetContextView(APIView, GenerateLookupsMixin):
         return handler.response(serializer.data)
 
 
+ACADEMY_GITHUB_SYNC_ACTIONS = frozenset({"pull", "push", "create_repo"})
+
+
 # Create your views here.
 class AcademyAssetActionView(APIView):
     """
@@ -1269,14 +1441,31 @@ class AcademyAssetActionView(APIView):
     """
 
     @staticmethod
-    async def update_asset_action(asset: Asset, user: User, data: dict[str, Any], academy_id: int):
+    async def update_asset_action(
+        asset: Asset,
+        user: User,
+        data: dict[str, Any],
+        academy_id: int,
+        *,
+        request_url: str | None = None,
+    ):
         """
         This function updates the asset type based on the action slug
         """
 
         action_slug = data.get("action_slug")
 
-        possible_actions = ["test", "pull", "push", "analyze_seo", "clean", "originality", "claim_asset", "create_repo"]
+        possible_actions = [
+            "test",
+            "pull",
+            "push",
+            "analyze_seo",
+            "clean",
+            "originality",
+            "claim_asset",
+            "create_repo",
+            "sync_telemetry_stats",
+        ]
         if action_slug not in possible_actions:
             raise ValidationException(f"Invalid action {action_slug}")
         try:
@@ -1288,14 +1477,24 @@ class AcademyAssetActionView(APIView):
                 override_meta = False
                 if data and "override_meta" in data:
                     override_meta = data["override_meta"]
-                await apull_from_github(asset.slug, override_meta=override_meta)
+                try:
+                    await apull_from_github(asset.slug, override_meta=override_meta)
+                finally:
+                    await sync_to_async(log_pull_outcome_from_db)(asset.slug)
             elif action_slug == "push":
-                if asset.asset_type not in ["ARTICLE", "LESSON", "QUIZ"]:
+                if asset.asset_type not in ["ARTICLE", "LESSON", "QUIZ", "PROJECT", "EXERCISE"]:
                     raise ValidationException(
                         f"Asset type {asset.asset_type} cannot be pushed to GitHub, please update the Github repository manually"
                     )
-
-                await apush_to_github(asset.slug, owner=user)
+                try:
+                    if asset.asset_type in ["PROJECT", "EXERCISE"]:
+                        await apush_project_or_exercise_to_github(
+                            asset.slug, create_or_update=False
+                        )
+                    else:
+                        await apush_to_github(asset.slug, owner=user)
+                finally:
+                    await sync_to_async(log_outbound_push_from_db)(asset.slug)
             elif action_slug == "create_repo":
                 if asset.asset_type not in ["PROJECT", "EXERCISE"]:
                     raise ValidationException(
@@ -1304,9 +1503,14 @@ class AcademyAssetActionView(APIView):
 
                 # Extract organization_github_username from data if provided
                 organization_github_username = data.get("organization_github_username")
-                await apush_project_or_exercise_to_github(
-                    asset.slug, create_or_update=True, organization_github_username=organization_github_username
-                )
+                try:
+                    await apush_project_or_exercise_to_github(
+                        asset.slug,
+                        create_or_update=True,
+                        organization_github_username=organization_github_username,
+                    )
+                finally:
+                    await sync_to_async(log_outbound_push_from_db)(asset.slug)
             elif action_slug == "analyze_seo":
                 report = SEOAnalyzer(asset)
                 await report.astart()
@@ -1315,6 +1519,12 @@ class AcademyAssetActionView(APIView):
                 if asset.asset_type not in ["ARTICLE", "LESSON"]:
                     raise ValidationException("Only lessons and articles can be scanned for originality")
                 await ascan_asset_originality(asset)
+            elif action_slug == "sync_telemetry_stats":
+
+                def _queue_asset_telemetry_stats_sync():
+                    sync_asset_telemetry_stats.delay(asset.id)
+
+                await sync_to_async(_queue_asset_telemetry_stats_sync)()
             elif action_slug == "claim_asset":
 
                 if asset.academy is not None:
@@ -1330,14 +1540,11 @@ class AcademyAssetActionView(APIView):
                 asset.academy = academy
                 await asset.asave()
 
+        except ValidationException:
+            raise
         except Exception as e:
             logger.exception(e)
-            if isinstance(e, Exception):
-                raise ValidationException(str(e))
-
-            raise ValidationException(
-                "; ".join([k.capitalize() + ": " + "".join(v) for k, v in e.message_dict.items()])
-            )
+            raise ValidationException(str(e))
 
         # Using sync_to_async is still needed because Serpy serializers might perform synchronous operations.
         # Prefetching reduces the chance of implicit sync DB calls within the serializer.
@@ -1372,13 +1579,53 @@ class AcademyAssetActionView(APIView):
         if asset is None:
             raise ValidationException(f"This asset {asset_slug} does not exist for this academy {academy_id}", 404)
 
-        data = await self.update_asset_action(
-            asset, request.user, {**request.data, "action_slug": action_slug}, academy_id
-        )
+        _req_url = build_request_url_for_activity_log(request)
+        try:
+            data = await self.update_asset_action(
+                asset,
+                request.user,
+                {**request.data, "action_slug": action_slug},
+                academy_id,
+                request_url=_req_url,
+            )
+        except ValidationException as exc:
+            if action_slug in ACADEMY_GITHUB_SYNC_ACTIONS:
+                _st = int(getattr(exc, "status_code", status.HTTP_400_BAD_REQUEST))
+                _detail = getattr(exc, "detail", None)
+                await sync_to_async(record_github_activity)(
+                    asset.slug,
+                    "academy",
+                    action=action_slug,
+                    detail="AcademyAssetActionView PUT",
+                    status="error",
+                    http_status=_st,
+                    error=(str(_detail) if _detail is not None else str(exc))[:500],
+                    request_url=_req_url,
+                )
+            raise
+        else:
+            if action_slug in ACADEMY_GITHUB_SYNC_ACTIONS:
+                await sync_to_async(record_github_activity)(
+                    asset.slug,
+                    "academy",
+                    action=action_slug,
+                    detail="AcademyAssetActionView PUT",
+                    status="ok",
+                    http_status=status.HTTP_200_OK,
+                    request_url=_req_url,
+                )
         return Response(data, status=status.HTTP_200_OK)
 
     @staticmethod
-    async def create_asset_action(action_slug: str, asset: Asset, user: User, data: dict[str, Any], academy_id: int):
+    async def create_asset_action(
+        action_slug: str,
+        asset: Asset,
+        user: User,
+        data: dict[str, Any],
+        academy_id: int,
+        *,
+        request_url: str | None = None,
+    ):
         """
         This function creates a new asset
         """
@@ -1392,14 +1639,42 @@ class AcademyAssetActionView(APIView):
                 override_meta = False
                 if data and "override_meta" in data:
                     override_meta = data["override_meta"]
-                await apull_from_github(asset.slug, override_meta=override_meta)
+                try:
+                    await apull_from_github(asset.slug, override_meta=override_meta)
+                finally:
+                    await sync_to_async(log_pull_outcome_from_db)(asset.slug)
+                await sync_to_async(record_github_activity)(
+                    asset.slug,
+                    "academy",
+                    action="pull",
+                    detail="AcademyAssetActionView POST bulk",
+                    status="ok",
+                    http_status=status.HTTP_200_OK,
+                    request_url=request_url,
+                )
             elif action_slug == "push":
-                if asset.asset_type not in ["ARTICLE", "LESSON"]:
+                if asset.asset_type not in ["ARTICLE", "LESSON", "QUIZ", "PROJECT", "EXERCISE"]:
                     raise ValidationException(
-                        "Only lessons and articles and be pushed to github, please update the Github repository yourself and come back to pull the changes from here"
+                        "Only lessons, articles, quizzes, projects, and exercises can be pushed to github"
                     )
-
-                await apush_to_github(asset.slug, owner=user)
+                try:
+                    if asset.asset_type in ["PROJECT", "EXERCISE"]:
+                        await apush_project_or_exercise_to_github(
+                            asset.slug, create_or_update=False
+                        )
+                    else:
+                        await apush_to_github(asset.slug, owner=user)
+                finally:
+                    await sync_to_async(log_outbound_push_from_db)(asset.slug)
+                await sync_to_async(record_github_activity)(
+                    asset.slug,
+                    "academy",
+                    action="push",
+                    detail="AcademyAssetActionView POST bulk",
+                    status="ok",
+                    http_status=status.HTTP_200_OK,
+                    request_url=request_url,
+                )
             elif action_slug == "create_repo":
                 if asset.asset_type not in ["PROJECT", "EXERCISE"]:
                     raise ValidationException(
@@ -1408,8 +1683,22 @@ class AcademyAssetActionView(APIView):
 
                 # Extract organization_github_username from data if provided
                 organization_github_username = data.get("organization_github_username")
-                await apush_project_or_exercise_to_github(
-                    asset.slug, create_or_update=True, organization_github_username=organization_github_username
+                try:
+                    await apush_project_or_exercise_to_github(
+                        asset.slug,
+                        create_or_update=True,
+                        organization_github_username=organization_github_username,
+                    )
+                finally:
+                    await sync_to_async(log_outbound_push_from_db)(asset.slug)
+                await sync_to_async(record_github_activity)(
+                    asset.slug,
+                    "academy",
+                    action="create_repo",
+                    detail="AcademyAssetActionView POST bulk",
+                    status="ok",
+                    http_status=status.HTTP_200_OK,
+                    request_url=request_url,
                 )
             elif action_slug == "analyze_seo":
                 report = SEOAnalyzer(asset)
@@ -1431,26 +1720,58 @@ class AcademyAssetActionView(APIView):
 
             return True
 
+        except ValidationException as ve:
+            logger.exception(ve)
+            if action_slug in ACADEMY_GITHUB_SYNC_ACTIONS:
+                _st = int(getattr(ve, "status_code", status.HTTP_400_BAD_REQUEST))
+                _detail = getattr(ve, "detail", None)
+                await sync_to_async(record_github_activity)(
+                    asset.slug,
+                    "academy",
+                    action=action_slug,
+                    detail="AcademyAssetActionView POST bulk",
+                    status="error",
+                    http_status=_st,
+                    error=(str(_detail) if _detail is not None else str(ve))[:500],
+                    request_url=request_url,
+                )
+            return False
         except Exception as e:
             logger.exception(e)
+            if action_slug in ACADEMY_GITHUB_SYNC_ACTIONS:
+                await sync_to_async(record_github_activity)(
+                    asset.slug,
+                    "academy",
+                    action=action_slug,
+                    detail="AcademyAssetActionView POST bulk",
+                    status="error",
+                    http_status=status.HTTP_400_BAD_REQUEST,
+                    error=str(e)[:500],
+                    request_url=request_url,
+                )
             return False
 
     @acapable_of("crud_asset")
-    async def post(self, request, action_slug, academy_id=None):
+    async def post(self, request, action_slug, asset_slug=None, academy_id=None):
         if action_slug not in ["test", "pull", "push", "analyze_seo", "claim_asset", "create_repo"]:
             raise ValidationException(f"Invalid action {action_slug}")
 
-        # Check if 'assets' key exists
-        if "assets" not in request.data:
-            raise ValidationException("Assets not found in the body of the request.")
+        # Use asset_slug from URL path for single-asset action, or "assets" from body for bulk
+        if asset_slug is not None:
+            assets = [asset_slug]
+        elif "assets" in request.data:
+            assets = request.data["assets"]
+        else:
+            raise ValidationException("Assets not found in the body of the request. Pass 'assets' array or use the URL path with asset slug.")
 
-        assets = request.data["assets"]
+        assets = list(assets) if isinstance(assets, (list, tuple)) else [assets]
 
         # Check if the assets list is empty
         if not assets:
             raise ValidationException("The list of Assets is empty.")
 
         invalid_assets = []
+        _bulk_req_url = build_request_url_for_activity_log(request)
 
         for asset_slug in assets:
             asset = (
@@ -1463,7 +1784,9 @@ class AcademyAssetActionView(APIView):
                 invalid_assets.append(asset_slug)
                 continue
 
-            if not await self.create_asset_action(action_slug, asset, request.user, request.data, academy_id):
+            if not await self.create_asset_action(
+                action_slug, asset, request.user, request.data, academy_id, request_url=_bulk_req_url
+            ):
                 invalid_assets.append(asset_slug)
 
         pulled_assets = list(set(assets).difference(set(invalid_assets)))
@@ -1563,6 +1886,11 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
 
     extensions = APIViewExtensions(cache=AssetCache, sort="-published_at", paginate=True)
 
+    @staticmethod
+    def _asset_academy_scope_q(academy_id):
+        """Unclaimed or same-academy assets; DB equivalent of _get_asset_by_slug_or_id visibility."""
+        return Q(academy__id=int(academy_id)) | Q(academy__isnull=True)
+
     def _get_asset_by_slug_or_id(self, asset_slug_or_id, academy_id, request=None):
         """
         Helper method to retrieve an asset by either slug or ID.
@@ -1575,15 +1903,16 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
         Returns:
             Asset instance or None if not found
         """
+        academy_id = int(academy_id)
         if asset_slug_or_id.isdigit():
-            # It's an ID
-            return Asset.objects.filter(id=int(asset_slug_or_id), academy__id=academy_id).first()
+            asset = Asset.objects.filter(id=int(asset_slug_or_id)).select_related("academy").first()
         else:
-            # It's a slug - use the existing get_by_slug method with academy filter
             asset = Asset.get_by_slug(asset_slug_or_id, request)
-            if asset is None or (asset.academy is not None and asset.academy.id != int(academy_id)):
-                return None
-            return asset
+
+        # Same rule for ID and slug: visible if unclaimed (academy null) or owned by this academy
+        if asset is None or (asset.academy is not None and asset.academy.id != academy_id):
+            return None
+        return asset
 
     @capable_of("read_asset")
     def get(self, request, asset_slug_or_id=None, academy_id=None):
@@ -1607,7 +1936,7 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
             serializer = AcademyAssetSerializer(asset)
             return handler.response(serializer.data)
 
-        items = Asset.objects.filter(Q(academy__id=academy_id) | Q(academy__isnull=True))
+        items = Asset.objects.filter(self._asset_academy_scope_q(academy_id))
 
         lookup = {}
 
@@ -1748,30 +2077,42 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
         items = items.filter(**lookup).distinct()
         items = handler.queryset(items)
 
-        serializer = AcademyAssetSerializer(items, many=True)
+        expand = self.request.GET.get("expand")
+
+        if "big" in self.request.GET:
+            expand_fields = ["readme"]
+            if expand is not None:
+                expand_fields = list(set(expand_fields + expand.split(",")))
+            serializer = AssetExpandableSerializer(items, many=True, expand=expand_fields)
+        else:
+            serializer = AcademyAssetSerializer(items, many=True)
 
         return handler.response(serializer.data)
 
     @capable_of("crud_asset")
     def put(self, request, asset_slug_or_id=None, academy_id=None):
 
-        data_list = request.data
-        if not isinstance(request.data, list):
-
-            # make it a list
-            data_list = [request.data]
-
+        raw = request.data
+        if isinstance(raw, list):
+            data_list = [{**item} if isinstance(item, dict) else dict(item) for item in raw]
+        else:
             if asset_slug_or_id is None:
                 raise ValidationException("Missing asset_slug_or_id")
+            data_list = [{**raw} if isinstance(raw, dict) else dict(raw)]
 
-            # Use helper method to find asset by slug or ID
+        if asset_slug_or_id is not None:
             asset = self._get_asset_by_slug_or_id(asset_slug_or_id, academy_id, request)
             if asset is None:
                 raise ValidationException(
                     f"This asset {asset_slug_or_id} does not exist for this academy {academy_id}", 404
                 )
+            # Single payload + URL asset: id must follow the URL (slug/id). List bodies used to skip this merge,
+            # leaving a stale body id (e.g. 3146) that does not match the slug or academy scope.
+            if len(data_list) == 1:
+                data_list[0]["id"] = asset.id
 
-            data_list[0]["id"] = asset.id
+        if len(data_list) == 0:
+            raise ValidationException("Request body must not be empty", slug="empty-body")
 
         all_assets = []
         for data in data_list:
@@ -1810,7 +2151,7 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
             if "id" not in data:
                 raise ValidationException("Cannot determine asset id", slug="without-id")
 
-            instance = Asset.objects.filter(id=data["id"], academy__id=academy_id).first()
+            instance = Asset.objects.filter(id=data["id"]).filter(self._asset_academy_scope_q(academy_id)).first()
             if not instance:
                 raise ValidationException(
                     f'Asset({data["id"]}) does not exist on this academy', code=404, slug="not-found"
@@ -1884,6 +2225,15 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
             instance = serializer.save()
             # only pull if the readme raw is not already set
             if instance.readme_url and "github.com" in instance.readme_url and instance.readme_raw is None:
+                record_github_activity(
+                    instance.slug,
+                    "academy",
+                    action="pull_queued",
+                    detail="POST create academy asset: initial pull",
+                    status="ok",
+                    http_status=status.HTTP_201_CREATED,
+                    request_url=build_request_url_for_activity_log(request),
+                )
                 async_pull_from_github.delay(instance.slug)
             return Response(AssetBigSerializer(instance).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -1942,22 +2292,34 @@ class AcademyAssetCommentView(APIView, GenerateLookupsMixin):
     List all snippets, or create a new snippet.
     """
 
-    extensions = APIViewExtensions(cache=AssetCommentCache, sort="-created_at", paginate=True)
+    extensions = APIViewExtensions(paginate=True)
 
     @capable_of("read_asset")
     def get(self, request, academy_id=None):
 
         handler = self.extensions(request)
-        cache = handler.cache.get()
-        if cache is not None:
-            return cache
 
-        items = AssetComment.objects.filter(asset__academy__id=academy_id)
+        academy_ids = [int(academy_id)]
+        if academies_param := request.GET.get("academies"):
+            academy_ids = get_academy_ids_from_capability(
+                {"academy_id": academies_param}, request, "read_asset", scope="read_aggregate"
+            )
+
+        items = AssetComment.objects.filter(asset__academy__id__in=academy_ids)
         lookup = {}
 
         if "asset" in self.request.GET:
             param = self.request.GET.get("asset")
-            lookup["asset__slug__in"] = [p.lower() for p in param.split(",")]
+            assets = [p.strip() for p in param.split(",") if p.strip()]
+            asset_ids = [int(p) for p in assets if p.isnumeric()]
+            asset_slugs = [p.lower() for p in assets if not p.isnumeric()]
+
+            if asset_ids and asset_slugs:
+                items = items.filter(Q(asset__id__in=asset_ids) | Q(asset__slug__in=asset_slugs))
+            elif asset_ids:
+                lookup["asset__id__in"] = asset_ids
+            elif asset_slugs:
+                lookup["asset__slug__in"] = asset_slugs
 
         if "resolved" in self.request.GET:
             param = self.request.GET.get("resolved")
@@ -1982,9 +2344,18 @@ class AcademyAssetCommentView(APIView, GenerateLookupsMixin):
             lookup["author__email"] = param
 
         items = items.filter(**lookup)
+        sort = request.GET.get("sort")
+        if sort in ["priority", "-priority", "created_at", "-created_at"]:
+            items = items.order_by(sort)
+        else:
+            items = items.order_by("-created_at")
         items = handler.queryset(items)
 
         serializer = AcademyCommentSerializer(items, many=True)
+        meta = academy_scope_response_meta(request)
+        if meta:
+            return handler.response({"results": serializer.data, **meta})
+
         return handler.response(serializer.data)
 
     @capable_of("crud_asset")
@@ -2039,7 +2410,7 @@ class AcademyAssetErrorView(APIView, GenerateLookupsMixin):
     List all snippets, or create a new snippet.
     """
 
-    extensions = APIViewExtensions(sort="-created_at", paginate=True)
+    extensions = APIViewExtensions(paginate=True)
 
     @capable_of("read_asset_error")
     def get(self, request, academy_id=None):
@@ -2074,6 +2445,11 @@ class AcademyAssetErrorView(APIView, GenerateLookupsMixin):
         if like is not None and like != "undefined" and like != "":
             items = items.filter(Q(slug__icontains=slugify(like)) | Q(path__icontains=like))
 
+        sort = request.GET.get("sort")
+        if sort in ["priority", "-priority", "created_at", "-created_at"]:
+            items = items.order_by(sort)
+        else:
+            items = items.order_by("-created_at")
         items = handler.queryset(items)
 
         serializer = AcademyErrorSerializer(items, many=True)
@@ -2134,6 +2510,80 @@ class AcademyAssetErrorView(APIView, GenerateLookupsMixin):
             items.delete()
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademyAssetErrorDedupeView(APIView):
+    """
+    Collapse duplicate AssetErrorLog rows for the same logical issue key.
+
+    The canonical grouping matches the rest of the registry tooling:
+    (slug, asset_type, path, asset).
+    """
+
+    @capable_of("crud_asset_error")
+    def post(self, request, error_id=None, academy_id=None):
+
+        if not error_id:
+            raise ValidationException("Missing error ID on the URL", 404)
+
+        keeper = AssetErrorLog.objects.filter(
+            Q(id=error_id) & (Q(asset__academy__id=academy_id) | Q(asset__isnull=True))
+        ).first()
+        if keeper is None:
+            raise ValidationException("This error does not exist", 404)
+
+        duplicates = AssetErrorLog.objects.filter(
+            slug=keeper.slug,
+            asset_type=keeper.asset_type,
+            path=keeper.path,
+            asset=keeper.asset,
+        ).exclude(id=keeper.id)
+
+        duplicate_rows = list(duplicates.order_by("id"))
+        deleted_ids = [row.id for row in duplicate_rows]
+
+        if not duplicate_rows:
+            serializer = AcademyErrorSerializer(keeper)
+            return Response({"kept": serializer.data, "deleted_ids": [], "deleted_count": 0}, status=status.HTTP_200_OK)
+
+        merged = compute_asset_error_log_dedupe_merge(keeper, duplicate_rows)
+
+        update_fields = merged["update_fields"]
+        if "status" in update_fields:
+            keeper.status = merged["status"]
+
+        if "status_text" in update_fields:
+            keeper.status_text = merged["status_text"]
+
+        if "user" in update_fields:
+            keeper.user_id = merged["user_id"]
+
+        if "priority" in update_fields:
+            keeper.priority = merged["priority"]
+
+        if update_fields:
+            keeper.save(update_fields=update_fields)
+
+        duplicates.delete()
+
+        keeper.refresh_from_db()
+        serializer = AcademyErrorSerializer(keeper)
+        return Response(
+            {"kept": serializer.data, "deleted_ids": deleted_ids, "deleted_count": len(deleted_ids)},
+            status=status.HTTP_200_OK,
+        )
+
+
+class AcademyAssetErrorCatalogView(APIView):
+    @capable_of_many("read_asset_error", scope="read_aggregate")
+    def get(self, request, academy_ids=None):
+        catalog = get_asset_error_log_catalog()
+        meta = academy_scope_response_meta(request)
+
+        if meta:
+            return Response({"results": catalog, **meta}, status=status.HTTP_200_OK)
+
+        return Response(catalog, status=status.HTTP_200_OK)
 
 
 class AcademyAssetAliasView(APIView, GenerateLookupsMixin):
@@ -2242,9 +2692,13 @@ class AcademyCategoryView(APIView, GenerateLookupsMixin):
         if like is not None and like != "undefined" and like != "":
             items = items.filter(Q(slug__icontains=slugify(like)) | Q(title__icontains=like))
 
-        lang = request.GET.get("lang", None)
-        if lang is not None:
-            items = items.filter(lang__iexact=lang)
+        lang = request.GET.get("lang")
+        if lang:
+            normalized_lang = lang.lower()
+            if normalized_lang in ["us", "en"]:
+                items = items.filter(Q(lang__iexact="us") | Q(lang__iexact="en"))
+            else:
+                items = items.filter(lang__iexact=normalized_lang)
 
         items = items.filter(**lookup)
         items = handler.queryset(items)
@@ -2500,3 +2954,70 @@ class CodeCompilerView(APIView):
                 url = "/v1/prompting/completion/code-compiler/"
 
             return await s.post(url, json=request.data)
+
+
+class LearnpackPackagesView(APIView):
+    """
+    Proxy endpoint to communicate with learnpack service to get packages.
+    """
+
+    permission_classes = [AllowAny]
+
+    async def get(self, request):
+        """
+        GET request to fetch packages from learnpack service.
+        Proxies the request to learnpack's /v1/learnpack/packages endpoint.
+        """
+        lang = await aget_user_language(request)
+        user_id = request.user.id if request.user.is_authenticated else None
+
+        try:
+            async with Service("rigobot", user_id, proxy=True) as s:
+                # Forward query parameters to learnpack
+                params = dict(request.GET)
+                return await s.get("/v1/learnpack/packages", params=params)
+        except Exception as e:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Error calling learnpack service: {str(e)}",
+                    es=f"Error al llamar al servicio learnpack: {str(e)}",
+                ),
+                code=500,
+                slug="learnpack-service-error",
+            )
+
+
+class CompletionView(APIView):
+    """
+    Proxy endpoint to communicate with rigobot for AI completion/messaging.
+    """
+
+    @consume("rigobot-api-test-completion")
+    async def post(self, request):
+        """
+        POST request to send a message to rigobot completion endpoint.
+        The request body should contain a "message" field that will be wrapped
+        in the inputs object before being sent to rigobot.
+        """
+
+        # Get message from request body
+        message = request.data.get("message")
+        if not message:
+            lang = await aget_user_language(request)
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Message is required",
+                    es="El mensaje es requerido",
+                    slug="message-required",
+                ),
+                code=400,
+            )
+
+        # Wrap message in inputs object
+        payload = {"inputs": {"message": message}}
+
+        # Get rigobot token using user's token
+        async with Service("rigobot", request.user.id, proxy=True) as s:
+            return await s.post("/v1/prompting/completion/student-api-essage", json=payload)

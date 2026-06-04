@@ -43,6 +43,7 @@ CAPABILITIES = [
     {"slug": "read_all_cohort", "description": "List all the cohorts or a single cohort information"},
     {"slug": "crud_cohort", "description": "Create, update or delete cohort info"},
     {"slug": "read_eventcheckin", "description": "List and read all the event_checkins"},
+    {"slug": "crud_eventcheckin", "description": "Create, update or import event checkins"},
     {"slug": "read_survey", "description": "List all the nps answers"},
     {"slug": "crud_survey", "description": "Create, update or delete surveys"},
     {"slug": "read_nps_answers", "description": "List all the nps answers"},
@@ -85,7 +86,7 @@ CAPABILITIES = [
 ROLES = [
     {
         "slug": "admin",
-        "name": "Admin",
+        "name": "System Admin",
         "caps": [c["slug"] for c in CAPABILITIES],
     },
     {
@@ -208,6 +209,7 @@ def extend_roles(roles: list):
                 "crud_lead",
                 "read_event",
                 "crud_event",
+                "crud_eventcheckin",
                 "read_eventcheckin",
                 "read_nps_answers",
                 "read_lead",
@@ -272,7 +274,7 @@ def extend_roles(roles: list):
     roles.append(
         {
             "slug": "country_manager",
-            "name": "Country Manager",
+            "name": "Academy Admin",
             "caps": create_academy_roles.extend(
                 roles,
                 [
@@ -341,7 +343,7 @@ class AcademyEventTestSuite(CypressTestCase):
             [
                 {
                     "slug": "admin",
-                    "name": "Admin",
+                    "name": "System Admin",
                 },
                 {
                     "slug": "academy_token",
@@ -397,7 +399,7 @@ class AcademyEventTestSuite(CypressTestCase):
                 },
                 {
                     "slug": "country_manager",
-                    "name": "Country Manager",
+                    "name": "Academy Admin",
                 },
             ],
         )

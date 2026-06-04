@@ -17,8 +17,10 @@ class GetOrCreateSessionTestSuite(AdmissionsTestCase):
         if should create a room with status 'pending'
         """
 
-        data1 = json.load(open("breathecode/admissions/tests/actions/sample_syllabus1.json", "r"))
-        data2 = json.load(open("breathecode/admissions/tests/actions/sample_syllabus2.json", "r"))
+        with open("breathecode/admissions/tests/actions/sample_syllabus1.json", "r", encoding="utf-8") as f:
+            data1 = json.load(f)
+        with open("breathecode/admissions/tests/actions/sample_syllabus2.json", "r", encoding="utf-8") as f:
+            data2 = json.load(f)
         models1 = self.bc.database.create(
             syllabus=True, syllabus_version={"json": data1}, authenticate=True, capability="crud_syllabus"
         )

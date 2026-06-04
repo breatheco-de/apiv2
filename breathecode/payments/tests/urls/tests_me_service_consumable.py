@@ -33,6 +33,7 @@ def format_invoice_item(data={}):
         "currency_id": 1,
         "externally_managed": False,
         "id": 1,
+        "invoice_notes": None,
         "paid_at": UTC_NOW,
         "payment_method_id": None,
         "proof_id": None,
@@ -50,6 +51,7 @@ def format_invoice_item(data={}):
 def get_serializer(self, currency, user, data={}):
     return {
         "amount": 0,
+        "invoice_notes": None,
         "currency": {
             "code": currency.code,
             "name": currency.name,
@@ -122,7 +124,8 @@ def serialize_consumable(consumable, data={}):
         "user": consumable.user.id if consumable.user else None,
         "plan_financing": consumable.plan_financing.id if consumable.plan_financing else None,
         "subscription": consumable.subscription.id if consumable.subscription else None,
-        **data,
+        "standalone_invoice": data.get("standalone_invoice"),
+        **{k: v for k, v in data.items() if k != "standalone_invoice"},
     }
 
 
@@ -201,6 +204,42 @@ class TestSignal(LegacyAPITestCase):
         assert json == expected
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of("payments.Consumable"), [])
+
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test__void_consumable_includes_standalone_invoice_with_academy(self):
+        model = self.bc.database.create(
+            country=1,
+            city=1,
+            academy=1,
+            user=1,
+            service={"type": "VOID", "slug": "vps_server"},
+            service_item={"service_id": 1, "how_many": 1},
+            bag={"academy_id": 1, "user_id": 1},
+            invoice={"bag_id": 1, "user_id": 1, "academy_id": 1},
+            consumable={
+                "user_id": 1,
+                "service_item_id": 1,
+                "how_many": 2,
+                "standalone_invoice_id": 1,
+            },
+        )
+        self.client.force_authenticate(model.user)
+
+        url = reverse_lazy("payments:me_service_consumable")
+        response = self.client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        voids = response.json()["voids"]
+        assert len(voids) == 1
+        item = voids[0]["items"][0]
+        assert item["standalone_invoice"] == {
+            "id": model.invoice.id,
+            "academy": {
+                "id": model.academy.id,
+                "slug": model.academy.slug,
+                "name": model.academy.name,
+            },
+        }
 
     """
     🔽🔽🔽 Get with one Consumable, how_many = 0

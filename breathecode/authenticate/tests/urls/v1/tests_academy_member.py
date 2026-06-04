@@ -70,6 +70,7 @@ def generate_user_invite(data: dict) -> dict:
         "academy_id": None,
         "author_id": None,
         "cohort_id": None,
+        "course_id": None,
         "email": None,
         "first_name": None,
         "id": 0,
@@ -86,6 +87,8 @@ def generate_user_invite(data: dict) -> dict:
         "token": "",
         "process_message": "",
         "process_status": "PENDING",
+        "subscription_seat_id": None,
+        "syllabus_id": None,
         "user_id": None,
         "city": None,
         "country": None,
@@ -1807,9 +1810,9 @@ class MemberPostTestSuite(AuthTestCase):
                     "dude@dude.dude",
                     {
                         "email": "dude@dude.dude",
-                        "subject": "Welcome to " + model.academy.name,
+                        "subject": f"{model.academy.name} is inviting you to {model.academy.slug}.4Geeks.com",
                         "LINK": url,
-                        "FIST_NAME": "Kenny",
+                        "FIRST_NAME": "Kenny",
                     },
                     academy=model.academy,
                 )
@@ -2036,9 +2039,9 @@ class MemberPostTestSuite(AuthTestCase):
                     "dude2@dude.dude",
                     {
                         "email": "dude2@dude.dude",
-                        "subject": "Welcome to " + model.academy.name,
+                        "subject": f"{model.academy.name} is inviting you to {model.academy.slug}.4Geeks.com",
                         "LINK": url,
-                        "FIST_NAME": "Kenny",
+                        "FIRST_NAME": "Kenny",
                     },
                     academy=model.academy,
                 )

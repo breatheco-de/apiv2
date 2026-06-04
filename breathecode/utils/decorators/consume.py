@@ -11,7 +11,7 @@ from capyc.core.managers import feature
 from capyc.rest_framework.exceptions import PaymentException, ValidationException
 from django.contrib.auth.models import AnonymousUser
 from django.core.handlers.wsgi import WSGIRequest
-from django.db.models import QuerySet, Sum
+from django.db.models import Q, QuerySet, Sum
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
@@ -19,6 +19,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from breathecode.authenticate.models import User
+# Lazy imports for payments models to avoid circular dependency
+# These are imported inside functions where they're used
 from breathecode.payments.signals import consume_service
 
 from ..exceptions import ProgrammingError
@@ -200,6 +202,90 @@ def adiscount_consumption_sessions(consumables: QuerySet[T]) -> QuerySet[T]:
     return discount_consumption_sessions(consumables)
 
 
+def _has_unlimited_service_item(user: User, service: str) -> bool:
+    """
+    Check if user has an active subscription or plan financing with an unlimited service item
+    for the given service, even if no consumable record exists yet.
+    
+    Args:
+        user: The user to check
+        service: Service slug or consumer name
+        
+    Returns:
+        True if user has unlimited service item, False otherwise
+    """
+    from breathecode.payments.models import (
+        PlanFinancing,
+        PlanServiceItem,
+        Subscription,
+        SubscriptionServiceItem,
+    )
+    
+    utc_now = timezone.now()
+    
+    # Normalize service filter
+    if isinstance(service, str):
+        if "_" in service:
+            # Consumer format (e.g., "JOIN_MENTORSHIP")
+            service_filter = Q(service_item__service__consumer=service.upper())
+        else:
+            # Slug format
+            service_filter = Q(service_item__service__slug=service)
+    else:
+        return False
+    
+    # Build query for unlimited service items
+    unlimited_filter = service_filter & Q(service_item__how_many=-1)
+    
+    # Check active subscriptions - subscription-level service items (add-ons)
+    active_subscriptions = Subscription.objects.filter(
+        user=user,
+        status=Subscription.Status.ACTIVE
+    ).filter(
+        Q(valid_until=None) | Q(valid_until__gte=utc_now)
+    ).exclude(
+        status__in=[Subscription.Status.DEPRECATED, Subscription.Status.EXPIRED, Subscription.Status.PAYMENT_ISSUE]
+    )
+    
+    if SubscriptionServiceItem.objects.filter(
+        subscription__in=active_subscriptions
+    ).filter(unlimited_filter).exists():
+        return True
+    
+    # Check active subscriptions - plan-level service items
+    # Get all plans from active subscriptions (ManyToMany relationship)
+    subscription_plan_ids = []
+    for subscription in active_subscriptions:
+        subscription_plan_ids.extend(subscription.plans.values_list("id", flat=True))
+    
+    if subscription_plan_ids and PlanServiceItem.objects.filter(
+        plan_id__in=subscription_plan_ids
+    ).filter(unlimited_filter).exists():
+        return True
+    
+    # Check active plan financings - plan-level service items
+    active_plan_financings = PlanFinancing.objects.filter(
+        user=user,
+        status=PlanFinancing.Status.ACTIVE
+    ).filter(
+        Q(plan_expires_at=None) | Q(plan_expires_at__gte=utc_now)
+    ).exclude(
+        status__in=[PlanFinancing.Status.DEPRECATED, PlanFinancing.Status.EXPIRED, PlanFinancing.Status.CANCELLED]
+    )
+    
+    # Get all plans from active plan financings (ManyToMany relationship)
+    financing_plan_ids = []
+    for plan_financing in active_plan_financings:
+        financing_plan_ids.extend(plan_financing.plans.values_list("id", flat=True))
+    
+    if financing_plan_ids and PlanServiceItem.objects.filter(
+        plan_id__in=financing_plan_ids
+    ).filter(unlimited_filter).exists():
+        return True
+    
+    return False
+
+
 def consume(service: str, consumer: Optional[Consumer] = None, format: str = "json") -> callable:
     """Check if the current user can access to the resource through of permissions."""
 
@@ -232,6 +318,7 @@ def consume(service: str, consumer: Optional[Consumer] = None, format: str = "js
             flags: Optional[FlagsParams] = None,
             **opts: Unpack[ServiceContext],
         ) -> ServiceContext:
+            from breathecode.payments.models import Consumable
 
             if flags is None:
                 flags = {}
@@ -291,10 +378,12 @@ def consume(service: str, consumer: Optional[Consumer] = None, format: str = "js
                     context["consumables"] = discount_consumption_sessions(context["consumables"])
 
                 if context["price"] and context["consumables"].count() == 0:
-                    raise PaymentException(
-                        f"You do not have enough credits to access this service: {service}",
-                        slug="with-consumer-not-enough-consumables",
-                    )
+                    # Check if user has unlimited service item in their plans before raising error
+                    if not _has_unlimited_service_item(request.user, service):
+                        raise PaymentException(
+                            f"You do not have enough credits to access this service: {service}",
+                            slug="with-consumer-not-enough-consumables",
+                        )
 
                 if context["price"] and context["lifetime"] and (consumable := context["consumables"].first()):
                     session = ConsumptionSession.build_session(request, consumable, context["lifetime"])
@@ -400,10 +489,13 @@ def consume(service: str, consumer: Optional[Consumer] = None, format: str = "js
                     context["consumables"] = await adiscount_consumption_sessions(context["consumables"])
 
                 if context["price"] and await context["consumables"].acount() == 0:
-                    raise PaymentException(
-                        f"You do not have enough credits to access this service: {service}",
-                        slug="with-consumer-not-enough-consumables",
-                    )
+                    # Check if user has unlimited service item in their plans before raising error
+                    has_unlimited = await sync_to_async(_has_unlimited_service_item)(user, service)
+                    if not has_unlimited:
+                        raise PaymentException(
+                            f"You do not have enough credits to access this service: {service}",
+                            slug="with-consumer-not-enough-consumables",
+                        )
 
                 if context["price"] and context["lifetime"] and (consumable := await context["consumables"].afirst()):
                     session = await ConsumptionSession.abuild_session(request, consumable, context["lifetime"])

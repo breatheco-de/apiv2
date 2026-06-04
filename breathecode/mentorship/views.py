@@ -486,7 +486,7 @@ class ForwardMeetUrl:
 
             if credentials is None:
                 current_path = self.request.get_full_path()
-                token, _ = Token.get_or_create(user=self.request.user, token_type="temporal")
+                token, _ = Token.get_or_create(user=self.request.user, token_type="short")
                 encoded_path = urllib.parse.urlencode({"url": current_path})
 
                 # Use minimal scopes for basic profile and email access only
@@ -818,7 +818,7 @@ def end_mentoring_session(request, session_id, token):
         {
             "form": form,
             "disabled": session.status not in ["PENDING", "STARTED"],
-            "btn_lable": (
+            "btn_label": (
                 "End Mentoring Session"
                 if session.status in ["PENDING", "STARTED"]
                 else "Mentoring session already ended"

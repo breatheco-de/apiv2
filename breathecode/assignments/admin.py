@@ -175,7 +175,7 @@ class TaskAdmin(admin.ModelAdmin):
     raw_id_fields = ["user", "cohort", "telemetry", "attachments"]
 
     def delivery_url(self, obj):
-        token, created = Token.get_or_create(obj.user, token_type="temporal")
+        token, created = Token.get_or_create(obj.user, token_type="short")
         url = os.getenv("API_URL") + f"/v1/assignment/task/{str(obj.id)}/deliver/{token}"
         return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{url}'>deliver</a>")
 
@@ -429,9 +429,9 @@ class LearnPackWebhookForm(forms.ModelForm):
 @admin.register(LearnPackWebhook)
 class LearnPackWebhookAdmin(admin.ModelAdmin):
     form = LearnPackWebhookForm
-    list_display = ("id", "event", "status", "student", "created_at")
-    search_fields = ["telemetry__asset_slug", "telemetry__user__email"]
-    list_filter = ["status", "event"]
+    list_display = ("id", "event", "status", "package_slug", "student", "created_at", "asset_id", "learnpack_package_id")
+    search_fields = ["telemetry__asset_slug", "telemetry__user__email", "student__email", "package_slug", "learnpack_package_id", "asset_id"]
+    list_filter = ["status", "event", "package_slug"]
     raw_id_fields = ["student", "telemetry"]
     actions = [process_hook, async_process_hook]
 

@@ -123,3 +123,70 @@ i should hide
 
         asset = clean_asset_readme(model["asset"])
         self.assertEqual(asset, model["asset"])
+
+    def test__clean_asset_adds_canonical_telemetry_batch_for_interactive_assets(self):
+        readme_content = Asset.encode("# Hello")
+        model = self.bc.database.create(
+            asset=[
+                {
+                    "slug": "telemetry-us",
+                    "lang": "us",
+                    "interactive": True,
+                    "readme_url": "https://github.com/org/repo/blob/main/README.md",
+                    "readme_raw": readme_content,
+                    "readme": readme_content,
+                },
+                {
+                    "slug": "telemetry-es",
+                    "lang": "es",
+                    "interactive": True,
+                    "readme_url": "https://github.com/org/repo/blob/main/README.es.md",
+                    "readme_raw": readme_content,
+                    "readme": readme_content,
+                },
+            ]
+        )
+        canonical = model["asset"][0]
+        translated = model["asset"][1]
+        translated.all_translations.add(canonical)
+
+        cleaned = clean_asset_readme(translated)
+        expected = f"https://breathecode.herokuapp.com/v1/assignment/me/telemetry?asset_id={canonical.id}"
+        self.assertEqual(cleaned.config["telemetry"]["batch"], expected)
+
+    def test__clean_asset_overwrites_wrong_telemetry_batch_for_interactive_assets(self):
+        readme_content = Asset.encode("# Hello")
+        model = self.bc.database.create(
+            asset={
+                "slug": "telemetry-wrong",
+                "lang": "us",
+                "interactive": True,
+                "config": {"telemetry": {"batch": "https://wrong/url?asset_id=999"}},
+                "readme_url": "https://github.com/org/repo/blob/main/README.md",
+                "readme_raw": readme_content,
+                "readme": readme_content,
+            }
+        )
+        asset = model["asset"]
+
+        cleaned = clean_asset_readme(asset)
+        expected = f"https://breathecode.herokuapp.com/v1/assignment/me/telemetry?asset_id={asset.id}"
+        self.assertEqual(cleaned.config["telemetry"]["batch"], expected)
+
+    def test__clean_asset_non_interactive_keeps_config_unchanged(self):
+        readme_content = Asset.encode("# Hello")
+        original_config = {"delivery": {"formats": ["url"]}}
+        model = self.bc.database.create(
+            asset={
+                "slug": "telemetry-noop",
+                "lang": "us",
+                "interactive": False,
+                "config": original_config,
+                "readme_url": "https://github.com/org/repo/blob/main/README.md",
+                "readme_raw": readme_content,
+                "readme": readme_content,
+            }
+        )
+
+        cleaned = clean_asset_readme(model["asset"])
+        self.assertEqual(cleaned.config, original_config)

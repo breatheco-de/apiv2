@@ -11,6 +11,7 @@ from django.urls.base import reverse_lazy
 from django.utils import timezone
 from rest_framework import status
 
+from breathecode.activity.models import ACTIVITY_TABLE_NAME
 from breathecode.services.google_cloud.big_query import BigQuery
 from breathecode.utils.attr_dict import AttrDict
 
@@ -208,7 +209,7 @@ class MediaTestSuite(MediaTestCase):
 
     @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
     def test_get_all_fields(self):
-        expected_query = "SELECT * FROM `test.4geeks.activity` "
+        expected_query = f"SELECT * FROM `test.4geeks.{ACTIVITY_TABLE_NAME}` "
         url = reverse_lazy("v2:activity:report")
         model = self.bc.database.create(user=1, academy=1, profile_academy=1, capability="read_activity", role=1)
 
@@ -232,7 +233,7 @@ class MediaTestSuite(MediaTestCase):
 
     @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
     def test_get_all_fields_limit(self):
-        expected_query = "SELECT * FROM `test.4geeks.activity`  LIMIT 5"
+        expected_query = f"SELECT * FROM `test.4geeks.{ACTIVITY_TABLE_NAME}`  LIMIT 5"
         url = reverse_lazy("v2:activity:report") + f"?limit=5"
         model = self.bc.database.create(user=1, academy=1, profile_academy=1, capability="read_activity", role=1)
 
@@ -257,7 +258,9 @@ class MediaTestSuite(MediaTestCase):
 
     @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
     def test_get_group(self):
-        expected_query = "SELECT kind FROM `test.4geeks.activity`  GROUP BY kind"
+        from breathecode.activity.models import ACTIVITY_TABLE_NAME
+
+        expected_query = f"SELECT kind FROM `test.4geeks.{ACTIVITY_TABLE_NAME}`  GROUP BY kind"
         url = reverse_lazy("v2:activity:report") + f"?by=kind&fields=kind"
         model = self.bc.database.create(user=1, academy=1, profile_academy=1, capability="read_activity", role=1)
 
@@ -282,7 +285,9 @@ class MediaTestSuite(MediaTestCase):
     @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
     def test_get_filters_lte(self):
         json_query = '{ "filter": { "user_id__lte": 5 } }'
-        expected_query = "SELECT * FROM `test.4geeks.activity` WHERE user_id <= @x__user_id"
+        from breathecode.activity.models import ACTIVITY_TABLE_NAME
+
+        expected_query = f"SELECT * FROM `test.4geeks.{ACTIVITY_TABLE_NAME}` WHERE user_id <= @x__user_id"
         url = reverse_lazy("v2:activity:report") + f"?query={json_query}"
         model = self.bc.database.create(user=1, academy=1, profile_academy=1, capability="read_activity", role=1)
 
@@ -307,7 +312,9 @@ class MediaTestSuite(MediaTestCase):
     @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
     def test_get_filters_lt(self):
         json_query = '{ "filter": { "user_id__lt": 5 } }'
-        expected_query = "SELECT * FROM `test.4geeks.activity` WHERE user_id < @x__user_id"
+        from breathecode.activity.models import ACTIVITY_TABLE_NAME
+
+        expected_query = f"SELECT * FROM `test.4geeks.{ACTIVITY_TABLE_NAME}` WHERE user_id < @x__user_id"
         url = reverse_lazy("v2:activity:report") + f"?query={json_query}"
         model = self.bc.database.create(user=1, academy=1, profile_academy=1, capability="read_activity", role=1)
 
@@ -332,7 +339,9 @@ class MediaTestSuite(MediaTestCase):
     @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
     def test_get_filters_gte(self):
         json_query = '{ "filter": { "user_id__gte": 5 } }'
-        expected_query = "SELECT * FROM `test.4geeks.activity` WHERE user_id >= @x__user_id"
+        from breathecode.activity.models import ACTIVITY_TABLE_NAME
+
+        expected_query = f"SELECT * FROM `test.4geeks.{ACTIVITY_TABLE_NAME}` WHERE user_id >= @x__user_id"
         url = reverse_lazy("v2:activity:report") + f"?query={json_query}"
         model = self.bc.database.create(user=1, academy=1, profile_academy=1, capability="read_activity", role=1)
 
@@ -357,7 +366,9 @@ class MediaTestSuite(MediaTestCase):
     @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
     def test_get_filters_gt(self):
         json_query = '{ "filter": { "user_id__gt": 5 } }'
-        expected_query = "SELECT * FROM `test.4geeks.activity` WHERE user_id > @x__user_id"
+        from breathecode.activity.models import ACTIVITY_TABLE_NAME
+
+        expected_query = f"SELECT * FROM `test.4geeks.{ACTIVITY_TABLE_NAME}` WHERE user_id > @x__user_id"
         url = reverse_lazy("v2:activity:report") + f"?query={json_query}"
         model = self.bc.database.create(user=1, academy=1, profile_academy=1, capability="read_activity", role=1)
 
@@ -382,7 +393,9 @@ class MediaTestSuite(MediaTestCase):
     @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
     def test_get_aggregation_sum(self):
         json_query = '{ "grouping_function": { "sum": ["id"] } }'
-        expected_query = "SELECT SUM(id) AS sum__id FROM `test.4geeks.activity` "
+        from breathecode.activity.models import ACTIVITY_TABLE_NAME
+
+        expected_query = f"SELECT SUM(id) AS sum__id FROM `test.4geeks.{ACTIVITY_TABLE_NAME}` "
         url = reverse_lazy("v2:activity:report") + f"?query={json_query}"
         model = self.bc.database.create(user=1, academy=1, profile_academy=1, capability="read_activity", role=1)
 
@@ -407,7 +420,9 @@ class MediaTestSuite(MediaTestCase):
     @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
     def test_get_aggregation_count(self):
         json_query = '{ "grouping_function": { "count": ["kind"] } }'
-        expected_query = "SELECT COUNT(kind) AS count__kind FROM `test.4geeks.activity` "
+        from breathecode.activity.models import ACTIVITY_TABLE_NAME
+
+        expected_query = f"SELECT COUNT(kind) AS count__kind FROM `test.4geeks.{ACTIVITY_TABLE_NAME}` "
         url = reverse_lazy("v2:activity:report") + f"?query={json_query}"
         model = self.bc.database.create(user=1, academy=1, profile_academy=1, capability="read_activity", role=1)
 
@@ -432,7 +447,9 @@ class MediaTestSuite(MediaTestCase):
     @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
     def test_get_aggregation_avg(self):
         json_query = '{ "grouping_function": { "avg": ["user_id"] } }'
-        expected_query = "SELECT AVG(user_id) AS avg__user_id FROM `test.4geeks.activity` "
+        from breathecode.activity.models import ACTIVITY_TABLE_NAME
+
+        expected_query = f"SELECT AVG(user_id) AS avg__user_id FROM `test.4geeks.{ACTIVITY_TABLE_NAME}` "
         url = reverse_lazy("v2:activity:report") + f"?query={json_query}"
         model = self.bc.database.create(user=1, academy=1, profile_academy=1, capability="read_activity", role=1)
 

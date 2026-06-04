@@ -25,9 +25,15 @@ import breathecode.assignments.tasks as tasks
 from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.assignments.permissions.consumers import code_revision_service
 from breathecode.authenticate.actions import aget_user_language, get_user_language
-from breathecode.authenticate.models import ProfileAcademy, Token
+from breathecode.authenticate.models import AcademyAuthSettings, ProfileAcademy, Token
 from breathecode.registry.models import Asset
 from breathecode.services.learnpack import LearnPack
+from breathecode.services.learnpack.webhook_ignore import (
+    get_telemetry_webhook_ignore_from_settings,
+    set_telemetry_webhook_ignore_on_settings,
+    should_ignore_learnpack_webhook,
+    validate_telemetry_webhook_ignore_body,
+)
 from breathecode.utils import GenerateLookupsMixin, capable_of, num_to_roman, response_207
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import consume, has_permission
@@ -37,17 +43,30 @@ from breathecode.utils.multi_status_response import MultiStatusResponse
 from .actions import deliver_task, sync_cohort_tasks
 from .caches import TaskCache
 from .forms import DeliverAssigntmentForm
-from .models import FinalProject, Task, UserAttachment, RepositoryDeletionOrder
+from .models import (
+    ERROR,
+    IGNORED,
+    AssignmentTelemetry,
+    FinalProject,
+    LearnPackWebhook,
+    Task,
+    UserAttachment,
+    RepositoryDeletionOrder,
+)
 from .serializers import (
     FinalProjectGETSerializer,
+    LearnPackWebhookSerializer,
     PostFinalProjectSerializer,
     PostTaskSerializer,
+    POSTAssignmentTelemetrySerializer,
     PUTFinalProjectSerializer,
     PUTTaskSerializer,
+    PUTAssignmentTelemetrySerializer,
     TaskAttachmentSerializer,
     TaskGETDeliverSerializer,
     TaskGETSerializer,
     UserAttachmentSerializer,
+    TaskUserSmallSerializer,
     RepositoryDeletionOrderSerializer,
 )
 
@@ -76,6 +95,20 @@ MIME_ALLOW = [
 IMAGES_MIME_ALLOW = ["image/png", "image/svg+xml", "image/jpeg", "image/jpg"]
 
 USER_ASSIGNMENTS_BUCKET = os.getenv("USER_ASSIGNMENTS_BUCKET", None)
+
+
+def _apply_cohort_live_meeting_filter(items, request):
+    cohort_live_meeting = request.GET.get("cohort_live_meeting", None)
+    if cohort_live_meeting is None:
+        return items
+
+    value = cohort_live_meeting.lower()
+    if value == "true":
+        return items.exclude(Q(cohort__online_meeting_url__isnull=True) | Q(cohort__online_meeting_url=""))
+    if value == "false":
+        return items.filter(Q(cohort__online_meeting_url__isnull=True) | Q(cohort__online_meeting_url=""))
+
+    return items
 
 
 class TaskTeacherView(APIView):
@@ -150,10 +183,69 @@ class TaskTeacherView(APIView):
         if task_type is not None:
             items = items.filter(task_type__in=task_type.split(","))
 
+        items = _apply_cohort_live_meeting_filter(items, request)
+
         items = items.order_by("created_at")
 
         serializer = TaskGETSerializer(items, many=True)
         return Response(serializer.data)
+
+
+class AcademyTaskView(APIView):
+    """
+    List all assignment tasks for a single academy with optional filters and pagination.
+    """
+
+    extensions = APIViewExtensions(cache=TaskCache, sort="-created_at", paginate=True)
+
+    @capable_of("read_assignment")
+    def get(self, request, academy_id):
+        handler = self.extensions(request)
+
+        cache = handler.cache.get()
+        if cache is not None:
+            return cache
+
+        items = Task.objects.filter(cohort__academy__id=academy_id)
+
+        user_id = request.GET.get("user_id", None)
+        if user_id is not None:
+            items = items.filter(user__id__in=user_id.split(","))
+
+        revision_status = request.GET.get("revision_status", None)
+        if revision_status is not None:
+            items = items.filter(revision_status__in=revision_status.split(","))
+
+        task_type = request.GET.get("task_type", None)
+        if task_type is not None:
+            items = items.filter(task_type__in=task_type.split(","))
+
+        task_status = request.GET.get("task_status", None)
+        if task_status is not None:
+            items = items.filter(task_status__in=task_status.split(","))
+
+        cohort = request.GET.get("cohort", None)
+        if cohort is not None:
+            cohorts = cohort.split(",")
+            ids = [x for x in cohorts if x.strip().isnumeric()]
+            slugs = [x.strip() for x in cohorts if x.strip() and not x.strip().isnumeric()]
+            if ids and slugs:
+                items = items.filter(Q(cohort__id__in=ids) | Q(cohort__slug__in=slugs))
+            elif ids:
+                items = items.filter(cohort__id__in=ids)
+            elif slugs:
+                items = items.filter(cohort__slug__in=slugs)
+
+        associated_slug = request.GET.get("associated_slug", None)
+        if associated_slug is not None:
+            items = items.filter(associated_slug__in=[p.lower().strip() for p in associated_slug.split(",")])
+
+        items = _apply_cohort_live_meeting_filter(items, request)
+
+        items = handler.queryset(items)
+
+        serializer = TaskGETSerializer(items, many=True)
+        return handler.response(serializer.data)
 
 
 @api_view(["POST"])
@@ -168,6 +260,18 @@ def sync_cohort_tasks_view(request, cohort_id=None):
 
     serializer = TaskGETSerializer(syncronized, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+def _academy_id_from_telemetry_request(request) -> int | None:
+    """Resolve academy id from header or query (same sources as ``capable_of``) without raising."""
+    for header in ("Academy", "academy"):
+        raw = request.headers.get(header)
+        if raw is not None and str(raw).strip().isdigit():
+            return int(str(raw).strip())
+    raw = request.GET.get("academy")
+    if raw is not None and str(raw).strip().isdigit():
+        return int(str(raw).strip())
+    return None
 
 
 class AssignmentTelemetryView(APIView, GenerateLookupsMixin):
@@ -193,10 +297,21 @@ class AssignmentTelemetryView(APIView, GenerateLookupsMixin):
             for key, value in request.query_params.items():
                 merged_data[key] = value
 
+        scope_academy_id = academy_id if academy_id is not None else _academy_id_from_telemetry_request(request)
+        ignore = False
+        ignore_reason: str | None = None
+        if scope_academy_id is not None:
+            ignore, ignore_reason = should_ignore_learnpack_webhook(scope_academy_id, merged_data)
+
         webhook = LearnPack.add_webhook_to_log(merged_data)
 
         if webhook:
-            tasks.async_learnpack_webhook.delay(webhook.id)
+            if ignore and ignore_reason:
+                webhook.status = IGNORED
+                webhook.status_text = ignore_reason
+                webhook.save(update_fields=["status", "status_text", "updated_at"])
+            else:
+                tasks.async_learnpack_webhook.delay(webhook.id)
         else:
             logger.debug("A request cannot be parsed, maybe you should update `LearnPack" ".add_webhook_to_log`")
             logger.debug(request.data)
@@ -205,6 +320,202 @@ class AssignmentTelemetryView(APIView, GenerateLookupsMixin):
             )
 
         return Response("ok", content_type="text/plain")
+
+
+class AcademyLearnPackWebhookView(APIView):
+    extensions = APIViewExtensions(sort="-created_at", paginate=True)
+
+    @staticmethod
+    def _parse_numeric_filter(raw: str, field: str) -> list[int]:
+        values = [x.strip() for x in raw.split(",") if x.strip()]
+        if not values:
+            return []
+
+        invalid = [x for x in values if not x.isnumeric()]
+        if invalid:
+            raise ValidationException(f"Invalid `{field}` value(s): {','.join(invalid)}", code=400, slug="invalid-filter")
+
+        return [int(x) for x in values]
+
+    @staticmethod
+    def _parse_text_filter(raw: str) -> list[str]:
+        return [x.strip() for x in raw.split(",") if x.strip()]
+
+    def _filtered_queryset(self, request, academy_id=None):
+        items = LearnPackWebhook.objects.filter(student__profileacademy__academy__id=academy_id).distinct()
+
+        student = request.GET.get("student")
+        if student:
+            ids = self._parse_numeric_filter(student, "student")
+            if ids:
+                items = items.filter(student__id__in=ids)
+
+        event = request.GET.get("event")
+        if event:
+            event_slugs = self._parse_text_filter(event)
+            if event_slugs:
+                items = items.filter(event__in=event_slugs)
+
+        asset_id = request.GET.get("asset_id")
+        if asset_id:
+            ids = self._parse_numeric_filter(asset_id, "asset_id")
+            if ids:
+                items = items.filter(asset_id__in=ids)
+
+        learnpack_package_id = request.GET.get("learnpack_package_id")
+        if learnpack_package_id:
+            ids = self._parse_numeric_filter(learnpack_package_id, "learnpack_package_id")
+            if ids:
+                items = items.filter(learnpack_package_id__in=ids)
+
+        status_filter = request.GET.get("status")
+        if status_filter:
+            statuses = self._parse_text_filter(status_filter)
+            if statuses:
+                items = items.filter(status__in=statuses)
+
+        return items
+
+    @capable_of("read_assignment")
+    def get(self, request, academy_id=None):
+        handler = self.extensions(request)
+        items = self._filtered_queryset(request, academy_id=academy_id)
+
+        items = handler.queryset(items)
+        serializer = LearnPackWebhookSerializer(items, many=True)
+        return handler.response(serializer.data)
+
+    @capable_of("crud_telemetry")
+    def delete(self, request, webhook_id=None, academy_id=None):
+        items = self._filtered_queryset(request, academy_id=academy_id)
+
+        if webhook_id is not None:
+            item = items.filter(id=webhook_id).first()
+            if item is None:
+                raise ValidationException("Webhook not found", code=404, slug="webhook-not-found")
+
+            if item.status != ERROR:
+                raise ValidationException(
+                    "Only webhook logs with status ERROR can be deleted",
+                    code=400,
+                    slug="invalid-webhook-status",
+                )
+
+            item.delete()
+            return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+        status_filter = request.GET.get("status")
+        if not status_filter:
+            raise ValidationException(
+                "Missing querystring property `status=ERROR` for bulk delete webhooks",
+                code=400,
+                slug="missing-status",
+            )
+
+        statuses = self._parse_text_filter(status_filter)
+        if set(statuses) != {ERROR}:
+            raise ValidationException(
+                "Bulk delete only supports `status=ERROR`",
+                code=400,
+                slug="invalid-status",
+            )
+
+        items.delete()
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademyLearnPackTelemetryWebhookIgnoreView(APIView):
+    """Read or replace ``learnpack_features['telemetry_webhook_ignore']`` for the academy."""
+
+    @capable_of("read_assignment")
+    def get(self, request, academy_id=None):
+        settings, _ = AcademyAuthSettings.objects.get_or_create(academy_id=academy_id)
+        return Response(get_telemetry_webhook_ignore_from_settings(settings))
+
+    @capable_of("crud_telemetry")
+    def put(self, request, academy_id=None):
+        cleaned = validate_telemetry_webhook_ignore_body(request.data)
+        settings, _ = AcademyAuthSettings.objects.get_or_create(academy_id=academy_id)
+        set_telemetry_webhook_ignore_on_settings(settings, cleaned)
+        return Response(cleaned)
+
+
+class AcademyAssignmentTelemetryView(APIView, GenerateLookupsMixin):
+    """
+    Academy-specific endpoints for creating and updating AssignmentTelemetry.
+    Requires crud_telemetry capability in the academy.
+    """
+
+    @capable_of("crud_telemetry")
+    def post(self, request, asset_slug, user_id, academy_id=None):
+        """
+        Create or update (upsert) AssignmentTelemetry for a specific asset and user.
+        Academy ID is retrieved from the Academy header via @capable_of decorator.
+        """
+        lang = get_user_language(request)
+
+        # Get or validate user
+        from breathecode.authenticate.models import User
+
+        user = User.objects.filter(id=user_id).first()
+        if user is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"User with id {user_id} not found",
+                    es=f"Usuario con id {user_id} no encontrado",
+                ),
+                status.HTTP_404_NOT_FOUND,
+                slug="user-not-found",
+            )
+
+        # Check if telemetry already exists
+        telemetry = AssignmentTelemetry.objects.filter(
+            asset_slug=asset_slug, user__id=user_id
+        ).first()
+
+        serializer = POSTAssignmentTelemetrySerializer(
+            telemetry, data=request.data, context={"user": user, "asset_slug": asset_slug}, partial=True
+        )
+
+        if serializer.is_valid():
+            saved_telemetry = serializer.save()
+            status_code = status.HTTP_200_OK if telemetry else status.HTTP_201_CREATED
+            return Response(serializer.data, status=status_code)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of("crud_telemetry")
+    def put(self, request, asset_slug, user_id, academy_id=None):
+        """
+        Update existing AssignmentTelemetry for a specific asset and user.
+        Academy ID is retrieved from the Academy header via @capable_of decorator.
+        """
+        lang = get_user_language(request)
+
+        # Find the AssignmentTelemetry record
+        telemetry = AssignmentTelemetry.objects.filter(
+            asset_slug=asset_slug, user__id=user_id
+        ).first()
+
+        if telemetry is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Assignment telemetry not found for asset {asset_slug} and user {user_id}",
+                    es=f"Telemetría de tarea no encontrada para el recurso {asset_slug} y usuario {user_id}",
+                ),
+                status.HTTP_404_NOT_FOUND,
+                slug="telemetry-not-found",
+            )
+
+        serializer = PUTAssignmentTelemetrySerializer(telemetry, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class FinalProjectScreenshotView(APIView):
@@ -536,6 +847,7 @@ class CohortTaskView(APIView, GenerateLookupsMixin):
             items = items.distinct()
 
         items = items.filter(**lookup)
+        items = _apply_cohort_live_meeting_filter(items, request)
         items = handler.queryset(items)
 
         serializer = TaskGETSerializer(items, many=True)
@@ -764,7 +1076,7 @@ class TaskMeView(APIView):
 
         items = handler.queryset(items)
 
-        serializer = TaskGETSerializer(items, many=True)
+        serializer = TaskUserSmallSerializer(items, many=True)
         return handler.response(serializer.data)
 
     def put(self, request, task_id=None):
@@ -826,11 +1138,12 @@ class TaskMeView(APIView):
 
         serializer = PostTaskSerializer(data=payload, context={"request": request, "user_id": user_id}, many=True)
         if serializer.is_valid():
-            tasks = serializer.save()
+            saved_tasks = serializer.save()
             # tasks.teacher_task_notification.delay(serializer.data['id'])
             tasks_activity.add_activity.delay(
-                request.user.id, "open_syllabus_module", related_type="assignments.Task", related_id=tasks[0].id
+                request.user.id, "open_syllabus_module", related_type="assignments.Task", related_id=saved_tasks[0].id
             )
+            tasks.sync_pending_tasks_to_history_log.delay(saved_tasks[0].id)
 
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

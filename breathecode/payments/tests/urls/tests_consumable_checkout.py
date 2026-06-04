@@ -83,6 +83,7 @@ def format_invoice_item(data={}):
         "currency_id": 1,
         "externally_managed": False,
         "id": 1,
+        "invoice_notes": None,
         "paid_at": UTC_NOW,
         "payment_method_id": None,
         "proof_id": None,
@@ -101,6 +102,7 @@ def get_serializer(currency, user, data={}):
     return {
         "id": 1,
         "amount": 0,
+        "invoice_notes": None,
         "currency": {
             "code": currency.code,
             "name": currency.name,
@@ -1306,9 +1308,9 @@ def test_seats__purchase_creates_team_sets_strategy_from_plan(database, client: 
 
     assert response.status_code == status.HTTP_201_CREATED
 
-    # Team should be created with desired seats and strategy from plan
+    # Team should be created with desired seats + 1 (owner seat is free) and strategy from plan
     team = SubscriptionBillingTeam.objects.get(subscription=model.subscription)
-    assert team.seats_limit == desired_seats
+    assert team.seats_limit == desired_seats + 1
     assert team.consumption_strategy == "PER_TEAM"
 
     # Scheduler should be triggered only when team is created

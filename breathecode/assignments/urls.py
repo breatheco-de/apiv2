@@ -1,8 +1,58 @@
+"""
+URL Configuration for Assignments App
+
+This module defines URL patterns following REST conventions with some specific exceptions
+for the BreatheCode API v2.
+
+REST Naming Conventions:
+========================
+
+1. Resource-based URLs:
+   - Use plural nouns for collections: /academy/tasks, /academy/coderevisions
+   - Use singular nouns for individual resources: /task/<id>
+
+2. HTTP Methods:
+   - GET /academy/task - List all academy tasks
+   - POST /academy/task - Create new task
+   - GET /academy/task/<id> - Get specific task
+   - PUT/PATCH /academy/task/<id> - Update specific task
+   - DELETE /academy/task/<id> - Delete specific task
+
+3. Nested Resources:
+   - /user/me/task/<id> - Current user's specific task
+   - /academy/task/<id>/commitfile - Files for a specific task
+   - /academy/cohort/<id>/task - Tasks for a specific cohort
+
+4. Actions (Non-REST exceptions):
+   - /task/<id>/deliver - Deliver task assignment (POST)
+   - /task/<id>/deliver/<token> - Deliver with token (POST)
+   - /sync/cohort/<id>/task - Sync cohort tasks (POST)
+
+5. Special Endpoints:
+   - /user/me/* - Current user's assignments and tasks
+   - /academy/* - Academy-specific resources
+   - /me/* - Current user's resources (shorter prefix)
+   - /sync/* - Synchronization endpoints
+
+6. URL Naming:
+   - Use snake_case for URL names: academy_task_id_commitfile
+   - Include resource type and ID when applicable
+   - Be descriptive but concise
+
+Examples:
+- academy_task_id_commitfile - Get/update commit files for specific task
+- user_me_task_id - Get/update current user's specific task
+- academy_coderevision_id - Get/update specific code revision
+- sync_cohort_id_task - Sync tasks for specific cohort
+"""
+
 from django.urls import path
 
 from .views import (
+    AcademyAssignmentTelemetryView,
     AcademyCodeRevisionView,
     AcademyCommitFileView,
+    AcademyTaskView,
     CohortTaskView,
     FinalProjectMeView,
     FinalProjectScreenshotView,
@@ -17,6 +67,8 @@ from .views import (
     deliver_assignment_view,
     sync_cohort_tasks_view,
     AssignmentTelemetryView,
+    AcademyLearnPackTelemetryWebhookIgnoreView,
+    AcademyLearnPackWebhookView,
     FinalProjectCohortView,
     CompletionJobView,
     SyncTasksView,
@@ -54,6 +106,7 @@ urlpatterns = [
         "me/coderevision/<int:coderevision_id>/rate", MeCodeRevisionRateView.as_view(), name="me_coderevision_id_rate"
     ),
     path("academy/coderevision", AcademyCodeRevisionView.as_view(), name="academy_coderevision"),
+    path("academy/task", AcademyTaskView.as_view(), name="academy_task"),
     path(
         "academy/task/<int:task_id>/coderevision",
         AcademyCodeRevisionView.as_view(),
@@ -82,5 +135,21 @@ urlpatterns = [
     path("me/deletion_order", RepositoryDeletionsMeView.as_view(), name="me_deletion_order"),
     path("academy/flag", FlagView.as_view(), name="flag"),
     path("academy/asset/flag", AssetFlagView.as_view(), name="flag_asset"),
+    path("academy/learnpack/webhook", AcademyLearnPackWebhookView.as_view(), name="academy_learnpack_webhook"),
+    path(
+        "academy/learnpack/webhook/<int:webhook_id>",
+        AcademyLearnPackWebhookView.as_view(),
+        name="academy_learnpack_webhook_id",
+    ),
+    path(
+        "academy/learnpack/telemetry-webhook-ignore",
+        AcademyLearnPackTelemetryWebhookIgnoreView.as_view(),
+        name="academy_learnpack_telemetry_webhook_ignore",
+    ),
     path("academy/asset/<str:asset_id>/flag/legacy", LegacyFlagAssetView.as_view(), name="flag_asset_legacy"),
+    path(
+        "academy/asset/<str:asset_slug>/user/<int:user_id>/telemetry",
+        AcademyAssignmentTelemetryView.as_view(),
+        name="academy_asset_slug_user_id_telemetry",
+    ),
 ]

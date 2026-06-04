@@ -25,6 +25,7 @@ def serialize_task(data={}):
         "user_id": 1,
         "cohort_id": 1,
         "delivered_at": None,
+        "delivered_flags": [],
         "description": "",
         "github_url": None,
         "live_url": None,

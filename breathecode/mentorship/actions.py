@@ -101,7 +101,7 @@ def get_pending_sessions_or_create(token, mentor, service, mentee=None):
         create_room_on_google_meet(session, mentee)
 
     elif session.service.video_provider == MentorshipService.VideoProvider.DAILY:
-        daily = DailyClient()
+        daily = DailyClient(academy=session.service.academy)
         room = daily.create_room(exp_in_seconds=service.duration.seconds)
         session.online_meeting_url = room["url"]
         session.name = room["name"]
@@ -129,7 +129,7 @@ def extend_session(session: MentorshipSession, duration_in_minutes=None, exp_in_
         duration_in_minutes = 30
 
     # default duration can be overridden by service
-    daily = DailyClient()
+    daily = DailyClient(academy=session.service.academy)
 
     if duration_in_minutes is not None and session.ends_at:
         daily.extend_room(name=session.name, exp_in_seconds=duration_in_minutes * 3600)

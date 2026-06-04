@@ -3,6 +3,7 @@ import logging
 import os
 
 import requests
+from capyc.rest_framework.exceptions import ValidationException
 from django.template.loader import get_template
 from django.utils import timezone
 from premailer import transform
@@ -12,7 +13,6 @@ from twilio.rest import Client
 
 from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.services.slack import client
-from capyc.rest_framework.exceptions import ValidationException
 
 from .models import Device, SlackChannel, SlackTeam, SlackUser, SlackUserTeam
 
@@ -22,6 +22,13 @@ if FIREBASE_KEY is not None and FIREBASE_KEY != "":
     push_service = FCMNotification(api_key=FIREBASE_KEY)
 
 logger = logging.getLogger(__name__)
+
+# Import EmailManager for optional template validation
+try:
+    from .utils.email_manager import EmailManager
+except ImportError:
+    EmailManager = None
+    logger.warning("EmailManager not available, template validation disabled")
 
 
 def send_email_message(template_slug, to, data=None, force=False, inline_css=False, academy=None):
@@ -35,14 +42,46 @@ def send_email_message(template_slug, to, data=None, force=False, inline_css=Fal
     if isinstance(to, list) == False:
         to = [to]
 
+    # Check if template is disabled for this academy
+    if academy and hasattr(academy, 'notify_settings'):
+        try:
+            settings = academy.notify_settings
+            if not settings.is_template_enabled(template_slug):
+                logger.info(f"Template '{template_slug}' is disabled for academy {academy.id}")
+                return True  # Silently skip sending
+        except Exception as e:
+            logger.warning(f"Failed to check if template is disabled for {template_slug}: {e}")
+
+    # Apply academy variable overrides
+    if academy and hasattr(academy, 'notify_settings'):
+        try:
+            settings = academy.notify_settings
+            overrides = settings.get_all_overrides_for_template(template_slug)
+            # Academy overrides take priority over code defaults
+            data.update(overrides)
+        except Exception as e:
+            logger.warning(f"Failed to apply academy overrides for {template_slug}: {e}")
+
+    # Optional: Log if template is not in registry (helps with future migration)
+    if EmailManager is not None:
+        if not EmailManager.validate_notification(template_slug):
+            logger.debug(f"Template '{template_slug}' not found in notification registry (still sending)")
+
     if os.getenv("EMAIL_NOTIFICATIONS_ENABLED", False) == "TRUE" or force:
         template = get_template_content(template_slug, data, ["email"], inline_css=inline_css, academy=academy)
+
+        sender_name = os.environ.get("COMPANY_NAME", "4Geeks")
+        if academy is not None and getattr(academy, "white_labeled", False):
+            try:
+                sender_name = academy.name or sender_name
+            except Exception:
+                sender_name = sender_name
 
         result = requests.post(
             f"https://api.mailgun.net/v3/{os.environ.get('MAILGUN_DOMAIN')}/messages",
             auth=("api", os.environ.get("MAILGUN_API_KEY", "")),
             data={
-                "from": f"4Geeks <mailgun@{os.environ.get('MAILGUN_DOMAIN')}>",
+                "from": f"{sender_name} <mailgun@{os.environ.get('MAILGUN_DOMAIN')}>",
                 "to": to,
                 "subject": template["subject"],
                 "text": template["text"],
@@ -216,6 +255,8 @@ def get_template_content(slug, data=None, formats=None, inline_css=False, academ
         "COMPANY_CONTACT_URL": os.environ.get("COMPANY_CONTACT_URL", ""),
         "COMPANY_LEGAL_NAME": os.environ.get("COMPANY_LEGAL_NAME", ""),
         "COMPANY_ADDRESS": os.environ.get("COMPANY_ADDRESS", ""),
+        "DOMAIN_NAME": os.environ.get("DOMAIN_NAME", ""),
+        "PLATFORM_DESCRIPTION": os.environ.get("PLATFORM_DESCRIPTION", "An award winning platform to learn and improve your AI related skills."),
         "style__success": "#99ccff",
         "style__danger": "#ffcccc",
         "style__secondary": "#ededed",
@@ -227,10 +268,14 @@ def get_template_content(slug, data=None, formats=None, inline_css=False, academ
     templates = {}
 
     if academy:
-        z["COMPANY_INFO_EMAIL"] = academy.feedback_email
-        z["COMPANY_LEGAL_NAME"] = academy.legal_name or academy.name
-        z["COMPANY_LOGO"] = academy.logo_url
-        z["COMPANY_NAME"] = academy.name
+        # Use setdefault to only set if not already in context
+        # This preserves academy template_variables overrides (global.* and template.*)
+        z.setdefault("COMPANY_INFO_EMAIL", academy.feedback_email)
+        z.setdefault("COMPANY_LEGAL_NAME", academy.legal_name or academy.name)
+        z.setdefault("COMPANY_LOGO", academy.logo_url)
+        z.setdefault("COMPANY_NAME", academy.name)
+        z.setdefault("DOMAIN_NAME", academy.website_url)
+        z.setdefault("PLATFORM_DESCRIPTION", academy.platform_description)
 
         if "heading" not in z:
             z["heading"] = academy.name
@@ -380,6 +425,39 @@ def sync_slack_team_users(team_id):
     return True
 
 
+def sync_slack_team_user(team_id, slack_user_id):
+    from breathecode.authenticate.models import CredentialsSlack
+
+    logger.debug(f"Sync slack user {slack_user_id} from team {team_id}")
+
+    team = SlackTeam.objects.filter(id=team_id).first()
+    if team is None:
+        raise Exception("Invalid team id: " + str(team_id))
+
+    credentials = CredentialsSlack.objects.filter(team_id=team.slack_id).first()
+    if credentials is None or credentials.token is None:
+        raise Exception(f"No credentials found for this team {team_id}")
+
+    team.sync_status = "INCOMPLETED"
+    team.synqued_at = timezone.now()
+    team.save()
+
+    api = client.Slack(credentials.token)
+    data = api.get("users.info", {"user": slack_user_id})
+    member = data["user"]
+
+    # ignore bots
+    if member["is_bot"] or member["name"] == "slackbot":
+        return False
+
+    sync_slack_user(member, team)
+
+    team.sync_status = "COMPLETED"
+    team.save()
+
+    return True
+
+
 def sync_slack_user(payload, team=None):
 
     if team is None and "team_id" in payload:
@@ -440,6 +518,69 @@ def sync_slack_user(payload, team=None):
     slack_user.save()
 
     return slack_user
+
+
+def sync_slack_team_cohort(team_id, cohort_id):
+    from breathecode.authenticate.models import CredentialsSlack
+
+    logger.debug(f"Sync slack cohort {cohort_id} from team {team_id}")
+
+    team = SlackTeam.objects.filter(id=team_id).first()
+    if team is None:
+        raise Exception("Invalid team id: " + str(team_id))
+
+    cohort = Cohort.objects.filter(id=cohort_id, academy_id=team.academy_id).first()
+    if cohort is None:
+        raise Exception(f"Cohort {cohort_id} not found in this academy")
+
+    credentials = CredentialsSlack.objects.filter(team_id=team.slack_id).first()
+    if credentials is None or credentials.token is None:
+        raise Exception(f"No credentials found for this team {team_id}")
+
+    team.sync_status = "INCOMPLETED"
+    team.synqued_at = timezone.now()
+    team.save()
+
+    api = client.Slack(credentials.token)
+    data = api.get(
+        "conversations.list",
+        {
+            "types": "public_channel,private_channel",
+            "limit": 300,
+        },
+    )
+
+    channels = data["channels"]
+    while (
+        "response_metadata" in data
+        and "next_cursor" in data["response_metadata"]
+        and data["response_metadata"]["next_cursor"] != ""
+    ):
+        data = api.get(
+            "conversations.list",
+            {
+                "limit": 300,
+                "cursor": data["response_metadata"]["next_cursor"],
+                "types": "public_channel,private_channel",
+            },
+        )
+        channels = channels + data["channels"]
+
+    channel = next((x for x in channels if x["name_normalized"] == cohort.slug), None)
+    if channel is None:
+        logger.warning(f"Cohort slug={cohort.slug} has no matching slack channel for team={team_id}")
+        team.sync_status = "INCOMPLETED"
+        team.sync_message = f"No slack channel found for cohort slug={cohort.slug}"
+        team.save()
+        return False
+
+    sync_slack_channel(channel, team)
+
+    team.sync_status = "COMPLETED"
+    team.sync_message = None
+    team.save()
+
+    return True
 
 
 def sync_slack_channel(payload, team=None):

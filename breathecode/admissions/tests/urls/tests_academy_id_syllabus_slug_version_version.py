@@ -8,6 +8,7 @@ from django.urls.base import reverse_lazy
 from rest_framework import status
 from django.utils import timezone
 
+from ...models import Syllabus, SyllabusVersion
 from ..mixins import AdmissionsTestCase
 
 UTC_NOW = timezone.now()
@@ -120,6 +121,7 @@ class CertificateTestSuite(AdmissionsTestCase):
             "week_hours": model.syllabus.week_hours,
             "status": model.syllabus_version.status,
             "change_log_details": model.syllabus_version.change_log_details,
+            "reasoning": model.syllabus_version.reasoning,
             "main_technologies": None,
         }
 
@@ -129,3 +131,72 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(self.all_syllabus_dict(), [{**self.model_to_dict(model, "syllabus")}])
         self.assertEqual(self.all_syllabus_version_dict(), [{**self.model_to_dict(model, "syllabus_version")}])
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
+
+    def test_academy_id_syllabus_slug_version_version_with_macro_override(self):
+        self.headers(academy=1)
+        syllabus_slug = "web-ui-fundamentals-with-tailwind"
+        model = self.generate_models(
+            authenticate=True,
+            profile_academy=True,
+            capability="read_syllabus",
+            role="potato",
+            syllabus=True,
+            syllabus_version=True,
+            cohort=True,
+            syllabus_kwargs={"slug": syllabus_slug},
+        )
+
+        model.syllabus_version.json = {
+            "days": [
+                {
+                    "id": 1,
+                    "label": "HTML Fundamentals",
+                    "lessons": [],
+                    "quizzes": [],
+                    "replits": [],
+                    "assignments": [
+                        {"slug": "project-1", "title": "Project 1"},
+                        {"slug": "project-2", "title": "Project 2"},
+                    ],
+                }
+            ]
+        }
+        model.syllabus_version.save()
+
+        macro_syllabus = Syllabus.objects.create(
+            slug="ai-engineering-macro",
+            name="AI Engineering Macro",
+            academy_owner=model.academy,
+            private=True,
+        )
+        macro_version = SyllabusVersion.objects.create(
+            syllabus=macro_syllabus,
+            version=2,
+            status="PUBLISHED",
+            json={
+                f"{syllabus_slug}.v{model.syllabus_version.version}": {
+                    "days": [
+                        {
+                            "assignments": [
+                                {"status": "DELETED"},
+                                {"slug": "another-project", "title": "Another Project"},
+                            ]
+                        }
+                    ]
+                }
+            },
+        )
+
+        model.cohort.slug = "ai-engineering-1"
+        model.cohort.syllabus_version = macro_version
+        model.cohort.save()
+
+        url = reverse_lazy(
+            "admissions:academy_id_syllabus_slug_version_version",
+            kwargs={"academy_id": 1, "syllabus_slug": syllabus_slug, "version": model.syllabus_version.version},
+        )
+        response = self.client.get(f"{url}?macro-cohort=ai-engineering-1")
+        payload = response.json()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(payload["json"]["days"][0]["assignments"], [{"slug": "another-project", "title": "Another Project"}])

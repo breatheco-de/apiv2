@@ -44,6 +44,7 @@ class Command(BaseCommand):
         self.year = options["year"]
         self.max_deletions = options["max_deletions"]
         self.total_deleted = 0
+        self.whitelist_cache = {}
 
         if self.dry_run:
             self.stdout.write(self.style.WARNING("DRY RUN MODE: No repositories will be deleted"))
@@ -142,73 +143,106 @@ class Command(BaseCommand):
         repositories = self.extract_unique_repositories(tasks)
         self.stdout.write(self.style.SUCCESS(f"Found {len(repositories)} unique repositories to process"))
 
-        # Process repositories in batches
-        deleted_count = 0
-        to_delete = []
-        for i in range(0, len(repositories), self.batch_size):
-            # Check if we've reached the maximum deletion limit
-            if self.total_deleted + deleted_count >= self.max_deletions:
-                self.stdout.write(self.style.WARNING("Reached maximum deletion limit. Stopping batch processing."))
+        remaining_limit = self.max_deletions - self.total_deleted
+        if remaining_limit <= 0:
+            self.stdout.write(self.style.WARNING("Reached maximum deletion limit. Skipping organization."))
+            return 0
+
+        candidates_to_delete = []
+        skipped_protected = 0
+        for owner, repo_name in repositories:
+            if self.should_delete_repository(owner, repo_name):
+                candidates_to_delete.append((owner, repo_name))
+            else:
+                skipped_protected += 1
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Eligible to delete: {len(candidates_to_delete)} "
+                f"(skipped by whitelist/assets: {skipped_protected})"
+            )
+        )
+
+        if len(candidates_to_delete) == 0:
+            self.stdout.write(self.style.WARNING("No eligible repositories for deletion in this organization."))
+            return 0
+
+        if self.dry_run:
+            preview_count = min(len(candidates_to_delete), remaining_limit)
+            for owner, repo_name in candidates_to_delete[:preview_count]:
+                self.stdout.write(self.style.WARNING(f"[DRY RUN] Would delete repository: {owner}/{repo_name}"))
+
+            omitted = len(candidates_to_delete) - preview_count
+            if omitted > 0:
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"[DRY RUN] Omitted {omitted} additional eligible repositories due to max-deletions limit."
+                    )
+                )
+
+            return preview_count
+
+        confirm = input(
+            "Are you sure you want to delete these repositories? "
+            f"(target real deletions: {remaining_limit}, candidates: {len(candidates_to_delete)}) (y/n): "
+        )
+        if confirm.lower() != "y":
+            self.stdout.write(self.style.ERROR("Operation cancelled by user."))
+            return 0
+
+        stats = {"attempted": 0, "deleted": 0, "missing_or_inaccessible": 0, "failed": 0}
+        stale_examples = []
+        max_examples = 10
+        progress_step = max(1, self.batch_size)
+
+        for owner, repo_name in candidates_to_delete:
+            if stats["deleted"] >= remaining_limit:
                 break
 
-            # Calculate how many repositories we can still process
-            remaining_limit = self.max_deletions - self.total_deleted - deleted_count
-            batch_size = min(self.batch_size, remaining_limit)
+            result = self.delete_repository(github_client, owner, repo_name)
+            stats["attempted"] += 1
 
-            # Process only the remaining repositories up to the limit
-            batch = repositories[i : i + batch_size]
+            if result == "deleted":
+                stats["deleted"] += 1
+            elif result == "missing_or_inaccessible":
+                stats["missing_or_inaccessible"] += 1
+                if len(stale_examples) < max_examples:
+                    stale_examples.append(f"{owner}/{repo_name}")
+            else:
+                stats["failed"] += 1
 
-            # Preview phase: collect which repos would be deleted
-            preview_batch = []
-            for owner, repo_name in batch:
-                if self.should_delete_repository(owner, repo_name):
-                    preview_batch.append((owner, repo_name))
-            to_delete.extend(preview_batch)
-
-            # Simulate deletion for --dry-run, or just preview for confirmation
-            batch_deleted = 0
-            for owner, repo_name in batch:
-                if self.should_delete_repository(owner, repo_name):
-                    msg = (
-                        f"[DRY RUN] Would delete repository: {owner}/{repo_name}"
-                        if self.dry_run
-                        else f"[WARNING] Will delete repository: {owner}/{repo_name}"
+            if stats["attempted"] % progress_step == 0:
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"Progress: attempted={stats['attempted']}, deleted={stats['deleted']}, "
+                        f"missing_or_inaccessible={stats['missing_or_inaccessible']}, failed={stats['failed']}"
                     )
-                    self.stdout.write(self.style.WARNING(msg))
-                    batch_deleted += 1
-                else:
-                    logger.debug(f"Skipping repository {owner}/{repo_name} (whitelisted or other reason)")
+                )
 
+        self.stdout.write(
+            self.style.SUCCESS(
+                "Deletion summary: "
+                f"attempted={stats['attempted']}, deleted={stats['deleted']}, "
+                f"missing_or_inaccessible={stats['missing_or_inaccessible']}, failed={stats['failed']}"
+            )
+        )
+
+        if stale_examples:
             self.stdout.write(
-                self.style.SUCCESS(
-                    f"Batch {i//self.batch_size + 1}: "
-                    f"{'Would delete' if self.dry_run else 'Will delete'} {batch_deleted} repositories "
-                    f"(Total: {self.total_deleted + deleted_count + batch_deleted}/{self.max_deletions})"
+                self.style.WARNING(
+                    "Examples of stale DB references (repo missing or inaccessible on GitHub): "
+                    + ", ".join(stale_examples)
                 )
             )
 
-            # Check if we've reached the limit after this batch
-            deleted_count += batch_deleted
-
-            if self.total_deleted + deleted_count >= self.max_deletions:
-                self.stdout.write(
-                    self.style.WARNING(f"Reached maximum deletion limit of {self.max_deletions} repositories.")
+        if stats["deleted"] < remaining_limit and stats["attempted"] == len(candidates_to_delete):
+            self.stdout.write(
+                self.style.WARNING(
+                    "Could not reach target real deletions because there are no more eligible candidates."
                 )
-                break
+            )
 
-        # Confirmation before actual deletion
-        if not self.dry_run and to_delete:
-            confirm = input("Are you sure you want to delete these repositories? (y/n): ")
-            if confirm.lower() != "y":
-                self.stdout.write(self.style.ERROR("Operation cancelled by user."))
-                return 0
-            # Now actually delete
-            actually_deleted = 0
-            for owner, repo_name in to_delete:
-                if self.delete_repository(github_client, owner, repo_name):
-                    actually_deleted += 1
-            return actually_deleted
-        return deleted_count
+        return stats["deleted"]
 
     def get_github_client(self, org_name: str) -> Optional[Github]:
         """Get GitHub client for the specified organization."""
@@ -244,12 +278,27 @@ class Command(BaseCommand):
 
         return list(repositories)
 
+    def get_whitelist_repositories(self, owner: str) -> set[str]:
+        """
+        Fetch whitelisted repositories for an owner once and cache in memory.
+        This avoids one DB query per repository during deletion checks.
+        """
+        owner_key = owner.lower()
+        if owner_key not in self.whitelist_cache:
+            names = RepositoryWhiteList.objects.filter(
+                provider="GITHUB",
+                repository_user__iexact=owner,
+            ).values_list("repository_name", flat=True)
+
+            self.whitelist_cache[owner_key] = {name.lower() for name in names}
+
+        return self.whitelist_cache[owner_key]
+
     def should_delete_repository(self, owner: str, repo_name: str) -> bool:
         """Check if a repository should be deleted based on whitelist and other criteria."""
-        # Check if repository is in whitelist
-        is_whitelisted = RepositoryWhiteList.objects.filter(
-            provider="GITHUB", repository_user__iexact=owner, repository_name__iexact=repo_name
-        ).exists()
+        # Check whitelist from in-memory cache (loaded once per owner)
+        whitelisted_repositories = self.get_whitelist_repositories(owner)
+        is_whitelisted = repo_name.lower() in whitelisted_repositories
 
         if is_whitelisted:
             logger.info(f"Repository {owner}/{repo_name} is whitelisted, skipping deletion")
@@ -270,17 +319,18 @@ class Command(BaseCommand):
 
         return True
 
-    def delete_repository(self, github_client: Github, owner: str, repo_name: str) -> bool:
+    def delete_repository(self, github_client: Github, owner: str, repo_name: str) -> str:
         """Delete a repository using the GitHub API."""
         if self.dry_run:
-            self.stdout.write(self.style.WARNING(f"[DRY RUN] Would delete repository: {owner}/{repo_name}"))
-            return True
+            return "deleted"
 
         try:
             # Check if repository exists before attempting deletion
             if not github_client.repo_exists(owner, repo_name):
-                logger.warning(f"Repository {owner}/{repo_name} does not exist or is not accessible")
-                return False
+                logger.info(
+                    f"Skipping stale repository reference, not found or inaccessible: {owner}/{repo_name}"
+                )
+                return "missing_or_inaccessible"
 
             # Delete the repository
             response = github_client.delete_org_repo(owner, repo_name)
@@ -288,7 +338,7 @@ class Command(BaseCommand):
             if response.status_code == 204:  # GitHub returns 204 for successful deletion
                 self.stdout.write(self.style.SUCCESS(f"Successfully deleted repository: {owner}/{repo_name}"))
                 logger.info(f"Deleted repository: {owner}/{repo_name}")
-                return True
+                return "deleted"
             else:
                 self.stdout.write(
                     self.style.ERROR(
@@ -296,9 +346,20 @@ class Command(BaseCommand):
                     )
                 )
                 logger.error(f"Failed to delete repository {owner}/{repo_name}: HTTP {response.status_code}")
-                return False
+                return "failed"
 
         except Exception as e:
-            self.stdout.write(self.style.ERROR(f"Error deleting repository {owner}/{repo_name}: {str(e)}"))
-            logger.error(f"Error deleting repository {owner}/{repo_name}: {str(e)}")
-            return False
+            error_message = str(e).strip()
+            if not error_message:
+                error_message = "Unknown error returned by GitHub API"
+
+            low_error_message = error_message.lower()
+            if "404" in low_error_message or "not found" in low_error_message:
+                logger.info(
+                    f"Skipping stale repository reference, not found or inaccessible: {owner}/{repo_name}"
+                )
+                return "missing_or_inaccessible"
+
+            self.stdout.write(self.style.ERROR(f"Error deleting repository {owner}/{repo_name}: {error_message}"))
+            logger.error(f"Error deleting repository {owner}/{repo_name}: {error_message}")
+            return "failed"

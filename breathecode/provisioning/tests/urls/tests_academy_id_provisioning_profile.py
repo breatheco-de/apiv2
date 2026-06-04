@@ -11,14 +11,25 @@ from ..mixins import ProvisioningTestCase
 
 
 def get_serializer(provisioning_profile, data={}):
+    vendor = provisioning_profile.vendor
     return {
         "id": provisioning_profile.id,
-        "vendor": provisioning_profile.vendor,
+        "vendor": (
+            {
+                "id": vendor.id,
+                "name": vendor.name,
+                "workspaces_url": vendor.workspaces_url,
+            }
+            if vendor
+            else None
+        ),
         "academy": {
             "id": provisioning_profile.academy.id,
             "name": provisioning_profile.academy.name,
             "slug": provisioning_profile.academy.slug,
         },
+        "cohort_ids": list(provisioning_profile.cohorts.values_list("id", flat=True)),
+        "member_ids": list(provisioning_profile.members.values_list("id", flat=True)),
         **data,
     }
 
@@ -45,8 +56,11 @@ class ProvisioningTestSuite(ProvisioningTestCase):
         model = self.bc.database.create(
             user=1,
             profile_academy=1,
+            role=1,
+            capability="read_provisioning_activity",
         )
         self.client.force_authenticate(model.user)
+        self.headers(academy=1)
 
         response = self.client.get(url)
         json = response.json()
@@ -62,10 +76,13 @@ class ProvisioningTestSuite(ProvisioningTestCase):
         model = self.bc.database.create(
             user=1,
             profile_academy=1,
+            role=1,
+            capability="read_provisioning_activity",
             provisioning_profile=1,
             vendor=1,
         )
         self.client.force_authenticate(model.user)
+        self.headers(academy=1)
 
         response = self.client.get(url)
         json = response.json()

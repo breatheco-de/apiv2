@@ -1,11 +1,16 @@
 import logging
 import os
+from hashlib import sha256
+import json
+from datetime import date
+from uuid import uuid4
 
 import stripe
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from circuitbreaker import CircuitBreakerError
-from django.db.models import Q
+from django.db import transaction
+from django.db.models import Count, Exists, OuterRef, Prefetch, Q
 from django.http import HttpRequest, StreamingHttpResponse
 from django.utils import timezone
 from rest_framework import status
@@ -17,25 +22,238 @@ from rest_framework.views import APIView
 from breathecode.admissions.models import Academy
 from breathecode.authenticate.actions import get_user_language
 from breathecode.monitoring import signals
-from breathecode.utils import GenerateLookupsMixin, capable_of
+from breathecode.monitoring.reports.api_registry import get_report_api_config, get_report_type_metadata, resolve_default_date
+from breathecode.utils import GenerateLookupsMixin, capable_of, capable_of_many
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 
-from .actions import add_github_webhook, add_stripe_webhook, get_admin_actions
-from .models import CSVDownload, CSVUpload, RepositorySubscription, RepositoryWebhook
+from .actions import add_github_webhook, add_stripe_webhook, add_stripe_webhook_error, get_admin_actions, run_script
+from .models import CSVDownload, CSVUpload, MonitorScript, ReportGenerationJob, RepositorySubscription, RepositoryWebhook
 from .serializers import (
     CSVDownloadSmallSerializer,
     CSVUploadSmallSerializer,
+    MonitoringErrorSerializer,
+    ReportGenerationJobListSerializer,
+    ReportGenerationJobSerializer,
+    ReportGenerationTriggerSerializer,
+    MonitorScriptSmallSerializer,
     RepositorySubscriptionSerializer,
     RepoSubscriptionSmallSerializer,
 )
 from .signals import github_webhook
-from .tasks import async_unsubscribe_repo
+from .tasks import async_unsubscribe_repo, generate_report_job
 
 logger = logging.getLogger(__name__)
 
 
-def get_stripe_webhook_secret():
-    return os.getenv("STRIPE_WEBHOOK_SECRET", "")
+QUERY_PARAM_ALLOWLIST = {"limit", "offset", "sort"}
+
+
+def _get_report_api_config_or_404(report_type: str, lang: str):
+    config = get_report_api_config(report_type)
+    if config is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Report type {report_type} is not supported",
+                es=f"El tipo de reporte {report_type} no está soportado",
+                slug="report-type-not-found",
+            ),
+            code=status.HTTP_404_NOT_FOUND,
+        )
+
+    return config
+
+
+def _parse_filter_value(key: str, raw_value: str, filter_config: dict, lang: str):
+    filter_type = filter_config.get("type")
+
+    try:
+        if filter_type == "int":
+            return int(raw_value)
+
+        if filter_type == "float":
+            return float(raw_value)
+
+        if filter_type == "date":
+            return date.fromisoformat(raw_value)
+
+        return raw_value
+
+    except (TypeError, ValueError):
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Invalid value for filter {key}",
+                es=f"Valor inválido para el filtro {key}",
+                slug="invalid-filter-value",
+            ),
+        )
+
+
+def _validate_filter_query_params(request, config, lang: str):
+    allowed_query_params = set(config.filters.keys()) | QUERY_PARAM_ALLOWLIST
+    unexpected_query_params = [key for key in request.GET.keys() if key not in allowed_query_params]
+    if unexpected_query_params:
+        formatted = ", ".join(sorted(unexpected_query_params))
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Unsupported filters: {formatted}",
+                es=f"Filtros no soportados: {formatted}",
+                slug="unsupported-filter",
+            ),
+        )
+
+
+def _validate_sort_fields(request, config, lang: str):
+    if "sort" not in request.GET:
+        return
+
+    sort_values = []
+    for value in request.GET.getlist("sort"):
+        sort_values += [v.strip() for v in value.split(",") if v.strip()]
+
+    for sort_field in sort_values:
+        if sort_field not in config.sort_fields:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Sort field {sort_field} is not allowed for report {config.slug}",
+                    es=f"El campo de ordenamiento {sort_field} no está permitido para el reporte {config.slug}",
+                    slug="invalid-sort-field",
+                ),
+            )
+
+
+def _apply_report_filters(request, queryset, config, academy_ids: list[int], lang: str):
+    queryset = queryset.filter(academy_id__in=academy_ids)
+
+    if request.GET.get("academy"):
+        academy_values = [x.strip() for x in request.GET.get("academy").split(",") if x.strip()]
+        try:
+            academy_filter = [int(x) for x in academy_values]
+        except ValueError:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Invalid value for filter academy",
+                    es="Valor inválido para el filtro academy",
+                    slug="invalid-filter-value",
+                )
+            )
+
+        if sorted(academy_filter) != sorted(academy_ids):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="The academy query param must match the authenticated academy scope",
+                    es="El parámetro academy debe coincidir con el alcance de academia autenticado",
+                    slug="academy-filter-mismatch",
+                ),
+            )
+
+    for key, filter_config in config.filters.items():
+        if key == "academy":
+            continue
+
+        if key not in request.GET:
+            continue
+
+        value = _parse_filter_value(key, request.GET.get(key), filter_config, lang)
+        if "choices" in filter_config and value not in filter_config["choices"]:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Invalid value for {key}, expected one of: {', '.join(filter_config['choices'])}",
+                    es=f"Valor inválido para {key}, se esperaba uno de: {', '.join(filter_config['choices'])}",
+                    slug="invalid-filter-choice",
+                ),
+            )
+
+        queryset = queryset.filter(**{filter_config["lookup"]: value})
+
+    has_date_range = "date_start" in request.GET or "date_end" in request.GET
+    if "date" not in request.GET and not has_date_range and config.date_field:
+        latest_date = resolve_default_date(queryset, config.date_field)
+        if latest_date:
+            queryset = queryset.filter(**{config.date_field: latest_date})
+
+    return queryset
+
+
+def _get_filtered_report_queryset(request, report_type: str, academy_ids: list[int], lang: str):
+    config = _get_report_api_config_or_404(report_type, lang)
+    queryset = config.model.objects.all()
+
+    _validate_filter_query_params(request, config, lang)
+    _validate_sort_fields(request, config, lang)
+
+    queryset = _apply_report_filters(request, queryset, config, academy_ids, lang)
+    return queryset, config
+
+
+async def _async_iter_from_list(items):
+    """Convert a list to an async generator for StreamingHttpResponse in ASGI mode"""
+    for item in items:
+        yield item
+
+def get_stripe_webhook_secret(payload=None):
+    """
+    Get appropriate Stripe webhook secret based on payload data.
+
+    If payload is provided, tries to identify the academy from the webhook data
+    and return its specific secret. Falls back to global secret if academy
+    cannot be identified.
+
+    Args:
+        payload: Optional webhook payload (bytes or dict)
+
+    Returns:
+        str: The webhook secret or None if no secret found
+    """
+    import json
+    import logging
+
+    from breathecode.payments.models import AcademyPaymentSettings, Invoice
+
+    logger = logging.getLogger(__name__)
+
+    if payload:
+        try:
+            if isinstance(payload, bytes):
+                payload_dict = json.loads(payload.decode("utf-8"))
+            else:
+                payload_dict = payload
+
+            event_data = payload_dict.get("data", {}).get("object", {})
+            charge_id = event_data.get("id")
+
+            if charge_id:
+                invoice = (
+                    Invoice.objects.filter(stripe_id=charge_id).select_related("academy__payment_settings").first()
+                )
+                if invoice and invoice.academy:
+                    academy_settings = (
+                        AcademyPaymentSettings.objects.filter(
+                            academy=invoice.academy, stripe_webhook_secret__isnull=False
+                        )
+                        .exclude(stripe_webhook_secret="")
+                        .first()
+                    )
+
+                    if academy_settings and academy_settings.stripe_webhook_secret:
+                        logger.info(f"Using webhook secret for academy: {invoice.academy.slug}")
+                        return academy_settings.stripe_webhook_secret
+        except Exception as e:
+            logger.debug(f"Could not identify academy from payload: {e}")
+            # Continue to fallback to global
+
+    global_secret = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+    if global_secret:
+        logger.info("Using global webhook secret")
+        return global_secret
+
+    return None
 
 
 class DjangoAdminView(APIView):
@@ -106,6 +324,8 @@ def get_download(request, download_id=None):
 
         raw = request.GET.get("raw", "")
         if raw == "true":
+            import os
+
             from ..services.google_cloud import Storage
 
             try:
@@ -128,7 +348,7 @@ def get_download(request, download_id=None):
                 )
 
             return StreamingHttpResponse(
-                buffer.all(),
+                _async_iter_from_list(buffer.all()),
                 content_type="text/csv",
                 headers={"Content-Disposition": f"attachment; filename={download.name}"},
             )
@@ -216,7 +436,7 @@ def process_stripe_webhook(request):
     event = None
     payload = request.body
     sig_header = request.headers.get("Stripe-Signature", None)
-    endpoint_secret = get_stripe_webhook_secret()
+    endpoint_secret = get_stripe_webhook_secret(payload)
 
     try:
         if not sig_header:
@@ -229,10 +449,12 @@ def process_stripe_webhook(request):
 
     except ValueError as e:
         logger.error(f"Invalid payload: {str(e)}")
+        add_stripe_webhook_error(payload, sig_header, slug="invalid-payload", message=str(e))
         raise ValidationException("Invalid payload", code=400, slug="invalid-payload")
 
     except stripe.error.SignatureVerificationError as e:
         logger.error(f"Webhook signature verification failed: {str(e)}")
+        add_stripe_webhook_error(payload, sig_header, slug="not-allowed", message=str(e))
         raise ValidationException("Not allowed", code=403, slug="not-allowed")
 
     if event := add_stripe_webhook(event):
@@ -311,3 +533,639 @@ class RepositorySubscriptionView(APIView, GenerateLookupsMixin):
             instance = serializer.save()
             return Response(RepoSubscriptionSmallSerializer(instance).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AcademyDownloadView(APIView):
+    """
+    Academy-specific download endpoint with proper capability check
+    """
+
+    @capable_of("read_downloads")
+    def get(self, request, academy_id=None, download_id=None):
+        lang = get_user_language(request)
+
+        if download_id is not None:
+            download = CSVDownload.objects.filter(id=download_id, academy__id=academy_id).first()
+            if download is None:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"CSV Download {download_id} not found for academy {academy_id}",
+                        es=f"Descarga CSV {download_id} no encontrada para la academia {academy_id}",
+                        slug="download-not-found",
+                    ),
+                    code=status.HTTP_404_NOT_FOUND,
+                )
+
+            raw = request.GET.get("raw", "")
+            if raw == "true":
+                from ..services.google_cloud import Storage
+
+                try:
+                    storage = Storage()
+                    cloud_file = storage.file(os.getenv("DOWNLOADS_BUCKET", None), download.name)
+                    buffer = cloud_file.stream_download()
+
+                except CircuitBreakerError:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en="The circuit breaker is open due to an error, please try again later",
+                            es="El circuit breaker está abierto debido a un error, por favor intente más tarde",
+                            slug="circuit-breaker-open",
+                        ),
+                        slug="circuit-breaker-open",
+                        data={"service": "Google Cloud Storage"},
+                        silent=True,
+                        code=503,
+                    )
+
+                return StreamingHttpResponse(
+                    _async_iter_from_list(buffer.all()),
+                    content_type="text/csv",
+                    headers={"Content-Disposition": f"attachment; filename={download.name}"},
+                )
+            else:
+                serializer = CSVDownloadSmallSerializer(download, many=False)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+
+        # List all downloads for the academy
+        csv_downloads = CSVDownload.objects.filter(academy__id=academy_id)
+        serializer = CSVDownloadSmallSerializer(csv_downloads, many=True)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AcademyDownloadSignedUrlView(APIView):
+    """
+    Generate signed URLs for CSV downloads with temporary access
+    """
+
+    @capable_of("read_downloads")
+    def get(self, request, academy_id=None, download_id=None):
+        lang = get_user_language(request)
+
+        # Validate download exists and belongs to academy
+        download = CSVDownload.objects.filter(id=download_id, academy__id=academy_id, status="DONE").first()
+        if download is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"CSV Download {download_id} not found or not ready for academy {academy_id}",
+                    es=f"Descarga CSV {download_id} no encontrada o no lista para la academia {academy_id}",
+                    slug="download-not-found-or-not-ready",
+                ),
+                code=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Generate signed URL using Storage helper method
+        import os
+
+        from ..services.google_cloud import Storage
+
+        expiration_hours = int(request.GET.get("expiration_hours", 1))
+
+        try:
+            storage = Storage()
+            signed_url = storage.generate_download_signed_url(
+                bucket_name=os.getenv("DOWNLOADS_BUCKET", None),
+                file_name=download.name,
+                expiration_hours=expiration_hours,
+            )
+
+            return Response(
+                {
+                    "signed_url": signed_url,
+                    "expires_in_hours": min(expiration_hours, 24),
+                    "filename": download.name,
+                    "download_id": download.id,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        except CircuitBreakerError:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="The circuit breaker is open due to an error, please try again later",
+                    es="El circuit breaker está abierto debido a un error, por favor intente más tarde",
+                    slug="circuit-breaker-open",
+                ),
+                slug="circuit-breaker-open",
+                data={"service": "Google Cloud Storage"},
+                silent=True,
+                code=503,
+            )
+        except Exception as e:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Failed to generate signed URL: {str(e)}",
+                    es=f"Error al generar URL firmada: {str(e)}",
+                    slug="signed-url-generation-failed",
+                ),
+                code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+class AcademyScriptView(APIView):
+    """
+    API endpoint to trigger and run monitoring scripts via POST.
+    Returns MonitorScript serialization with MonitoringErrors created during that run.
+    """
+
+    @capable_of("read_asset")
+    def post(self, request, academy_id=None, script_slug=None):
+        lang = get_user_language(request)
+
+        # Validate academy
+        academy = Academy.objects.filter(id=academy_id).first()
+        if not academy:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Academy {academy_id} not found",
+                    es=f"Academia {academy_id} no encontrada",
+                    slug="academy-not-found",
+                ),
+                code=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Find MonitorScript by slug and academy
+        script = MonitorScript.objects.filter(
+            script_slug=script_slug, application__academy=academy
+        ).first()
+
+        if not script:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Monitoring script '{script_slug}' not found for academy {academy_id}",
+                    es=f"Script de monitoreo '{script_slug}' no encontrado para la academia {academy_id}",
+                    slug="script-not-found",
+                ),
+                code=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Execute the script
+        results = run_script(script)
+
+        # Refresh script from database to get updated fields
+        script.refresh_from_db()
+
+        # Get the errors created during this run
+        monitoring_errors = results.get("monitoring_errors", [])
+
+        # Serialize the script
+        script_serializer = MonitorScriptSmallSerializer(script)
+        script_data = script_serializer.data
+        
+        # Serialize the errors
+        errors_serializer = MonitoringErrorSerializer(monitoring_errors, many=True)
+        
+        # Combine script and errors
+        response_data = {
+            **script_data,
+            "monitoring_errors": errors_serializer.data,
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
+
+
+class MonitoringReportView(APIView):
+    @capable_of_many("read_monitoring_report")
+    def get(self, request, academy_ids=None, report_type=None):
+        if not report_type:
+            metadata = get_report_type_metadata()
+            return Response(metadata, status=status.HTTP_200_OK)
+
+        lang = get_user_language(request)
+        queryset, config = _get_filtered_report_queryset(request, report_type, academy_ids, lang)
+
+        handler = APIViewExtensions(sort=config.default_sort, paginate=True)(request)
+        queryset = handler.queryset(queryset)
+
+        serializer = config.list_serializer(queryset, many=True)
+        return handler.response(serializer.data)
+
+
+class MonitoringReportDetailView(APIView):
+    @capable_of_many("read_monitoring_report")
+    def get(self, request, report_type=None, report_id=None, academy_ids=None):
+        lang = get_user_language(request)
+        config = _get_report_api_config_or_404(report_type, lang)
+
+        if not config.supports_detail:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Report {report_type} does not support detail view",
+                    es=f"El reporte {report_type} no soporta vista de detalle",
+                    slug="report-detail-not-supported",
+                ),
+                code=status.HTTP_404_NOT_FOUND,
+            )
+
+        instance = config.model.objects.filter(id=report_id, academy_id__in=academy_ids).first()
+        if instance is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Report record {report_id} not found",
+                    es=f"Registro de reporte {report_id} no encontrado",
+                    slug="report-record-not-found",
+                ),
+                code=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = config.detail_serializer(instance, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class MonitoringReportSummaryView(APIView):
+    @capable_of_many("read_monitoring_report")
+    def get(self, request, report_type=None, academy_ids=None):
+        lang = get_user_language(request)
+        queryset, config = _get_filtered_report_queryset(request, report_type, academy_ids, lang)
+
+        if config.supports_summary is False or config.summary_builder is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Report {report_type} does not support summary view",
+                    es=f"El reporte {report_type} no soporta vista de resumen",
+                    slug="report-summary-not-supported",
+                ),
+                code=status.HTTP_404_NOT_FOUND,
+            )
+
+        payload = config.summary_builder(queryset, academy_ids)
+        return Response(payload, status=status.HTTP_200_OK)
+
+
+def _job_fingerprint(report_type: str, academy_id: int, date_start: date, date_end: date, params: dict) -> str:
+    payload = {
+        "report_type": report_type,
+        "academy_id": academy_id,
+        "date_start": date_start.isoformat(),
+        "date_end": date_end.isoformat(),
+        "params": params,
+    }
+    return sha256(json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()
+
+
+def _parent_job_fingerprint(report_type: str, academy_ids: list[int], date_start: date, date_end: date, params: dict) -> str:
+    payload = {
+        "report_type": report_type,
+        "kind": "parent_batch",
+        "academy_ids": sorted(academy_ids),
+        "date_start": date_start.isoformat(),
+        "date_end": date_end.isoformat(),
+        "params": params,
+    }
+    return sha256(json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()
+
+
+def _scope_resolution_full(request: HttpRequest) -> bool:
+    scope = getattr(request, "academy_scope", None)
+    if not scope:
+        return True
+    return scope.get("resolution") == "full"
+
+
+def _params_with_academy_scope(request: HttpRequest, base_params: dict) -> dict:
+    scope = getattr(request, "academy_scope", None)
+    if not scope:
+        return dict(base_params)
+    merged = dict(base_params)
+    merged["requested_academy_ids"] = scope.get("requested_academy_ids")
+    merged["applied_academy_ids"] = scope.get("applied_academy_ids")
+    merged["resolution"] = scope.get("resolution")
+    return merged
+
+
+def _eligible_parent_ids_for_academy_scope(academy_ids: list[int]) -> list[int]:
+    u_set = list(academy_ids)
+    bad_child = ReportGenerationJob.objects.filter(parent_id=OuterRef("pk")).exclude(academy_id__in=u_set)
+    has_child = ReportGenerationJob.objects.filter(parent_id=OuterRef("pk"))
+    return list(
+        ReportGenerationJob.objects.filter(parent_id__isnull=True, academy_id__isnull=True)
+        .annotate(_bad=Exists(bad_child), _has=Exists(has_child))
+        .filter(_bad=False, _has=True)
+        .values_list("id", flat=True)
+    )
+
+
+def _parent_row_visible_for_scope(job: ReportGenerationJob, academy_ids: list[int]) -> bool:
+    if job.academy_id is not None or job.parent_id is not None:
+        return False
+    u_set = set(academy_ids)
+    child_academy_ids = list(job.children.values_list("academy_id", flat=True))
+    if not child_academy_ids:
+        return False
+    return all(cid in u_set for cid in child_academy_ids)
+
+
+def _get_report_generation_job_for_user(job_id: int, report_type: str, academy_ids: list[int]):
+    job = ReportGenerationJob.objects.filter(id=job_id, report_type=report_type).first()
+    if not job:
+        return None
+    if job.academy_id is None and job.parent_id is None:
+        if _parent_row_visible_for_scope(job, academy_ids):
+            return job
+        return None
+    if job.academy_id and job.academy_id in academy_ids:
+        return job
+    return None
+
+
+def _generation_jobs_queryset_for_scope(academy_ids: list[int]):
+    u_set = list(academy_ids)
+    eligible = _eligible_parent_ids_for_academy_scope(u_set)
+    children_q = Q(academy_id__in=u_set) & (Q(parent_id__isnull=True) | ~Q(parent_id__in=eligible))
+    if eligible:
+        return ReportGenerationJob.objects.filter(Q(id__in=eligible) | children_q).order_by("-created_at").distinct()
+    return ReportGenerationJob.objects.filter(children_q).order_by("-created_at").distinct()
+
+
+def _enqueue_report_job_after_commit(job_id: int):
+    """Schedule Celery after the current DB transaction commits (avoids workers running before rows exist)."""
+
+    def after_commit():
+        task_result = generate_report_job.delay(job_id)
+        ReportGenerationJob.objects.filter(pk=job_id).update(
+            celery_task_id=task_result.id,
+            updated_at=timezone.now(),
+        )
+
+    transaction.on_commit(after_commit)
+
+
+class MonitoringReportGenerationView(APIView):
+    @capable_of_many("read_monitoring_report", scope="read_aggregate")
+    def post(self, request, report_type=None, academy_ids=None):
+        lang = get_user_language(request)
+        data = {**request.data, "report_type": report_type}
+        serializer = ReportGenerationTriggerSerializer(data=data, context={"lang": lang, "academy_ids": academy_ids})
+        serializer.is_valid(raise_exception=True)
+        payload = serializer.validated_data
+
+        params = {}
+        for key in ["date", "date_start", "date_end", "days_back"]:
+            if key in request.data:
+                params[key] = request.data.get(key)
+
+        params = _params_with_academy_scope(request, params)
+        applied = sorted(set(academy_ids))
+        force = payload.get("force", False)
+        resolution_full = _scope_resolution_full(request)
+        multi_applied = len(applied) > 1
+        use_parent_batch = multi_applied and resolution_full
+
+        if use_parent_batch:
+            parent_fp = _parent_job_fingerprint(
+                report_type=payload["report_type"],
+                academy_ids=applied,
+                date_start=payload["date_start"],
+                date_end=payload["date_end"],
+                params=params,
+            )
+            if not force:
+                existing_parent = ReportGenerationJob.objects.filter(
+                    parent_id__isnull=True,
+                    academy_id__isnull=True,
+                    report_type=payload["report_type"],
+                    fingerprint=parent_fp,
+                    status__in=[ReportGenerationJob.Status.PENDING, ReportGenerationJob.Status.RUNNING],
+                ).first()
+                if existing_parent:
+                    return Response(
+                        ReportGenerationJobSerializer(existing_parent, many=False).data,
+                        status=status.HTTP_200_OK,
+                    )
+
+            reused_existing = True
+            child_jobs: list[ReportGenerationJob] = []
+            scheduled_child_ids: set[int] = set()
+            with transaction.atomic():
+                batch_id = uuid4()
+                parent = ReportGenerationJob.objects.create(
+                    report_type=payload["report_type"],
+                    status=ReportGenerationJob.Status.PENDING,
+                    status_message="Queued",
+                    academy_id=None,
+                    parent_id=None,
+                    batch_id=batch_id,
+                    requested_by=request.user,
+                    date_start=payload["date_start"],
+                    date_end=payload["date_end"],
+                    params=params,
+                    fingerprint=parent_fp,
+                )
+                for academy_id in applied:
+                    fingerprint = _job_fingerprint(
+                        report_type=payload["report_type"],
+                        academy_id=academy_id,
+                        date_start=payload["date_start"],
+                        date_end=payload["date_end"],
+                        params=params,
+                    )
+                    existing = None
+                    if not force:
+                        existing = ReportGenerationJob.objects.filter(
+                            academy_id=academy_id,
+                            report_type=payload["report_type"],
+                            fingerprint=fingerprint,
+                            parent_id__isnull=True,
+                            status__in=[ReportGenerationJob.Status.PENDING, ReportGenerationJob.Status.RUNNING],
+                        ).first()
+                    if existing:
+                        if existing.parent_id is None:
+                            ReportGenerationJob.objects.filter(pk=existing.pk).update(
+                                parent_id=parent.id, batch_id=batch_id
+                            )
+                            existing.refresh_from_db()
+                        child_jobs.append(existing)
+                        continue
+
+                    reused_existing = False
+                    child = ReportGenerationJob.objects.create(
+                        report_type=payload["report_type"],
+                        status=ReportGenerationJob.Status.PENDING,
+                        status_message="Queued",
+                        academy_id=academy_id,
+                        parent_id=parent.id,
+                        batch_id=batch_id,
+                        requested_by=request.user,
+                        date_start=payload["date_start"],
+                        date_end=payload["date_end"],
+                        params=params,
+                        fingerprint=fingerprint,
+                    )
+                    _enqueue_report_job_after_commit(child.id)
+                    scheduled_child_ids.add(child.id)
+                    child_jobs.append(child)
+
+            for job in child_jobs:
+                if job.id in scheduled_child_ids:
+                    continue
+                if job.celery_task_id:
+                    continue
+                if job.status in [ReportGenerationJob.Status.PENDING, ReportGenerationJob.Status.RUNNING]:
+                    _enqueue_report_job_after_commit(job.id)
+
+            status_code = status.HTTP_200_OK if reused_existing else status.HTTP_202_ACCEPTED
+            return Response(ReportGenerationJobSerializer(parent, many=False).data, status=status_code)
+
+        jobs: list[ReportGenerationJob] = []
+        reused_existing = True
+        for academy_id in applied:
+            fingerprint = _job_fingerprint(
+                report_type=payload["report_type"],
+                academy_id=academy_id,
+                date_start=payload["date_start"],
+                date_end=payload["date_end"],
+                params=params,
+            )
+
+            if not force:
+                existing = ReportGenerationJob.objects.filter(
+                    academy_id=academy_id,
+                    report_type=payload["report_type"],
+                    fingerprint=fingerprint,
+                    status__in=[ReportGenerationJob.Status.PENDING, ReportGenerationJob.Status.RUNNING],
+                ).first()
+                if existing:
+                    jobs.append(existing)
+                    continue
+
+            reused_existing = False
+            job = ReportGenerationJob.objects.create(
+                report_type=payload["report_type"],
+                status=ReportGenerationJob.Status.PENDING,
+                status_message="Queued",
+                academy_id=academy_id,
+                requested_by=request.user,
+                date_start=payload["date_start"],
+                date_end=payload["date_end"],
+                params=params,
+                fingerprint=fingerprint,
+            )
+
+            _enqueue_report_job_after_commit(job.id)
+            jobs.append(job)
+
+        status_code = status.HTTP_200_OK if reused_existing else status.HTTP_202_ACCEPTED
+        if len(jobs) == 1:
+            return Response(ReportGenerationJobSerializer(jobs[0], many=False).data, status=status_code)
+        return Response(ReportGenerationJobSerializer(jobs, many=True).data, status=status_code)
+
+
+class MonitoringReportGenerationDetailView(APIView):
+    @capable_of_many("read_monitoring_report", scope="read_aggregate")
+    def get(self, request, report_type=None, job_id=None, academy_ids=None):
+        lang = get_user_language(request)
+        job = _get_report_generation_job_for_user(job_id, report_type, academy_ids)
+        if not job:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Report generation job {job_id} not found",
+                    es=f"Trabajo de generación de reporte {job_id} no encontrado",
+                    slug="report-generation-job-not-found",
+                ),
+                code=status.HTTP_404_NOT_FOUND,
+            )
+
+        return Response(ReportGenerationJobSerializer(job, many=False).data, status=status.HTTP_200_OK)
+
+    @capable_of_many("read_monitoring_report", scope="read_aggregate")
+    def delete(self, request, report_type=None, job_id=None, academy_ids=None):
+        lang = get_user_language(request)
+        job = _get_report_generation_job_for_user(job_id, report_type, academy_ids)
+        if not job:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Report generation job {job_id} not found",
+                    es=f"Trabajo de generación de reporte {job_id} no encontrado",
+                    slug="report-generation-job-not-found",
+                ),
+                code=status.HTTP_404_NOT_FOUND,
+            )
+
+        if job.status in [ReportGenerationJob.Status.PENDING, ReportGenerationJob.Status.RUNNING]:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Cannot delete report generation jobs while pending or running",
+                    es="No se puede borrar un trabajo de generación mientras está pendiente o en ejecución",
+                    slug="cannot-delete-active-report-generation-job",
+                ),
+                code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if job.academy_id is None and job.parent_id is None:
+            active_children = job.children.filter(
+                status__in=[ReportGenerationJob.Status.PENDING, ReportGenerationJob.Status.RUNNING]
+            )
+            if active_children.exists():
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Cannot delete parent report generation job while a child is pending or running",
+                        es="No se puede borrar el trabajo padre mientras un hijo esté pendiente o en ejecución",
+                        slug="cannot-delete-parent-with-active-children",
+                    ),
+                    code=status.HTTP_400_BAD_REQUEST,
+                )
+
+        job.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class MonitoringReportGenerationListView(APIView):
+    @capable_of_many("read_monitoring_report", scope="read_aggregate")
+    def get(self, request, academy_ids=None):
+        lang = get_user_language(request)
+        child_jobs_qs = ReportGenerationJob.objects.filter(academy_id__isnull=False).select_related("academy")
+        queryset = (
+            _generation_jobs_queryset_for_scope(academy_ids)
+            .annotate(children_count=Count("children"))
+            .prefetch_related(Prefetch("children", queryset=child_jobs_qs))
+        )
+
+        status_filter = request.GET.get("status")
+        if status_filter:
+            statuses = [x.strip().upper() for x in status_filter.split(",") if x.strip()]
+            allowed = {x[0] for x in ReportGenerationJob.Status.choices}
+            unexpected = [x for x in statuses if x not in allowed]
+            if unexpected:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Invalid status filter: {', '.join(unexpected)}",
+                        es=f"Filtro status inválido: {', '.join(unexpected)}",
+                        slug="invalid-status-filter",
+                    )
+                )
+            queryset = queryset.filter(status__in=statuses)
+
+        report_type = request.GET.get("report_type")
+        if report_type:
+            allowed = {x[0] for x in ReportGenerationJob.ReportType.choices}
+            if report_type not in allowed:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Invalid report_type filter: {report_type}",
+                        es=f"Filtro report_type inválido: {report_type}",
+                        slug="invalid-report-type-filter",
+                    )
+                )
+            queryset = queryset.filter(report_type=report_type)
+
+        handler = APIViewExtensions(sort="-created_at", paginate=True)(request)
+        queryset = handler.queryset(queryset)
+        serialized = ReportGenerationJobListSerializer(queryset, many=True).data
+        return handler.response(serialized)

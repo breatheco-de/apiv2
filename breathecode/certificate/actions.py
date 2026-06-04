@@ -6,13 +6,17 @@ import hashlib
 import json
 import logging
 import os
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import User
+from django.db.models import Q
 from django.utils import timezone
 
-from breathecode.admissions.models import FULLY_PAID, UP_TO_DATE, CohortUser, SyllabusVersion
+from breathecode.admissions.models import FULLY_PAID, UP_TO_DATE, CohortUser, Syllabus, SyllabusVersion
+
+if TYPE_CHECKING:
+    from breathecode.admissions.models import Cohort
 from breathecode.assignments.models import Task
 from breathecode.registry.actions import generate_screenshot
 
@@ -60,6 +64,9 @@ def syllabus_weeks_to_days(json):
 def get_assets_from_syllabus(
     syllabus_version: SyllabusVersion | int, task_types: Optional[list[str]] = None, only_mandatory=False
 ):
+    # Lazy import avoids circular import at module load time.
+    from breathecode.admissions.actions import resolve_syllabus_json
+
     if not isinstance(syllabus_version, SyllabusVersion):
         syllabus = SyllabusVersion.objects.filter(id=syllabus_version).first()
 
@@ -81,7 +88,7 @@ def get_assets_from_syllabus(
     if isinstance(syllabus.json, str):
         syllabus.json = json.loads(syllabus.json)
 
-    syllabus.json = syllabus_weeks_to_days(syllabus.json)
+    syllabus.json = resolve_syllabus_json(syllabus.json)
 
     for day in syllabus.json["days"]:
         for atype in key_map:
@@ -142,6 +149,33 @@ def how_many_pending_tasks(
     return how_many_pending_tasks
 
 
+def resolve_specialty_for_cohort(cohort: "Cohort") -> Optional[Specialty]:
+    """Pick certificate Specialty for cohort syllabus: cohort academy first, then global (academy null)."""
+    if cohort.syllabus_version is None:
+        return None
+    syllabus_id = cohort.syllabus_version.syllabus_id
+    base = Specialty.objects.filter(syllabuses__id=syllabus_id).distinct()
+    spec = base.filter(academy_id=cohort.academy_id).order_by("id").first()
+    if spec:
+        return spec
+    return base.filter(academy_id__isnull=True).order_by("id").first()
+
+
+def get_syllabus_specialty_bucket_conflict(specialty: Specialty, syllabus: Syllabus) -> Optional[Specialty]:
+    """Another specialty in the same academy bucket (or global) already linked to this syllabus."""
+    if specialty.academy_id is not None:
+        bucket = Q(academy_id=specialty.academy_id)
+    else:
+        bucket = Q(academy_id__isnull=True)
+    return (
+        Specialty.objects.filter(bucket, syllabuses__id=syllabus.pk)
+        .exclude(pk=specialty.pk)
+        .distinct()
+        .order_by("id")
+        .first()
+    )
+
+
 def generate_certificate(user, cohort=None, layout=None):
     query = {"user__id": user.id}
 
@@ -164,7 +198,7 @@ def generate_certificate(user, cohort=None, layout=None):
             slug="missing-syllabus-version",
         )
 
-    specialty = Specialty.objects.filter(syllabus__id=cohort.syllabus_version.syllabus_id).first()
+    specialty = resolve_specialty_for_cohort(cohort)
     if not specialty:
         raise ValidationException("Specialty has no Syllabus assigned", slug="missing-specialty")
 
@@ -213,7 +247,11 @@ def generate_certificate(user, cohort=None, layout=None):
     try:
         uspe.academy = cohort.academy
         pending_tasks = how_many_pending_tasks(
-            cohort.syllabus_version, user, task_types=["PROJECT"], only_mandatory=True, cohort_id=cohort.id
+            cohort.syllabus_version,
+            user,
+            task_types=["PROJECT"],
+            only_mandatory=True,
+            cohort_id=cohort.id,
         )
 
         if pending_tasks and pending_tasks > 0:
@@ -258,6 +296,133 @@ def generate_certificate(user, cohort=None, layout=None):
     return uspe
 
 
+def generate_certificate_ignoring_tasks(user, cohort=None, layout=None):
+    """
+    Generate certificate ignoring pending tasks validation.
+    This is used for admin bulk actions when certificates need to be generated
+    even if students have pending tasks.
+    """
+    query = {"user__id": user.id}
+
+    if cohort:
+        query["cohort__id"] = cohort.id
+
+    cohort_user = CohortUser.objects.filter(**query).exclude(cohort__stage="DELETED").first()
+
+    if not cohort_user:
+        raise ValidationException(
+            "Impossible to obtain the student cohort, maybe it's none assigned", slug="missing-cohort-user"
+        )
+
+    if not cohort:
+        cohort = cohort_user.cohort
+
+    if cohort.syllabus_version is None:
+        raise ValidationException(
+            f"The cohort has no syllabus assigned, please set a syllabus for cohort: {cohort.name}",
+            slug="missing-syllabus-version",
+        )
+
+    specialty = resolve_specialty_for_cohort(cohort)
+    if not specialty:
+        raise ValidationException("Specialty has no Syllabus assigned", slug="missing-specialty")
+
+    uspe = UserSpecialty.objects.filter(user=user, cohort=cohort).first()
+
+    if uspe is not None and uspe.status == "PERSISTED" and uspe.preview_url:
+        raise ValidationException("This user already has a certificate created", slug="already-exists")
+
+    if uspe is None:
+        utc_now = timezone.now()
+        uspe = UserSpecialty(
+            user=user,
+            cohort=cohort,
+            token=hashlib.sha1((str(user.id) + str(utc_now)).encode("UTF-8")).hexdigest(),
+            specialty=specialty,
+            signed_by_role=strings[cohort.language.lower()]["Main Instructor"],
+        )
+        if specialty.expiration_day_delta is not None:
+            uspe.expires_at = utc_now + timezone.timedelta(days=specialty.expiration_day_delta)
+
+    layout = LayoutDesign.objects.filter(slug=layout).first()
+
+    if layout is None:
+        layout = LayoutDesign.objects.filter(is_default=True, academy=cohort.academy).first()
+
+    if layout is None:
+        layout = LayoutDesign.objects.filter(slug="default").first()
+
+    if layout is None:
+        raise ValidationException(
+            "No layout was specified and there is no default layout for this academy", slug="no-default-layout"
+        )
+
+    uspe.layout = layout
+
+    # validate for teacher
+    main_teacher = CohortUser.objects.filter(cohort__id=cohort.id, role="TEACHER").first()
+    if main_teacher is None or main_teacher.user is None:
+        raise ValidationException(
+            "This cohort does not have a main teacher, please assign it first", slug="without-main-teacher"
+        )
+
+    main_teacher = main_teacher.user
+    uspe.signed_by = main_teacher.first_name + " " + main_teacher.last_name
+
+    try:
+        uspe.academy = cohort.academy
+        # Check pending tasks but don't fail - just record the count
+        pending_tasks = how_many_pending_tasks(
+            cohort.syllabus_version,
+            user,
+            task_types=["PROJECT"],
+            only_mandatory=True,
+            cohort_id=cohort.id,
+        )
+
+        # Skip pending tasks validation - this is the key difference from generate_certificate
+
+        if not (cohort_user.finantial_status == FULLY_PAID or cohort_user.finantial_status == UP_TO_DATE):
+            message = "The student must have finantial status FULLY_PAID or UP_TO_DATE"
+            raise ValidationException(message, slug="bad-finantial-status")
+
+        if cohort_user.educational_status != "GRADUATED":
+            raise ValidationException(
+                "The student must have educational " "status GRADUATED", slug="bad-educational-status"
+            )
+
+        if not cohort.never_ends and cohort.current_day != cohort.syllabus_version.syllabus.duration_in_days:
+            raise ValidationException(
+                "Cohort current day should be " f"{cohort.syllabus_version.syllabus.duration_in_days}",
+                slug="cohort-not-finished",
+            )
+
+        if not cohort.never_ends and cohort.stage != "ENDED":
+            raise ValidationException(
+                "The student cohort stage has to be 'ENDED' before you can issue any certificates",
+                slug="cohort-without-status-ended",
+            )
+
+        if not uspe.issued_at:
+            uspe.issued_at = timezone.now()
+
+        uspe.status = PERSISTED
+        # Set status text indicating pending tasks were ignored
+        if pending_tasks and pending_tasks > 0:
+            uspe.status_text = f"Generated through admin ignoring {pending_tasks} pending tasks"
+        else:
+            uspe.status_text = "Certificate successfully queued for PDF generation"
+        uspe.save()
+
+    except ValidationException as e:
+        message = str(e)
+        uspe.status = ERROR
+        uspe.status_text = message
+        uspe.save()
+
+    return uspe
+
+
 def certificate_screenshot(certificate_id: int):
 
     certificate = UserSpecialty.objects.get(id=certificate_id)
@@ -270,7 +435,28 @@ def certificate_screenshot(certificate_id: int):
         # if the file does not exist
         if file.blob is None:
             url = f"https://certificate.4geeks.com/preview/{certificate.token}"
-            r = generate_screenshot(url, "1024x707", device="desktop", cacheLimit="0")
+            bypass_secret = os.getenv("VERCEL_CERTIFICATE_BYPASS_SECRET", "").strip()
+            if bypass_secret:
+                url = f"{url}?x-vercel-protection-bypass={bypass_secret}&x-vercel-set-bypass-cookie=true"
+            logger.info(
+                f"[CERT_SCREENSHOT] cert_id={certificate_id} bypass={'yes' if bypass_secret else 'no'} url={url.split('?')[0]}"
+            )
+            logger.info(
+                "[CERT_SCREENSHOT] params: dimension=1024x707 device=desktop cacheLimit=0 delay=3000 "
+                "user-agent=Chrome/120.0"
+            )
+            r = generate_screenshot(
+                url,
+                "1024x707",
+                device="desktop",
+                cacheLimit="0",
+                delay=3000,
+                **{
+                    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                    "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                },
+            )
+            logger.info(f"[CERT_SCREENSHOT] response status_code={r.status_code}")
 
             if r.status_code == 200:
                 file.upload(r.content, public=True)

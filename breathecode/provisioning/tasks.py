@@ -1,7 +1,7 @@
 import logging
 import math
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 from io import BytesIO
 from typing import Any
@@ -9,17 +9,32 @@ from typing import Any
 import pandas as pd
 import pytz
 from dateutil.relativedelta import relativedelta
+from django.db import transaction
 from django.db.models import DecimalField, F, Sum
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from task_manager.core.exceptions import AbortTask, RetryTask
 from task_manager.django.decorators import task
 
+from breathecode.authenticate.models import User
+from breathecode.payments import actions as payment_actions
+from breathecode.payments.models import Consumable, Service
 from breathecode.payments.services.stripe import Stripe
+from breathecode.payments.signals import consume_service, deprovision_service, reimburse_service_units
 from breathecode.provisioning import actions
-from breathecode.provisioning.models import ProvisioningBill, ProvisioningConsumptionEvent, ProvisioningUserConsumption
+from breathecode.provisioning.utils.llm_client import LLMClientError, get_llm_client
+from breathecode.provisioning.models import (
+    ProvisioningAcademy,
+    ProvisioningBill,
+    ProvisioningConsumptionEvent,
+    ProvisioningLLM,
+    ProvisioningUserConsumption,
+    ProvisioningVPS,
+)
+from breathecode.provisioning.utils.vps_client import VPSProvisioningError, get_vps_client
 from breathecode.services.google_cloud.storage import Storage
 from breathecode.utils.decorators import TaskPriority
+from breathecode.utils.encryption import encrypt
 from breathecode.utils.io.file import cut_csv
 
 logger = logging.getLogger(__name__)
@@ -400,3 +415,437 @@ def archive_provisioning_bill(bill_id: int, **_: Any):
     bill.archived_at = now
     bill.save()
     logger.info(f"Successfully archived bill {bill_id}")
+
+
+@task(priority=TaskPriority.STUDENT.value)
+def provision_vps_task(provisioning_vps_id: int, vendor_selection: dict | None = None, **_: Any):
+    """
+    Provision a VPS via the vendor API. On success: update model, encrypt password, send email.
+    On failure: reimburse consumable and set status ERROR.
+    """
+    vps = ProvisioningVPS.objects.filter(id=provisioning_vps_id).select_related("vendor", "academy", "user").first()
+    if not vps:
+        logger.warning("ProvisioningVPS id=%s not found", provisioning_vps_id)
+        return
+    if vps.status not in (ProvisioningVPS.VPS_STATUS_PENDING, ProvisioningVPS.VPS_STATUS_PROVISIONING):
+        logger.info("ProvisioningVPS id=%s already in status %s, skipping", provisioning_vps_id, vps.status)
+        return
+
+    vps.status = ProvisioningVPS.VPS_STATUS_PROVISIONING
+    vps.save(update_fields=["status", "updated_at"])
+
+    provisioning_academy = ProvisioningAcademy.objects.filter(academy=vps.academy, vendor=vps.vendor).first()
+    if not provisioning_academy:
+        _vps_fail(vps, "No ProvisioningAcademy for this academy and vendor")
+        return
+
+    credentials = {"token": provisioning_academy.credentials_token or ""}
+    if provisioning_academy.credentials_key:
+        credentials["key"] = provisioning_academy.credentials_key
+    if provisioning_academy.vendor_settings:
+        credentials.update(provisioning_academy.vendor_settings)
+    if vendor_selection:
+        credentials.update(vendor_selection)
+    credentials["provisioning_vps_id"] = provisioning_vps_id
+    client = get_vps_client(vps.vendor)
+    if not client:
+        _vps_fail(vps, "No VPS client registered for vendor %s", vps.vendor.name if vps.vendor else "?")
+        return
+
+    try:
+        result = client.create_vps(credentials, plan_slug=vps.plan_slug or None)
+    except VPSProvisioningError as e:
+        _vps_fail(vps, str(e))
+        return
+
+    external_id = result.get("external_id") or ""
+    ip_address = result.get("ip_address")
+    hostname = result.get("hostname") or ""
+    ssh_user = result.get("ssh_user") or "root"
+    ssh_port = result.get("ssh_port") or 22
+    root_password = result.get("root_password")
+
+    vps.external_id = external_id
+    vps.ip_address = ip_address
+    vps.hostname = hostname
+    vps.ssh_user = ssh_user
+    vps.ssh_port = ssh_port
+    if root_password:
+        try:
+            vps.root_password_encrypted = encrypt(root_password)
+        except Exception as enc_err:
+            logger.exception("Encrypting VPS root password failed: %s", enc_err)
+            _vps_fail(vps, "Failed to store password")
+            return
+    vps.status = ProvisioningVPS.VPS_STATUS_ACTIVE
+    vps.provisioned_at = timezone.now()
+    vps.error_message = ""
+    vps.save(
+        update_fields=[
+            "external_id",
+            "ip_address",
+            "hostname",
+            "ssh_user",
+            "ssh_port",
+            "root_password_encrypted",
+            "status",
+            "provisioned_at",
+            "error_message",
+            "updated_at",
+        ]
+    )
+
+    vps.refresh_from_db(fields=None)
+    actions.apply_early_vps_billing_alignment(vps)
+
+    try:
+        from breathecode.notify.actions import send_email_message
+
+        to = vps.user.email if getattr(vps.user, "email", None) else None
+        if to:
+            data = {
+                "hostname": hostname,
+                "ip_address": ip_address or "",
+                "ssh_user": ssh_user,
+                "ssh_port": ssh_port,
+                "root_password": root_password or "",
+            }
+            send_email_message("vps_connection_details", to, data=data, academy=vps.academy)
+    except Exception as email_err:
+        logger.warning("Failed to send VPS connection email: %s", email_err)
+
+
+def _vps_fail(vps: ProvisioningVPS, message: str, *args) -> None:
+    if args:
+        message = message % args
+    if vps.consumed_consumable_id:
+        try:
+            reimburse_service_units.send_robust(sender=Consumable, instance=vps.consumed_consumable, how_many=1)
+        except Exception as e:
+            logger.exception("Reimburse consumable failed: %s", e)
+    vps.status = ProvisioningVPS.VPS_STATUS_ERROR
+    vps.error_message = message[:255] if len(message) > 255 else message
+    vps.save(update_fields=["status", "error_message", "updated_at"])
+
+
+@task(priority=TaskPriority.STUDENT.value)
+def renew_or_deprovision_vps_task(provisioning_vps_id: int, **_: Any):
+    """
+    For one ACTIVE VPS: if user has vps_server consumable, consume 1 to renew; else deprovision (destroy_vps, set DELETED).
+    """
+    vps = (
+        ProvisioningVPS.objects.filter(id=provisioning_vps_id, status=ProvisioningVPS.VPS_STATUS_ACTIVE)
+        .select_related("vendor", "academy", "user")
+        .first()
+    )
+    if not vps:
+        return
+    consumables = Consumable.list(
+        user=vps.user,
+        include_zero_balance=False,
+        extra={"service_item__service__consumer": Service.Consumer.VPS_SERVER},
+    ).filter(how_many__gt=0)
+    if consumables.exists():
+        consumable = consumables.first()
+        consume_service.send(sender=Consumable, instance=consumable, how_many=1)
+        logger.info("Renewed VPS %s: consumed 1 vps_server", provisioning_vps_id)
+        return
+    deprovision_vps_task(provisioning_vps_id)
+
+
+@task(priority=TaskPriority.STUDENT.value)
+def deprovision_vps_task(provisioning_vps_id: int, *, request_mid_cycle_rebuild: bool = False, **_: Any):
+    """
+    Deprovision a VPS via the vendor API (e.g. academy delete or monthly renewal).
+    Sets status to DELETED. Optionally send vps_deprovisioned email.
+    When request_mid_cycle_rebuild is True (student me/vps delete), may refund the initial consumable
+    if ProvisioningAcademy.vendor_settings.allow_mid_cycle_rebuild is True; DELETED is committed in its own
+    transaction before reimbursement so a refund failure cannot roll back DELETED after the vendor destroy.
+    If there is no ProvisioningAcademy or no external_id, marks DELETED locally only (no vendor call, no refund, no email)
+    — same as legacy: provisioning failure path usually already reimbursed the consumable.
+    """
+    vps = (
+        ProvisioningVPS.objects.filter(id=provisioning_vps_id)
+        .select_related("vendor", "academy", "user", "consumed_consumable")
+        .first()
+    )
+    if not vps:
+        logger.warning("ProvisioningVPS id=%s not found for deprovision", provisioning_vps_id)
+        return
+    if vps.status == ProvisioningVPS.VPS_STATUS_DELETED:
+        return
+
+    prior_status = vps.status
+    provisioning_academy = ProvisioningAcademy.objects.filter(academy=vps.academy, vendor=vps.vendor).first()
+
+    if not provisioning_academy or not vps.external_id:
+        vps.status = ProvisioningVPS.VPS_STATUS_DELETED
+        vps.deleted_at = timezone.now()
+        vps.save(update_fields=["status", "deleted_at", "updated_at"])
+        return
+
+    credentials = {"token": provisioning_academy.credentials_token or ""}
+    client = get_vps_client(vps.vendor)
+    if client:
+        try:
+            client.destroy_vps(credentials, vps.external_id)
+        except VPSProvisioningError as e:
+            logger.warning("Deprovision VPS %s failed: %s", provisioning_vps_id, e)
+
+    with transaction.atomic():
+        locked = ProvisioningVPS.objects.select_for_update().filter(pk=provisioning_vps_id).first()
+        if not locked or locked.status == ProvisioningVPS.VPS_STATUS_DELETED:
+            return
+        locked.status = ProvisioningVPS.VPS_STATUS_DELETED
+        locked.deleted_at = timezone.now()
+        locked.save(update_fields=["status", "deleted_at", "updated_at"])
+
+    if request_mid_cycle_rebuild:
+        pa = ProvisioningAcademy.objects.filter(academy=locked.academy, vendor=locked.vendor).first()
+        allow_reimbursement = bool((pa.vendor_settings or {}).get("allow_mid_cycle_rebuild")) if pa else False
+        eligible = prior_status in (
+            ProvisioningVPS.VPS_STATUS_PENDING,
+            ProvisioningVPS.VPS_STATUS_PROVISIONING,
+            ProvisioningVPS.VPS_STATUS_ACTIVE,
+        )
+        if allow_reimbursement and eligible and locked.consumed_consumable_id:
+            try:
+                reimburse_service_units.send_robust(sender=Consumable, instance=locked.consumed_consumable, how_many=1)
+            except Exception as e:
+                logger.exception("Reimburse consumable failed: %s", e)
+                raise
+
+    try:
+        from breathecode.notify.actions import send_email_message
+
+        to = vps.user.email if getattr(vps.user, "email", None) else None
+        if to:
+            send_email_message(
+                "vps_deprovisioned",
+                to,
+                data={"hostname": vps.hostname or ""},
+                academy=vps.academy,
+            )
+    except Exception as email_err:
+        logger.warning("Failed to send VPS deprovisioned email: %s", email_err)
+
+
+@task(priority=TaskPriority.SCHEDULER.value)
+def monthly_vps_renewal_dispatcher(**_: Any):
+    """
+    Run at start of each month (e.g. Celery beat crontab 0 0 1 * *).
+    Enqueues renew_or_deprovision_vps_task for each ACTIVE ProvisioningVPS.
+    """
+    active_ids = list(
+        ProvisioningVPS.objects.filter(status=ProvisioningVPS.VPS_STATUS_ACTIVE).values_list("id", flat=True)
+    )
+    for vps_id in active_ids:
+        renew_or_deprovision_vps_task.delay(vps_id)
+    logger.info("Monthly VPS renewal: enqueued %s tasks", len(active_ids))
+
+
+@task(priority=TaskPriority.STUDENT.value)
+def deprovision_standalone_consumable(consumable_id: int, **_: Any):
+    """
+    At standalone consumable ``valid_until``, tear down provisioned resources for that grant.
+
+    VPS: ``provisioning_vps_ids``; other VOID services: ``academy_id``.
+
+    If invoked before ``valid_until``, reschedules at that datetime (no extra 1h buffer; grant already applied it).
+    """
+    from breathecode.utils.decorators.service_deprovisioner import get_service_deprovisioner
+
+    consumable = (
+        Consumable.objects.filter(id=consumable_id)
+        .select_related("service_item__service", "standalone_invoice__bag", "user")
+        .first()
+    )
+    if not consumable or not consumable.standalone_invoice_id:
+        logger.info(
+            "deprovision_standalone_consumable: consumable %s missing or not standalone, skipping",
+            consumable_id,
+        )
+        return
+
+    if not consumable.service_item_id or not consumable.service_item.service_id:
+        logger.info("deprovision_standalone_consumable: consumable %s has no service, skipping", consumable_id)
+        return
+
+    service = consumable.service_item.service
+    if not service.slug or not get_service_deprovisioner(service.slug):
+        logger.info(
+            "deprovision_standalone_consumable: no deprovisioner for service %s, skipping",
+            service.slug,
+        )
+        return
+
+    user_id = consumable.user_id
+    if not user_id:
+        logger.info("deprovision_standalone_consumable: consumable %s has no user, skipping", consumable_id)
+        return
+
+    utc_now = timezone.now()
+    valid_until = consumable.valid_until
+    if valid_until is None:
+        logger.info(
+            "deprovision_standalone_consumable: consumable %s has no valid_until, skipping",
+            consumable_id,
+        )
+        return
+    if valid_until > utc_now:
+        logger.info(
+            "deprovision_standalone_consumable: consumable %s valid_until %s still in the future, rescheduling",
+            consumable_id,
+            valid_until,
+        )
+        payment_actions.schedule_standalone_consumable_deprovision(consumable_id, valid_until, service)
+        return
+
+    bag = consumable.standalone_invoice.bag if consumable.standalone_invoice_id else None
+    academy_id = bag.academy_id if bag else None
+
+    if service.consumer == Service.Consumer.VPS_SERVER:
+        active_statuses = [
+            ProvisioningVPS.VPS_STATUS_PENDING,
+            ProvisioningVPS.VPS_STATUS_PROVISIONING,
+            ProvisioningVPS.VPS_STATUS_ACTIVE,
+        ]
+        vps_ids = list(
+            ProvisioningVPS.objects.filter(
+                consumed_consumable_id=consumable_id,
+                status__in=active_statuses,
+            ).values_list("id", flat=True)
+        )
+        if not vps_ids:
+            logger.info(
+                "deprovision_standalone_consumable: no active VPS for consumable %s, skipping signal",
+                consumable_id,
+            )
+            return
+        deprovision_service.send_robust(
+            sender=Service,
+            instance=service,
+            user_id=user_id,
+            context={"provisioning_vps_ids": vps_ids},
+        )
+        return
+
+    if academy_id is None:
+        logger.info(
+            "deprovision_standalone_consumable: no academy for consumable %s, skipping",
+            consumable_id,
+        )
+        return
+    deprovision_service.send_robust(
+        sender=Service,
+        instance=service,
+        user_id=user_id,
+        context={"academy_id": academy_id},
+    )
+
+
+@task(priority=TaskPriority.STUDENT.value)
+def deprovision_litellm_user_task(
+    user_id: int,
+    academy_id: int | None = None,
+    **_: Any,
+):
+    """
+    Deprovision a user from Litellm by deleting the external user and its API keys.
+
+    This is triggered when the user loses `free_monthly_llm_budget`.
+    """
+    user = User.objects.filter(id=user_id).first()
+    if not user:
+        raise AbortTask(f"User {user_id} not found")
+
+    if academy_id:
+        try:
+            academy_id = int(academy_id)
+        except Exception:
+            academy_id = None
+
+    if academy_id:
+        has_entitlement = payment_actions.user_has_service_entitlement_in_academy(
+            user,
+            "free-monthly-llm-budget",
+            academy_id,
+        )
+        if has_entitlement:
+            logger.info(
+                "User %s still has free-monthly-llm-budget for academy %s, skipping deprovision",
+                user_id,
+                academy_id,
+            )
+            return
+    else:
+        if Consumable.list(user=user, service="free-monthly-llm-budget").exists():
+            logger.info("User %s still has free-monthly-llm-budget, skipping deprovision", user_id)
+            return
+
+    provisioning_llms_qs = ProvisioningLLM.objects.filter(user=user).select_related("academy", "vendor").all()
+    if academy_id:
+        provisioning_llms_qs = provisioning_llms_qs.filter(academy_id=academy_id)
+
+    # Group external users by (academy_id, vendor_id) so each deletion call
+    # uses the correct ProvisioningAcademy credentials/base_url.
+    provisioning_academy_groups: dict[tuple[int, int], set[str]] = {}
+    for provisioning_llm in provisioning_llms_qs:
+        if not provisioning_llm.vendor_id or not provisioning_llm.external_user_id:
+            continue
+        key = (provisioning_llm.academy_id, provisioning_llm.vendor_id)
+        provisioning_academy_groups.setdefault(key, set()).add(str(provisioning_llm.external_user_id))
+
+    if not provisioning_academy_groups:
+        return
+
+    now = timezone.now()
+
+    # For each tenant/config (academy + vendor), call Litellm to delete the external user(s),
+    # and persist our internal status accordingly.
+    for (academy_id, vendor_id), external_user_ids in provisioning_academy_groups.items():
+        provisioning_academy = (
+            ProvisioningAcademy.objects.select_related("vendor")
+            .filter(
+                academy_id=academy_id,
+                vendor_id=vendor_id,
+            )
+            .first()
+        )
+
+        if not provisioning_academy or not provisioning_academy.vendor:
+            continue
+
+        client = get_llm_client(provisioning_academy)
+        if client is None:
+            continue
+
+        user_id_list = list(external_user_ids)
+        try:
+            client.delete_user(user_ids=user_id_list)
+        except LLMClientError as exc:
+            ProvisioningLLM.objects.filter(
+                user=user,
+                academy_id=academy_id,
+                vendor_id=vendor_id,
+                external_user_id__in=user_id_list,
+            ).update(
+                status=ProvisioningLLM.STATUS_ERROR,
+                error_message=str(exc),
+                updated_at=timezone.now(),
+            )
+            raise RetryTask(f"deprovision_litellm_user_task failed: {exc}") from exc
+
+        # Success: mark affected records as deprovisioned.
+        ProvisioningLLM.objects.filter(
+            user=user,
+            academy_id=academy_id,
+            vendor_id=vendor_id,
+            external_user_id__in=user_id_list,
+        ).update(
+            status=ProvisioningLLM.STATUS_DEPROVISIONED,
+            deprovisioned_at=now,
+            error_message="",
+            updated_at=timezone.now(),
+        )
+        logger.info(f"Deprovisioned user {user_id} from Litellm for academy {academy_id} and vendor {vendor_id}")

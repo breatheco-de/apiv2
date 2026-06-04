@@ -1,19 +1,33 @@
 import logging
 import re
+from copy import deepcopy
 from datetime import timedelta
 
 from capyc.rest_framework.exceptions import ValidationException
+from django.db import transaction
 from django.db.models.query_utils import Q
 from django.utils import timezone
 from rest_framework import serializers
 
 from breathecode.admissions.models import Academy, Cohort
+from breathecode.authenticate.models import ProfileAcademy
 from breathecode.monitoring.actions import test_link
 from breathecode.services.activecampaign.client import acp_ids
 from breathecode.utils import serpy
 from breathecode.utils.integer_to_base import to_base
 
-from .models import AcademyAlias, ActiveCampaignAcademy, Automation, CourseTranslation, FormEntry, ShortLink, Tag
+from .models import (
+    AcademyAlias,
+    ActiveCampaignAcademy,
+    Automation,
+    Course,
+    CourseResaleSettings,
+    CourseTranslation,
+    FormEntry,
+    ShortLink,
+    Tag,
+)
+from .utils.person_name import standardize_person_name
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +70,15 @@ class ShortlinkSmallSerializer(serpy.Serializer):
     utm_term = serpy.Field()
     utm_plan = serpy.Field()
 
+    # New traceability fields
+    event = serpy.Field()
+    course = serpy.Field()
+    downloadable = serpy.Field()
+    plan = serpy.Field()
+    referrer_user = serpy.Field()
+    purpose = serpy.Field()
+    notes = serpy.Field()
+
 
 class UserSmallSerializer(serpy.Serializer):
     id = serpy.Field()
@@ -79,6 +102,7 @@ class ActiveCampaignAcademyBigSerializer(serpy.Serializer):
     id = serpy.Field()
     ac_key = serpy.Field()
     ac_url = serpy.Field()
+    status_page_url = serpy.Field()
     academy = AcademySmallSerializer()
     duplicate_leads_delta_avoidance = serpy.Field()
     sync_status = serpy.Field()
@@ -229,6 +253,7 @@ class FormEntryHookSerializer(serpy.Serializer):
     cohort = serpy.MethodField(required=False)
     is_won = serpy.MethodField(required=False)
     custom_fields = serpy.MethodField(required=False)
+    lead_generation_app = LeadgenAppSmallSerializer(required=False)
 
     def get_cohort(self, obj):
         _cohort = Cohort.objects.filter(slug=obj.ac_expected_cohort).first()
@@ -416,18 +441,67 @@ class GetCourseTranslationSerializer(serpy.Serializer):
 
 class GetCourseSmallSerializer(serpy.Serializer):
     slug = serpy.Field()
-    icon_url = serpy.Field()
-    banner_image = serpy.Field()
+    icon_url = serpy.MethodField()
+    banner_image = serpy.MethodField()
     academy = serpy.MethodField()
     syllabus = serpy.MethodField()
-    color = serpy.Field()
+    color = serpy.MethodField()
     course_translation = serpy.MethodField()
-    technologies = serpy.Field()
+    technologies = serpy.MethodField()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.context = kwargs.get("context", {})
+
+    def _get_resale_settings(self, obj):
+        """
+        Helper to get resale settings if the course is being accessed by a reseller.
+        Returns CourseResaleSettings if exists, None otherwise.
+        """
+        academy_id = self.context.get("academy_id")
+        if not academy_id:
+            return None
+        
+        return CourseResaleSettings.objects.filter(
+            course=obj,
+            academy_id=academy_id,
+            is_active=True
+        ).first()
+
+    def get_icon_url(self, obj):
+        """Return icon URL, using reseller's custom value if applicable."""
+        resale = self._get_resale_settings(obj)
+        if resale and resale.icon_url:
+            return resale.icon_url
+        return obj.icon_url
+
+    def get_banner_image(self, obj):
+        """Return banner image, using reseller's custom value if applicable."""
+        resale = self._get_resale_settings(obj)
+        if resale and resale.banner_image:
+            return resale.banner_image
+        return obj.banner_image
+
+    def get_color(self, obj):
+        """Return color, using reseller's custom value if applicable."""
+        resale = self._get_resale_settings(obj)
+        if resale and resale.color:
+            return resale.color
+        return obj.color
+
+    def get_technologies(self, obj):
+        """Return technologies, using reseller's custom value if applicable."""
+        resale = self._get_resale_settings(obj)
+        if resale and resale.technologies:
+            return resale.technologies
+        return obj.technologies
 
     def get_academy(self, obj):
+        """Always returns the original course owner ID."""
         return obj.academy.id
 
     def get_syllabus(self, obj):
+        """Always returns original syllabus (content cannot be modified by resellers)."""
         return [x for x in obj.syllabus.all().values_list("id", flat=True)]
 
     def get_course_translation(self, obj):
@@ -448,10 +522,11 @@ class GetCourseSerializer(GetCourseSmallSerializer):
     syllabus = serpy.MethodField()
     academy = GetAcademySmallSerializer()
     cohort = serpy.MethodField()
-    status = serpy.Field()
-    is_listed = serpy.Field()
-    visibility = serpy.Field()
+    status = serpy.MethodField()
+    is_listed = serpy.MethodField()
+    visibility = serpy.MethodField()
     plan_slug = serpy.MethodField()
+    suggested_plan_addon = serpy.MethodField()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -464,14 +539,265 @@ class GetCourseSerializer(GetCourseSmallSerializer):
         if obj.cohort:
             return GetCohortSmallSerializer(obj.cohort, many=False).data
 
+    def get_status(self, obj):
+        """Return status, using reseller's custom value if applicable."""
+        resale = self._get_resale_settings(obj)
+        if resale and resale.status:
+            return resale.status
+        return obj.status
+
+    def get_is_listed(self, obj):
+        """Return is_listed, using reseller's custom value if applicable."""
+        resale = self._get_resale_settings(obj)
+        if resale and resale.is_listed is not None:
+            return resale.is_listed
+        return obj.is_listed
+
+    def get_visibility(self, obj):
+        """Return visibility, using reseller's custom value if applicable."""
+        resale = self._get_resale_settings(obj)
+        if resale and resale.visibility:
+            return resale.visibility
+        return obj.visibility
+
     def get_plan_slug(self, obj):
+        """Return plan slug, using reseller's custom value if applicable."""
+        resale = self._get_resale_settings(obj)
         country_code = (self.context.get("country_code") or "").lower()
-        if country_code and obj.plan_by_country_code is not None and country_code in obj.plan_by_country_code:
+        
+        # If resale exists and has custom plan settings
+        if resale:
+            # Check resale plan by country code first
+            if country_code and resale.plan_by_country_code and country_code in resale.plan_by_country_code:
+                plan_slug = resale.plan_by_country_code.get(country_code)
+                if plan_slug:
+                    return plan_slug
+            
+            # Then check resale plan_slug
+            if resale.plan_slug:
+                return resale.plan_slug
+        
+        # Fallback to original course plan
+        if country_code and obj.plan_by_country_code and country_code in obj.plan_by_country_code:
             plan_slug = obj.plan_by_country_code.get(country_code, "")
             if plan_slug is not None:
                 return plan_slug
 
         return obj.plan_slug
+
+    def get_suggested_plan_addon(self, obj):
+        return list(obj.suggested_plan_addon.all().values_list("slug", flat=True))
+
+
+class CoursePOSTSerializer(serializers.ModelSerializer):
+    source_course = serializers.CharField(required=False, allow_null=True, allow_blank=False, write_only=True)
+
+    class Meta:
+        model = Course
+        fields = (
+            "slug",
+            "source_course",
+            "syllabus",
+            "cohort",
+            "is_listed",
+            "plan_slug",
+            "status",
+            "color",
+            "status_message",
+            "visibility",
+            "icon_url",
+            "banner_image",
+            "technologies",
+            "has_waiting_list",
+        )
+        extra_kwargs = {
+            "icon_url": {"required": False},
+            "technologies": {"required": False},
+            "slug": {"required": True},
+        }
+        read_only_fields = ()
+
+    def _get_source_course(self, source_course):
+        source_value = str(source_course).strip()
+        query = Q(slug=source_value)
+        if source_value.isdigit():
+            query = query | Q(id=int(source_value))
+
+        source = Course.objects.filter(query).select_related("academy", "cohort").first()
+        if source is None:
+            raise ValidationException(f"Source course {source_value} not found", slug="source-course-not-found")
+
+        request = self.context.get("request")
+        if request is None:
+            raise ValidationException("Missing request context", slug="request-not-in-context")
+
+        has_source_permission = request.user.is_superuser or ProfileAcademy.objects.filter(
+            user=request.user,
+            academy=source.academy,
+            role__capabilities__slug="crud_course",
+        ).exists()
+        if not has_source_permission:
+            raise ValidationException(
+                "You do not have permission to clone from this source academy",
+                slug="source-course-forbidden",
+                code=403,
+            )
+
+        return source
+
+    def validate(self, attrs):
+        source_course = attrs.get("source_course")
+        if source_course:
+            attrs["_source_course_instance"] = self._get_source_course(source_course)
+
+        if not source_course:
+            if not attrs.get("icon_url"):
+                raise ValidationException("icon_url is required", slug="missing-icon-url")
+            if not attrs.get("technologies"):
+                raise ValidationException("technologies is required", slug="missing-technologies")
+
+        return attrs
+
+    def _copy_course_translations(self, source, destination):
+        source_translations = CourseTranslation.objects.filter(course=source)
+        for translation in source_translations:
+            CourseTranslation.objects.create(
+                course=destination,
+                lang=translation.lang,
+                title=translation.title,
+                heading=translation.heading,
+                description=translation.description,
+                short_description=translation.short_description,
+                video_url=translation.video_url,
+                featured_assets=translation.featured_assets,
+                landing_url=translation.landing_url,
+                preview_url=translation.preview_url,
+                course_modules=deepcopy(translation.course_modules),
+                landing_variables=deepcopy(translation.landing_variables),
+                prerequisite=deepcopy(translation.prerequisite),
+            )
+
+    def create(self, validated_data):
+        academy_id = self.context.get("academy_id")
+        academy = Academy.objects.filter(id=academy_id).first()
+        if academy is None:
+            raise ValidationException(f"Academy {academy_id} not found", slug="academy-not-found")
+
+        source = validated_data.pop("_source_course_instance", None)
+        validated_data.pop("source_course", None)
+        syllabus = validated_data.pop("syllabus", None)
+
+        if source:
+            clone_defaults = {
+                "cohort": source.cohort if source.cohort and source.cohort.academy_id == academy.id else None,
+                "is_listed": source.is_listed,
+                "plan_slug": source.plan_slug,
+                "plan_by_country_code": deepcopy(source.plan_by_country_code),
+                "status": source.status,
+                "color": source.color,
+                "status_message": source.status_message,
+                "visibility": source.visibility,
+                "icon_url": source.icon_url,
+                "banner_image": source.banner_image,
+                "technologies": source.technologies,
+                "has_waiting_list": source.has_waiting_list,
+            }
+            clone_defaults.update(validated_data)
+            create_data = clone_defaults
+        else:
+            create_data = validated_data
+
+        with transaction.atomic():
+            course = Course.objects.create(academy=academy, **create_data)
+
+            if syllabus is not None:
+                course.syllabus.set(syllabus)
+            elif source:
+                course.syllabus.set(source.syllabus.all())
+                course.invites.set(source.invites.all())
+                course.suggested_plan_addon.set(source.suggested_plan_addon.all())
+                self._copy_course_translations(source, course)
+
+        return course
+
+
+class CoursePUTSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Course
+        fields = (
+            "slug",
+            "syllabus",
+            "cohort",
+            "is_listed",
+            "plan_slug",
+            "status",
+            "color",
+            "status_message",
+            "visibility",
+            "icon_url",
+            "banner_image",
+            "technologies",
+            "has_waiting_list",
+        )
+        extra_kwargs = {
+            "slug": {"required": False},
+            "technologies": {"required": False},
+            "icon_url": {"required": False},
+        }
+        read_only_fields = ()
+
+
+class CourseTranslationPOSTSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CourseTranslation
+        fields = (
+            "lang",
+            "title",
+            "heading",
+            "description",
+            "short_description",
+            "video_url",
+            "featured_assets",
+            "landing_url",
+            "preview_url",
+            "course_modules",
+            "landing_variables",
+            "prerequisite",
+        )
+
+    def validate(self, attrs):
+        course = self.context.get("course")
+        lang = attrs.get("lang")
+
+        if CourseTranslation.objects.filter(course=course, lang=lang).exists():
+            raise ValidationException(
+                f"A translation for lang '{lang}' already exists for this course",
+                slug="translation-already-exists",
+            )
+
+        return attrs
+
+    def create(self, validated_data):
+        course = self.context.get("course")
+        return CourseTranslation.objects.create(course=course, **validated_data)
+
+
+class CourseTranslationPUTSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CourseTranslation
+        fields = (
+            "title",
+            "heading",
+            "description",
+            "short_description",
+            "video_url",
+            "featured_assets",
+            "landing_url",
+            "preview_url",
+            "course_modules",
+            "landing_variables",
+            "prerequisite",
+        )
 
 
 class PostFormEntrySerializer(serializers.ModelSerializer):
@@ -480,6 +806,13 @@ class PostFormEntrySerializer(serializers.ModelSerializer):
         model = FormEntry
         exclude = ()
         read_only_fields = ["id"]
+
+    def validate(self, attrs):
+        if attrs.get("first_name"):
+            attrs["first_name"] = standardize_person_name(attrs["first_name"])
+        if attrs.get("last_name"):
+            attrs["last_name"] = standardize_person_name(attrs["last_name"])
+        return attrs
 
     def create(self, validated_data):
 
@@ -573,6 +906,75 @@ class TagListSerializer(serializers.ListSerializer):
         return result
 
 
+class POSTTagSerializer(serializers.ModelSerializer):
+    slug = serializers.CharField(required=True, max_length=150)
+    description = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+    class Meta:
+        model = Tag
+        fields = ("slug", "tag_type", "description", "automation")
+        extra_kwargs = {
+            "tag_type": {"required": False, "allow_null": True},
+            "automation": {"required": False, "allow_null": True},
+        }
+
+    def create(self, validated_data):
+        from breathecode.services.activecampaign import ActiveCampaign
+        from breathecode.admissions.models import Academy
+
+        academy_id = self.context.get("academy")
+        if not academy_id:
+            raise ValidationException("Academy ID is required", slug="missing-academy-id")
+
+        academy = Academy.objects.filter(id=academy_id).first()
+        if academy is None:
+            raise ValidationException(f"Academy {academy_id} not found", slug="academy-not-found")
+
+        slug = validated_data.pop("slug")
+        description = validated_data.pop("description", "")
+
+        # Check if tag already exists for this academy (check both relationships)
+        existing_tag = Tag.objects.filter(slug=slug).filter(
+            Q(ac_academy__academy__id=academy_id) | Q(academy__id=academy_id)
+        ).first()
+        
+        if existing_tag:
+            raise ValidationException(
+                f"Tag with slug '{slug}' already exists for this academy", slug="tag-already-exists"
+            )
+
+        # Try to get ActiveCampaign Academy (optional)
+        ac_academy = ActiveCampaignAcademy.objects.filter(academy__id=academy_id).first()
+        
+        acp_id = None
+        subscribers = 0
+        
+        # If ActiveCampaign is configured, create tag there
+        if ac_academy:
+            client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
+            try:
+                ac_data = client.create_tag(slug, description=description or "")
+                acp_id = ac_data["id"]
+                subscribers = 0  # Will be updated on sync
+            except Exception as e:
+                # Log but don't fail - tag can still be created locally
+                logger.warning(f"Failed to create tag in ActiveCampaign: {str(e)}")
+
+        # Create local Tag object
+        tag = Tag(
+            slug=slug,
+            acp_id=acp_id,
+            ac_academy=ac_academy,
+            academy=academy,  # Direct academy relationship
+            subscribers=subscribers,
+            description=description,
+            **validated_data,
+        )
+        tag.save()
+
+        return tag
+
+
 class PUTTagSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -606,3 +1008,225 @@ class ActiveCampaignAcademySerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         return ActiveCampaignAcademy.objects.create(**validated_data)
+
+
+class CourseResaleSettingsSerializer(serpy.Serializer):
+    """Serializer for GET requests of CourseResaleSettings."""
+
+    id = serpy.Field()
+    course = serpy.MethodField()
+    academy = AcademySmallSerializer()
+    
+    # Pricing and plans
+    plan_slug = serpy.Field()
+    plan_by_country_code = serpy.Field()
+    
+    # Visual customization
+    icon_url = serpy.Field()
+    banner_image = serpy.Field()
+    color = serpy.Field()
+    technologies = serpy.Field()
+    
+    # Status and visibility
+    status = serpy.Field()
+    status_message = serpy.Field()
+    visibility = serpy.Field()
+    is_listed = serpy.Field()
+    has_waiting_list = serpy.Field()
+    
+    # Control
+    is_active = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+
+    def get_course(self, obj):
+        return {"id": obj.course.id, "slug": obj.course.slug}
+
+
+class CourseResaleSettingsPOSTSerializer(serializers.ModelSerializer):
+    """Serializer for POST requests to create CourseResaleSettings."""
+
+    class Meta:
+        model = CourseResaleSettings
+        fields = (
+            # Pricing and plans
+            "plan_slug",
+            "plan_by_country_code",
+            # Visual customization
+            "icon_url",
+            "banner_image",
+            "color",
+            "technologies",
+            # Status and visibility
+            "status",
+            "status_message",
+            "visibility",
+            "is_listed",
+            "has_waiting_list",
+            # Control
+            "is_active",
+        )
+
+    def validate(self, data):
+        """Validate course resale settings data."""
+        academy = self.context.get("academy")
+        course = self.context.get("course")
+
+        if academy is None:
+            raise ValidationException("Academy not found in context", slug="academy-not-found")
+
+        if course is None:
+            raise ValidationException("Course not found in context", slug="course-not-found")
+
+        # Check if course already has resale settings for this academy
+        if CourseResaleSettings.objects.filter(course=course, academy=academy).exists():
+            raise ValidationException(
+                f"Resale settings already exist for course {course.slug} and academy {academy.slug}",
+                slug="resale-settings-already-exist",
+                code=400,
+            )
+
+        # Check if academy is trying to resell its own course
+        if course.academy == academy:
+            raise ValidationException(
+                "An academy cannot resell its own courses",
+                slug="cannot-resell-own-course",
+                code=400,
+            )
+
+        return data
+
+    def create(self, validated_data):
+        """Create CourseResaleSettings instance."""
+        academy = self.context.get("academy")
+        course = self.context.get("course")
+
+        return CourseResaleSettings.objects.create(course=course, academy=academy, **validated_data)
+
+
+class CourseResaleSettingsPUTSerializer(serializers.ModelSerializer):
+    """Serializer for PUT requests to update CourseResaleSettings."""
+
+    class Meta:
+        model = CourseResaleSettings
+        fields = (
+            # Pricing and plans
+            "plan_slug",
+            "plan_by_country_code",
+            # Visual customization
+            "icon_url",
+            "banner_image",
+            "color",
+            "technologies",
+            # Status and visibility
+            "status",
+            "status_message",
+            "visibility",
+            "is_listed",
+            "has_waiting_list",
+            # Control
+            "is_active",
+        )
+
+
+# ============================================================================
+# V2 Serializers - Use ppc_tracking_id instead of gclid
+# ============================================================================
+
+
+class FormEntrySerializerV2(serpy.Serializer):
+    """V2 serializer that uses ppc_tracking_id instead of gclid"""
+    id = serpy.Field()
+    first_name = serpy.Field()
+    last_name = serpy.Field()
+    email = serpy.Field()
+    course = serpy.Field()
+    location = serpy.Field()
+    language = serpy.Field()
+    ppc_tracking_id = serpy.MethodField()
+    utm_url = serpy.Field()
+    utm_medium = serpy.Field()
+    utm_campaign = serpy.Field()
+    utm_source = serpy.Field()
+    utm_placement = serpy.Field()
+    utm_term = serpy.Field()
+    utm_plan = serpy.Field()
+    sex = serpy.Field()
+    tags = serpy.Field()
+    storage_status = serpy.Field()
+    country = serpy.Field()
+    lead_type = serpy.Field()
+    academy = AcademySmallSerializer(required=False)
+    client_comments = serpy.Field(required=False)
+    created_at = serpy.Field()
+    custom_fields = serpy.MethodField(required=False)
+
+    def get_ppc_tracking_id(self, obj):
+        """Map gclid field to ppc_tracking_id"""
+        return obj.gclid
+
+    def get_custom_fields(self, obj):
+        if isinstance(obj.custom_fields, dict):
+            processed_fields = {}
+            for key, value in obj.custom_fields.items():
+                if isinstance(value, list):
+                    processed_fields[key] = ",".join(map(str, value))
+                else:
+                    processed_fields[key] = value
+            return processed_fields
+        return {}
+
+
+class PostFormEntrySerializerV2(serializers.ModelSerializer):
+    """
+    V2 serializer for creating form entries.
+    Accepts ppc_tracking_id instead of gclid - no backward compatibility.
+    """
+
+    ppc_tracking_id = serializers.CharField(max_length=255, required=False, allow_blank=True, allow_null=True)
+
+    class Meta:
+        model = FormEntry
+        exclude = ()
+        read_only_fields = ["id"]
+        extra_kwargs = {
+            "gclid": {"write_only": True},  # Hide gclid from input, we use ppc_tracking_id instead
+        }
+
+    def to_internal_value(self, data):
+        """Map ppc_tracking_id to gclid before validation"""
+        if "ppc_tracking_id" in data:
+            # Create a copy to avoid mutating the original
+            data = data.copy()
+            data["gclid"] = data.pop("ppc_tracking_id")
+        return super().to_internal_value(data)
+
+    def validate(self, attrs):
+        if attrs.get("first_name"):
+            attrs["first_name"] = standardize_person_name(attrs["first_name"])
+        if attrs.get("last_name"):
+            attrs["last_name"] = standardize_person_name(attrs["last_name"])
+        return attrs
+
+    def create(self, validated_data):
+        academy = None
+        if "location" in validated_data:
+            alias = AcademyAlias.objects.filter(active_campaign_slug=validated_data["location"]).first()
+            if alias is not None:
+                academy = alias.academy
+            else:
+                academy = Academy.objects.filter(active_campaign_slug=validated_data["location"]).first()
+
+        # copy the validated data just to do small last minute corrections
+        data = validated_data.copy()
+
+        # "us" language will become "en" language, its the right lang code
+        if "language" in data and data["language"] == "us":
+            data["language"] = "en"
+
+        if "tag_objects" in data and data["tag_objects"] != "":
+            tag_ids = data["tag_objects"].split(",")
+            data["tags"] = Tag.objects.filter(id__in=tag_ids)
+
+        result = super().create({**data, "academy": academy})
+        return result

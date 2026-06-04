@@ -28,6 +28,7 @@ from .payments_models_mixin import PaymentsModelsMixin
 from .provisioning_models_mixin import ProvisioningModelsMixin
 from .registry_models_mixin import RegistryModelsMixin
 from .task_manager_models_mixin import TaskManagerModelsMixin
+from .talent_development_models_mixin import TalentDevelopmentModelsMixin
 
 __all__ = ["GenerateModelsMixin"]
 
@@ -55,6 +56,7 @@ class GenerateModelsMixin(
     CommonsModelsMixin,
     LinkedServicesMixin,
     TaskManagerModelsMixin,
+    TalentDevelopmentModelsMixin,
 ):
 
     def __detect_invalid_arguments__(self, models={}, **kwargs):
@@ -139,6 +141,7 @@ class GenerateModelsMixin(
             self.generate_monitoring_models,
             self.generate_certificate_models,
             self.generate_career_models,
+            self.generate_talent_development_models,
             self.generate_commons_models,
         )
 

@@ -1,4 +1,5 @@
 import logging
+import os
 from typing import Type
 
 from django.conf import settings
@@ -28,7 +29,7 @@ def post_mentorship_session_completed(sender: Type[MentorshipSession], instance:
         token, created = Token.get_or_create(instance.mentor.user, token_type="temporal", hours_length=24)
 
         # Get the API URL
-        api_url = getattr(settings, "API_URL", "https://api.4geeks.com")
+        api_url = getattr(settings, "API_URL", os.getenv("API_URL"))
 
         # Build the session completion URL
         session_form_url = f"{api_url}/mentor/session/{instance.id}?token={token.key}"

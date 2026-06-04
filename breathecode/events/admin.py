@@ -10,8 +10,10 @@ from breathecode.utils import AdminExportCsvMixin
 
 from .actions import sync_org_events, sync_org_venues
 from .models import (
+    AcademyEventSettings,
     Event,
     EventbriteWebhook,
+    LumaWebhook,
     EventCheckin,
     EventContext,
     EventType,
@@ -90,7 +92,7 @@ class EventAdmin(admin.ModelAdmin, AdminExportCsvMixin):
         "online_event",
         "event_type",
     ]
-    search_fields = ["slug", "title", "eventbrite_id", "eventbrite_organizer_id"]
+    search_fields = ["slug", "title", "eventbrite_id", "eventbrite_organizer_id", "luma_id"]
     raw_id_fields = ["host_user"]
     actions = ["export_as_csv", reattempt_add_event_slug_as_acp_tag]
 
@@ -136,6 +138,13 @@ def reattempt_eventbrite_webhook(modeladmin, request, queryset):
         tasks.async_eventbrite_webhook.delay(entry.id)
 
 
+def reattempt_luma_webhook(modeladmin, request, queryset):
+    entries = queryset.all()
+
+    for entry in entries:
+        tasks.async_luma_webhook.delay(entry.id)
+
+
 @admin.register(EventbriteWebhook)
 class EventbriteWebhookAdmin(admin.ModelAdmin):
     list_display = ("id", "current_status", "action", "organization", "user_attendee", "event", "created_at")
@@ -155,6 +164,46 @@ class EventbriteWebhookAdmin(admin.ModelAdmin):
 
     def organization(self, obj):
         return Organization.objects.filter(eventbrite_id=obj.organization_id).first()
+
+    def current_status(self, obj):
+        colors = {
+            "DONE": "bg-success",
+            "ERROR": "bg-error",
+            "PENDING": "bg-warning",
+        }
+        if obj.status == "DONE":
+            return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
+        return format_html(
+            f"<div><span class='badge {colors[obj.status]}'>{obj.status}</span></div><small>{obj.status_text}</small>"
+        )
+
+    def user_attendee(self, obj):
+        if obj.attendee is None:
+            return "-"
+        return format_html(f"<a href='/admin/auth/user/{obj.attendee.id}/change/'>{str(obj.attendee)}</a>")
+
+
+@admin.register(LumaWebhook)
+class LumaWebhookAdmin(admin.ModelAdmin):
+    list_display = ("id", "current_status", "type", "organization", "user_attendee", "event", "created_at")
+    list_filter = ["organization_id", "status", "type"]
+    search_fields = [
+        "organization_id",
+        "status",
+        "type",
+        "luma_guest_id",
+        "webhook_id",
+        "event__title",
+        "event__slug",
+        "attendee__email",
+        "attendee__first_name",
+        "attendee__last_name",
+    ]
+    raw_id_fields = ["event", "attendee"]
+    actions = [reattempt_luma_webhook]
+
+    def organization(self, obj):
+        return Organization.objects.filter(id=obj.organization_id).first()
 
     def current_status(self, obj):
         colors = {
@@ -248,3 +297,14 @@ class EventContextAdmin(admin.ModelAdmin):
     list_filter = ["status"]
     search_fields = ["event__title", "event__slug", "status_text"]
     raw_id_fields = ["event"]
+
+
+@admin.register(AcademyEventSettings)
+class AcademyEventSettingsAdmin(admin.ModelAdmin):
+    list_display = (
+        "academy",
+        "default_meeting_provider",
+    )
+    list_filter = ["academy"]
+    search_fields = ["academy__slug", "academy__name"]
+    raw_id_fields = ["academy"]

@@ -198,3 +198,32 @@ class ProvisioningTestSuite(ProvisioningTestCase):
 
         vendor = get_provisioning_vendor(model.user.id, model.profile_academy, model.cohort)
         self.assertEqual(vendor.name, vendor2.provisioning_vendor.name)
+
+    def test__get_provisioning_vendor_entire_academy_ignores_other_vendor_types(self):
+        """Academy-wide VPS + academy-wide coding editor must not count as ambiguous."""
+        model = self.bc.database.create(cohort=1, profile_academy=1)
+        vps = self.bc.database.create(
+            provisioning_vendor={
+                "name": "hostinger",
+                "vendor_type": ProvisioningVendor.VendorType.VPS_SERVER,
+            },
+        )
+        editor = self.bc.database.create(
+            provisioning_vendor={
+                "name": "gitpod",
+                "vendor_type": ProvisioningVendor.VendorType.CODING_EDITOR,
+            },
+        )
+        self.bc.database.create(
+            academy=model.profile_academy.academy,
+            provisioning_vendor=vps.provisioning_vendor,
+            provisioning_profile={"members": None, "cohorts": None},
+        )
+        self.bc.database.create(
+            academy=model.profile_academy.academy,
+            provisioning_vendor=editor.provisioning_vendor,
+            provisioning_profile={"members": None, "cohorts": None},
+        )
+
+        vendor = get_provisioning_vendor(model.user.id, model.profile_academy, model.cohort)
+        self.assertEqual(vendor.id, editor.provisioning_vendor.id)

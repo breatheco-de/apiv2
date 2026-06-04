@@ -96,8 +96,20 @@ class AcademyActivateTestSuite(AdmissionsTestCase):
             "slug": model.academy.slug,
             "name": model.academy.name,
             "status": "ACTIVE",
-            "country": {"code": model.academy.country.code, "name": model.academy.country.name},
-            "city": {"name": model.academy.city.name},
+            "country": {
+                "id": model.academy.country.code,
+                "code": model.academy.country.code,
+                "name": model.academy.country.name,
+            },
+            "city": {
+                "id": model.academy.city.id,
+                "name": model.academy.city.name,
+                "country": {
+                    "id": model.academy.city.country.code,
+                    "code": model.academy.city.country.code,
+                    "name": model.academy.city.country.name,
+                },
+            },
             "logo_url": model.academy.logo_url,
         }
 
@@ -128,8 +140,20 @@ class AcademyActivateTestSuite(AdmissionsTestCase):
             "slug": model.academy.slug,
             "name": model.academy.name,
             "status": "ACTIVE",
-            "country": {"code": model.academy.country.code, "name": model.academy.country.name},
-            "city": {"name": model.academy.city.name},
+            "country": {
+                "id": model.academy.country.code,
+                "code": model.academy.country.code,
+                "name": model.academy.country.name,
+            },
+            "city": {
+                "id": model.academy.city.id,
+                "name": model.academy.city.name,
+                "country": {
+                    "id": model.academy.city.country.code,
+                    "code": model.academy.city.country.code,
+                    "name": model.academy.city.country.name,
+                },
+            },
             "logo_url": model.academy.logo_url,
         }
 

@@ -16,10 +16,12 @@ logger = logging.getLogger(__name__)
 
 
 @receiver(timeslot_saved, sender=CohortTimeSlot)
-def post_save_cohort_time_slot(sender: Type[CohortTimeSlot], instance: CohortTimeSlot, **kwargs: Any):
+def post_save_cohort_time_slot(
+    sender: Type[CohortTimeSlot], instance: CohortTimeSlot, force_generation=False, **kwargs: Any
+):
     logger.info("Procesing CohortTimeSlot save")
 
-    if (
+    if force_generation or (
         instance.cohort.ending_date
         and instance.cohort.ending_date > timezone.now()
         and instance.cohort.never_ends == False

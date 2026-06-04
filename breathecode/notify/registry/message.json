@@ -1,0 +1,64 @@
+{
+    "slug": "message",
+    "name": "Generic Message",
+    "description": "Generic notification template for sending custom messages with optional buttons and links",
+    "category": "general",
+    "channels": {
+        "email": {
+            "template_path": "message",
+            "default_subject": "Message from {academy_name}"
+        }
+    },
+    "variables": [
+        {
+            "name": "SUBJECT",
+            "description": "Message subject/title",
+            "source": "Passed in data dict",
+            "example": "Important Update",
+            "required": true
+        },
+        {
+            "name": "MESSAGE",
+            "description": "Main message content (supports HTML)",
+            "source": "Passed in data dict",
+            "example": "Your cohort schedule has been updated. Please check the new times.",
+            "required": true
+        },
+        {
+            "name": "BUTTON",
+            "description": "Optional button text",
+            "source": "Passed in data dict if button is needed",
+            "example": "View Schedule",
+            "required": false
+        },
+        {
+            "name": "LINK",
+            "description": "URL for the button (required if BUTTON is provided)",
+            "source": "Passed in data dict",
+            "example": "https://app.4geeks.com/cohort/schedule",
+            "required": false
+        },
+        {
+            "name": "BUTTON_TARGET",
+            "description": "Button link target attribute",
+            "source": "Passed in data dict, defaults to '_blank'",
+            "example": "_blank",
+            "required": false
+        },
+        {
+            "name": "GO_BACK",
+            "description": "Optional back link text",
+            "source": "Passed in data dict",
+            "example": "Go back to dashboard",
+            "required": false
+        },
+        {
+            "name": "URL_BACK",
+            "description": "URL for the back link (required if GO_BACK is provided)",
+            "source": "Passed in data dict",
+            "example": "https://app.4geeks.com/dashboard",
+            "required": false
+        }
+    ]
+}
+

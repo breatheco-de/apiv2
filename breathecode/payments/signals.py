@@ -14,6 +14,7 @@ reimburse_service_units = emisor.signal("reimburse_service_units")
 lose_service_permissions = emisor.signal("lose_service_permissions")
 grant_service_permissions = emisor.signal("grant_service_permissions")
 revoke_service_permissions = emisor.signal("revoke_service_permissions")
+deprovision_service = emisor.signal("deprovision_service")
 
 # proxy to m2m_changed in Event.service_items
 update_plan_m2m_service_items = emisor.signal("update_plan_m2m_service_items")

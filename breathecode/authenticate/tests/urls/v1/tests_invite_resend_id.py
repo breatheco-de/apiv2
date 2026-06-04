@@ -114,14 +114,14 @@ class AuthenticateTestSuite(AuthTestCase):
                     model.user_invite.email,
                     {
                         "email": model.user_invite.email,
-                        "subject": "Invitation to join 4Geeks",
+                        "subject": f"{model.academy.name if hasattr(model, 'academy') and model.academy else '4Geeks'} is inviting you to {model.academy.slug if hasattr(model, 'academy') and model.academy else '4geeks'}.4Geeks.com",
                         "LINK": (
                             os.getenv("API_URL", "")
                             + "/v1/auth/member/invite/"
                             + model.user_invite.token
                             + "?callback=https%3A%2F%2Fadmin.4geeks.com"
                         ),
-                        "FIST_NAME": model.user_invite.first_name,
+                        "FIRST_NAME": model.user_invite.first_name,
                     },
                     academy=None,
                 )
@@ -172,14 +172,14 @@ class AuthenticateTestSuite(AuthTestCase):
                     model.user_invite.email,
                     {
                         "email": model.user_invite.email,
-                        "subject": "Invitation to join 4Geeks",
+                        "subject": f"{model.academy.name if hasattr(model, 'academy') and model.academy else '4Geeks'} is inviting you to {model.academy.slug if hasattr(model, 'academy') and model.academy else '4geeks'}.4Geeks.com",
                         "LINK": (
                             os.getenv("API_URL", "")
                             + "/v1/auth/member/invite/"
                             + model.user_invite.token
                             + "?callback=https%3A%2F%2Fadmin.4geeks.com"
                         ),
-                        "FIST_NAME": model.user_invite.first_name,
+                        "FIRST_NAME": model.user_invite.first_name,
                     },
                     academy=None,
                 )
@@ -232,14 +232,14 @@ class AuthenticateTestSuite(AuthTestCase):
                     model.user_invite.email,
                     {
                         "email": model.user_invite.email,
-                        "subject": "Invitation to join 4Geeks",
+                        "subject": f"{model.academy.name if hasattr(model, 'academy') and model.academy else '4Geeks'} is inviting you to {model.academy.slug if hasattr(model, 'academy') and model.academy else '4geeks'}.4Geeks.com",
                         "LINK": (
                             os.getenv("API_URL", "")
                             + "/v1/auth/member/invite/"
                             + model.user_invite.token
                             + "?callback=https%3A%2F%2Fadmin.4geeks.com"
                         ),
-                        "FIST_NAME": model.user_invite.first_name,
+                        "FIRST_NAME": model.user_invite.first_name,
                     },
                     academy=None,
                 )

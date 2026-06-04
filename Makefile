@@ -32,7 +32,7 @@ test:
 	# # docker pull $(BQ_EMULATOR_IMAGE) --project=$(PROJECT_ID)
 	# docker run -d -p 8086:8086 --name bigquery-emulator $(BQ_EMULATOR_IMAGE)
 
-	pipenv run test
+	poetry run pytest
 
 	docker ps
 	# insert your test command here

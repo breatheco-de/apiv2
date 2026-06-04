@@ -17,11 +17,12 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 import breathecode.notify.actions as notify_actions
-from breathecode.admissions.models import Academy, City, Cohort, CohortUser, Country
-from breathecode.authenticate.actions import get_app_url, get_user_settings, sync_with_rigobot
+from breathecode.admissions.models import Academy, City, Cohort, CohortUser, Country, Syllabus, UP_TO_DATE
+from breathecode.authenticate.actions import convert_youtube_to_embed, get_app_url, get_invite_url, get_user_settings, sync_with_rigobot
 from breathecode.authenticate.tasks import verify_user_invite_email
 from breathecode.events.models import Event
 from breathecode.registry.models import Asset
+from breathecode.services.learnpack.webhook_ignore import LEARNPACK_FEATURES_TELEMETRY_WEBHOOK_IGNORE_KEY
 from breathecode.utils import serpy, validate_conversion_info
 
 from .models import (
@@ -38,6 +39,38 @@ from .models import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def get_welcome_video_for_invite(validated_data, academy):
+    """
+    Get welcome_video for invite with priority:
+    1. From payload (validated_data)
+    2. From academy default
+    3. None if neither has valid video
+    
+    Args:
+        validated_data: Serializer validated data
+        academy: Academy instance
+        
+    Returns:
+        dict or None: Welcome video dict with url and preview_image, or None
+    """
+    # Priority 1: Check if welcome_video is in payload
+    payload_video = validated_data.get("welcome_video")
+    if payload_video and isinstance(payload_video, dict):
+        url = payload_video.get("url", "")
+        preview_image = payload_video.get("preview_image", "")
+        if url and preview_image:
+            return payload_video
+    
+    # Priority 2: Check academy default welcome_video
+    if academy and academy.welcome_video and isinstance(academy.welcome_video, dict):
+        url = academy.welcome_video.get("url", "")
+        preview_image = academy.welcome_video.get("preview_image", "")
+        if url and preview_image:
+            return academy.welcome_video
+    
+    return None
 
 
 class CapyAppUserSerializer(capy.Serializer):
@@ -163,8 +196,8 @@ class UserTinySerializer(serpy.Serializer):
     email = serpy.Field()
 
 
-class UserBigSerializer(serpy.Serializer):
-    """The serializer schema definition."""
+class UserSmallSerializer(serpy.Serializer):
+    """The serializer schema definition - minimal user data (id, email, first_name)."""
 
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
@@ -227,10 +260,14 @@ class RoleSmallSerializer(serpy.Serializer):
 
     id = serpy.MethodField()
     slug = serpy.Field()
+    display_slug = serpy.MethodField()
     name = serpy.Field()
 
     def get_id(self, obj):
         return obj.slug
+
+    def get_display_slug(self, obj):
+        return obj.display_slug
 
 
 class RoleBigSerializer(serpy.Serializer):
@@ -238,12 +275,16 @@ class RoleBigSerializer(serpy.Serializer):
 
     id = serpy.MethodField()
     slug = serpy.Field()
+    display_slug = serpy.MethodField()
     name = serpy.Field()
     capabilities = serpy.MethodField()
 
     # this id is needed for zapier.com
     def get_id(self, obj):
         return obj.slug
+
+    def get_display_slug(self, obj):
+        return obj.display_slug
 
     def get_capabilities(self, obj):
         return obj.capabilities.all().values_list("slug", flat=True)
@@ -283,6 +324,13 @@ class GithubUserSerializer(serpy.Serializer):
         return GithubSmallSerializer(github).data
 
 
+class DiscordUsersSerializer(serpy.Serializer):
+    discord_id = serpy.Field()
+    username = serpy.Field()
+    created_at = serpy.Field()
+    user = UserTinySerializer()
+
+
 class GetProfileSmallSerializer(serpy.Serializer):
     avatar_url = serpy.Field()
 
@@ -304,7 +352,10 @@ class UserInviteShortSerializer(serpy.Serializer):
     id = serpy.Field()
     status = serpy.Field()
     email = serpy.Field()
+    phone = serpy.Field()
     sent_at = serpy.Field()
+    opened_at = serpy.Field()
+    clicked_at = serpy.Field()
     created_at = serpy.Field()
 
 
@@ -312,9 +363,23 @@ class UserInviteNoUrlSerializer(UserInviteShortSerializer):
     first_name = serpy.Field()
     last_name = serpy.Field()
     token = serpy.Field()
+    welcome_video = serpy.Field(required=False)
     academy = AcademyTinySerializer(required=False)
     cohort = CohortTinySerializer(required=False)
     role = RoleSmallSerializer(required=False)
+    event_slug = serpy.Field(required=False)
+    asset_slug = serpy.Field(required=False)
+    conversion_info = serpy.Field(required=False)
+    course = serpy.MethodField(required=False)
+
+    def get_course(self, obj):
+        if obj.course is None:
+            return None
+
+        return {
+            "id": obj.course.id,
+            "slug": obj.course.slug,
+        }
 
 
 class UserInviteSerializer(UserInviteNoUrlSerializer):
@@ -323,7 +388,9 @@ class UserInviteSerializer(UserInviteNoUrlSerializer):
     def get_invite_url(self, _invite):
         if _invite.token is None:
             return None
-        return os.getenv("API_URL") + "/v1/auth/member/invite/" + str(_invite.token)
+        academy = getattr(_invite, "academy", None)
+        callback_url = get_app_url(academy=academy) if academy else None
+        return get_invite_url(_invite.token, academy=academy, callback_url=callback_url)
 
 
 class AcademySerializer(serpy.Serializer):
@@ -375,8 +442,8 @@ class AcademySmallSerializer(serpy.Serializer):
     slug = serpy.Field()
 
 
-class UserSmallSerializer(serpy.Serializer):
-    """The serializer schema definition."""
+class UserBigSerializer(serpy.Serializer):
+    """The serializer schema definition - complete user data (id, email, first_name, last_name, github, profile)."""
 
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
@@ -393,10 +460,12 @@ class UserSmallSerializer(serpy.Serializer):
         return GithubSmallSerializer(obj.credentialsgithub).data
 
     def get_profile(self, obj):
-        if not hasattr(obj, "profile"):
+        try:
+            profile = obj.profile
+        except Profile.DoesNotExist:
             return None
 
-        return GetProfileSmallSerializer(obj.profile).data
+        return GetProfileSmallSerializer(profile).data
 
 
 class UserSuperSmallSerializer(serpy.Serializer):
@@ -410,10 +479,12 @@ class UserSuperSmallSerializer(serpy.Serializer):
     profile = serpy.MethodField()
 
     def get_profile(self, obj):
-        if not hasattr(obj, "profile"):
+        try:
+            profile = obj.profile
+        except Profile.DoesNotExist:
             return None
 
-        return GetProfileSmallSerializer(obj.profile).data
+        return GetProfileSmallSerializer(profile).data
 
 
 class GetProfileAcademySerializer(serpy.Serializer):
@@ -423,7 +494,7 @@ class GetProfileAcademySerializer(serpy.Serializer):
     id = serpy.Field()
     first_name = serpy.Field()
     last_name = serpy.Field()
-    user = UserSmallSerializer(required=False)
+    user = UserBigSerializer(required=False)
     academy = AcademySmallSerializer()
     role = RoleSmallSerializer()
     created_at = serpy.Field()
@@ -491,10 +562,12 @@ class AppUserSerializer(serpy.Serializer):
     profile = serpy.MethodField()
 
     def get_profile(self, obj):
-        if not hasattr(obj, "profile"):
+        try:
+            profile = obj.profile
+        except Profile.DoesNotExist:
             return None
 
-        return GetProfileSmallSerializer(obj.profile).data
+        return GetProfileSmallSerializer(profile).data
 
     def get_github(self, obj):
         github = CredentialsGithub.objects.filter(user=obj.id).first()
@@ -565,11 +638,15 @@ class AuthSettingsBigSerializer(serpy.Serializer):
     id = serpy.Field()
     academy = AcademyTinySerializer()
     github_username = serpy.Field()
-    github_owner = UserSmallSerializer(required=False)
-    google_cloud_owner = UserSmallSerializer(required=False)
+    github_owner = UserBigSerializer(required=False)
+    google_cloud_owner = UserBigSerializer(required=False)
     github_default_team_ids = serpy.Field()
     github_is_sync = serpy.Field()
     github_error_log = serpy.Field()
+
+    learnpack_owner = UserTinySerializer(required=False)
+    learnpack_features = serpy.Field()
+    learnpack_org_id = serpy.Field()
 
 
 #
@@ -586,6 +663,26 @@ class AcademyAuthSettingsSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
 
         return super().create({**validated_data, "academy": Academy.filter(id=self.context["academy_id"]).first()})
+
+    def update(self, instance, validated_data):
+        # Preserve LearnPack telemetry ignore rules when PUT omits `telemetry_webhook_ignore` under learnpack_features.
+        if "learnpack_features" in validated_data:
+            incoming = validated_data["learnpack_features"]
+            if not isinstance(incoming, dict):
+                incoming = {}
+            merged = {**(instance.learnpack_features or {}), **incoming}
+
+            prev = instance.learnpack_features or {}
+            if (
+                isinstance(prev, dict)
+                and LEARNPACK_FEATURES_TELEMETRY_WEBHOOK_IGNORE_KEY in prev
+                and LEARNPACK_FEATURES_TELEMETRY_WEBHOOK_IGNORE_KEY not in incoming
+            ):
+                merged[LEARNPACK_FEATURES_TELEMETRY_WEBHOOK_IGNORE_KEY] = prev[
+                    LEARNPACK_FEATURES_TELEMETRY_WEBHOOK_IGNORE_KEY
+                ]
+            validated_data["learnpack_features"] = merged
+        return super().update(instance, validated_data)
 
 
 class StaffSerializer(serializers.ModelSerializer):
@@ -646,10 +743,11 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
     )
     user = serializers.IntegerField(write_only=True, required=False)
     status = serializers.CharField(read_only=True)
+    welcome_video = serializers.JSONField(write_only=True, required=False)
 
     class Meta:
         model = ProfileAcademy
-        fields = ("email", "role", "user", "first_name", "last_name", "address", "phone", "invite", "cohort", "status")
+        fields = ("email", "role", "user", "first_name", "last_name", "address", "phone", "invite", "cohort", "status", "welcome_video")
 
     def validate(self, data):
         lang = data.get("lang", "en")
@@ -822,6 +920,10 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                     raise ValidationException("Cohort not found", slug="cohort-not-found")
                 cohort.append(cohort_search)
 
+        # Remove 'invite' field as it's not a ProfileAcademy model field
+        # It's only used for validation logic
+        invite = validated_data.pop("invite", None)
+
         user = None
         email = None
         status = "INVITED"
@@ -853,7 +955,6 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
 
         # if there is not user (first time) it will be considere an invite
         if "user" not in validated_data:
-            validated_data.pop("invite")  # the front end sends invite=true so we need to remove it
             email = validated_data["email"].lower()
 
             if len(cohort) == 0:
@@ -887,36 +988,51 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                     if not UserInvite.objects.filter(token=token).exists():
                         break
 
+                welcome_video = get_welcome_video_for_invite(validated_data, academy)
+                
                 invite = UserInvite(
                     email=email,
                     first_name=validated_data["first_name"],
                     last_name=validated_data["last_name"],
+                    phone=validated_data.get("phone", ""),
                     academy=academy,
                     cohort=single_cohort,
                     role=role,
                     author=self.context.get("request").user,
                     token=token,
+                    welcome_video=welcome_video,
                 )
                 invite.save()
 
                 logger.debug("Sending invite email to " + email)
 
-                params = {"callback": "https://admin.4geeks.com"}
-                querystr = urllib.parse.urlencode(params)
-                url = os.getenv("API_URL") + "/v1/auth/member/invite/" + str(invite.token) + "?" + querystr
+                callback_url = get_app_url(academy=academy)
+                url = get_invite_url(invite.token, academy=academy, callback_url=callback_url)
+
+                email_data = {
+                    "email": email,
+                    "subject": f"{academy.name} is inviting you to {academy.slug}.4Geeks.com",
+                    "LINK": url,
+                    "FIRST_NAME": validated_data["first_name"],
+                    "TRACKER_URL": f"{os.getenv('API_URL', '')}/v1/auth/invite/track/open/{invite.id}",
+                }
+                
+                # Add welcome video if available
+                if invite.welcome_video:
+                    welcome_video = invite.welcome_video.copy() if isinstance(invite.welcome_video, dict) else invite.welcome_video
+                    email_data["WELCOME_VIDEO"] = welcome_video
 
                 notify_actions.send_email_message(
                     "welcome_academy",
                     email,
-                    {
-                        "email": email,
-                        "subject": "Welcome to " + academy.name,
-                        "LINK": url,
-                        "FIST_NAME": validated_data["first_name"],
-                    },
+                    email_data,
                     academy=academy,
                 )
 
+        # Remove welcome_video from validated_data as it's not a ProfileAcademy field
+        if "welcome_video" in validated_data:
+            del validated_data["welcome_video"]
+        
         # add member to the academy (the cohort is inside validated_data
         return super().create(
             {
@@ -934,14 +1050,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
 class StudentPOSTListSerializer(serializers.ListSerializer):
 
     def create(self, validated_data):
-
         result = [self.child.create(attrs) for attrs in validated_data]
-
-        try:
-            self.child.Meta.model.objects.bulk_create(result)
-        except IntegrityError as e:
-            raise ValidationError(e)
-
         return result
 
 
@@ -954,8 +1063,21 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
     plans = serializers.ListField(
         child=serializers.IntegerField(write_only=True, required=False), write_only=True, required=False
     )
+    payment_method = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     user = serializers.IntegerField(write_only=True, required=False)
     status = serializers.CharField(read_only=True)
+    welcome_video = serializers.JSONField(write_only=True, required=False)
+    conversion_info = serializers.JSONField(write_only=True, required=False, allow_null=True)
+    country = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    city = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    syllabus_slug = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=False)
+    how_many_installments = serializers.IntegerField(write_only=True, required=False, min_value=1)
+    initial_payment_amount = serializers.FloatField(write_only=True, required=False, allow_null=True)
+    initial_payment_notes = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    unique_payment_negotiated_amount = serializers.FloatField(write_only=True, required=False, allow_null=True)
+    grace_period_duration = serializers.IntegerField(write_only=True, required=False, min_value=0)
+    grace_period_duration_unit = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    financing_option_id = serializers.IntegerField(write_only=True, required=False, min_value=1)
 
     id = serializers.IntegerField(read_only=True)
 
@@ -972,17 +1094,84 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
             "cohort",
             "status",
             "plans",
+            "payment_method",
             "id",
+            "welcome_video",
+            "conversion_info",
+            "country",
+            "city",
+            "syllabus_slug",
+            "how_many_installments",
+            "initial_payment_amount",
+            "initial_payment_notes",
+            "unique_payment_negotiated_amount",
+            "grace_period_duration",
+            "grace_period_duration_unit",
+            "financing_option_id",
         )
         list_serializer_class = StudentPOSTListSerializer
 
     def validate(self, data):
+        request = self.context.get("request")
+        lang = getattr(request, "LANG", None) if request else None
+        lang = lang or self.context.get("lang", "en") if isinstance(self.context.get("lang"), str) else "en"
+
         if "email" in data and data["email"]:
             data["email"] = data["email"].lower()
             user = User.objects.filter(email=data["email"]).first()
 
             if user:
                 data["user"] = user.id
+
+        # Clean phone number (strip whitespace)
+        if "phone" in data and data["phone"]:
+            data["phone"] = data["phone"].strip()
+
+        # Clean location fields
+        if "country" in data and isinstance(data["country"], str):
+            data["country"] = data["country"].strip()
+
+        if "city" in data and isinstance(data["city"], str):
+            data["city"] = data["city"].strip()
+
+        conversion_info = data.get("conversion_info", None)
+        validate_conversion_info(conversion_info, lang)
+
+        syllabus_slug = data.get("syllabus_slug", None)
+        if syllabus_slug:
+            syllabus = Syllabus.objects.filter(slug=syllabus_slug).first()
+            if syllabus is None:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Syllabus not found",
+                        es="Syllabus no encontrado",
+                    ),
+                    slug="syllabus-not-found",
+                    code=400,
+                )
+
+            data["syllabus"] = syllabus
+            data.pop("syllabus_slug", None)
+
+        # Validate payment_method if provided
+        if "payment_method" in data and data["payment_method"] is not None:
+            from breathecode.payments.models import PaymentMethod
+
+            academy_id = self.context.get("academy_id")
+            payment_method = PaymentMethod.objects.filter(
+                id=data["payment_method"], academy_id=academy_id
+            ).first()
+
+            if payment_method is None:
+                raise ValidationException(
+                    translation(
+                        en=f"Payment method not found or does not belong to this academy",
+                        es=f"Método de pago no encontrado o no pertenece a esta academia",
+                    ),
+                    slug="payment-method-not-found",
+                    code=404,
+                )
 
         if "user" not in data:
             if "invite" not in data or data["invite"] != True:
@@ -1000,14 +1189,119 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
         elif "user" in data:
             already = ProfileAcademy.objects.filter(user=data["user"], academy=self.context["academy_id"]).first()
             if already:
+                if already.role_id != "student":
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en="This user is already a member of this academy with a non-student role",
+                            es="Este usuario ya es miembro de esta academia con un rol diferente al de estudiante",
+                        ),
+                        code=400,
+                        slug="already-exists-with-non-student-role",
+                    )
+                data["_existing_profile_academy_id"] = already.id
+
+        financing_field_names = (
+            "how_many_installments",
+            "initial_payment_amount",
+            "initial_payment_notes",
+            "unique_payment_negotiated_amount",
+            "grace_period_duration",
+            "grace_period_duration_unit",
+            "financing_option_id",
+        )
+        financing_request_keys = financing_field_names + ("negotiated_invoice_amount",)
+        has_financing_fields = any(k in data for k in financing_request_keys)
+        if has_financing_fields and not data.get("plans"):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Financing options require at least one plan in plans",
+                    es="Las opciones de financiamiento requieren al menos un plan en plans",
+                ),
+                slug="plan-access-requires-plans",
+                code=400,
+            )
+
+        student_plan_access = None
+        if data.get("plans"):
+            from breathecode.payments.actions import validate_student_invite_plan_access_config
+            from breathecode.payments.models import Plan
+
+            plans_loaded = []
+            for plan_id in data["plans"]:
+                p = Plan.objects.filter(id=plan_id).first()
+                if p is None:
+                    raise ValidationException("Plan not found", slug="plan-not-found")
+                plans_loaded.append(p)
+
+            how_many = data.get("how_many_installments", 1)
+            initial_amt = data.get("initial_payment_amount", None)
+            if "initial_payment_amount" not in data:
+                initial_amt = None
+            initial_notes = data.get("initial_payment_notes", None)
+            unique_amt = data.get("unique_payment_negotiated_amount", None)
+            if "unique_payment_negotiated_amount" not in data and "negotiated_invoice_amount" in data:
+                unique_amt = data.get("negotiated_invoice_amount", None)
+            elif "unique_payment_negotiated_amount" not in data:
+                unique_amt = None
+            grace_dur = data.get("grace_period_duration", 0)
+            if grace_dur is None:
+                grace_dur = 0
+            grace_unit = data.get("grace_period_duration_unit") or "MONTH"
+            if isinstance(grace_unit, str) and grace_unit.strip() == "":
+                grace_unit = "MONTH"
+            financing_option_id = data.get("financing_option_id")
+
+            student_plan_access = validate_student_invite_plan_access_config(
+                plans=plans_loaded,
+                how_many_installments=how_many,
+                initial_payment_amount=initial_amt,
+                initial_payment_notes=initial_notes,
+                unique_payment_negotiated_amount=unique_amt,
+                grace_period_duration=int(grace_dur),
+                grace_period_duration_unit=grace_unit,
+                financing_option_id=financing_option_id,
+                lang=lang,
+                note_author_user_id=(self.context.get("request").user.id if self.context.get("request") else None),
+            )
+
+            if initial_amt is not None and float(initial_amt) > 0 and not data.get("payment_method"):
                 raise ValidationException(
-                    "This user is already a member of this academy staff", code=400, slug="already-exists"
+                    translation(
+                        lang,
+                        en="initial_payment_amount greater than zero requires payment_method",
+                        es="initial_payment_amount mayor que cero requiere payment_method",
+                    ),
+                    slug="initial-payment-requires-payment-method",
+                    code=400,
                 )
+
+            if unique_amt is not None and float(unique_amt) > 0 and not data.get("payment_method"):
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="unique_payment_negotiated_amount greater than zero requires payment_method",
+                        es="unique_payment_negotiated_amount mayor que cero requiere payment_method",
+                    ),
+                    slug="unique-payment-negotiated-requires-payment-method",
+                    code=400,
+                )
+
+        for k in financing_field_names:
+            data.pop(k, None)
+        data.pop("negotiated_invoice_amount", None)
+
+        if student_plan_access is not None:
+            data["_student_plan_access_payload"] = student_plan_access
 
         return data
 
     def create(self, validated_data):
         from breathecode.payments.models import Plan
+
+        student_plan_access = validated_data.pop("_student_plan_access_payload", None)
+        existing_profile_academy_id = validated_data.pop("_existing_profile_academy_id", None)
 
         academy = Academy.objects.filter(id=self.context.get("academy_id")).first()
         if academy is None:
@@ -1031,13 +1325,17 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
         user = None
         email = None
         status = "INVITED"
+        conversion_info = validated_data.pop("conversion_info", None)
+        country = validated_data.pop("country", None)
+        city = validated_data.pop("city", None)
+        syllabus = validated_data.pop("syllabus", None)
         if "user" in validated_data:
             user = User.objects.filter(id=validated_data["user"]).first()
             if user is None:
                 raise ValidationException("User not found", slug="user-not-found")
 
             email = user.email
-            token, created = Token.get_or_create(user, token_type="temporal")
+            token, created = Token.get_or_create(user, token_type="short")
             querystr = urllib.parse.urlencode(
                 {"callback": get_app_url() + f"?utm_medium=academy&utm_source={academy.slug}", "token": token}
             )
@@ -1046,39 +1344,92 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
             if "invite" in validated_data:
                 del validated_data["invite"]
 
-            if "plans" in validated_data:
-                del validated_data["plans"]
+            plans_for_user = []
+            if "plans" in validated_data and validated_data["plans"]:
+                plan_list = validated_data.pop("plans")
+                for plan_id in plan_list:
+                    plan = Plan.objects.filter(id=plan_id).first()
+                    if plan is None:
+                        raise ValidationException("Plan not found", slug="plan-not-found")
+                    plans_for_user.append(plan)
 
-            profile_academy = ProfileAcademy.objects.create(
-                **{
-                    **validated_data,
-                    "email": email,
-                    "user": user,
-                    "academy": academy,
-                    "role": role,
-                    "status": status,
-                }
-            )
-            profile_academy.save()
+            payment_method_for_plans = None
+            if "payment_method" in validated_data:
+                pm_id = validated_data.pop("payment_method")
+                if pm_id is not None:
+                    from breathecode.payments.models import PaymentMethod
+
+                    payment_method_for_plans = PaymentMethod.objects.filter(
+                        id=pm_id,
+                        academy_id=academy.id,
+                    ).first()
+
+            profile_academy_extra_fields = ("welcome_video", "cohorts")
+            for _f in profile_academy_extra_fields:
+                validated_data.pop(_f, None)
+
+            if existing_profile_academy_id:
+                profile_academy = ProfileAcademy.objects.filter(id=existing_profile_academy_id).first()
+                if profile_academy is None:
+                    raise ValidationException("Profile academy not found", slug="profile-academy-not-found")
+            else:
+                profile_academy = ProfileAcademy.objects.create(
+                    **{
+                        **validated_data,
+                        "email": email,
+                        "user": user,
+                        "academy": academy,
+                        "role": role,
+                        "status": status,
+                    }
+                )
+                profile_academy.save()
 
             for c in cohort:
-                CohortUser.objects.create(
+                CohortUser.objects.get_or_create(
                     cohort=c,
-                    role="STUDENT",
                     user=user,
+                    defaults={"role": "STUDENT", "finantial_status": UP_TO_DATE},
                 )
 
-            notify_actions.send_email_message(
-                "academy_invite",
-                email,
-                {
-                    "subject": f"Invitation to study at {academy.name}",
-                    "invites": [ProfileAcademySmallSerializer(profile_academy).data],
-                    "user": UserSmallSerializer(user).data,
-                    "LINK": url,
-                },
-                academy=academy,
-            )
+            if plans_for_user:
+                from breathecode.payments.actions import create_invited_plan_financing_for_user
+
+                author = self.context.get("request").user if self.context.get("request") else None
+                request = self.context.get("request")
+                lang = getattr(request, "LANG", None) if request else None
+                lang = lang or self.context.get("lang", "en") if isinstance(self.context.get("lang"), str) else "en"
+                primary_cohort = cohort[0] if cohort else None
+                extra_cohorts = cohort[1:] if len(cohort) > 1 else None
+                financing_kwargs = {}
+                if student_plan_access:
+                    financing_kwargs.update(student_plan_access)
+                for plan in plans_for_user:
+                    create_invited_plan_financing_for_user(
+                        user=user,
+                        plan=plan,
+                        academy=academy,
+                        cohort=primary_cohort,
+                        payment_method=payment_method_for_plans,
+                        author=author,
+                        lang=lang,
+                        conversion_info=conversion_info,
+                        joined_cohorts=extra_cohorts,
+                        **financing_kwargs,
+                    )
+
+            if not existing_profile_academy_id:
+                notify_actions.send_email_message(
+                    "academy_invite",
+                    email,
+                    {
+                        "subject": f"Invitation to study at {academy.name}",
+                        "invites": [ProfileAcademySmallSerializer(profile_academy).data],
+                        "user": UserBigSerializer(user).data,
+                        "LINK": url,
+                    },
+                    academy=academy,
+                )
             return profile_academy
 
         plans: list[Plan] = []
@@ -1089,6 +1440,15 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                 if plan is None:
                     raise ValidationException("Plan not found", slug="plan-not-found")
                 plans.append(plan)
+
+        # Extract payment_method if provided
+        payment_method = None
+        if "payment_method" in validated_data:
+            payment_method_id = validated_data.pop("payment_method")
+            if payment_method_id is not None:
+                from breathecode.payments.models import PaymentMethod
+
+                payment_method = PaymentMethod.objects.filter(id=payment_method_id).first()
 
         if "user" not in validated_data:
             validated_data.pop("invite")  # the front end sends invite=true so we need to remove it
@@ -1124,6 +1484,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                 },
             )
 
+            invites_created = []
             for single_cohort in cohort:
                 # prevent duplicate token (very low probability)
                 while True:
@@ -1133,42 +1494,71 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
 
                 now = timezone.now()
 
+                welcome_video = get_welcome_video_for_invite(validated_data, academy)
+                
                 invite = UserInvite(
                     user=user,
                     email=email,
                     first_name=validated_data["first_name"],
                     last_name=validated_data["last_name"],
+                    phone=validated_data.get("phone", ""),
                     academy=academy,
                     cohort=single_cohort,
                     role=role,
                     author=self.context.get("request").user,
                     token=token,
                     expires_at=now + relativedelta(months=6),
+                    payment_method=payment_method,
+                    welcome_video=welcome_video,
+                    conversion_info=conversion_info,
+                    country=country,
+                    city=city,
+                    syllabus=syllabus,
+                    student_plan_access=(student_plan_access if plans else None),
                 )
                 invite.save()
+                invites_created.append(invite)
 
                 logger.debug("Sending invite email to " + email)
 
-                querystr = urllib.parse.urlencode({"callback": get_app_url()})
-                url = os.getenv("API_URL") + "/v1/auth/member/invite/" + str(invite.token) + "?" + querystr
+                # Log academy info for debugging white label
+                logger.info(f"DEBUG create_invite - Academy: {academy.slug}, white_labeled={academy.white_labeled}, website_url={academy.website_url}")
+                
+                callback_url = get_app_url(academy=academy)
+                logger.info(f"DEBUG create_invite - Callback URL: {callback_url}")
+                
+                url = get_invite_url(invite.token, academy=academy, callback_url=callback_url)
+                logger.info(f"DEBUG create_invite - Full invite URL: {url}")
+
+                email_data = {
+                    "email": email,
+                    "subject": f"{academy.name} is inviting you to {academy.slug}.4Geeks.com",
+                    "LINK": url,
+                    "FIRST_NAME": validated_data["first_name"],
+                    "TRACKER_URL": f"{os.getenv('API_URL', '')}/v1/auth/invite/track/open/{invite.id}",
+                }
+                
+                # Add welcome video if available
+                if invite.welcome_video:
+                    welcome_video = invite.welcome_video.copy() if isinstance(invite.welcome_video, dict) else invite.welcome_video
+                    email_data["WELCOME_VIDEO"] = welcome_video
 
                 notify_actions.send_email_message(
                     "welcome_academy",
                     email,
-                    {
-                        "email": email,
-                        "subject": "Welcome to " + academy.name,
-                        "LINK": url,
-                        "FIST_NAME": validated_data["first_name"],
-                    },
+                    email_data,
                     academy=academy,
                 )
 
             for plan in plans:
-                plan.invites.add(invite)
+                for invite in invites_created:
+                    plan.invites.add(invite)
 
             if "plans" in validated_data:
                 del validated_data["plans"]
+            
+            if "welcome_video" in validated_data:
+                del validated_data["welcome_video"]
 
             return ProfileAcademy.objects.create(
                 **{
@@ -1243,11 +1633,24 @@ class MemberPUTSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
 
-        if instance.user.first_name is None or instance.user.first_name == "":
+        user_updated = False
+        
+        if "first_name" in validated_data:
+            instance.user.first_name = validated_data["first_name"]
+            user_updated = True
+        elif instance.user.first_name is None or instance.user.first_name == "":
             instance.user.first_name = instance.first_name or ""
-        if instance.user.last_name is None or instance.user.last_name == "":
+            user_updated = True
+
+        if "last_name" in validated_data:
+            instance.user.last_name = validated_data["last_name"]
+            user_updated = True
+        elif instance.user.last_name is None or instance.user.last_name == "":
             instance.user.last_name = instance.last_name or ""
-        instance.user.save()
+            user_updated = True
+
+        if user_updated:
+            instance.user.save()
 
         return super().update(instance, validated_data)
 
@@ -1349,6 +1752,10 @@ class AuthSerializer(serializers.Serializer):
             raise ValidationException(
                 "You need to validate your email first", slug="email-not-validated", silent=True, code=403, data=data
             )
+
+        if user is None:
+            msg = "Unable to log in with provided credentials."
+            raise serializers.ValidationError(msg, code=403)
 
         attrs["user"] = user
         return attrs
@@ -1700,6 +2107,11 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         if obj.status != "ACCEPTED":
             return None
 
+        # Determine organization based on academy slug
+        organization = "4geeks"  # default
+        if obj.academy and obj.academy.slug == "learnpack":
+            organization = "learnpack"
+
         # if should be created within the signal
         if not self.user:
             self.user = User.objects.filter(email=self.email).first()
@@ -1727,7 +2139,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         self.instance.save()
 
         token, _ = Token.get_or_create(user=self.user, token_type="login")
-        async_to_sync(sync_with_rigobot)(token.key)
+        async_to_sync(sync_with_rigobot)(token.key, organization=organization)
         return token.key
 
     def get_plans(self, obj: UserInvite):

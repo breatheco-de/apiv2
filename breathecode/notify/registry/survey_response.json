@@ -1,0 +1,51 @@
+{
+    "slug": "survey_response",
+    "name": "Survey Response (New Survey System)",
+    "description": "Email invitation to answer a SurveyResponse (token-based) from the new survey system",
+    "category": "feedback",
+    "channels": {
+        "email": {
+            "template_path": "survey_response",
+            "default_subject": "We'd love your feedback"
+        }
+    },
+    "variables": [
+        {
+            "name": "SUBJECT",
+            "description": "Email subject/title shown inside the email body",
+            "source": "Passed in data dict",
+            "example": "We'd love your feedback",
+            "required": true
+        },
+        {
+            "name": "MESSAGE",
+            "description": "Message text shown inside the email body",
+            "source": "Passed in data dict",
+            "example": "Please take a minute to answer this survey.",
+            "required": false
+        },
+        {
+            "name": "BUTTON",
+            "description": "Call-to-action button label",
+            "source": "Passed in data dict",
+            "example": "Open survey",
+            "required": false
+        },
+        {
+            "name": "LINK",
+            "description": "Frontend URL to open the survey using the SurveyResponse token",
+            "source": "Generated from app URL + token",
+            "example": "https://app.4geeks.com/survey/6b4e9a3b-0c2b-4c2b-9d8b-1c2d3e4f5a6b",
+            "required": true
+        },
+        {
+            "name": "TRACKER_URL",
+            "description": "1x1 pixel URL to track email opens",
+            "source": "API URL + /v1/feedback/survey/response/<token>/tracker.png",
+            "example": "https://api.4geeks.com/v1/feedback/survey/response/6b4e9a3b-0c2b-4c2b-9d8b-1c2d3e4f5a6b/tracker.png",
+            "required": false
+        }
+    ]
+}
+
+

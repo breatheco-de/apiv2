@@ -1,4 +1,7 @@
+import base64
 import datetime
+import io
+import json
 import logging
 import os
 import random
@@ -6,9 +9,10 @@ import re
 import string
 import urllib.parse
 from random import randint
-from typing import Any
+from typing import Any, Optional
 
 import aiohttp
+import requests
 from adrf.requests import AsyncRequest
 from asgiref.sync import sync_to_async
 from capyc.core.i18n import translation
@@ -19,10 +23,15 @@ from django.db.models import Q
 from django.utils import timezone
 
 import breathecode.notify.actions as notify_actions
-from breathecode.admissions.models import Academy, CohortUser
+from breathecode.admissions.models import Academy, CohortUser, UP_TO_DATE
+from breathecode.authenticate.models import CredentialsDiscord
 from breathecode.services.github import Github
+from breathecode.utils.decorators import service_deprovisioner
 
 from .models import (
+    ADD,
+    PENDING,
+    SYNCHED,
     AcademyAuthSettings,
     CredentialsGithub,
     DeviceId,
@@ -38,8 +47,565 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 
-def get_app_url():
-    url = os.getenv("APP_URL", "https://4geeks.com")
+def _github_copilot_response_for_log(response: Any) -> str:
+    if response is None:
+        return "null"
+    if isinstance(response, dict):
+        try:
+            s = json.dumps(response, default=str, ensure_ascii=True)
+        except Exception:
+            s = str(response)
+    else:
+        s = str(response)
+    if len(s) > 2000:
+        return s[:2000] + "...[truncated]"
+    return s
+
+
+def _get_github_academy_user_for_copilot_log(user_id: int, academy_id: int | None) -> GithubAcademyUser | None:
+    qs = GithubAcademyUser.objects.filter(user_id=user_id)
+    if academy_id:
+        qs = qs.filter(academy_id=academy_id)
+    return qs.order_by("-updated_at").first()
+
+
+def _append_copilot_storage_log(
+    user_id: int,
+    academy_id: int | None,
+    message: str,
+    *,
+    sibling_academy_ids: list[int] | None = None,
+) -> None:
+    if sibling_academy_ids:
+        row = (
+            GithubAcademyUser.objects.filter(user_id=user_id, academy_id__in=sibling_academy_ids)
+            .order_by("-updated_at")
+            .first()
+        )
+    else:
+        row = _get_github_academy_user_for_copilot_log(user_id=user_id, academy_id=academy_id)
+    if not row:
+        return
+    try:
+        row.log(message)
+        row.save(update_fields=["storage_log", "updated_at"])
+    except Exception:
+        logger.exception(
+            "[COPILOT storage_log] failed user_id=%s academy_id=%s sibling_academy_ids=%s message=%s",
+            user_id,
+            academy_id,
+            sibling_academy_ids,
+            message[:250],
+        )
+
+
+def github_academy_user_allows_copilot(user: User, academy_id: int | None = None) -> bool:
+    """Copilot is tied to org membership tracking: user must be SYNCHED + ADD for the academy (or any academy)."""
+    if not user or not user.id:
+        return False
+    qs = GithubAcademyUser.objects.filter(user_id=user.id, storage_status=SYNCHED, storage_action=ADD)
+    if academy_id:
+        return qs.filter(academy_id=academy_id).exists()
+    return qs.exists()
+
+
+def github_academy_user_allows_copilot_in_sibling_academies(user: User, sibling_academy_ids: list[int]) -> bool:
+    """SYNCHED+ADD in at least one academy in sibling_academy_ids (same GitHub org)."""
+    if not user or not user.id or not sibling_academy_ids:
+        return False
+    return GithubAcademyUser.objects.filter(
+        user_id=user.id,
+        academy_id__in=sibling_academy_ids,
+        storage_status=SYNCHED,
+        storage_action=ADD,
+    ).exists()
+
+
+def _github_org_sibling_academy_ids_for_academy(academy_id: int) -> list[int]:
+    """All academy ids with the same AcademyAuthSettings.github_username; else [academy_id]."""
+    settings = (
+        AcademyAuthSettings.objects.filter(academy_id=academy_id)
+        .exclude(github_username="")
+        .exclude(github_username__isnull=True)
+        .first()
+    )
+    if not settings:
+        return [academy_id]
+    org = (settings.github_username or "").strip()
+    if not org:
+        return [academy_id]
+    ids = list(
+        AcademyAuthSettings.objects.filter(github_username__iexact=org).values_list("academy_id", flat=True)
+    )
+    return ids if ids else [academy_id]
+
+
+def _user_has_copilot_entitlement(user: User, academy_id: int | None = None) -> bool:
+    """Active github-copilot consumable via Consumable.list; None = any subscription/plan (any academy)."""
+    # Local import: payments.models imports get_user_settings from this module at load time.
+    from breathecode.payments.models import Consumable, Service
+
+    extra = {"subscription__academy_id": academy_id} if academy_id else None
+    extra_financing = {"plan_financing__academy_id": academy_id} if academy_id else None
+
+    consumer = Service.Consumer.GITHUB_COPILOT
+    if academy_id:
+        return (
+            Consumable.list(user=user, service=consumer, extra=extra).exists()
+            or Consumable.list(user=user, service=consumer, extra=extra_financing).exists()
+        )
+
+    return Consumable.list(user=user, service=consumer).exists()
+
+
+def _user_has_copilot_entitlement_in_sibling_academies(user: User, sibling_academy_ids: list[int]) -> bool:
+    """github-copilot consumible for at least one academy_id in sibling_academy_ids."""
+    for aid in sibling_academy_ids:
+        if _user_has_copilot_entitlement(user, aid):
+            return True
+    return False
+
+
+def _copilot_entitlement_ok_for_provision(
+    user: User, academy_id: int | None, *, sibling_academy_ids: list[int] | None
+) -> bool:
+    if sibling_academy_ids is not None:
+        return _user_has_copilot_entitlement_in_sibling_academies(user, sibling_academy_ids)
+    return _user_has_copilot_entitlement(user, academy_id)
+
+
+def _get_copilot_client_for_user(user: User, academy_id: int | None = None) -> tuple[Github | None, str | None]:
+    settings_qs = AcademyAuthSettings.objects.select_related("github_owner")
+
+    if academy_id:
+        settings_qs = settings_qs.filter(academy_id=academy_id)
+
+    settings = settings_qs.exclude(github_username="").exclude(github_username__isnull=True).first()
+    if not settings or not settings.github_owner_id:
+        return None, None
+
+    owner_creds = CredentialsGithub.objects.filter(user_id=settings.github_owner_id).first()
+    user_creds = CredentialsGithub.objects.filter(user_id=user.id).first()
+    if not owner_creds or not owner_creds.token or not user_creds or not user_creds.username:
+        return None, None
+
+    return Github(org=settings.github_username, token=owner_creds.token), user_creds.username
+
+
+def provision_github_copilot_for_user(
+    user_id: int,
+    academy_id: int | None = None,
+    *,
+    source: str | None = None,
+    sibling_academy_ids: list[int] | None = None,
+) -> bool:
+    """Grant Copilot seat: consumible + GithubAcademyUser SYNCHED+ADD (and GitHub creds)."""
+    user = User.objects.filter(id=user_id).first()
+    if not user:
+        logger.info(
+            "[COPILOT provision] user_id=%s academy_id=%s ok=False skipped reason=no_user",
+            user_id,
+            academy_id,
+        )
+        return False
+
+    resolved_academy_id = academy_id
+    if sibling_academy_ids is not None and resolved_academy_id is None and sibling_academy_ids:
+        resolved_academy_id = sibling_academy_ids[0]
+
+    _log_sibling = {"sibling_academy_ids": sibling_academy_ids} if sibling_academy_ids is not None else {}
+
+    if not _copilot_entitlement_ok_for_provision(user, academy_id, sibling_academy_ids=sibling_academy_ids):
+        _append_copilot_storage_log(
+            user_id=user_id,
+            academy_id=resolved_academy_id,
+            message="Copilot add skipped: no github-copilot entitlement",
+            **_log_sibling,
+        )
+        logger.info(
+            "[COPILOT provision] user_id=%s academy_id=%s ok=False skipped reason=no_copilot_entitlement",
+            user_id,
+            academy_id,
+        )
+        return False
+
+    if sibling_academy_ids is not None:
+        ghou_ok = github_academy_user_allows_copilot_in_sibling_academies(user, sibling_academy_ids)
+    else:
+        ghou_ok = github_academy_user_allows_copilot(user, academy_id)
+    if not ghou_ok:
+        _append_copilot_storage_log(
+            user_id=user_id,
+            academy_id=resolved_academy_id,
+            message="Copilot add skipped: GithubAcademyUser is not SYNCHED+ADD",
+            **_log_sibling,
+        )
+        logger.info(
+            "[COPILOT provision] user_id=%s academy_id=%s ok=False skipped reason=github_academy_not_eligible",
+            user_id,
+            academy_id,
+        )
+        return False
+
+    gh, github_username = _get_copilot_client_for_user(user, resolved_academy_id)
+    if not gh or not github_username:
+        _append_copilot_storage_log(
+            user_id=user_id,
+            academy_id=resolved_academy_id,
+            message="Copilot add skipped: missing GitHub org owner token or user github username",
+            **_log_sibling,
+        )
+        logger.info(
+            "[COPILOT provision] user_id=%s academy_id=%s ok=False skipped reason=no_github_client_or_username",
+            user_id,
+            academy_id,
+        )
+        return False
+
+    org = getattr(gh, "org", None)
+    source_suffix = f"; source={source}" if source else ""
+    try:
+        response = gh.copilot_add_selected_users([github_username])
+        response_for_log = _github_copilot_response_for_log(response)
+        _append_copilot_storage_log(
+            user_id=user_id,
+            academy_id=resolved_academy_id,
+            message=(
+                f"Copilot add done for @{github_username} in org {org}; github_response={response_for_log}"
+                f"{source_suffix}"
+            ),
+            **_log_sibling,
+        )
+        logger.info(
+            "[COPILOT provision] user_id=%s academy_id=%s org=%s github_username=%s ok=True github_response=%s source=%s",
+            user_id,
+            academy_id,
+            org,
+            github_username,
+            response_for_log,
+            source or "",
+        )
+        return True
+    except Exception as e:
+        _append_copilot_storage_log(
+            user_id=user_id,
+            academy_id=resolved_academy_id,
+            message=f"Copilot add failed for @{github_username} in org {org}; error={str(e)}{source_suffix}",
+            **_log_sibling,
+        )
+        logger.exception(
+            "[COPILOT provision] user_id=%s academy_id=%s org=%s github_username=%s ok=False github_api_error source=%s",
+            user_id,
+            academy_id,
+            org,
+            github_username,
+            source or "",
+        )
+        return False
+
+
+def deprovision_github_copilot_for_user(
+    user_id: int,
+    academy_id: int | None = None,
+    *,
+    ignore_entitlement: bool = False,
+) -> bool:
+    """Remove Copilot seat. Unless ignore_entitlement, skip when user still has any active github-copilot consumable."""
+    user = User.objects.filter(id=user_id).first()
+    if not user:
+        logger.info(
+            "[COPILOT deprovision] user_id=%s academy_id=%s ignore_entitlement=%s ok=False skipped reason=no_user",
+            user_id,
+            academy_id,
+            ignore_entitlement,
+        )
+        return False
+
+    if not ignore_entitlement and _user_has_copilot_entitlement(user, None):
+        _append_copilot_storage_log(
+            user_id=user_id,
+            academy_id=academy_id,
+            message="Copilot remove skipped: user still has github-copilot entitlement",
+        )
+        logger.info(
+            "[COPILOT deprovision] user_id=%s academy_id=%s ok=False skipped reason=still_has_copilot_entitlement",
+            user_id,
+            academy_id,
+        )
+        return False
+
+    gh, github_username = _get_copilot_client_for_user(user, academy_id)
+    if not gh or not github_username:
+        _append_copilot_storage_log(
+            user_id=user_id,
+            academy_id=academy_id,
+            message="Copilot remove skipped: missing GitHub org owner token or user github username",
+        )
+        logger.info(
+            "[COPILOT deprovision] user_id=%s academy_id=%s ignore_entitlement=%s ok=False skipped reason=no_github_client_or_username",
+            user_id,
+            academy_id,
+            ignore_entitlement,
+        )
+        return False
+
+    org = getattr(gh, "org", None)
+    try:
+        response = gh.copilot_remove_selected_users([github_username])
+        response_for_log = _github_copilot_response_for_log(response)
+        _append_copilot_storage_log(
+            user_id=user_id,
+            academy_id=academy_id,
+            message=f"Copilot remove done for @{github_username} in org {org}; github_response={response_for_log}",
+        )
+        logger.info(
+            "[COPILOT deprovision] user_id=%s academy_id=%s org=%s github_username=%s ok=True github_response=%s",
+            user_id,
+            academy_id,
+            org,
+            github_username,
+            response_for_log,
+        )
+        return True
+    except Exception as e:
+        _append_copilot_storage_log(
+            user_id=user_id,
+            academy_id=academy_id,
+            message=f"Copilot remove failed for @{github_username} in org {org}; error={str(e)}",
+        )
+        logger.exception(
+            "[COPILOT deprovision] user_id=%s academy_id=%s org=%s github_username=%s ok=False github_api_error",
+            user_id,
+            academy_id,
+            org,
+            github_username,
+        )
+        return False
+
+
+def deferred_github_copilot_remove_if_still_revoked(user_id: int, academy_id: int) -> bool:
+    """After GHAU loses SYNCHED+ADD: skip remove if sibling org still has ADD or user still has copilot consumable."""
+    user = User.objects.filter(id=user_id).first()
+    if not user:
+        logger.info(
+            "[COPILOT deprovision] user_id=%s academy_id=%s ok=False skipped reason=deferred_revoke_no_user",
+            user_id,
+            academy_id,
+        )
+        return False
+
+    sibling_ids = _github_org_sibling_academy_ids_for_academy(academy_id)
+    if github_academy_user_allows_copilot_in_sibling_academies(user, sibling_ids):
+        logger.info(
+            "[COPILOT deprovision] user_id=%s academy_id=%s ok=False skipped reason=deferred_revoke_user_still_add_sibling_org sibling_academy_ids=%s",
+            user_id,
+            academy_id,
+            sibling_ids,
+        )
+        return False
+
+    return deprovision_github_copilot_for_user(user_id=user_id, academy_id=academy_id)
+
+
+@service_deprovisioner("github-copilot")
+def deprovision_github_copilot(user_id: int, context: dict | None = None, **_: Any):
+    academy_id = None
+
+    if isinstance(context, dict):
+        academy_id = context.get("academy_id") or context.get("academy")
+    try:
+        academy_id = int(academy_id) if academy_id else None
+    except Exception:
+        academy_id = None
+
+    return deprovision_github_copilot_for_user(user_id=user_id, academy_id=academy_id)
+
+
+def convert_youtube_to_embed(url):
+    """
+    Convert video URL to embed format for iframe usage.
+    Supports YouTube, Vimeo, Loom, VideoAsk, Google Drive, and direct video URLs.
+    
+    Args:
+        url: Video URL (YouTube watch/embed, Vimeo, Loom, VideoAsk, Google Drive, or direct video file)
+    
+    Returns:
+        str: Embed URL ready for iframe src attribute
+    """
+    if not url:
+        return url
+    
+    # Clean URL - remove any URL encoding issues and whitespace
+    url = url.strip()
+    
+    # Decode URL if needed
+    try:
+        url = urllib.parse.unquote(url)
+    except Exception:
+        pass
+    
+    # Check if already in embed format (any platform)
+    if "/embed/" in url:
+        # If it's YouTube embed, add autoplay parameters
+        if "youtube.com/embed/" in url:
+            video_id_match = re.search(r"youtube\.com\/embed\/([a-zA-Z0-9_-]{11})", url)
+            if video_id_match:
+                video_id = video_id_match.group(1)
+                # Remove existing query params and add autoplay
+                return f"https://www.youtube.com/embed/{video_id}?autoplay=1&mute=1"
+        # For other platforms, clean and return
+        if "?" in url:
+            url = url.split("?")[0]
+        return url
+    
+    # YouTube URL patterns
+    # Pattern 1: youtube.com/watch?v=VIDEO_ID or youtu.be/VIDEO_ID
+    match = re.search(r"(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})", url)
+    if match:
+        video_id = match.group(1)
+        return f"https://www.youtube.com/embed/{video_id}?autoplay=1&mute=1"
+    
+    # Pattern 2: youtube.com/watch?other_params&v=VIDEO_ID
+    match = re.search(r"youtube\.com\/watch\?.*[&?]v=([a-zA-Z0-9_-]{11})", url)
+    if match:
+        video_id = match.group(1)
+        return f"https://www.youtube.com/embed/{video_id}?autoplay=1&mute=1"
+    
+    # Pattern 3: Already YouTube embed format but with query params
+    match = re.search(r"youtube\.com\/embed\/([a-zA-Z0-9_-]{11})", url)
+    if match:
+        video_id = match.group(1)
+        return f"https://www.youtube.com/embed/{video_id}?autoplay=1&mute=1"
+    
+    # Vimeo URL patterns
+    # Pattern 1: vimeo.com/VIDEO_ID or vimeo.com/VIDEO_ID?params
+    match = re.search(r"vimeo\.com\/(?:video\/)?(\d+)", url)
+    if match:
+        video_id = match.group(1)
+        return f"https://player.vimeo.com/video/{video_id}?autoplay=1"
+    
+    # Pattern 2: player.vimeo.com/video/VIDEO_ID (already embed format)
+    match = re.search(r"player\.vimeo\.com\/video\/(\d+)", url)
+    if match:
+        video_id = match.group(1)
+        # Check if it already has query params
+        if "?" in url:
+            return f"https://player.vimeo.com/video/{video_id}&autoplay=1"
+        return f"https://player.vimeo.com/video/{video_id}?autoplay=1"
+    
+    # Loom URL patterns
+    # Pattern 1: loom.com/share/VIDEO_ID - convert to embed
+    match = re.search(r"loom\.com\/share\/([a-zA-Z0-9_-]+)", url)
+    if match:
+        video_id = match.group(1)
+        return f"https://www.loom.com/embed/{video_id}"
+    
+    # Pattern 2: loom.com/embed/VIDEO_ID (already embed format)
+    match = re.search(r"loom\.com\/embed\/([a-zA-Z0-9_-]+)", url)
+    if match:
+        video_id = match.group(1)
+        return f"https://www.loom.com/embed/{video_id}"
+    
+    # VideoAsk URL patterns
+    # Pattern 1: videoask.com/VIDEO_ID or videoask.com/f/VIDEO_ID - convert to embed
+    match = re.search(r"videoask\.com\/(?:f\/)?([a-zA-Z0-9_-]+)", url)
+    if match:
+        video_id = match.group(1)
+        return f"https://www.videoask.com/embed/{video_id}"
+    
+    # Pattern 2: videoask.com/embed/VIDEO_ID (already embed format)
+    match = re.search(r"videoask\.com\/embed\/([a-zA-Z0-9_-]+)", url)
+    if match:
+        video_id = match.group(1)
+        return f"https://www.videoask.com/embed/{video_id}"
+    
+    # Google Drive URL patterns
+    # Pattern 1: drive.google.com/file/d/FILE_ID/view - convert to preview (embed)
+    match = re.search(r"drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)", url)
+    if match:
+        file_id = match.group(1)
+        return f"https://drive.google.com/file/d/{file_id}/preview"
+    
+    # Pattern 2: drive.google.com/open?id=FILE_ID - convert to preview
+    match = re.search(r"drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)", url)
+    if match:
+        file_id = match.group(1)
+        return f"https://drive.google.com/file/d/{file_id}/preview"
+    
+    # Pattern 3: drive.google.com/file/d/FILE_ID/preview (already embed format)
+    match = re.search(r"drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)\/preview", url)
+    if match:
+        file_id = match.group(1)
+        return f"https://drive.google.com/file/d/{file_id}/preview"
+    
+    # Check if it's a direct video file URL (.mp4, .webm, .ogg, etc.)
+    # These should be used with <video> tag, not iframe, so return as is
+    video_extensions = ['.mp4', '.webm', '.ogg', '.ogv', '.mov', '.m4v', '.avi']
+    if any(url.lower().endswith(ext) for ext in video_extensions):
+        return url
+    
+    # Check if it's a data URL (base64 encoded video)
+    if url.startswith('data:video/'):
+        return url
+    
+    # If no pattern matches, return original URL
+    # This allows other video platforms or custom embed URLs to work
+    return url
+
+
+def get_app_url(academy=None):
+    """
+    Get the app URL for redirects.
+    
+    Args:
+        academy: Optional Academy instance. If provided and white_labeled=True,
+                 returns the academy's website_url instead of the default APP_URL.
+    
+    Returns:
+        str: The URL to redirect to (without trailing slash)
+    """
+    if academy and academy.white_labeled and academy.website_url:
+        url = academy.website_url
+    else:
+        url = os.getenv("APP_URL", "https://4geeks.com")
+    
+    if url and url[-1] == "/":
+        url = url[:-1]
+
+    return url
+
+
+def get_invite_url(invite_token, academy=None, callback_url=None):
+    """
+    Get the invitation URL for email links.
+    
+    If academy is white_labeled and has website_url, returns:
+        {website_url}/accept-invite?inviteToken={token}
+    Otherwise, returns the API URL with callback parameter.
+    
+    Args:
+        invite_token: The invitation token
+        academy: Optional Academy instance
+        callback_url: Optional callback URL for non-white-labeled academies
+    
+    Returns:
+        str: The invitation URL
+    """
+    if academy and academy.white_labeled and academy.website_url:
+        website_url = academy.website_url.rstrip('/')
+        return f"{website_url}/accept-invite?inviteToken={invite_token}"
+    
+    api_url = os.getenv("API_URL", "https://breathecode.herokuapp.com")
+    if callback_url:
+        params = {"callback": callback_url}
+        querystr = urllib.parse.urlencode(params)
+        return f"{api_url}/v1/auth/member/invite/{invite_token}?{querystr}"
+    
+    return f"{api_url}/v1/auth/member/invite/{invite_token}"
+
+
+def get_api_url():
+    url = os.getenv("API_URL", "https://breathecode.herokuapp.com/")
     if url and url[-1] == "/":
         url = url[:-1]
 
@@ -106,7 +672,7 @@ def reset_password(users=None, extra=None, academy=None):
         raise Exception("Missing users")
 
     for user in users:
-        token, created = Token.get_or_create(user, token_type="temporal")
+        token, created = Token.get_or_create(user, token_type="short")
 
         # returns true or false if the email was send
         return send_email_message(
@@ -123,23 +689,36 @@ def reset_password(users=None, extra=None, academy=None):
     return True
 
 
-def resend_invite(token=None, email=None, first_name=None, extra=None, academy=None):
+def resend_invite(token=None, email=None, first_name=None, extra=None, academy=None, invite_id=None):
     if extra is None:
         extra = {}
 
-    params = {"callback": "https://admin.4geeks.com"}
-    querystr = urllib.parse.urlencode(params)
-    url = os.getenv("API_URL", "") + "/v1/auth/member/invite/" + str(token) + "?" + querystr
+    callback_url = get_app_url(academy=academy)
+    url = get_invite_url(token, academy=academy, callback_url=callback_url)
+
+    data = {
+        "email": email,
+        "subject": f"{academy.name if academy else '4Geeks'} is inviting you to {academy.slug if academy else '4geeks'}.4Geeks.com",
+        "LINK": url,
+        "FIRST_NAME": first_name,
+        **extra,
+    }
+    
+    # Add tracking URL if invite_id is provided
+    if invite_id:
+        data["TRACKER_URL"] = f"{os.getenv('API_URL', '')}/v1/auth/invite/track/open/{invite_id}"
+    
+    if invite_id:
+        from .models import UserInvite
+        invite = UserInvite.objects.filter(id=invite_id).first()
+        if invite and invite.welcome_video:
+            welcome_video = invite.welcome_video.copy() if isinstance(invite.welcome_video, dict) else invite.welcome_video
+            data["WELCOME_VIDEO"] = welcome_video
+
     notify_actions.send_email_message(
         "welcome_academy",
         email,
-        {
-            "email": email,
-            "subject": "Invitation to join 4Geeks",
-            "LINK": url,
-            "FIST_NAME": first_name,
-            **extra,
-        },
+        data,
         academy=academy,
     )
 
@@ -530,6 +1109,57 @@ def remove_from_organization(cohort_id, user_id, force=False):
         return False
 
 
+def save_discord_credentials(user_id, discord_user_id, guild_id, cohort_slug):
+    try:
+        user = User.objects.get(id=user_id)
+        credentials, created = CredentialsDiscord.objects.get_or_create(
+            user=user,
+            defaults={
+                "discord_id": discord_user_id,
+                "joined_servers": [guild_id],
+            },
+        )
+        if not created:
+
+            import breathecode.authenticate.tasks as auth_tasks
+            from breathecode.authenticate.models import Cohort
+
+            cohort_academy = Cohort.objects.filter(slug=cohort_slug).prefetch_related("academy").first()
+            cohorts = Cohort.objects.filter(cohortuser__user=user, academy=cohort_academy.academy.id).all()
+            for cohort in cohorts:
+                if cohort.shortcuts:
+                    for shortcut in cohort.shortcuts:
+                        if shortcut.get("label", None) == "Discord" and shortcut.get("server_id", None) is not None:
+                            auth_tasks.remove_discord_role_task.delay(
+                                guild_id=guild_id,
+                                discord_user_id=int(credentials.discord_id),
+                                role_id=shortcut.get("role_id", None),
+                                academy_id=cohort_academy.academy.id,
+                            )
+
+            credentials.discord_id = discord_user_id
+
+            server_exists = False
+            for server in credentials.joined_servers:
+                if server == guild_id:
+                    server_exists = True
+                    break
+
+            if not server_exists:
+                credentials.joined_servers.append(server_id)
+
+            credentials.save()
+            logger.info(f"Discord credentials saved for user {user_id} (Discord ID: {discord_user_id})")
+
+        return True
+    except User.DoesNotExist:
+        logger.error(f"User {user_id} not found when saving Discord credentials")
+        raise ValidationException(f"User {user_id} not found", slug="user-not-found")
+    except Exception as e:
+        logger.error(f"Error saving Discord credentials for user {user_id}: {str(e)}")
+        raise ValidationException(str(e))
+
+
 def delete_from_github(github_user: GithubAcademyUser):
     try:
         settings = AcademyAuthSettings.objects.filter(academy__id=github_user.academy.id).first()
@@ -543,12 +1173,24 @@ def delete_from_github(github_user: GithubAcademyUser):
         return False
 
 
-def sync_organization_members(academy_id, only_status=None):
+def sync_organization_members(
+    academy_id, only_status=None, github_academy_user_id: Optional[int] = None, force_requeue: bool = False
+):
+    """
+    Synchronize GithubAcademyUser rows for an academy with the GitHub org.
 
+    :param github_academy_user_id: If set, only this GithubAcademyUser is processed
+        (and the "unknown org members" pass is skipped).
+    :param force_requeue: If True with ``github_academy_user_id``, set storage to PENDING+ADD before syncing.
+
+    Per-member failures inviting to or deleting from GitHub are logged on the row (``storage_status=ERROR``)
+    and on ``AcademyAuthSettings``; processing continues with the remaining users.
+    """
     if only_status is None:
         only_status = []
 
     now = timezone.now()
+    single_gau = github_academy_user_id is not None
 
     settings = AcademyAuthSettings.objects.filter(academy__id=academy_id).first()
     if settings is None or not settings.github_is_sync:
@@ -576,18 +1218,36 @@ def sync_organization_members(academy_id, only_status=None):
             slug="invalid-owner",
         )
 
-    # retry errored users only from this academy being synched
-    GithubAcademyUser.objects.filter(academy=settings.academy, storage_status="ERROR").update(
-        storage_status="PENDING", storage_synch_at=None
-    )
-
-    # users without github credentials are marked as error
-    no_github_credentials = GithubAcademyUser.objects.filter(
-        academy=settings.academy, user__credentialsgithub__isnull=True
-    )
-    no_github_credentials.update(
-        storage_status="ERROR", storage_log=[GithubAcademyUser.create_log("This user needs connect to github")]
-    )
+    if single_gau:
+        gau = GithubAcademyUser.objects.filter(id=github_academy_user_id, academy=settings.academy).first()
+        if gau is None:
+            raise ValidationException(
+                translation(
+                    en=f"GithubAcademyUser id {github_academy_user_id} not found for this academy",
+                    es=f"No existe GithubAcademyUser id {github_academy_user_id} en esta academia",
+                ),
+                slug="gau-not-found",
+            )
+        if force_requeue:
+            gau.storage_status = PENDING
+            gau.storage_action = ADD
+            gau.save()
+        if gau.user is None or not CredentialsGithub.objects.filter(user=gau.user).exists():
+            gau.storage_status = "ERROR"
+            gau.log("This user needs connect to github", reset=True)
+            gau.save()
+    else:
+        # retry errored users only from this academy being synched
+        GithubAcademyUser.objects.filter(academy=settings.academy, storage_status="ERROR").update(
+            storage_status="PENDING", storage_synch_at=None
+        )
+        # users without github credentials are marked as error
+        no_github_credentials = GithubAcademyUser.objects.filter(
+            academy=settings.academy, user__credentialsgithub__isnull=True
+        )
+        no_github_credentials.update(
+            storage_status="ERROR", storage_log=[GithubAcademyUser.create_log("This user needs connect to github")]
+        )
 
     gb = Github(org=settings.github_username, token=settings.github_owner.credentialsgithub.token)
 
@@ -606,8 +1266,13 @@ def sync_organization_members(academy_id, only_status=None):
     if len(only_status) > 0:
         org_users = org_users.filter(storage_action__in=only_status)
 
+    if single_gau:
+        org_users = org_users.filter(id=github_academy_user_id)
+
     for _member in org_users:
         github = CredentialsGithub.objects.filter(user=_member.user).first()
+        if github is None:
+            continue
         if _member.storage_status in ["PENDING"] and _member.storage_action in ["ADD", "INVITE"]:
             if github.username in remaining_usernames:
                 _member.log("User was already added to github")
@@ -626,7 +1291,10 @@ def sync_organization_members(academy_id, only_status=None):
                     gb.invite_org_member(github.email, team_ids=teams)
                 except Exception as e:
                     settings.add_error("Error inviting member " + str(github.email) + " to org: " + str(e))
-                    raise e
+                    _member.log(f"Error inviting to GitHub org: {e}")
+                    _member.storage_status = "ERROR"
+                    _member.save()
+                    continue
                 _member.storage_status = "SYNCHED"
                 _member.log(f"Sent invitation to {github.email}")
                 _member.storage_action = "INVITE"
@@ -656,7 +1324,10 @@ def sync_organization_members(academy_id, only_status=None):
                         gb.delete_org_member(github.username)
                     except Exception as e:
                         settings.add_error("Error deleting member from org: " + str(e))
-                        raise e
+                        _member.log(f"Error deleting from GitHub org: {e}")
+                        _member.storage_status = "ERROR"
+                        _member.save()
+                        continue
                     _member.log("Successfully deleted in github organization")
                 else:
                     _member.log(
@@ -670,39 +1341,40 @@ def sync_organization_members(academy_id, only_status=None):
         remaining_usernames = set([username for username in remaining_usernames if username != github_username])
 
     # there are some users from github we could not find in THIS academy cohorts
-    for u in remaining_usernames:
-        _user = CredentialsGithub.objects.filter(username=u).first()
-        if _user is not None:
-            _user = _user.user
+    if not single_gau:
+        for u in remaining_usernames:
+            _user = CredentialsGithub.objects.filter(username=u).first()
+            if _user is not None:
+                _user = _user.user
 
-        # we look if the user is present in this particular academy, not from academy_slugs because we do want
-        # to duplicate this users per academy, that way each academy can decide if wants to delete or not
-        # you should see in the code for deletion that users will only be deleted if all the academies for
-        # the same organization delete it
-        _query = GithubAcademyUser.objects.filter(academy=settings.academy).filter(username=u)
-        if _user is not None:
-            _query = _query.filter(user=_user)
-        unknown_user = _query.first()
+            # we look if the user is present in this particular academy, not from academy_slugs because we do want
+            # to duplicate this users per academy, that way each academy can decide if wants to delete or not
+            # you should see in the code for deletion that users will only be deleted if all the academies for
+            # the same organization delete it
+            _query = GithubAcademyUser.objects.filter(academy=settings.academy).filter(username=u)
+            if _user is not None:
+                _query = _query.filter(user=_user)
+            unknown_user = _query.first()
 
-        if unknown_user is None:
-            unknown_user = GithubAcademyUser(
-                academy=settings.academy,
-                user=_user,
-                username=u,
-                storage_status="UNKNOWN",
-                storage_action="IGNORE",
-                storage_synch_at=now,
+            if unknown_user is None:
+                unknown_user = GithubAcademyUser(
+                    academy=settings.academy,
+                    user=_user,
+                    username=u,
+                    storage_status="UNKNOWN",
+                    storage_action="IGNORE",
+                    storage_synch_at=now,
+                )
+                unknown_user.save()
+
+            unknown_user.storage_status = "UNKNOWN"
+            unknown_user.storage_action = "IGNORE"
+            unknown_user.storage_synch_at = now
+            unknown_user.log(
+                "This user is coming from github, we don't know if its a student from your academy or if it should be added or deleted, keep it as IGNORED to avoid deletion",
+                reset=True,
             )
             unknown_user.save()
-
-        unknown_user.storage_status = "UNKNOWN"
-        unknown_user.storage_action = "IGNORE"
-        unknown_user.storage_synch_at = now
-        unknown_user.log(
-            "This user is coming from github, we don't know if its a student from your academy or if it should be added or deleted, keep it as IGNORED to avoid deletion",
-            reset=True,
-        )
-        unknown_user.save()
 
     return True
 
@@ -748,10 +1420,10 @@ def accept_invite(accepting_ids=None, user=None):
 
             cu = CohortUser.objects.filter(user=user, cohort=invite.cohort).first()
             if cu is None and (role := role.upper()) in ["TEACHER", "ASSISTANT", "REVIEWER", "STUDENT"]:
-                cu = CohortUser(user=user, cohort=invite.cohort, role_id=role.lower(), educational_status="ACTIVE")
+                cu = CohortUser(user=user, cohort=invite.cohort, role=role, educational_status="ACTIVE")
                 cu.save()
             elif cu is None:
-                cu = CohortUser(user=user, cohort=invite.cohort, role_id="student", educational_status="ACTIVE")
+                cu = CohortUser(user=user, cohort=invite.cohort, role="STUDENT", educational_status="ACTIVE")
                 cu.save()
 
         if user is not None and invite.user is None:
@@ -807,9 +1479,9 @@ JWT_LIFETIME = 10
 
 
 def accept_invite_action(data=None, token=None, lang="en"):
-    from breathecode.payments import tasks as payments_tasks
     from breathecode.payments import actions as payments_actions
-    from breathecode.payments.models import Bag, Invoice, Plan
+    from breathecode.payments.models import Plan
+
 
     if data is None:
         data = {}
@@ -842,6 +1514,13 @@ def accept_invite_action(data=None, token=None, lang="en"):
     if user is None:
         user = User(email=invite.email, first_name=first_name, last_name=last_name, username=invite.email)
         user.save()
+    else:
+        # If user exists but is inactive (zombie), activate them
+        if not user.is_active:
+            user.is_active = True
+            user.first_name = first_name or user.first_name
+            user.last_name = last_name or user.last_name
+            user.save()
 
     # Only set/update the password if it's provided
     if password1:
@@ -885,68 +1564,127 @@ def accept_invite_action(data=None, token=None, lang="en"):
         for plan in invite.subscription_seat.billing_team.plans.all():
             payments_actions.grant_student_capabilities(user, plan)
 
-    if invite.cohort is not None:
-        role = "student"
-        if invite.role is not None and invite.role.slug != "student":
-            role = invite.role.slug.lower()
+    # StudentPOSTSerializer creates one UserInvite per cohort (each with its own token). Accepting any
+    # of those tokens must enroll the user in every cohort in that batch (same email + academy + role).
+    pending_invite_qs = UserInvite.objects.filter(email__iexact=invite.email, status="PENDING")
+    if invite.academy_id is not None:
+        pending_invite_qs = pending_invite_qs.filter(academy_id=invite.academy_id)
+    else:
+        pending_invite_qs = pending_invite_qs.filter(pk=invite.pk)
+    if invite.role_id is not None:
+        pending_invite_qs = pending_invite_qs.filter(role_id=invite.role_id)
 
-        cu = CohortUser.objects.filter(user=user, cohort=invite.cohort).first()
+    pending_invites = list(
+        pending_invite_qs.select_related(
+            "cohort",
+            "cohort__academy",
+            "academy",
+            "role",
+            "payment_method",
+            "author",
+            "user",
+        )
+    )
+
+    for user_invite in pending_invites:
+        if user_invite.cohort is None:
+            continue
+
+        role = "student"
+        if user_invite.role is not None and user_invite.role.slug != "student":
+            role = user_invite.role.slug.upper()
+
+        cu = CohortUser.objects.filter(user=user, cohort=user_invite.cohort).first()
         if cu is None:
-            cu = CohortUser(user=user, cohort=invite.cohort, role_id=role)
+            cu = CohortUser(user=user, cohort=user_invite.cohort, role=role.upper(), finantial_status=UP_TO_DATE)
             cu.save()
 
-        plan = Plan.objects.filter(cohort_set__cohorts=invite.cohort, invites=invite).first()
+    # Create ONE financing per plan, even if the user was invited to multiple cohorts that belong to the same plan's
+    # cohort_set. Each invite is cohort-scoped (one token per cohort), but financing is plan-scoped.
+    from collections import defaultdict
 
-        if (
-            plan
-            and invite.user
-            and invite.cohort.academy.main_currency
-            and (
-                invite.cohort.available_as_saas == True
-                or (invite.cohort.available_as_saas == None and invite.cohort.academy.available_as_saas == True)
-            )
+    plan_to_cohorts: dict[int, list[Cohort]] = defaultdict(list)
+    plan_to_seen_cohort_ids: dict[int, set[int]] = defaultdict(set)
+    plan_to_invite: dict[int, UserInvite] = {}
+    plan_to_plan: dict[int, Plan] = {}
+
+    for user_invite in pending_invites:
+        if user_invite.cohort is None:
+            continue
+
+        invite_user = user_invite.user or user
+        academy = user_invite.cohort.academy
+        if not invite_user or not academy or not academy.main_currency_id:
+            continue
+
+        if not (
+            user_invite.cohort.available_as_saas is True
+            or (user_invite.cohort.available_as_saas is None and academy.available_as_saas is True)
         ):
-            utc_now = timezone.now()
+            continue
 
-            bag = Bag()
-            bag.chosen_period = "NO_SET"
-            bag.status = "PAID"
-            bag.type = "INVITED"
-            bag.how_many_installments = 1
-            bag.academy = invite.cohort.academy
-            bag.user = user
-            bag.is_recurrent = False
-            bag.was_delivered = False
-            bag.token = None
-            bag.currency = invite.cohort.academy.main_currency
-            bag.expires_at = None
+        for plan in Plan.objects.filter(invites=user_invite).distinct():
+            # Only group cohorts that actually belong to the plan's cohort_set.
+            if not plan.cohort_set_id or not plan.cohort_set.cohorts.filter(id=user_invite.cohort_id).exists():
+                continue
 
-            bag.save()
+            pid = plan.id
+            plan_to_plan[pid] = plan
+            plan_to_invite[pid] = user_invite  # keep last (same batch metadata is expected)
 
-            bag.plans.add(plan)
+            if user_invite.cohort_id not in plan_to_seen_cohort_ids[pid]:
+                plan_to_seen_cohort_ids[pid].add(user_invite.cohort_id)
+                plan_to_cohorts[pid].append(user_invite.cohort)
 
-            invoice = Invoice(
-                amount=0,
-                paid_at=utc_now,
-                user=invite.user,
-                bag=bag,
-                academy=bag.academy,
-                status="FULFILLED",
-                currency=bag.academy.main_currency,
-            )
-            invoice.save()
+    for plan_id, cohorts_list in plan_to_cohorts.items():
+        if not cohorts_list:
+            continue
 
-            payments_tasks.build_plan_financing.delay(bag.id, invoice.id, is_free=True)
+        plan = plan_to_plan.get(plan_id)
+        ui = plan_to_invite.get(plan_id)
+        if plan is None or ui is None:
+            continue
 
-    invite.status = "ACCEPTED"
-    invite.is_email_validated = True
-    invite.save()
+        invite_user = ui.user or user
+        academy = ui.academy or (cohorts_list[0].academy if cohorts_list else None)
+        if not invite_user or not academy:
+            continue
 
+        access = payments_actions.resolve_student_plan_access_from_invite(ui)
+        primary = cohorts_list[0]
+        joined = cohorts_list[1:] if len(cohorts_list) > 1 else None
+
+        payments_actions.create_invited_plan_financing_for_user(
+            user=invite_user,
+            plan=plan,
+            academy=academy,
+            cohort=primary,
+            joined_cohorts=joined,
+            payment_method=ui.payment_method,
+            author=ui.author,
+            lang=lang,
+            conversion_info=ui.conversion_info,
+            how_many_installments=access["how_many_installments"],
+            initial_payment_amount=access["initial_payment_amount"],
+            initial_payment_notes=access["initial_payment_notes"],
+            unique_payment_negotiated_amount=access.get("unique_payment_negotiated_amount"),
+            grace_period_duration=access["grace_period_duration"],
+            grace_period_duration_unit=access["grace_period_duration_unit"],
+            financing_option_id=access.get("financing_option_id"),
+        )
+
+    for user_invite in pending_invites:
+        user_invite.user = user
+        user_invite.status = "ACCEPTED"
+        user_invite.is_email_validated = True
+        user_invite.save()
+
+    invite.refresh_from_db()
     return invite
 
 
-async def sync_with_rigobot(token_key):
-    rigobot_payload = {"organization": "4geeks", "user_token": token_key}
+async def sync_with_rigobot(token_key, organization="4geeks"):
+    rigobot_payload = {"organization": organization, "user_token": token_key}
     rigobot_host = os.getenv("RIGOBOT_HOST", "https://rigobot.herokuapp.com")
 
     async with aiohttp.ClientSession() as session:
@@ -1005,6 +1743,8 @@ def get_academy_from_body(body: dict[str, Any], lang: str = "en", raise_exceptio
 
     if isinstance(academy_slug, int):
         academy = Academy.objects.filter(id=academy_slug).first()
+    elif isinstance(academy_slug, str) and academy_slug.isnumeric():
+        academy = Academy.objects.filter(id=academy_slug).first()
     elif isinstance(academy_slug, str):
         academy = Academy.objects.filter(slug=academy_slug).first()
 
@@ -1022,16 +1762,16 @@ def replace_user_email(requesting_user, target_user_id, new_email):
     Update user email across all models in the database that store email addresses.
     Only superusers can call this action. Users cannot change their own email.
     """
-    from breathecode.events.models import EventCheckin
-    from breathecode.marketing.models import Contact, FormEntry
-    from breathecode.assessment.models import UserAssessment
-    from breathecode.mentorship.models import SupportAgent, MentorProfile
-    from breathecode.notify.models import SlackUser
-    from breathecode.authenticate.models import User, UserInvite, ProfileAcademy, CredentialsGithub
     from capyc.core.i18n import translation
     from capyc.rest_framework.exceptions import ValidationException
-    from django.core.validators import validate_email
-    from django.core.exceptions import ValidationError as DjangoValidationError
+
+    from breathecode.assessment.models import UserAssessment
+    from breathecode.marketing.actions import validate_email_local
+    from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy, User, UserInvite
+    from breathecode.events.models import EventCheckin
+    from breathecode.marketing.models import Contact, FormEntry
+    from breathecode.mentorship.models import MentorProfile, SupportAgent
+    from breathecode.notify.models import SlackUser
 
     lang = getattr(requesting_user, "lang", "en")
     if not requesting_user.is_superuser:
@@ -1068,8 +1808,8 @@ def replace_user_email(requesting_user, target_user_id, new_email):
         )
 
     try:
-        validate_email(new_email)
-    except DjangoValidationError:
+        validate_email_local(new_email, lang)
+    except ValidationException:
         raise ValidationException(
             translation(
                 lang,
@@ -1162,3 +1902,93 @@ def replace_user_email(requesting_user, target_user_id, new_email):
             ),
             code=500,
         )
+
+
+def revoke_user_discord_permissions(user, academy):
+    import breathecode.authenticate.tasks as auth_tasks
+    from breathecode.authenticate.models import Cohort, CredentialsDiscord
+    from breathecode.services.discord import Discord
+
+    cohort_academy = Cohort.objects.filter(academy=academy).prefetch_related("academy").first()
+    if not cohort_academy:
+        logger.debug(f"No cohorts found for academy {academy.id}, skipping Discord revoke")
+        return False
+
+    cohorts = Cohort.objects.filter(cohortuser__user=user, academy=cohort_academy.academy.id).all()
+
+    discord_creds = CredentialsDiscord.objects.filter(user=user).first()
+    if not discord_creds:
+        logger.debug(f"User {user.id} has no Discord credentials, skipping revoke")
+        return False
+
+    # Collect all Discord shortcuts grouped by server_id to minimize API calls
+    discord_shortcuts = {}
+    for cohort in cohorts:
+        if cohort.shortcuts:
+            for shortcut in cohort.shortcuts:
+                if (
+                    shortcut.get("label") == "Discord"
+                    and shortcut.get("server_id") is not None
+                    and shortcut.get("role_id") is not None
+                ):
+
+                    server_id = shortcut.get("server_id")
+                    role_id = shortcut.get("role_id")
+
+                    if server_id not in discord_shortcuts:
+                        discord_shortcuts[server_id] = []
+                    discord_shortcuts[server_id].append(role_id)
+
+    if not discord_shortcuts:
+        logger.debug(f"User {user.id} has no valid Discord shortcuts, skipping revoke")
+        return False
+
+    discord_service = Discord(academy_id=academy.id)
+    discord_user_id = int(discord_creds.discord_id)
+    user_had_roles = False
+
+    for server_id, role_ids in discord_shortcuts.items():
+        try:
+            response = discord_service.get_member_in_server(discord_user_id, server_id)
+
+            if response.status_code == 200:
+                user_roles = response.json().get("roles", [])
+                for role_id in role_ids:
+                    if role_id in user_roles:
+                        user_had_roles = True
+                        logger.info(
+                            f"Removing role {role_id} from user {discord_user_id} in guild {server_id} for academy {cohort_academy.academy.id}"
+                        )
+                        auth_tasks.remove_discord_role_task.delay(
+                            server_id,
+                            discord_user_id,
+                            role_id,
+                            academy_id=cohort_academy.academy.id,
+                        )
+            else:
+                logger.warning(
+                    f"Could not get user {discord_user_id} info from server {server_id}: {response.status_code}"
+                )
+                # If we can't verify for the Discord user, schedule removal for all roles as safety measure
+                for role_id in role_ids:
+                    logger.info(
+                        f"Removing role {role_id} from user {discord_user_id} in guild {server_id} for academy {cohort_academy.academy.id} (API verification failed)"
+                    )
+                    auth_tasks.remove_discord_role_task.delay(
+                        server_id,
+                        discord_user_id,
+                        role_id,
+                        academy_id=cohort_academy.academy.id,
+                    )
+
+        except Exception as e:
+            logger.error(f"Error checking/removing Discord roles for server {server_id}: {e}")
+
+    if user_had_roles:
+        auth_tasks.send_discord_dm_task.delay(
+            discord_user_id,
+            "Your 4Geeks Plus subscription has ended, your roles have been removed. Renew your subscription to get them back: https://4geeks.com/checkout?plan=4geeks-plus-subscription",
+            cohort_academy.academy.id,
+        )
+
+    return user_had_roles

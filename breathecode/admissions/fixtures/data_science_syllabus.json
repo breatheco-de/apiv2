@@ -1,0 +1,20 @@
+[
+    {
+        "model": "admissions.syllabus",
+        "pk": 2,
+        "fields": {
+            "slug": "data-science",
+            "name": "Data Science",
+            "main_technologies": "Python, Pandas, NumPy, Scikit-learn, Matplotlib, Seaborn, SQL, Jupyter",
+            "github_url": "https://github.com/4geeksacademy/data-science-syllabus",
+            "duration_in_hours": 400,
+            "duration_in_days": 60,
+            "week_hours": 10,
+            "logo": "https://storage.googleapis.com/admissions-breathecode/certificate-logo-data-science.png",
+            "created_at": "2024-01-15T10:00:00.000Z",
+            "updated_at": "2024-01-15T10:00:00.000Z",
+            "private": false,
+            "academy_owner": 1
+        }
+    }
+]

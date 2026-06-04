@@ -5,6 +5,7 @@ import os
 import re
 import sys
 import time
+from datetime import timedelta
 from functools import lru_cache
 from io import StringIO
 from typing import Callable, Type
@@ -23,7 +24,7 @@ from breathecode.services.slack.actions.monitoring import render_snooze_script, 
 from breathecode.utils import ScriptNotification
 from breathecode.utils.script_notification import WrongScriptConfiguration
 
-from .models import CSVDownload, Endpoint, RepositorySubscription, RepositoryWebhook, StripeEvent
+from .models import CSVDownload, Endpoint, MonitorScript, MonitoringError, RepositorySubscription, RepositoryWebhook, StripeEvent
 
 logger = logging.getLogger(__name__)
 
@@ -274,6 +275,7 @@ def run_endpoint_diagnostic(endpoint_id):
 def run_script(script):
     results = {
         "severity_level": 0,
+        "monitoring_errors": [],
     }
 
     import contextlib
@@ -303,6 +305,29 @@ def run_script(script):
 
     if content or exception:
         local = {"result": {"status": "OPERATIONAL"}}
+        
+        # Track MonitoringErrors created during this script execution
+        created_errors = []
+        error_tracking_start_time = timezone.now()
+        
+        # Create a wrapper class that tracks error creation and auto-sets script/academy
+        class TrackingMonitoringError(MonitoringError):
+            def __init__(self, *args, **kwargs):
+                # Auto-set monitor_script and academy if not provided
+                if "monitor_script" not in kwargs and "monitor_script_id" not in kwargs:
+                    kwargs["monitor_script"] = script
+                if "academy" not in kwargs and "academy_id" not in kwargs:
+                    kwargs["academy"] = script.application.academy
+                super().__init__(*args, **kwargs)
+            
+            def save(self, *args, **kwargs):
+                # Ensure monitor_script and academy are set before saving
+                if not self.monitor_script_id:
+                    self.monitor_script = script
+                if not self.academy_id:
+                    self.academy = script.application.academy
+                return super().save(*args, **kwargs)
+        
         with stdout_io() as s:
             try:
                 if exception:
@@ -317,6 +342,7 @@ def run_script(script):
                         "academy": script.application.academy,
                         "ADMIN_URL": os.getenv("ADMIN_URL", ""),
                         "API_URL": os.getenv("API_URL", ""),
+                        "MonitoringError": TrackingMonitoringError,
                     },
                     local,
                 )
@@ -325,6 +351,16 @@ def run_script(script):
                 script.special_status_text = "OK"
                 results["severity_level"] = 5
                 script.response_text = s.getvalue()
+                
+                # Query for errors created during this execution
+                # Use a small buffer to account for any timing issues
+                created_errors = list(
+                    MonitoringError.objects.filter(
+                        monitor_script=script,
+                        created_at__gte=error_tracking_start_time - timedelta(seconds=1),
+                    ).order_by("created_at")
+                )
+                results["monitoring_errors"] = created_errors
 
             except ScriptNotification as e:
                 script.status_code = 1
@@ -346,6 +382,15 @@ def run_script(script):
                     script.status = "MINOR"
                     results["severity_level"] = 5
                 results["error_slug"] = e.slug
+                
+                # Query for errors created during this execution
+                created_errors = list(
+                    MonitoringError.objects.filter(
+                        monitor_script=script,
+                        created_at__gte=error_tracking_start_time - timedelta(seconds=1),
+                    ).order_by("created_at")
+                )
+                results["monitoring_errors"] = created_errors
 
             except WrongScriptConfiguration as e:
                 script.special_status_text = str(e)[:255]
@@ -355,6 +400,15 @@ def run_script(script):
                 results["error_slug"] = "wrong-configuration"
                 results["btn"] = None
                 results["severity_level"] = 100
+                
+                # Query for errors created during this execution
+                created_errors = list(
+                    MonitoringError.objects.filter(
+                        monitor_script=script,
+                        created_at__gte=error_tracking_start_time - timedelta(seconds=1),
+                    ).order_by("created_at")
+                )
+                results["monitoring_errors"] = created_errors
 
             except Exception as e:
                 import traceback
@@ -366,6 +420,15 @@ def run_script(script):
                 results["error_slug"] = "unknown"
                 results["btn"] = None
                 results["severity_level"] = 100
+                
+                # Query for errors created during this execution
+                created_errors = list(
+                    MonitoringError.objects.filter(
+                        monitor_script=script,
+                        created_at__gte=error_tracking_start_time - timedelta(seconds=1),
+                    ).order_by("created_at")
+                )
+                results["monitoring_errors"] = created_errors
 
         script.last_run = timezone.now()
         script.save()
@@ -406,16 +469,49 @@ def download_csv(module, model_name, ids_to_download, academy_id=None):
         download.save()
 
         meta = model._meta
-        field_names = [field.name for field in meta.fields]
+
+        # Check if model defines custom CSV fields with get_csv_fields()
+        if hasattr(model, "get_csv_fields"):
+            csv_fields = model.get_csv_fields()
+
+            # Check if fields are tuples (header, path) or just strings
+            if csv_fields and isinstance(csv_fields[0], tuple):
+                headers = [f[0] for f in csv_fields]
+                field_paths = [f[1] for f in csv_fields]
+            else:
+                headers = csv_fields
+                field_paths = csv_fields
+        else:
+            # Fallback to all model fields
+            field_paths = [field.name for field in meta.fields]
+            headers = field_paths
+
         # rebuild query from the admin
         queryset = model.objects.filter(pk__in=ids_to_download)
 
         # write csv
         buffer = StringIO()
         writer = csv.writer(buffer)
-        writer.writerow(field_names)
+        writer.writerow(headers)
+
         for obj in queryset:
-            writer.writerow((getattr(obj, field) for field in field_names))
+            row = []
+            for field_path in field_paths:
+                # Handle dot notation for related fields (e.g., "event.slug")
+                if "." in field_path:
+                    value = obj
+                    for attr in field_path.split("."):
+                        if value is None:
+                            break
+                        value = getattr(value, attr, None)
+                    row.append(value if value is not None else "")
+                else:
+                    # Simple field access (supports properties, methods, and regular fields)
+                    value = getattr(obj, field_path, "")
+                    # Handle callable attributes (methods without @property decorator)
+                    row.append(value() if callable(value) else value)
+
+            writer.writerow(row)
 
         # upload to google cloud bucket
         from ..services.google_cloud import Storage
@@ -423,7 +519,7 @@ def download_csv(module, model_name, ids_to_download, academy_id=None):
         storage = Storage()
         cloud_file = storage.file(os.getenv("DOWNLOADS_BUCKET", None), download.name)
         cloud_file.upload(buffer.getvalue(), content_type="text/csv")
-        download.url = cloud_file.url()
+        download.url = "will be generated on demand"  # We'll generate signed URLs on demand
         download.status = "DONE"
         download.save()
         return True
@@ -507,6 +603,29 @@ def add_stripe_webhook(context: dict) -> StripeEvent:
         raise ValidationException("Invalid stripe webhook payload", code=400, slug="invalid-stripe-webhook-payload")
 
     return event
+
+
+def add_stripe_webhook_error(raw_payload: bytes, sig_header: str | None, slug: str, message: str) -> StripeEvent | None:
+    try:
+        decoded = raw_payload.decode("utf-8") if isinstance(raw_payload, (bytes, bytearray)) else str(raw_payload)
+        parsed = {}
+        try:
+            parsed = json.loads(decoded or "{}")
+        except Exception:
+            parsed = {}
+
+        event = StripeEvent(
+            stripe_id=parsed.get("id"),
+            type=parsed.get("type", "unknown"),
+            status="ERROR",
+            status_texts={"slug": slug, "message": message, "verified": False},
+            data={"parsed": parsed, "raw_text": decoded},
+            request={"headers": {"Stripe-Signature": sig_header}},
+        )
+        event.save()
+        return event
+    except Exception:
+        return None
 
 
 class DjangoAdminActions:

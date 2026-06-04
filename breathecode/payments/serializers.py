@@ -1,22 +1,32 @@
 import logging
+from typing import Any
 
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
+from django.core.exceptions import FieldDoesNotExist
 from django.db.models.query_utils import Q
 from rest_framework.exceptions import ValidationError
 
 from breathecode.payments.actions import apply_pricing_ratio
 from breathecode.payments.models import (
-    Currency,
-    FinancingOption,
+    AcademyPaymentSettings,
     AcademyService,
+    Bag,
+    CohortSet,
+    Coupon,
+    Currency,
+    EventTypeSet,
+    FinancingOption,
+    CreditLedgerEntry,
+    MentorshipServiceSet,
     PaymentMethod,
     Plan,
+    PlanOffer,
     PlanOfferTranslation,
+    PlanTranslation,
     Service,
     ServiceItem,
     ServiceItemFeature,
-    Bag,
 )
 from breathecode.utils import serializers, serpy
 
@@ -57,6 +67,19 @@ class GetCohortSerializer(serpy.Serializer):
     slug = serpy.Field()
 
 
+class GetSyllabusSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
+
+
+class GetLiveClassSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    hash = serpy.Field()
+    starting_at = serpy.Field()
+    ending_at = serpy.Field()
+
+
 class GetPermissionSerializer(serpy.Serializer):
     name = serpy.Field()
     codename = serpy.Field()
@@ -75,7 +98,7 @@ class GetServiceSmallSerializer(serpy.Serializer):
     title = serpy.Field()
     slug = serpy.Field()
     # description = serpy.Field()
-    # owner = GetAcademySmallSerializer(many=False)
+    owner = serpy.MethodField()
     icon_url = serpy.Field()
     private = serpy.Field()
     groups = serpy.MethodField()
@@ -83,30 +106,44 @@ class GetServiceSmallSerializer(serpy.Serializer):
     consumer = serpy.Field()
     session_duration = serpy.Field()
 
+    def get_owner(self, obj):
+        if obj.owner:
+            return GetAcademySmallSerializer(obj.owner, many=False).data
+        return None
+
     def get_groups(self, obj):
         return GetGroupSerializer(obj.groups.all(), many=True).data
 
 
 class GetServiceSerializer(serpy.Serializer):
+    id = serpy.Field()
     title = serpy.Field()
     slug = serpy.Field()
-    # description = serpy.Field()
-    currency = GetCurrencySmallSerializer(many=False)
+    description = serpy.Field()
 
-    owner = GetAcademySmallSerializer(many=False)
+    owner = serpy.MethodField()
     private = serpy.Field()
     groups = serpy.MethodField()
+    is_model_service = serpy.Field()
+
+    def get_owner(self, obj):
+        if obj.owner:
+            return GetAcademySmallSerializer(obj.owner, many=False).data
+        return None
 
     def get_groups(self, obj):
         return GetGroupSerializer(obj.groups.all(), many=True).data
 
 
 class GetServiceItemSerializer(serpy.Serializer):
+    id = serpy.Field()
     unit_type = serpy.Field()
     how_many = serpy.Field()
     sort_priority = serpy.Field()
     service = GetServiceSmallSerializer()
     is_team_allowed = serpy.Field()
+    renew_at = serpy.Field()
+    renew_at_unit = serpy.Field()
 
 
 class GetServiceItemFeatureShortSerializer(serpy.Serializer):
@@ -130,6 +167,7 @@ class GetServiceItemWithFeaturesSerializer(GetServiceItemSerializer):
 
 
 class GetUserSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
     first_name = serpy.Field()
     last_name = serpy.Field()
     email = serpy.Field()
@@ -140,10 +178,40 @@ class GetConsumableSerializer(GetServiceItemSerializer):
     valid_until = serpy.Field()
 
 
-class GetFinancingOptionSerializer(serpy.Serializer):
-    monthly_price = serpy.MethodField()
-    how_many_months = serpy.Field()
+class GetConsumableForInvoiceSerializer(serpy.Serializer):
+    """Consumable payload for invoice detail (Consumable has service_item, not service)."""
 
+    id = serpy.Field()
+    unit_type = serpy.Field()
+    how_many = serpy.Field()
+    sort_priority = serpy.Field()
+    valid_until = serpy.Field()
+    user = serpy.MethodField()
+    service = serpy.MethodField()
+    is_team_allowed = serpy.MethodField()
+
+    def get_user(self, obj):
+        if obj.user_id and obj.user:
+            return GetUserSmallSerializer(obj.user, many=False).data
+        return None
+
+    def get_service(self, obj):
+        if obj.service_item_id and obj.service_item:
+            return GetServiceSmallSerializer(obj.service_item.service, many=False).data
+        return None
+
+    def get_is_team_allowed(self, obj):
+        if obj.service_item_id and obj.service_item:
+            return obj.service_item.is_team_allowed
+        return False
+
+
+class GetFinancingOptionSerializer(serpy.Serializer):
+    id = serpy.Field()
+    academy = serpy.MethodField()
+    monthly_price = serpy.MethodField()
+    discounted_monthly_price = serpy.MethodField()
+    how_many_months = serpy.Field()
     pricing_ratio_exceptions = serpy.Field()
     currency = serpy.MethodField()
 
@@ -167,6 +235,11 @@ class GetFinancingOptionSerializer(serpy.Serializer):
             slug = obj_currency.code.upper()  # Use code attribute
             if slug not in self.cache:
                 self.cache[slug] = obj_currency
+
+    def get_academy(self, obj: FinancingOption):
+        if obj.academy:
+            return GetAcademySmallSerializer(obj.academy).data
+        return None
 
     def get_currency(self, obj: FinancingOption):
         country_code = self.context.get("country_code")
@@ -203,11 +276,41 @@ class GetFinancingOptionSerializer(serpy.Serializer):
         price, _, _ = apply_pricing_ratio(obj.monthly_price, country_code, obj, cache=self.cache)
         return price
 
+    def get_discounted_monthly_price(self, obj: FinancingOption):
+        """
+        Return the monthly price of this financing option after applying:
+          - pricing ratio (country_code)
+          - coupons that apply to the parent plan (if provided in context)
+
+        This is mainly used in the checking/bag preview response to show
+        per-installment prices with discount, similar to bag.discounted_amount_per_month.
+        """
+        from . import actions
+
+        base_price = self.get_monthly_price(obj)
+        if base_price is None:
+            return None
+
+        coupons = (self.context or {}).get("coupons") or []
+        if not coupons:
+            return base_price
+
+        plan = (self.context or {}).get("plan")
+        if not plan:
+            return base_price
+
+        eligible = actions.get_coupons_for_plan(plan, list(coupons))
+        if not eligible:
+            return base_price
+
+        return actions.get_discounted_price(base_price, eligible)
+
 
 class GetPlanSmallTinySerializer(serpy.Serializer):
     title = serpy.Field()
     slug = serpy.Field()
     status = serpy.Field()
+    discontinued_reason = serpy.Field(required=False)
     time_of_life = serpy.Field()
     time_of_life_unit = serpy.Field()
     trial_duration = serpy.Field()
@@ -215,12 +318,31 @@ class GetPlanSmallTinySerializer(serpy.Serializer):
 
 
 class GetPlanSmallSerializer(GetPlanSmallTinySerializer):
+    translations = serpy.MethodField()
     service_items = serpy.MethodField()
     financing_options = serpy.MethodField()
     has_available_cohorts = serpy.MethodField()
+    cohort_set = serpy.MethodField()
+    mentorship_service_set = serpy.MethodField()
+    event_type_set = serpy.MethodField()
 
     def get_has_available_cohorts(self, obj):
         return bool(obj.cohort_set)
+
+    def get_cohort_set(self, obj):
+        if not obj.cohort_set:
+            return None
+        return GetTinyCohortSetSerializer(obj.cohort_set, many=False).data
+
+    def get_mentorship_service_set(self, obj):
+        if not obj.mentorship_service_set:
+            return None
+        return GetMentorshipServiceSetSmallSerializer(obj.mentorship_service_set, many=False).data
+
+    def get_event_type_set(self, obj):
+        if not obj.event_type_set:
+            return None
+        return GetEventTypeSetSmallSerializer(obj.event_type_set, many=False).data
 
     def get_service_items(self, obj):
         return GetServiceItemSerializer(obj.service_items.all(), many=True).data
@@ -229,12 +351,71 @@ class GetPlanSmallSerializer(GetPlanSmallTinySerializer):
         if obj.is_renewable:
             return []
 
-        # Pass country_code context to financing options serializer
-        context = {}
+        # Pass country_code and plan context to financing options serializer.
+        # Optionally, coupons can be passed (e.g. from a Bag) so that
+        # discounted_monthly_price can be computed per financing option.
+        context = {"plan": obj}
         if hasattr(self, "context") and self.context:
             context["country_code"] = self.context.get("country_code")
+            # coupons is optional and only present when serializing plans from a Bag
+            if "coupons" in self.context:
+                context["coupons"] = self.context.get("coupons") or []
 
         return GetFinancingOptionSerializer(obj.financing_options.all(), many=True, context=context).data
+
+    def get_translations(self, obj: Plan):
+        qs = PlanTranslation.objects.filter(plan=obj)
+        return GetPlanTranslationSerializer(qs, many=True).data
+
+
+class GetPlanTranslationSerializer(serpy.Serializer):
+    lang = serpy.Field()
+    title = serpy.Field()
+    description = serpy.Field()
+
+
+class PlanAddOnSmallSerializer(serpy.Serializer):
+    slug = serpy.Field()
+    title = serpy.Field()
+    translations = serpy.MethodField()
+    price_before_coupon = serpy.MethodField()
+    price_after_coupon = serpy.MethodField()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.context = kwargs.get("context", {}) or {}
+
+    def get_translations(self, obj: Plan):
+        qs = PlanTranslation.objects.filter(plan=obj)
+        return GetPlanTranslationSerializer(qs, many=True).data
+
+    def get_price_before_coupon(self, obj: Plan):
+        from . import actions
+
+        option = obj.financing_options.filter(how_many_months=1).first()
+        if not option:
+            return None
+
+        base_price = option.monthly_price or 0
+        country_code = self.context.get("country_code")
+        if country_code:
+            base_price, _, _ = actions.apply_pricing_ratio(base_price, country_code, option, lang="en")
+
+        return base_price
+
+    def get_price_after_coupon(self, obj: Plan):
+        from . import actions
+
+        base_price = self.get_price_before_coupon(obj)
+        if base_price is None:
+            return None
+
+        coupons = self.context.get("coupons") or []
+        if not coupons:
+            return base_price
+
+        addon_coupons = actions.get_coupons_for_plan(obj, coupons)
+        return actions.get_discounted_price(base_price, addon_coupons)
 
 
 class GetPlanSerializer(GetPlanSmallSerializer):
@@ -250,6 +431,7 @@ class GetPlanSerializer(GetPlanSmallSerializer):
     pricing_ratio_exceptions = serpy.Field()
     currency = serpy.MethodField()
     add_ons = serpy.MethodField()
+    plan_addons = serpy.MethodField()
     seat_service_price = serpy.MethodField()
     consumption_strategy = serpy.Field()
 
@@ -352,6 +534,35 @@ class GetPlanSerializer(GetPlanSmallSerializer):
 
         return GetAcademyServiceSmallReverseSerializer(obj.add_ons.all(), many=True, context=context).data
 
+    def get_plan_addons(self, obj: Plan):
+        """
+        Expose plan_addons (other Plan objects that can be purchased as one-shot bundles)
+        with their marketing information and one-shot pricing (including country ratios).
+        """
+        addons = obj.plan_addons.all()
+        items: list[dict[str, Any]] = []
+
+        for plan in addons:
+            data = GetPlanSmallSerializer(plan, many=False, context=self.context).data
+
+            option = plan.financing_options.filter(how_many_months=1).first()
+            if option:
+                country_code = (self.context.get("country_code") or "").lower()
+                base_price = option.monthly_price or 0
+                if country_code:
+                    price, _, _ = apply_pricing_ratio(
+                        base_price, country_code, option, lang=self.lang, cache=self.cache
+                    )
+                else:
+                    price = base_price
+                data["one_shot_price"] = price
+            else:
+                data["one_shot_price"] = None
+
+            items.append(data)
+
+        return items
+
 
 class GetPlanOfferTranslationSerializer(serpy.Serializer):
     lang = serpy.Field()
@@ -361,11 +572,23 @@ class GetPlanOfferTranslationSerializer(serpy.Serializer):
 
 
 class GetPlanOfferSerializer(serpy.Serializer):
-    original_plan = GetPlanSerializer(required=False, many=False)
-    suggested_plan = GetPlanSerializer(required=False, many=False)
+    original_plan = serpy.MethodField()
+    suggested_plan = serpy.MethodField()
     details = serpy.MethodField()
     show_modal = serpy.Field()
     expires_at = serpy.Field()
+
+    def get_original_plan(self, obj: PlanOffer):
+        if not obj.original_plan:
+            return None
+        context = getattr(self, "context", {}) or {}
+        return GetPlanSerializer(obj.original_plan, many=False, context=context).data
+
+    def get_suggested_plan(self, obj: PlanOffer):
+        if not obj.suggested_plan:
+            return None
+        context = getattr(self, "context", {}) or {}
+        return GetPlanSerializer(obj.suggested_plan, many=False, context=context).data
 
     def get_details(self, obj):
         query_args = []
@@ -381,20 +604,41 @@ class GetPlanOfferSerializer(serpy.Serializer):
         return None
 
 
+class GetPaymentMethodSmallSerializer(serpy.Serializer):
+    """Minimal payment method for invoice list (id, title, is_backed)."""
+
+    id = serpy.Field()
+    title = serpy.Field()
+    is_backed = serpy.Field()
+
+
+class GetProofOfPaymentSerializer(serpy.Serializer):
+    """Proof of payment for invoice detail (staff/externally-managed invoices)."""
+
+    id = serpy.Field()
+    reference = serpy.Field()
+    status = serpy.Field()
+    confirmation_image_url = serpy.Field()
+    provided_payment_details = serpy.Field()
+    created_at = serpy.Field()
+    created_by = GetUserSmallSerializer(many=False, required=False)
+
+
 class GetInvoiceSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
     amount = serpy.Field()
     currency = GetCurrencySmallSerializer(many=False)
     paid_at = serpy.Field()
     status = serpy.Field()
+    invoice_kind = serpy.Field()
+    invoice_notes = serpy.Field()
     user = GetUserSmallSerializer(many=False)
+    standalone_consumables = serpy.MethodField()
+    payment_method = GetPaymentMethodSmallSerializer(required=False, many=False)
+    created_at = serpy.Field()
 
-
-class GetInvoiceSerializer(GetInvoiceSmallSerializer):
-    id = serpy.Field()
-    amount = serpy.Field()
-    paid_at = serpy.Field()
-    status = serpy.Field()
-    currency = GetCurrencySmallSerializer()
+    def get_standalone_consumables(self, obj):
+        return list(obj.standalone_consumables.values_list("id", flat=True))
 
 
 class GetMentorshipServiceSerializer(serpy.Serializer):
@@ -428,8 +672,13 @@ class GetCouponSerializer(serpy.Serializer):
     referral_type = serpy.Field()
     referral_value = serpy.Field()
     auto = serpy.Field()
+    allowed_user = GetUserSmallSerializer(many=False, required=False)
     offered_at = serpy.Field()
     expires_at = serpy.Field()
+    times_used = serpy.Field()
+    last_used_at = serpy.Field(required=False)
+    stats = serpy.Field(required=False)
+    stats_updated_at = serpy.Field(required=False)
 
 
 class GetCouponWithPlansSerializer(serpy.Serializer):
@@ -569,10 +818,14 @@ class GetMentorshipServiceSetSmallSerializer(serpy.Serializer):
 
 class GetMentorshipServiceSetSerializer(GetMentorshipServiceSetSmallSerializer):
     academy_services = serpy.MethodField()
+    plans = serpy.MethodField()
 
     def get_academy_services(self, obj):
         items = AcademyService.objects.filter(available_mentorship_service_sets=obj)
         return GetAcademyServiceSmallReverseSerializer(items, many=True).data
+
+    def get_plans(self, obj):
+        return GetPlanSmallTinySerializer(obj.plan_set.all(), many=True).data
 
 
 class GetCohortSetSerializer(serpy.Serializer):
@@ -580,9 +833,46 @@ class GetCohortSetSerializer(serpy.Serializer):
     slug = serpy.Field()
     academy = GetAcademySmallSerializer(many=False)
     cohorts = serpy.MethodField()
+    plans = serpy.MethodField()
 
     def get_cohorts(self, obj):
         return GetCohortSerializer(obj.cohorts.filter(), many=True).data
+
+    def get_plans(self, obj):
+        return GetPlanSmallTinySerializer(obj.plan_set.all(), many=True).data
+
+
+class GetTinyCohortSetSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    cohorts = serpy.MethodField()
+
+    def get_cohorts(self, obj):
+        return GetCohortSerializer(obj.cohorts.filter(), many=True).data
+
+
+class CohortSetSerializer(serializers.ModelSerializer):
+    """Serializer for creating and updating CohortSet."""
+
+    class Meta:
+        model = CohortSet
+        fields = ("slug", "academy")
+
+
+class MentorshipServiceSetSerializer(serializers.ModelSerializer):
+    """Serializer for creating and updating MentorshipServiceSet."""
+
+    class Meta:
+        model = MentorshipServiceSet
+        fields = ("slug", "academy")
+
+
+class EventTypeSetSerializer(serializers.ModelSerializer):
+    """Serializer for creating and updating EventTypeSet."""
+
+    class Meta:
+        model = EventTypeSet
+        fields = ("slug", "academy")
 
 
 class GetEventTypeSerializer(serpy.Serializer):
@@ -609,11 +899,260 @@ class GetEventTypeSetSmallSerializer(serpy.Serializer):
 
 class GetEventTypeSetSerializer(GetEventTypeSetSmallSerializer):
     academy_services = serpy.MethodField()
+    plans = serpy.MethodField()
 
     def get_academy_services(self, obj):
         items = AcademyService.objects.filter(available_event_type_sets=obj)
         return GetAcademyServiceSmallReverseSerializer(items, many=True).data
 
+    def get_plans(self, obj):
+        return GetPlanSmallTinySerializer(obj.plan_set.all(), many=True).data
+
+
+class GetAbstractIOweYouSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    status = serpy.Field()
+    user = GetUserSmallSerializer(many=False)
+    plans = serpy.ManyToManyField(GetPlanSmallTinySerializer(attr="plans", many=True))
+    selected_cohort_set = GetCohortSetSerializer(many=False, required=False)
+
+
+class GetBagSerializer(serpy.Serializer):
+    id = serpy.Field()
+    service_items = serpy.MethodField()
+    plans = serpy.MethodField()
+    plan_addons = serpy.MethodField()
+    coupons = serpy.MethodField()
+    status = serpy.Field()
+    type = serpy.Field()
+    is_recurrent = serpy.Field()
+    was_delivered = serpy.Field()
+    amount_per_month = serpy.Field()
+    amount_per_quarter = serpy.Field()
+    amount_per_half = serpy.Field()
+    amount_per_year = serpy.Field()
+    plan_addons_amount = serpy.Field()
+    discounted_plan_addons_amount = serpy.MethodField()
+    discounted_amount_per_month = serpy.Field()
+    discounted_amount_per_quarter = serpy.Field()
+    discounted_amount_per_half = serpy.Field()
+    discounted_amount_per_year = serpy.Field()
+
+    token = serpy.Field()
+    seat_service_item = serpy.MethodField()
+    expires_at = serpy.Field()
+
+    def get_service_items(self, obj):
+        return GetServiceItemSerializer(obj.service_items.filter(), many=True).data
+
+    def get_seat_service_item(self, obj: Bag):
+        if not obj.seat_service_item or obj.seat_service_item.service.type != "SEAT":
+            return None
+
+        return GetServiceItemSerializer(obj.seat_service_item, many=False).data
+
+    def get_plans(self, obj):
+        # When serializing plans from a Bag, we can pass extra context so nested
+        # financing options know about country_code and bag coupons, allowing
+        # them to expose discounted_monthly_price.
+        context = {
+            "country_code": getattr(obj, "country_code", None),
+            "coupons": list(obj.coupons.all()),
+        }
+
+        return GetPlanSmallSerializer(obj.plans.filter(), many=True, context=context).data
+
+    def get_plan_addons(self, obj):
+        context = {
+            "country_code": getattr(obj, "country_code", None),
+            "coupons": list(obj.coupons.all()),
+        }
+
+        return PlanAddOnSmallSerializer(obj.plan_addons.all(), many=True, context=context).data
+
+    def get_coupons(self, obj: Bag):
+        """
+        Return coupons enriched with the bag context, including where
+        (which plans / plan_addons inside this bag) each coupon is applied.
+
+        This allows the frontend to show more detailed information about
+        the scope of each discount.
+        """
+        from . import actions
+
+        coupons = list(obj.coupons.all())
+        if not coupons:
+            return []
+
+        coupon_map: dict[int, dict] = {}
+        for coupon in coupons:
+            data = GetCouponSerializer(coupon, many=False).data
+
+            data["applied_plans"] = []
+            data["applied_plan_addons"] = []
+            coupon_map[coupon.id] = data
+
+        bag_plans = list(obj.plans.all())
+        for plan in bag_plans:
+            eligible = actions.get_coupons_for_plan(plan, coupons)
+            if not eligible:
+                continue
+
+            for coupon in eligible:
+                slug = plan.slug
+                applied = coupon_map[coupon.id]["applied_plans"]
+                if slug not in applied:
+                    applied.append(slug)
+
+        bag_plan_addons = list(obj.plan_addons.all())
+        for addon in bag_plan_addons:
+            eligible = actions.get_coupons_for_plan(addon, coupons)
+            if not eligible:
+                continue
+
+            for coupon in eligible:
+                slug = addon.slug
+                applied = coupon_map[coupon.id]["applied_plan_addons"]
+                if slug not in applied:
+                    applied.append(slug)
+
+        return list(coupon_map.values())
+
+    def get_discounted_plan_addons_amount(self, obj: Bag):
+        from . import actions
+
+        coupons = list(obj.coupons.all())
+        _, total_after = actions.get_plan_addons_amounts_with_coupons(obj, coupons, lang="en")
+        return total_after
+
+
+class CreditNoteSerializer(serpy.Serializer):
+    id = serpy.Field()
+    amount = serpy.Field()
+    currency = GetCurrencySmallSerializer()
+    reason = serpy.Field()
+    issued_at = serpy.Field()
+    status = serpy.Field()
+    legal_text = serpy.Field()
+    country_code = serpy.Field()
+    breakdown = serpy.Field()
+    refund_stripe_id = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+    invoice = GetInvoiceSmallSerializer(many=False)
+    invoice_credit_notes = serpy.MethodField()
+
+    def get_invoice_credit_notes(self, obj):
+        """Return all credit notes for the invoice associated with this credit note."""
+        if not obj.invoice:
+            return []
+
+        try:
+            # Get all credit notes for this invoice, ordered by creation date
+            credit_notes = obj.invoice.credit_notes.all().order_by("created_at")
+            return CreditNoteSerializer(credit_notes, many=True).data
+        except Exception:
+            return []
+
+
+class CreditLedgerEntrySerializer(serpy.Serializer):
+    id = serpy.Field()
+    scope = serpy.Field()
+    amount = serpy.Field()
+    entry_type = serpy.Field()
+    notes = serpy.Field()
+    created_at = serpy.Field()
+    user_id = serpy.Field()
+    plan_financing_id = serpy.Field()
+    subscription_id = serpy.Field()
+    source_invoice_id = serpy.Field()
+
+
+class GetUserCreditLedgerEntrySerializer(CreditLedgerEntrySerializer):
+    user = GetUserSmallSerializer(many=False)
+    source_invoice = GetInvoiceSmallSerializer(many=False, required=False)
+    plan_financing = serpy.MethodField()
+    plans = serpy.MethodField()
+
+    def get_plan_financing(self, obj):
+        if not obj.plan_financing:
+            return None
+        return {
+            "id": obj.plan_financing.id,
+            "status": obj.plan_financing.status,
+            "how_many_installments": obj.plan_financing.how_many_installments,
+            "installments_paid": obj.plan_financing.installments_paid,
+            "next_payment_at": obj.plan_financing.next_payment_at,
+        }
+
+    def get_plans(self, obj):
+        if not obj.plan_financing:
+            return []
+        return GetPlanSmallTinySerializer(obj.plan_financing.plans.all(), many=True).data
+
+
+# Backwards-compatible alias.
+
+
+class GetInvoiceSerializer(GetInvoiceSmallSerializer):
+    id = serpy.Field()
+    amount = serpy.Field()
+    paid_at = serpy.Field()
+    status = serpy.Field()
+    externally_managed = serpy.Field()
+    currency = GetCurrencySmallSerializer()
+    bag = GetBagSerializer(many=False)
+
+    amount_refunded = serpy.Field()
+    stripe_id = serpy.Field()
+    refund_stripe_id = serpy.Field()
+    refunded_at = serpy.Field()
+    amount_breakdown = serpy.Field()
+    credit_notes = serpy.MethodField()
+    credit_entries = serpy.MethodField()
+    standalone_consumables = serpy.MethodField()
+    payment_method = serpy.MethodField()
+    proof = serpy.MethodField()
+
+    def get_credit_notes(self, obj):
+        import logging
+
+        logger = logging.getLogger(__name__)
+
+        # Refresh invoice to avoid stale RelatedManager issues
+        if hasattr(obj, "refresh_from_db"):
+            try:
+                logger.debug(f"GetInvoiceSerializer.get_credit_notes: Refreshing Invoice(id={obj.id})")
+                obj.refresh_from_db()
+            except Exception as e:
+                logger.warning(f"GetInvoiceSerializer.get_credit_notes: Failed to refresh Invoice(id={obj.id}): {e}")
+
+        try:
+            credit_notes_list = list(obj.credit_notes.all())
+            return CreditNoteSerializer(credit_notes_list, many=True).data
+        except TypeError as e:
+            logger.error(
+                f"GetInvoiceSerializer.get_credit_notes: RelatedManager error for Invoice(id={obj.id}).credit_notes: {e}"
+            )
+            return []
+
+    def get_standalone_consumables(self, obj):
+        consumables_qs = obj.standalone_consumables.select_related("service_item__service", "user")
+        consumables = list(consumables_qs)
+        return GetConsumableForInvoiceSerializer(consumables, many=True).data
+
+    def get_credit_entries(self, obj):
+        return CreditLedgerEntrySerializer(obj.credit_entries.order_by("created_at"), many=True).data
+
+    def get_payment_method(self, obj):
+        if obj.payment_method_id and obj.payment_method:
+            return GetPaymentMethod(obj.payment_method, many=False).data
+        return None
+
+    def get_proof(self, obj):
+        if getattr(obj, "proof_id", None) and getattr(obj, "proof", None):
+            return GetProofOfPaymentSerializer(obj.proof, many=False).data
+        return None
 
 class GetAbstractIOweYouSerializer(serpy.Serializer):
 
@@ -634,23 +1173,56 @@ class GetAbstractIOweYouSerializer(serpy.Serializer):
     next_payment_at = serpy.Field()
     valid_until = serpy.Field()
 
+    # Billing team and seat information
+    has_billing_team = serpy.MethodField()
+    seats_count = serpy.MethodField()
+    seats_limit = serpy.MethodField()
 
-class GetAbstractIOweYouSmallSerializer(serpy.Serializer):
-    id = serpy.Field()
-    status = serpy.Field()
-    user = GetUserSmallSerializer(many=False)
-    plans = serpy.ManyToManyField(GetPlanSmallTinySerializer(attr="plans", many=True))
-    selected_cohort_set = GetCohortSetSerializer(many=False, required=False)
+    def get_has_billing_team(self, obj):
+        """Check if this financing/subscription has a billing team."""
+        return hasattr(obj, "subscriptionbillingteam")
+
+    def get_seats_count(self, obj):
+        """Get number of active seats in the billing team."""
+        if hasattr(obj, "subscriptionbillingteam"):
+            return obj.subscriptionbillingteam.seats.filter(is_active=True).count()
+        return None
+
+    def get_seats_limit(self, obj):
+        """Get total seat limit for the billing team."""
+        if hasattr(obj, "subscriptionbillingteam"):
+            return obj.subscriptionbillingteam.seats_limit
+        return None
 
 
 class GetPlanFinancingSerializer(GetAbstractIOweYouSerializer):
     plan_expires_at = serpy.Field()
     monthly_price = serpy.Field()
     how_many_installments = serpy.Field()
+    initial_payment_amount = serpy.Field()
+    grace_period_duration = serpy.Field()
+    grace_period_duration_unit = serpy.Field()
+    credit_balance = serpy.MethodField()
+    remaining_installments = serpy.MethodField()
+    credit_entries = serpy.MethodField()
+
+    def get_credit_balance(self, obj):
+        from breathecode.payments.actions import get_credit_balance
+
+        return get_credit_balance(obj)
+
+    def get_remaining_installments(self, obj):
+        from breathecode.payments.actions import get_remaining_installments
+
+        return get_remaining_installments(obj)
+
+    def get_credit_entries(self, obj):
+        return CreditLedgerEntrySerializer(obj.credit_entries.order_by("created_at"), many=True).data
 
 
 class GetSubscriptionHookSerializer(GetAbstractIOweYouSerializer):
     paid_at = serpy.Field()
+    last_status_change_at = serpy.Field()
     is_refundable = serpy.Field()
 
     pay_every = serpy.Field()
@@ -660,6 +1232,7 @@ class GetSubscriptionHookSerializer(GetAbstractIOweYouSerializer):
 class GetSubscriptionSerializer(GetAbstractIOweYouSerializer):
     paid_at = serpy.Field()
     created_at = serpy.Field()
+    last_status_change_at = serpy.Field()
     is_refundable = serpy.Field()
 
     pay_every = serpy.Field()
@@ -671,40 +1244,7 @@ class GetSubscriptionSerializer(GetAbstractIOweYouSerializer):
         return GetServiceItemSerializer(obj.service_items.filter(), many=True).data
 
 
-class GetBagSerializer(serpy.Serializer):
-    id = serpy.Field()
-    service_items = serpy.MethodField()
-    plans = serpy.MethodField()
-    coupons = serpy.MethodField()
-    status = serpy.Field()
-    type = serpy.Field()
-    is_recurrent = serpy.Field()
-    was_delivered = serpy.Field()
-    amount_per_month = serpy.Field()
-    amount_per_quarter = serpy.Field()
-    amount_per_half = serpy.Field()
-    amount_per_year = serpy.Field()
-    token = serpy.Field()
-    seat_service_item = serpy.MethodField()
-    expires_at = serpy.Field()
-
-    def get_service_items(self, obj):
-        return GetServiceItemSerializer(obj.service_items.filter(), many=True).data
-
-    def get_seat_service_item(self, obj: Bag):
-        if not obj.seat_service_item or obj.seat_service_item.service.type != "SEAT":
-            return None
-
-        return GetServiceItemSerializer(obj.seat_service_item, many=False).data
-
-    def get_plans(self, obj):
-        return GetPlanSmallSerializer(obj.plans.filter(), many=True).data
-
-    def get_coupons(self, obj):
-        return GetCouponSerializer(obj.coupons.filter(), many=True).data
-
-
-class ServiceSerializer(serializers.Serializer):
+class ServiceSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Service
@@ -714,7 +1254,7 @@ class ServiceSerializer(serializers.Serializer):
         return attrs
 
 
-class ServiceItemSerializer(serializers.Serializer):
+class ServiceItemSerializer(serializers.ModelSerializer):
     status_fields = ["unit_type"]
 
     class Meta:
@@ -723,6 +1263,21 @@ class ServiceItemSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         return attrs
+
+    def create(self, validated_data):
+        # Use the model's get_or_create_for_service method which encapsulates
+        # the business logic for ServiceItem uniqueness
+        service_item, created = ServiceItem.get_or_create_for_service(
+            service=validated_data.get("service"),
+            how_many=validated_data.get("how_many"),
+            unit_type=validated_data.get("unit_type", "UNIT"),
+            is_renewable=validated_data.get("is_renewable", False),
+            is_team_allowed=validated_data.get("is_team_allowed", False),
+            renew_at=validated_data.get("renew_at", 1),
+            renew_at_unit=validated_data.get("renew_at_unit", "MONTH"),
+            sort_priority=validated_data.get("sort_priority", 1),
+        )
+        return service_item
 
 
 class PlanSerializer(serializers.ModelSerializer):
@@ -733,16 +1288,86 @@ class PlanSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
     def validate(self, attrs):
+        instance = getattr(self, "instance", None)
+        old_status = instance.status if instance else None
+
+        incoming_status = attrs.get("status")
+        if incoming_status is None:
+            incoming_status = old_status if instance else Plan.Status.DRAFT
+
+        transitioning_to_discontinued = incoming_status == Plan.Status.DISCONTINUED and (
+            instance is None or old_status != Plan.Status.DISCONTINUED
+        )
+
+        if transitioning_to_discontinued:
+            reason = attrs.get("discontinued_reason")
+            if reason is None and instance is not None and "discontinued_reason" not in attrs:
+                reason = instance.discontinued_reason
+
+            if reason is None or (isinstance(reason, str) and not reason.strip()):
+                raise ValidationException(
+                    translation(
+                        en="discontinued_reason is required when setting plan status to DISCONTINUED",
+                        es="discontinued_reason es obligatorio al poner el plan en DISCONTINUED",
+                    ),
+                    slug="discontinued-reason-required",
+                    code=400,
+                )
+
         return attrs
 
     def create(self, validated_data):
-        return Plan.objects.create(**validated_data)
+        m2m_fields = {}
+
+        for key in list(validated_data.keys()):
+            try:
+                field = Plan._meta.get_field(key)
+            except FieldDoesNotExist:  # pragma: no cover - defensive safeguard
+                continue
+
+            if field.many_to_many:
+                m2m_fields[key] = validated_data.pop(key)
+
+        instance = Plan.objects.create(**validated_data)
+
+        for key, value in m2m_fields.items():
+            relation = getattr(instance, key)
+
+            if value is None:
+                relation.clear()
+                continue
+
+            relation.set(value)
+
+        return instance
 
     def update(self, instance, validated_data):
-        for key in validated_data:
-            setattr(instance, key, validated_data[key])
+        m2m_updates = {}
+
+        for key, value in validated_data.items():
+            try:
+                field = instance._meta.get_field(key)
+            except FieldDoesNotExist:  # pragma: no cover - defensive safeguard
+                setattr(instance, key, value)
+                continue
+
+            if field.many_to_many:
+                m2m_updates[key] = value
+                continue
+
+            setattr(instance, key, value)
 
         instance.save()
+
+        for key, value in m2m_updates.items():
+            relation = getattr(instance, key)
+
+            if value is None:
+                relation.clear()
+                continue
+
+            relation.set(value)
+
         return instance
 
 
@@ -753,16 +1378,74 @@ class PutPlanSerializer(PlanSerializer):
         model = Plan
         fields = "__all__"
 
-    def validate(self, attrs):
-        return attrs
+
+class FinancingOptionSerializer(serializers.ModelSerializer):
+    """Serializer for creating and updating FinancingOption"""
+
+    class Meta:
+        model = FinancingOption
+        fields = ["id", "academy", "monthly_price", "how_many_months", "currency", "pricing_ratio_exceptions"]
+        read_only_fields = ["id", "academy"]
+
+    def validate_monthly_price(self, value):
+        if value <= 0:
+            raise ValidationException(
+                translation(
+                    en="Monthly price must be greater than 0",
+                    es="El precio mensual debe ser mayor que 0",
+                ),
+                slug="invalid-monthly-price",
+                code=400,
+            )
+        return value
+
+    def validate_how_many_months(self, value):
+        if value <= 0:
+            raise ValidationException(
+                translation(
+                    en="Number of months must be greater than 0",
+                    es="El número de meses debe ser mayor que 0",
+                ),
+                slug="invalid-months",
+                code=400,
+            )
+        return value
 
     def create(self, validated_data):
-        return Plan.objects.create(**validated_data)
+        from breathecode.admissions.models import Academy
+
+        # Get academy from validated_data or from save() kwargs
+        # The view calls serializer.save(academy_id=academy_id)
+        academy_id = validated_data.pop("academy_id", None)
+        academy = validated_data.get("academy")
+
+        # Convert academy_id to Academy instance if needed
+        if academy_id and not academy:
+            academy = Academy.objects.filter(id=academy_id).first()
+            if not academy:
+                raise ValidationException(
+                    translation(
+                        en="Academy not found",
+                        es="Academia no encontrada",
+                    ),
+                    slug="academy-not-found",
+                    code=404,
+                )
+
+        # Use the model's get_or_create_for_academy method which encapsulates
+        # the business logic for FinancingOption uniqueness
+        financing_option, created = FinancingOption.get_or_create_for_academy(
+            academy=academy,
+            monthly_price=validated_data.get("monthly_price"),
+            currency=validated_data.get("currency"),
+            how_many_months=validated_data.get("how_many_months"),
+            pricing_ratio_exceptions=validated_data.get("pricing_ratio_exceptions"),
+        )
+        return financing_option
 
     def update(self, instance, validated_data):
         for key in validated_data:
             setattr(instance, key, validated_data[key])
-
         instance.save()
         return instance
 
@@ -773,6 +1456,7 @@ class GetPaymentMethod(serpy.Serializer):
     is_backed = serpy.Field()
     lang = serpy.Field()
     is_credit_card = serpy.Field()
+    is_crypto = serpy.Field()
     description = serpy.Field()
     third_party_link = serpy.Field()
     academy = GetAcademySmallSerializer(required=False, many=False)
@@ -854,3 +1538,118 @@ class BillingTeamAutoRechargeSerializer(serializers.Serializer):
         min_value=0,
         help_text="Maximum spending per monthly period (null = unlimited)",
     )
+
+
+class AcademyPaymentSettingsPUTSerializer(serializers.ModelSerializer):
+    """
+    Serializer for updating academy payment settings.
+
+    Allows updating payment-related configuration for an academy including
+    Stripe and Coinbase API keys, webhook secrets, and publishable keys.
+    """
+
+    class Meta:
+        model = AcademyPaymentSettings
+        fields = [
+            "stripe_api_key",
+            "stripe_webhook_secret",
+            "stripe_publishable_key",
+            "coinbase_api_key",
+            "coinbase_webhook_secret",
+        ]
+        extra_kwargs = {
+            "stripe_api_key": {"required": False, "allow_blank": True},
+            "stripe_webhook_secret": {"required": False, "allow_blank": True},
+            "stripe_publishable_key": {"required": False, "allow_blank": True},
+            "coinbase_api_key": {"required": False, "allow_blank": True, "allow_null": True},
+            "coinbase_webhook_secret": {"required": False, "allow_blank": True, "allow_null": True},
+        }
+
+
+class CouponSerializer(serializers.ModelSerializer):
+    """Serializer for creating and updating Coupon"""
+
+    class Meta:
+        model = Coupon
+        fields = [
+            "slug",
+            "discount_type",
+            "discount_value",
+            "referral_type",
+            "referral_value",
+            "auto",
+            "how_many_offers",
+            "plans",
+            "offered_at",
+            "expires_at",
+            "allowed_user",
+            "seller",
+            "referred_buyer",
+        ]
+        extra_kwargs = {
+            "slug": {"required": True},
+            "discount_type": {"required": True},
+            "discount_value": {"required": True},
+            "offered_at": {"required": False, "allow_null": True},
+            "expires_at": {"required": False, "allow_null": True},
+            "allowed_user": {"required": False, "allow_null": True},
+            "seller": {"required": False, "allow_null": True},
+            "referred_buyer": {"required": False, "allow_null": True},
+        }
+
+    def validate(self, attrs):
+        return attrs
+
+    def create(self, validated_data):
+        m2m_fields = {}
+
+        for key in list(validated_data.keys()):
+            try:
+                field = Coupon._meta.get_field(key)
+            except FieldDoesNotExist:  # pragma: no cover - defensive safeguard
+                continue
+
+            if field.many_to_many:
+                m2m_fields[key] = validated_data.pop(key)
+
+        instance = Coupon.objects.create(**validated_data)
+
+        for key, value in m2m_fields.items():
+            relation = getattr(instance, key)
+
+            if value is None:
+                relation.clear()
+                continue
+
+            relation.set(value)
+
+        return instance
+
+    def update(self, instance, validated_data):
+        m2m_updates = {}
+
+        for key, value in validated_data.items():
+            try:
+                field = instance._meta.get_field(key)
+            except FieldDoesNotExist:  # pragma: no cover - defensive safeguard
+                setattr(instance, key, value)
+                continue
+
+            if field.many_to_many:
+                m2m_updates[key] = value
+                continue
+
+            setattr(instance, key, value)
+
+        instance.save()
+
+        for key, value in m2m_updates.items():
+            relation = getattr(instance, key)
+
+            if value is None:
+                relation.clear()
+                continue
+
+            relation.set(value)
+
+        return instance

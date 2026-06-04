@@ -37,6 +37,7 @@ def get_serializer(syllabus_version, syllabus):
         "status": syllabus_version.status,
         "main_technologies": syllabus.main_technologies,
         "change_log_details": syllabus_version.change_log_details,
+        "reasoning": syllabus_version.reasoning,
         "week_hours": syllabus.week_hours,
     }
 

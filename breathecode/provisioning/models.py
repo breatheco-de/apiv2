@@ -13,7 +13,18 @@ logger = logging.getLogger(__name__)
 
 
 class ProvisioningVendor(models.Model):
+    class VendorType(models.TextChoices):
+        CODING_EDITOR = "CODING_EDITOR", "Coding Editor"
+        VPS_SERVER = "VPS_SERVER", "VPS Server"
+        LLM = "LLM", "LLM"
+
     name = models.CharField(max_length=200)
+    vendor_type = models.CharField(
+        max_length=20,
+        choices=VendorType.choices,
+        default=VendorType.CODING_EDITOR,
+        db_index=True,
+    )
     api_url = models.URLField(blank=True)
 
     workspaces_url = models.URLField(help_text="Points to the place were you can see all your containers")
@@ -67,10 +78,39 @@ class ProvisioningMachineTypes(models.Model):
 
 
 class ProvisioningAcademy(models.Model):
+    class ConnectionStatus(models.TextChoices):
+        UNTESTED = "UNTESTED", "Untested"
+        OK = "OK", "OK"
+        DEGRADED = "DEGRADED", "Degraded"
+        ERROR = "ERROR", "Error"
+
     vendor = models.ForeignKey(ProvisioningVendor, on_delete=models.SET_NULL, null=True, default=None)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     credentials_key = models.CharField(max_length=200, blank=True)
     credentials_token = models.CharField(max_length=200, blank=True)
+    vendor_settings = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Vendor-specific allowlists/settings (for example: item_ids, template_ids, data_center_ids).",
+    )
+
+    connection_status = models.CharField(
+        max_length=20,
+        choices=ConnectionStatus.choices,
+        default=ConnectionStatus.UNTESTED,
+        db_index=True,
+        help_text="Last known vendor API connection health (updated by connection checks).",
+    )
+    connection_status_text = models.CharField(
+        max_length=512,
+        blank=True,
+        help_text="Vendor or error detail for the last connection test.",
+    )
+    connection_test_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the last connection test was run.",
+    )
 
     container_idle_timeout = models.IntegerField(
         default=15, help_text="If the container is idle for X amount of minutes, it will be shut down"
@@ -251,3 +291,131 @@ class ProvisioningContainer(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+
+class ProvisioningVPS(models.Model):
+    """VPS instance provisioned for a student (e.g. via Hostinger). One active per user per academy."""
+
+    VPS_STATUS_PENDING = "PENDING"
+    VPS_STATUS_PROVISIONING = "PROVISIONING"
+    VPS_STATUS_ACTIVE = "ACTIVE"
+    VPS_STATUS_ERROR = "ERROR"
+    VPS_STATUS_DELETED = "DELETED"
+    VPS_STATUS_CHOICES = (
+        (VPS_STATUS_PENDING, "Pending"),
+        (VPS_STATUS_PROVISIONING, "Provisioning"),
+        (VPS_STATUS_ACTIVE, "Active"),
+        (VPS_STATUS_ERROR, "Error"),
+        (VPS_STATUS_DELETED, "Deleted"),
+    )
+
+    class RestartMode(models.TextChoices):
+        """Public API ``mode`` for VPS restart; each vendor exposes a subset via ``supported_restart_modes``."""
+
+        GRACEFUL = "graceful", "Graceful reboot"
+        FORCED = "forced", "Forced reboot"
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    vendor = models.ForeignKey(ProvisioningVendor, on_delete=models.SET_NULL, null=True, default=None)
+    consumed_consumable = models.ForeignKey(
+        "payments.Consumable",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Consumable used at request time; used to reimburse on provisioning failure.",
+    )
+
+    status = models.CharField(max_length=20, choices=VPS_STATUS_CHOICES, default=VPS_STATUS_PENDING, db_index=True)
+    hostname = models.CharField(max_length=255, blank=True, default="")
+    ip_address = models.GenericIPAddressField(null=True, blank=True, default=None)
+    ssh_user = models.CharField(max_length=100, blank=True, default="")
+    ssh_port = models.PositiveIntegerField(default=22)
+    root_password_encrypted = models.TextField(blank=True, default="")
+
+    external_id = models.CharField(max_length=100, blank=True, null=True, default=None)
+    plan_slug = models.CharField(max_length=100, blank=True, null=True, default=None)
+    error_message = models.TextField(blank=True, default="")
+
+    requested_at = models.DateTimeField(null=True, blank=True, default=None)
+    provisioned_at = models.DateTimeField(null=True, blank=True, default=None)
+    deleted_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="When the VPS was deprovisioned; useful for vendor charge analysis (e.g. active duration).",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    class Meta:
+        verbose_name = "Provisioning VPS"
+        verbose_name_plural = "Provisioning VPS"
+
+    def __str__(self):
+        return f"VPS {self.id} ({self.user_id}, {self.academy_id}, {self.status})"
+
+
+class ProvisioningLLM(models.Model):
+    """
+    Generic LLM provisioning record for a user in an academy with a given vendor.
+
+    This tracks the external user identity in the LLM provider and its provisioning state.
+    """
+
+    STATUS_PENDING = "PENDING"
+    STATUS_ACTIVE = "ACTIVE"
+    STATUS_DEPROVISIONED = "DEPROVISIONED"
+    STATUS_ERROR = "ERROR"
+
+    STATUS_CHOICES = (
+        (STATUS_PENDING, "Pending"),
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_DEPROVISIONED, "Deprovisioned"),
+        (STATUS_ERROR, "Error"),
+    )
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    vendor = models.ForeignKey(ProvisioningVendor, on_delete=models.SET_NULL, null=True, default=None)
+
+    external_user_id = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        default=None,
+        help_text="Identifier of the user in the external LLM provider.",
+    )
+
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING, db_index=True)
+
+    error_message = models.TextField(
+        blank=True,
+        default="",
+        help_text="Last error message encountered while provisioning/deprovisioning with the LLM provider.",
+    )
+
+    deprovisioned_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="When the user was deprovisioned in the LLM provider (if applicable).",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    class Meta:
+        verbose_name = "Provisioning LLM"
+        verbose_name_plural = "Provisioning LLM"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "academy", "vendor"],
+                name="uniq_provisioning_llm_per_user_academy_vendor",
+            )
+        ]
+
+    def __str__(self):
+        return f"LLM {self.id} ({self.user_id}, {self.academy_id}, {self.vendor_id}, {self.status})"

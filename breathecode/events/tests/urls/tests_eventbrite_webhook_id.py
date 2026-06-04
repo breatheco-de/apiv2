@@ -253,6 +253,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
                     "utm_url": None,
                     "status": "PENDING",
                     "attended_at": None,
+                    "luma_guest_id": None,
                 }
             ],
         )
@@ -310,6 +311,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
                     "id": 1,
                     "status": "PENDING",
                     "attended_at": None,
+                    "luma_guest_id": None,
                 }
             ],
         )
@@ -379,6 +381,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
                     "id": 1,
                     "status": "PENDING",
                     "attended_at": None,
+                    "luma_guest_id": None,
                 }
             ],
         )
@@ -502,6 +505,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
                     "id": 1,
                     "status": "PENDING",
                     "attended_at": None,
+                    "luma_guest_id": None,
                 }
             ],
         )
@@ -626,6 +630,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
                     "id": 1,
                     "status": "PENDING",
                     "attended_at": None,
+                    "luma_guest_id": None,
                 }
             ],
         )

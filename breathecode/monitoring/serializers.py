@@ -1,13 +1,15 @@
 import logging
+from datetime import timedelta
 
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from django.core.validators import URLValidator
+from django.utils import timezone
 from rest_framework import serializers
 
 from breathecode.authenticate.models import AcademyAuthSettings
 from breathecode.monitoring.actions import subscribe_repository
-from breathecode.monitoring.models import RepositorySubscription
+from breathecode.monitoring.models import MonitorScript, MonitoringError, ReportGenerationJob, RepositorySubscription
 from breathecode.monitoring.tasks import async_subscribe_repo, async_unsubscribe_repo
 from breathecode.utils import serpy
 
@@ -20,11 +22,32 @@ class AcademySmallSerializer(serpy.Serializer):
     name = serpy.Field()
 
 
+def serialize_included_academies_for_parent_job(obj):
+    """Parent-only batch rows (aggregate jobs): academy summaries from children. Otherwise None."""
+    if obj.academy_id is not None or obj.parent_id is not None:
+        return None
+    items = []
+    seen: set[int] = set()
+    for child in obj.children.all():
+        aid = child.academy_id
+        if not aid or aid in seen:
+            continue
+        seen.add(aid)
+        academy = getattr(child, "academy", None)
+        if academy is not None:
+            items.append(AcademySmallSerializer(academy).data)
+        else:
+            items.append({"id": aid, "slug": "", "name": ""})
+    items.sort(key=lambda x: x["id"])
+    return items
+
+
 class CSVDownloadSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     name = serpy.Field()
     url = serpy.Field()
     status = serpy.Field()
+    status_message = serpy.Field()
     created_at = serpy.Field()
     finished_at = serpy.Field()
 
@@ -181,3 +204,337 @@ class RepositorySubscriptionSerializer(serializers.ModelSerializer):
             async_unsubscribe_repo.delay(instance.id, force_delete=False)
 
         return super().update(instance, validated_data)
+
+
+class MonitoringErrorSerializer(serpy.Serializer):
+    id = serpy.Field()
+    severity = serpy.Field()
+    title = serpy.Field()
+    description = serpy.Field()
+    details = serpy.Field()
+    comments = serpy.Field()
+    created_at = serpy.Field()
+    fixed_at = serpy.Field()
+    replicated_at = serpy.Field()
+    monitor_script_id = serpy.Field(attr="monitor_script.id")
+    academy_id = serpy.Field(attr="academy.id")
+    user_id = serpy.Field(attr="user.id", required=False)
+
+
+class MonitorScriptSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    script_slug = serpy.Field()
+    status = serpy.Field()
+    status_code = serpy.Field()
+    severity_level = serpy.Field()
+    status_text = serpy.Field()
+    special_status_text = serpy.Field()
+    response_text = serpy.Field()
+    last_run = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+
+
+class ChurnRiskReportListSerializer(serpy.Serializer):
+    id = serpy.Field()
+    user_id = serpy.Field(attr="user.id")
+    user_email = serpy.Field(attr="user.email")
+    academy_id = serpy.Field(attr="academy.id", required=False)
+    report_date = serpy.Field()
+    churn_risk_score = serpy.Field()
+    risk_level = serpy.Field()
+    days_since_last_activity = serpy.Field()
+    login_count_7d = serpy.Field()
+    assignments_completed_7d = serpy.Field()
+    has_payment_issues = serpy.Field()
+    subscription_status = serpy.Field()
+
+
+class ChurnRiskReportDetailSerializer(serpy.Serializer):
+    id = serpy.Field()
+    user_id = serpy.Field(attr="user.id")
+    user_email = serpy.Field(attr="user.email")
+    academy_id = serpy.Field(attr="academy.id", required=False)
+    report_date = serpy.Field()
+    churn_risk_score = serpy.Field()
+    risk_level = serpy.Field()
+    days_since_last_activity = serpy.Field()
+    login_count_7d = serpy.Field()
+    login_trend = serpy.Field()
+    assignments_completed_7d = serpy.Field()
+    assignment_trend = serpy.Field()
+    avg_frustration_score = serpy.Field()
+    avg_engagement_score = serpy.Field()
+    has_payment_issues = serpy.Field()
+    subscription_status = serpy.Field()
+    days_until_renewal = serpy.Field()
+    details = serpy.Field()
+    created_at = serpy.Field()
+
+
+class ChurnReportSummarySerializer(serpy.Serializer):
+    total = serpy.Field()
+    average_score = serpy.Field()
+    payment_risk_count = serpy.Field()
+    unresolved_alert_count = serpy.Field()
+    risk_levels = serpy.Field()
+
+
+class AcquisitionReportListSerializer(serpy.Serializer):
+    id = serpy.Field()
+    source_type = serpy.Field()
+    source_id = serpy.Field()
+    report_date = serpy.Field()
+    academy_id = serpy.Field(attr="academy.id")
+    user_id = serpy.Field(required=False)
+    email = serpy.Field()
+    funnel_tier = serpy.Field()
+    utm_source = serpy.Field(required=False)
+    utm_medium = serpy.Field(required=False)
+    utm_campaign = serpy.Field(required=False)
+    landing_url = serpy.Field(required=False)
+    conversion_url = serpy.Field(required=False)
+    asset_slug = serpy.Field(required=False)
+    event_slug = serpy.Field(required=False)
+    deal_status = serpy.Field(required=False)
+    lead_type = serpy.Field(required=False)
+    team_seat_invite = serpy.Field()
+
+
+class AcquisitionReportDetailSerializer(serpy.Serializer):
+    id = serpy.Field()
+    source_type = serpy.Field()
+    source_id = serpy.Field()
+    report_date = serpy.Field()
+    academy_id = serpy.Field(attr="academy.id")
+    user_id = serpy.Field(required=False)
+    email = serpy.Field()
+    funnel_tier = serpy.Field()
+    utm_source = serpy.Field(required=False)
+    utm_medium = serpy.Field(required=False)
+    utm_campaign = serpy.Field(required=False)
+    utm_term = serpy.Field(required=False)
+    utm_content = serpy.Field(required=False)
+    utm_placement = serpy.Field(required=False)
+    landing_url = serpy.Field(required=False)
+    conversion_url = serpy.Field(required=False)
+    lead_type = serpy.Field(required=False)
+    deal_status = serpy.Field(required=False)
+    attribution_id = serpy.Field(required=False)
+    event_slug = serpy.Field(required=False)
+    asset_slug = serpy.Field(required=False)
+    course_id = serpy.Field(required=False)
+    cohort_id = serpy.Field(required=False)
+    syllabus_id = serpy.Field(required=False)
+    role_id = serpy.Field(required=False)
+    author_id = serpy.Field(required=False)
+    subscription_seat_id = serpy.Field(required=False)
+    plan_financing_seat_id = serpy.Field(required=False)
+    payment_method_id = serpy.Field(required=False)
+    team_seat_invite = serpy.Field()
+    details = serpy.Field()
+    created_at = serpy.Field()
+
+
+class AcquisitionReportSummarySerializer(serpy.Serializer):
+    report_row_count = serpy.Field()
+    unique_identities = serpy.Field(required=False)
+    cross_academy_identities = serpy.Field(required=False)
+    by_source_type = serpy.Field()
+    by_funnel_tier = serpy.Field()
+    by_funnel_tier_label = serpy.Field()
+    by_funnel_tier_identities = serpy.Field(required=False)
+    by_funnel_tier_label_identities = serpy.Field(required=False)
+    top_asset_slugs = serpy.Field()
+    top_event_slugs = serpy.Field()
+    top_utm_sources = serpy.Field()
+    top_utm_campaigns = serpy.Field()
+    top_conversion_urls = serpy.Field()
+    by_deal_status = serpy.Field()
+    team_seat_invite_count = serpy.Field()
+
+
+class MonitoringReportTypeSerializer(serpy.Serializer):
+    slug = serpy.Field()
+    label = serpy.Field()
+    description = serpy.Field()
+    filters = serpy.Field()
+    sort_fields = serpy.Field()
+    supports_detail = serpy.Field()
+    supports_summary = serpy.Field()
+
+
+class ReportGenerationJobSerializer(serpy.Serializer):
+    id = serpy.Field()
+    report_type = serpy.Field()
+    status = serpy.Field()
+    status_message = serpy.Field(required=False)
+    academy_id = serpy.MethodField()
+    parent_id = serpy.Field(required=False)
+    batch_id = serpy.MethodField(required=False)
+    children_count = serpy.MethodField(required=False)
+    included_academies = serpy.MethodField(required=False)
+    requested_by_id = serpy.Field(attr="requested_by.id", required=False)
+    date_start = serpy.Field()
+    date_end = serpy.Field()
+    params = serpy.Field()
+    progress_current = serpy.Field()
+    progress_total = serpy.Field()
+    generated_rows = serpy.Field()
+    result = serpy.Field()
+    error_log = serpy.Field(required=False)
+    celery_task_id = serpy.Field(required=False)
+    started_at = serpy.Field(required=False)
+    finished_at = serpy.Field(required=False)
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+
+    def get_academy_id(self, obj):
+        return obj.academy_id
+
+    def get_batch_id(self, obj):
+        return str(obj.batch_id) if obj.batch_id else None
+
+    def get_children_count(self, obj):
+        if hasattr(obj, "children_count"):
+            return int(obj.children_count)
+        return obj.children.count()
+
+    def get_included_academies(self, obj):
+        return serialize_included_academies_for_parent_job(obj)
+
+
+class ReportGenerationJobListSerializer(serpy.Serializer):
+    id = serpy.Field()
+    report_type = serpy.Field()
+    status = serpy.Field()
+    status_message = serpy.Field(required=False)
+    academy_id = serpy.MethodField()
+    parent_id = serpy.Field(required=False)
+    batch_id = serpy.MethodField(required=False)
+    children_count = serpy.MethodField(required=False)
+    included_academies = serpy.MethodField(required=False)
+    date_start = serpy.Field()
+    date_end = serpy.Field()
+    progress_current = serpy.Field()
+    progress_total = serpy.Field()
+    generated_rows = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+
+    def get_academy_id(self, obj):
+        return obj.academy_id
+
+    def get_batch_id(self, obj):
+        return str(obj.batch_id) if obj.batch_id else None
+
+    def get_children_count(self, obj):
+        if hasattr(obj, "children_count"):
+            return int(obj.children_count)
+        return obj.children.count()
+
+    def get_included_academies(self, obj):
+        return serialize_included_academies_for_parent_job(obj)
+
+
+class ReportGenerationTriggerSerializer(serializers.Serializer):
+    report_type = serializers.ChoiceField(choices=[x[0] for x in ReportGenerationJob.ReportType.choices])
+    date = serializers.DateField(required=False)
+    date_start = serializers.DateField(required=False)
+    date_end = serializers.DateField(required=False)
+    days_back = serializers.IntegerField(required=False, min_value=1)
+    academy = serializers.IntegerField(required=False)
+    force = serializers.BooleanField(required=False, default=False)
+
+    def validate(self, attrs):
+        lang = self.context.get("lang", "en")
+        academy_ids = self.context.get("academy_ids", [])
+
+        date = attrs.get("date")
+        date_start = attrs.get("date_start")
+        date_end = attrs.get("date_end")
+        days_back = attrs.get("days_back")
+        academy = attrs.get("academy")
+
+        provided = {
+            "date": date is not None,
+            "range": date_start is not None or date_end is not None,
+            "days_back": days_back is not None,
+        }
+        count = sum(1 for _, v in provided.items() if v)
+        if count != 1:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Provide exactly one of date, date_start/date_end, or days_back",
+                    es="Debes proveer exactamente uno: date, date_start/date_end, o days_back",
+                    slug="invalid-date-combination",
+                )
+            )
+
+        if date_start and not date_end or date_end and not date_start:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="date_start and date_end must be provided together",
+                    es="date_start y date_end deben enviarse juntos",
+                    slug="invalid-date-range",
+                )
+            )
+
+        if date_start and date_end and date_start > date_end:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="date_start must be lower than or equal to date_end",
+                    es="date_start debe ser menor o igual a date_end",
+                    slug="invalid-date-range-order",
+                )
+            )
+
+        if date_start and date_end and (date_end - date_start).days + 1 > 90:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Date range is too large, max 90 days",
+                    es="El rango de fechas es demasiado grande, máximo 90 días",
+                    slug="date-range-too-large",
+                )
+            )
+
+        if academy and academy_ids and academy not in academy_ids:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="The academy query param must match the authenticated academy scope",
+                    es="El parámetro academy debe coincidir con el alcance de academia autenticado",
+                    slug="academy-filter-mismatch",
+                )
+            )
+
+        if date:
+            attrs["date_start"] = date
+            attrs["date_end"] = date
+        elif days_back:
+            today = timezone.now().date()
+            attrs["date_end"] = today - timedelta(days=1)
+            attrs["date_start"] = attrs["date_end"] - timedelta(days=days_back - 1)
+
+        attrs["academy"] = academy
+        return attrs
+
+
+class MonitorScriptSmallSerializer(serpy.Serializer):
+    """Basic MonitorScript serializer."""
+    
+    id = serpy.Field()
+    script_slug = serpy.Field()
+    status = serpy.Field()
+    status_code = serpy.Field()
+    severity_level = serpy.Field()
+    status_text = serpy.Field()
+    special_status_text = serpy.Field()
+    response_text = serpy.Field()
+    last_run = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()

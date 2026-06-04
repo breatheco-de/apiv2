@@ -4,6 +4,7 @@ emisor = Emisor("breathecode.authenticate")
 
 # UserInvite accepted
 invite_status_updated = emisor.signal("invite_status_updated")
+invite_email_validated = emisor.signal("invite_email_validated")
 # ProfileAcademy accepted
 academy_invite_accepted = emisor.signal("academy_invite_accepted")
 profile_academy_saved = emisor.signal("profile_academy_saved")

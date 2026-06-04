@@ -249,8 +249,8 @@ class TokenTestSuite(AuthTestCase):
         self.assertLess(created, end)
 
         self.assertGreater(expires_at, start)
-        self.assertLess(expires_at, end + timedelta(minutes=10))
-        self.assertGreater(expires_at, end + timedelta(minutes=10) - timedelta(seconds=10))
+        self.assertLess(expires_at, end + timedelta(hours=24))
+        self.assertGreater(expires_at, end + timedelta(hours=24) - timedelta(seconds=10))
         self.assertToken(token)
 
         del db[0]["created"]
@@ -406,8 +406,8 @@ class TokenTestSuite(AuthTestCase):
         self.assertLess(created, end)
 
         self.assertGreater(expires_at, start)
-        self.assertLess(expires_at, end + timedelta(minutes=10))
-        self.assertGreater(expires_at, end + timedelta(minutes=10) - timedelta(seconds=10))
+        self.assertLess(expires_at, end + timedelta(hours=24))
+        self.assertGreater(expires_at, end + timedelta(hours=24) - timedelta(seconds=10))
         self.assertToken(token)
 
         del db[0]["created"]
@@ -517,8 +517,8 @@ class TokenTestSuite(AuthTestCase):
         self.assertLess(created, end)
 
         self.assertGreater(expires_at, start)
-        self.assertLess(expires_at, end + timedelta(minutes=10))
-        self.assertGreater(expires_at, end + timedelta(minutes=10) - timedelta(seconds=10))
+        self.assertLess(expires_at, end + timedelta(hours=24))
+        self.assertGreater(expires_at, end + timedelta(hours=24) - timedelta(seconds=10))
         self.assertToken(token)
 
         del db[0]["created"]
@@ -526,6 +526,36 @@ class TokenTestSuite(AuthTestCase):
         del db[0]["key"]
 
         self.assertEqual(db, [{"id": 3, "token_type": "temporal", "user_id": 1}])
+
+    """
+    🔽🔽🔽 get_or_create token_type short
+    """
+
+    def test_get_or_create__token_type_short(self):
+        start = timezone.now()
+        model = self.generate_models(user=True)
+
+        Token.get_or_create(model.user, token_type="short")
+        end = timezone.now()
+
+        db = self.all_token_dict()
+        created = db[0]["created"]
+        expires_at = db[0]["expires_at"]
+        token = db[0]["key"]
+
+        self.assertGreater(created, start)
+        self.assertLess(created, end)
+
+        self.assertGreater(expires_at, start)
+        self.assertLess(expires_at, end + timedelta(minutes=15))
+        self.assertGreater(expires_at, end + timedelta(minutes=15) - timedelta(seconds=10))
+        self.assertToken(token)
+
+        del db[0]["created"]
+        del db[0]["expires_at"]
+        del db[0]["key"]
+
+        self.assertEqual(db, [{"id": 1, "token_type": "short", "user_id": 1}])
 
     """
     🔽🔽🔽 validate_and_destroy bad arguments

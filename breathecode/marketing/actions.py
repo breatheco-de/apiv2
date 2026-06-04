@@ -1,8 +1,17 @@
 import json
 import os
 import re
+import socket
+from datetime import timedelta
 from itertools import chain
 from typing import Optional
+
+try:
+    import dns.resolver  # type: ignore
+    import dns.exception  # type: ignore
+    DNS_AVAILABLE = True
+except ImportError:
+    DNS_AVAILABLE = False
 
 import numpy as np
 import requests
@@ -19,12 +28,140 @@ from breathecode.services.activecampaign import ACOldClient, ActiveCampaign, Act
 from breathecode.services.brevo import Brevo
 from breathecode.utils import getLogger
 
-from .models import AcademyAlias, ActiveCampaignAcademy, Automation, FormEntry, Tag
+from .models import (
+    AcademyAlias,
+    ActiveCampaignAcademy,
+    Automation,
+    EmailDomainValidation,
+    FormEntry,
+    Tag,
+)
+from .utils.person_name import standardize_person_name
 
 logger = getLogger(__name__)
 
 GOOGLE_CLOUD_KEY = os.getenv("GOOGLE_CLOUD_KEY")
 MAIL_ABSTRACT_KEY = os.getenv("MAIL_ABSTRACT_KEY")
+
+def _load_disposable_email_domains():
+    """
+    Carga la lista de dominios de emails desechables desde un archivo de texto.
+    El archivo debe estar en breathecode/marketing/data/disposable_email_domains.txt
+    Un dominio por línea, las líneas que empiezan con # son comentarios.
+    
+    Returns:
+        set: Conjunto de dominios desechables (en minúsculas)
+    
+    Raises:
+        FileNotFoundError: Si el archivo no existe
+        IOError: Si hay un error leyendo el archivo
+        Exception: Si ocurre cualquier otro error durante la carga
+    
+    Nota: Esta función NO tiene fallback. Si falla, se lanza una excepción
+    para evitar que la validación de emails funcione sin protección contra
+    correos desechables (fail-secure).
+    """
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    data_dir = os.path.join(current_dir, "data")
+    file_path = os.path.join(data_dir, "disposable_email_domains.txt")
+    
+    if not os.path.exists(file_path):
+        error_msg = (
+            f"Archivo de dominios desechables no encontrado: {file_path}. "
+            "La validación de emails no puede funcionar sin este archivo."
+        )
+        logger.error(error_msg)
+        raise FileNotFoundError(error_msg)
+    
+    domains = set()
+    line_num = 0
+    
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            for _line_num, line in enumerate(f, start=1):
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    domains.add(line.lower())
+    except Exception as e:
+        error_msg = (
+            f"Error cargando dominios desechables desde {file_path}"
+            + (f" (línea {line_num})" if line_num > 0 else "")
+            + f": {e}. "
+            "La validación de emails no puede funcionar sin este archivo."
+        )
+        logger.error(error_msg)
+        raise IOError(error_msg) from e
+    
+    if not domains:
+        error_msg = (
+            f"El archivo de dominios desechables está vacío: {file_path}. "
+            "La validación de emails no puede funcionar sin dominios desechables."
+        )
+        logger.error(error_msg)
+        raise ValueError(error_msg)
+    
+    logger.info(f"Cargados {len(domains)} dominios desechables desde {file_path}")
+    return domains
+
+
+def get_disposable_email_domains():
+    """
+    Retorna el conjunto de dominios de emails desechables.
+    Los dominios se cargan desde un archivo de texto al importar el módulo.
+    """
+    return DISPOSABLE_EMAIL_DOMAINS
+
+
+DISPOSABLE_EMAIL_DOMAINS = _load_disposable_email_domains()
+
+FREE_EMAIL_DOMAINS = {
+    "gmail.com",
+    "yahoo.com",
+    "hotmail.com",
+    "outlook.com",
+    "aol.com",
+    "icloud.com",
+    "mail.com",
+    "protonmail.com",
+    "zoho.com",
+    "yandex.com",
+    "gmx.com",
+    "live.com",
+    "msn.com",
+    "inbox.com",
+    "fastmail.com",
+    "tutanota.com",
+    "mail.ru",
+    "qq.com",
+    "163.com",
+    "126.com",
+    "sina.com",
+    "rediffmail.com",
+    "hushmail.com",
+    "lycos.com",
+    "aim.com",
+    "rocketmail.com",
+}
+
+ROLE_EMAIL_PREFIXES = {
+    "abuse",
+    "admin",
+    "administrator",
+    "billing",
+    "contact",
+    "help",
+    "info",
+    "mail",
+    "mailbox",
+    "marketing",
+    "noreply",
+    "no-reply",
+    "postmaster",
+    "sales",
+    "security",
+    "support",
+    "webmaster",
+}
 
 
 def get_save_leads():
@@ -56,6 +193,349 @@ def bind_formentry_with_webhook(webhook):
     return True
 
 
+def _check_mx_records(domain):
+    """
+    Verifica si el dominio tiene registros MX válidos y los retorna.
+    
+    Los resultados se almacenan en la base de datos con expiración
+    para evitar verificaciones repetidas del mismo dominio.
+    
+    Args:
+        domain: Dominio a verificar
+    
+    Returns:
+        tuple: (bool, list) - (has_mx, mx_records)
+            - has_mx: True si el dominio tiene registros MX válidos
+            - mx_records: Lista de servidores MX encontrados
+    """
+    try:
+        import dns.resolver  # type: ignore
+        dns_available = True
+    except ImportError:
+        dns_available = False
+    
+    try:
+        cached_result = EmailDomainValidation.get_valid_domain(domain)
+        if cached_result is not None:
+            if dns_available and (not cached_result.mx_records or len(cached_result.mx_records) == 0):
+                logger.debug(f"Cache tiene mx_records vacío pero dnspython está disponible, forzando nueva verificación para {domain}")
+            else:
+                return (cached_result.has_mx, cached_result.mx_records or [])
+    except Exception as e:
+        logger.debug(f"No se pudo acceder al cache de validaciones MX: {e}")
+    
+    mx_records = []
+    has_mx = False
+    
+    try:
+        if dns_available:
+            answers = dns.resolver.resolve(domain, "MX")
+            mx_records = [str(rdata.exchange).rstrip(".") for rdata in answers]
+            has_mx = len(mx_records) > 0
+        else:
+            try:
+                socket.gethostbyname(domain)
+                has_mx = True
+            except (socket.gaierror, socket.herror, Exception):
+                has_mx = False
+    except Exception as e:
+        logger.debug(f"Error verificando registros MX para {domain}: {e}")
+        has_mx = False
+    
+    try:
+        domain_obj, _ = EmailDomainValidation.get_or_create_domain(domain)
+        domain_obj.has_mx = has_mx
+        domain_obj.mx_records = mx_records
+        from django.utils import timezone
+        domain_obj.next_check_at = timezone.now() + timedelta(days=180)
+        domain_obj.save()
+    except Exception as e:
+        logger.debug(f"No se pudo guardar resultado de validación MX en BD: {e}")
+    
+    return (has_mx, mx_records)
+
+
+def _check_spf(domain):
+    """
+    Verifica y obtiene el registro SPF del dominio.
+    
+    Args:
+        domain: Dominio a verificar
+    
+    Returns:
+        str o None: Registro SPF encontrado o None si no existe
+    """
+    try:
+        import dns.resolver  # type: ignore
+        import dns.exception  # type: ignore
+        dns_available = True
+    except ImportError:
+        dns_available = False
+    
+    try:
+        cached_result = EmailDomainValidation.get_valid_domain(domain)
+        if cached_result is not None and cached_result.spf:
+            return cached_result.spf
+    except Exception as e:
+        logger.debug(f"No se pudo acceder al cache de validaciones SPF: {e}")
+    
+    spf_record = None
+    
+    try:
+        if dns_available:
+            try:
+                answers = dns.resolver.resolve(domain, "TXT")
+                for rdata in answers:
+                    txt_string = "".join([s.decode() if isinstance(s, bytes) else s for s in rdata.strings])
+                    if txt_string.startswith("v=spf1"):
+                        spf_record = txt_string
+                        break
+            except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.exception.DNSException):
+                pass
+    except Exception as e:
+        logger.debug(f"Error verificando registro SPF para {domain}: {e}")
+    
+    try:
+        domain_obj, created = EmailDomainValidation.get_or_create_domain(domain)
+        domain_obj.spf = spf_record
+        # Asegurar que next_check_at tenga un valor si es un registro nuevo
+        if created or domain_obj.next_check_at is None:
+            from django.utils import timezone
+            domain_obj.next_check_at = timezone.now() + timedelta(days=180)
+        domain_obj.save()
+        logger.info(f"EmailDomainValidation actualizado (SPF) para {domain}: {spf_record is not None}")
+    except Exception as e:
+        logger.error(f"No se pudo guardar resultado de validación SPF en BD para {domain}: {e}", exc_info=True)
+    
+    return spf_record
+
+
+def _check_dmarc(domain):
+    """
+    Verifica y obtiene el registro DMARC del dominio.
+    
+    Args:
+        domain: Dominio a verificar
+    
+    Returns:
+        str o None: Registro DMARC encontrado o None si no existe
+    """
+    try:
+        import dns.resolver  # type: ignore
+        import dns.exception  # type: ignore
+        dns_available = True
+    except ImportError:
+        dns_available = False
+    
+    try:
+        cached_result = EmailDomainValidation.get_valid_domain(domain)
+        if cached_result is not None and cached_result.dmarc:
+            return cached_result.dmarc
+    except Exception as e:
+        logger.debug(f"No se pudo acceder al cache de validaciones DMARC: {e}")
+    
+    dmarc_record = None
+    
+    try:
+        if dns_available:
+            try:
+                dmarc_domain = f"_dmarc.{domain}"
+                answers = dns.resolver.resolve(dmarc_domain, "TXT")
+                for rdata in answers:
+                    txt_string = "".join([s.decode() if isinstance(s, bytes) else s for s in rdata.strings])
+                    if txt_string.startswith("v=DMARC1"):
+                        dmarc_record = txt_string
+                        break
+            except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.exception.DNSException):
+                pass
+    except Exception as e:
+        logger.debug(f"Error verificando registro DMARC para {domain}: {e}")
+    
+    try:
+        domain_obj, created = EmailDomainValidation.get_or_create_domain(domain)
+        domain_obj.dmarc = dmarc_record
+        # Asegurar que next_check_at tenga un valor si es un registro nuevo
+        if created or domain_obj.next_check_at is None:
+            from django.utils import timezone
+            domain_obj.next_check_at = timezone.now() + timedelta(days=180)
+        domain_obj.save()
+        logger.info(f"EmailDomainValidation actualizado (DMARC) para {domain}: {dmarc_record is not None}")
+    except Exception as e:
+        logger.error(f"No se pudo guardar resultado de validación DMARC en BD para {domain}: {e}", exc_info=True)
+    
+    return dmarc_record
+
+
+def _calculate_quality_score(has_mx, has_spf, has_dmarc, is_role, is_free):
+    """
+    Calcula un score de calidad del email basado en múltiples factores.
+    Retorna un valor entre 0.0 y 1.0.
+    
+    Nota: format_valid, is_disposable no se incluyen porque
+    si alguno de estos falla, se lanza una excepción antes de llegar aquí.
+    
+    Args:
+        has_mx: True si el dominio tiene registros MX válidos
+        has_spf: True si el dominio tiene registro SPF
+        has_dmarc: True si el dominio tiene registro DMARC
+        is_role: True si es un email de rol (info@, support@, etc.)
+        is_free: True si es un email de proveedor gratuito (gmail.com, etc.)
+    
+    Returns:
+        float: Score entre 0.0 y 1.0
+    """
+    score = 1.0
+
+    if not has_mx:
+        score -= 0.3
+    if not has_spf:
+        score -= 0.1
+    if not has_dmarc:
+        score -= 0.05
+    if is_role:
+        score -= 0.1
+    if is_free:
+        score -= 0.05
+
+    return max(0.0, min(1.0, score))
+
+
+def validate_email_local(email, lang):
+    """
+    Replica la funcionalidad de la API de Abstract API para validación de emails.
+    Realiza validaciones locales sin depender de servicios externos.
+
+    Retorna un diccionario con información de validación:
+    {
+        "email": "e@mail.com",
+        "user": "a",
+        "domain": "mail.com",
+        "format_valid": true,
+        "mx_found": true,
+        "mx_records": ["alt1.gmail-smtp-in.l.google.com"],
+        "spf": "v=spf1 include:_spf.google.com ~all",
+        "dmarc": "v=DMARC1; p=reject; ...",
+        "role": false,
+        "disposable": false,
+        "free": false,
+        "score": 0.8
+    }
+    """
+    pattern = r"^[^@]+@[^@]+\.[^@]+$"
+    format_valid = isinstance(email, str) and email and bool(re.match(pattern, email))
+
+    if not format_valid:
+        raise ValidationException(
+            translation(
+                lang,
+                en="The email address is not valid",
+                es="La dirección de correo electrónico no es válida",
+                slug="email-not-valid",
+            ),
+            data={"email": email},
+            slug="email-not-valid",
+        )
+
+    email_lower = email.lower().strip()
+    split_email = email_lower.split("@")
+
+    if len(split_email) != 2:
+        raise ValidationException(
+            translation(
+                lang,
+                en="The email address is not valid",
+                es="La dirección de correo electrónico no es válida",
+                slug="email-not-valid",
+            ),
+            data={"email": email},
+            slug="email-not-valid",
+        )
+
+    user_part = split_email[0]
+    domain = split_email[1]
+
+    is_disposable = domain in DISPOSABLE_EMAIL_DOMAINS
+
+    try:
+        domain_obj, created = EmailDomainValidation.get_or_create_domain(domain)
+        domain_obj.disposable = is_disposable
+        if created or domain_obj.next_check_at is None:
+            from django.utils import timezone
+            domain_obj.next_check_at = timezone.now() + timedelta(days=180)
+        domain_obj.save()
+        logger.info(f"EmailDomainValidation actualizado (disposable) para {domain}: {is_disposable}")
+    except Exception as e:
+        logger.error(f"No se pudo actualizar campo disposable en BD para {domain}: {e}", exc_info=True)
+
+    if is_disposable:
+        raise ValidationException(
+            translation(
+                lang,
+                en="It seems you are using a disposable email service. Please provide a different email address",
+                es="Parece que estás utilizando un proveedor de correos electronicos temporales. Por favor cambia tu dirección de correo electrónico.",
+                slug="disposable-email",
+            ),
+            slug="disposable-email",
+        )
+
+    has_mx, mx_records = _check_mx_records(domain)
+
+    if not has_mx:
+        raise ValidationException(
+            translation(
+                lang,
+                en="The email you have provided seems invalid, please provide a different email address.",
+                es="El correo electrónico que haz especificado parece inválido, por favor corrige tu correo electronico",
+                slug="invalid-email",
+            ),
+            slug="invalid-email",
+        )
+
+    spf_record = _check_spf(domain)
+    dmarc_record = _check_dmarc(domain)
+
+    is_role = user_part in ROLE_EMAIL_PREFIXES
+
+    is_free = domain in FREE_EMAIL_DOMAINS
+
+    quality_score = _calculate_quality_score(
+        has_mx=has_mx,
+        has_spf=spf_record is not None,
+        has_dmarc=dmarc_record is not None,
+        is_role=is_role,
+        is_free=is_free,
+    )
+
+    if quality_score <= 0.60:
+        raise ValidationException(
+            translation(
+                lang,
+                en="The email address seems to have poor quality. Are you able to provide a different email address?",
+                es="El correo electrónico que haz especificado parece de mala calidad. ¿Podrías especificarnos otra dirección?",
+                slug="poor-quality-email",
+            ),
+            data={"quality_score": quality_score},
+            slug="poor-quality-email",
+        )
+
+    email_status = {
+        "email": email_lower,
+        "user": user_part,
+        "domain": domain,
+        "format_valid": format_valid,
+        "mx_found": has_mx,
+        "mx_records": mx_records,
+        "spf": spf_record,
+        "dmarc": dmarc_record,
+        "role": is_role,
+        "disposable": is_disposable,
+        "free": is_free,
+        "score": quality_score,
+    }
+
+    return email_status
+
+
 def validate_email(email, lang):
     """
     Response: {
@@ -82,6 +562,18 @@ def validate_email(email, lang):
         }
     }
     """
+
+    pattern = r"^[^@]+@[^@]+\.[^@]+$"
+    if not isinstance(email, str) or not email or not re.match(pattern, email):
+        raise ValidationException(
+            translation(
+                lang,
+                en="The email address is not valid",
+                es="La dirección de correo electrónico no es válida",
+                slug="email-not-valid",
+            ),
+            data={"email": email},
+        )
 
     resp = requests.get(
         f"https://emailvalidation.abstractapi.com/v1/?api_key={MAIL_ABSTRACT_KEY}&email={email}", timeout=10
@@ -200,7 +692,7 @@ def get_lead_automations(ac_academy, form_entry):
     count = automations.count()
     if count == 0:
         _name = form_entry["automations"]
-        raise Exception(f"The specified automation {_name} was not found for this AC Academy")
+        raise Exception(f"The specified automation {_name} was not found for this AC Academy {ac_academy.academy.slug}")
 
     logger.debug(f"found {str(count)} automations")
     return automations
@@ -277,7 +769,9 @@ def register_new_lead(form_entry=None):
         pass
 
     if ac_academy is None:
-        ac_academy = ActiveCampaignAcademy.objects.filter(academy__slug=form_entry["location"]).first()
+        ac_academy = ActiveCampaignAcademy.objects.filter(
+            Q(academy__slug=form_entry["location"]) | Q(academy__academyalias__slug=form_entry["location"])
+        ).first()
 
     if ac_academy is None:
         raise RetryTask(
@@ -325,11 +819,24 @@ def register_new_lead(form_entry=None):
     if not "last_name" in form_entry:
         raise ValidationException("The last name doesn't exist")
 
+    form_entry["first_name"] = standardize_person_name(form_entry["first_name"])
+    form_entry["last_name"] = standardize_person_name(form_entry["last_name"])
+
     if not "phone" in form_entry:
         raise ValidationException("The phone doesn't exist")
 
     if not "id" in form_entry:
         raise ValidationException("The id doesn't exist")
+
+    entry = FormEntry.objects.filter(id=form_entry["id"]).first()
+    if not entry:
+        raise ValidationException("FormEntry not found (id: " + str(form_entry["id"]) + ")")
+
+    entry.first_name = form_entry["first_name"]
+    entry.last_name = form_entry["last_name"]
+    entry.storage_status = "PENDING"
+    entry.storage_status_text = ""
+    entry.save(update_fields=["first_name", "last_name", "storage_status", "storage_status_text"])
 
     if not "course" in form_entry:
         raise ValidationException("The course doesn't exist")
@@ -348,7 +855,15 @@ def register_new_lead(form_entry=None):
     }
 
     contact = set_optional(contact, "utm_url", form_entry, crm_vendor=ac_academy.crm_vendor)
-    contact = set_optional(contact, "utm_location", form_entry, "location", crm_vendor=ac_academy.crm_vendor)
+    
+    # Ensure location sent to Active Campaign matches academy.active_campaign_slug
+    location_value = form_entry.get("location")
+    if alias and alias.active_campaign_slug:
+        location_value = alias.active_campaign_slug
+    elif ac_academy.academy and ac_academy.academy.active_campaign_slug:
+        location_value = ac_academy.academy.active_campaign_slug
+    
+    contact = set_optional(contact, "utm_location", {"location": location_value}, "location", crm_vendor=ac_academy.crm_vendor)
     contact = set_optional(contact, "course", form_entry, crm_vendor=ac_academy.crm_vendor)
     contact = set_optional(contact, "utm_language", form_entry, "language", crm_vendor=ac_academy.crm_vendor)
     contact = set_optional(contact, "utm_country", form_entry, "country", crm_vendor=ac_academy.crm_vendor)
@@ -368,10 +883,6 @@ def register_new_lead(form_entry=None):
     # only for brevo
     if ac_academy.crm_vendor == "BREVO":
         contact = set_optional(contact, "utm_landing", form_entry, crm_vendor=ac_academy.crm_vendor)
-
-    entry = FormEntry.objects.filter(id=form_entry["id"]).first()
-    if not entry:
-        raise ValidationException("FormEntry not found (id: " + str(form_entry["id"]) + ")")
 
     if len(tags) > 0 and "contact-us" == tags[0].slug:
 
@@ -396,6 +907,7 @@ def register_new_lead(form_entry=None):
     is_duplicate = entry.is_duplicate(form_entry)
     if is_duplicate:
         entry.storage_status = "DUPLICATED"
+        entry.storage_status_text = ""
         entry.save()
         logger.info("FormEntry is considered a duplicate, not sent to CRM and no automations or tags added")
         return entry
@@ -412,10 +924,11 @@ def register_new_lead(form_entry=None):
     elif ac_academy.crm_vendor == "BREVO":
         entry = send_to_brevo(entry, ac_academy, contact, automations)
 
-    if entry.storage_status in ["ERROR"]:
+    if entry.storage_status == "ERROR":
         return entry
 
     entry.storage_status = "PERSISTED"
+    entry.storage_status_text = ""
     entry.save()
 
     form_entry["storage_status"] = "PERSISTED"
@@ -560,13 +1073,30 @@ def sync_tags(ac_academy):
         tags = tags + response["tags"]
 
     for tag in tags:
-        t = Tag.objects.filter(slug=tag["tag"], ac_academy=ac_academy).first()
-        if t is None:
+        # Look for existing tag by slug - check both ac_academy relationship AND direct academy
+        # This handles tags created locally without ActiveCampaign
+        existing_tag = Tag.objects.filter(
+            slug=tag["tag"]
+        ).filter(
+            Q(ac_academy=ac_academy) | 
+            Q(academy=ac_academy.academy)
+        ).first()
+        
+        if existing_tag is None:
+            # Tag doesn't exist locally - create new one
             t = Tag(
                 slug=tag["tag"],
                 acp_id=tag["id"],
                 ac_academy=ac_academy,
+                academy=ac_academy.academy,  # Set direct academy relationship too
             )
+        else:
+            # Tag exists locally - update it with ActiveCampaign data
+            t = existing_tag
+            t.acp_id = tag["id"]
+            t.ac_academy = ac_academy  # Ensure ac_academy is set
+            if not t.academy:
+                t.academy = ac_academy.academy  # Set academy if not already set
 
         t.subscribers = tag["subscriber_count"]
         t.save()
@@ -687,10 +1217,13 @@ def get_facebook_lead_info(lead_id, academy_id=None):
             lead.utm_medium = data["ad_id"]
             lead.utm_source = "facebook"
             for field in data["field_data"]:
+                raw_value = field["values"]
+                if isinstance(raw_value, list):
+                    raw_value = raw_value[0] if raw_value else ""
                 if field["name"] == "first_name" or field["name"] == "full_name":
-                    lead.first_name = field["values"]
+                    lead.first_name = standardize_person_name(raw_value)
                 elif field["name"] == "last_name":
-                    lead.last_name = field["values"]
+                    lead.last_name = standardize_person_name(raw_value)
                 elif field["name"] == "email":
                     lead.email = field["values"]
                 elif field["name"] == "phone":

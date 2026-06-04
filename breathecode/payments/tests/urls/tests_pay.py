@@ -16,7 +16,7 @@ import breathecode.activity.tasks as activity_tasks
 from breathecode.admissions import tasks as admissions_tasks
 from breathecode.payments import tasks
 from breathecode.payments.actions import apply_pricing_ratio, calculate_relative_delta
-from breathecode.payments.models import ServiceItem
+from breathecode.payments.models import FinancingOption, Plan, Service, ServiceItem, SubscriptionServiceItem
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
 UTC_NOW = timezone.now()
@@ -41,6 +41,7 @@ def format_invoice_item(data={}):
         "currency_id": 1,
         "externally_managed": False,
         "id": 1,
+        "invoice_notes": None,
         "paid_at": UTC_NOW,
         "payment_method_id": None,
         "proof_id": None,
@@ -77,6 +78,7 @@ def get_serializer(bc, currency, user, coupons=[], data={}):
     return {
         "id": 1,
         "amount": 0,
+        "invoice_notes": None,
         "currency": {
             "code": currency.code,
             "name": currency.name,

@@ -22,6 +22,8 @@
 | MAILGUN_API_KEY | Represents the api key used for the OAuth2 with `Mailgun` |
 | MAILGUN_DOMAIN | Represents the domain of Breathecode that provided `Mailgun` |
 | EVENTBRITE_KEY | Represents the key used for the OAuth2 with `Eventbrite` |
+| EVENTBRITE | Set to `1` to enable Eventbrite webhook processing |
+| LUMA_EVENT_PROCESSING | Luma webhook processing; enabled by default. Set to `0`, `false`, `no`, or `off` to disable globally |
 | FACEBOOK_VERIFY_TOKEN | Represents the verify token used for the OAuth2 with `Facebook` |
 | FACEBOOK_CLIENT_ID | Represents the client id used for the OAuth2 with `Facebook` |
 | FACEBOOK_SECRET | Represents the secret used for the OAuth2 with `Facebook` |

@@ -23,8 +23,20 @@ UTC_NOW = timezone.now()
 future_date = datetime.today() + timedelta(days=18)
 
 
-def post_serializer(self, academy, syllabus, syllabus_version, data={}):
-    return {
+def post_serializer(self, academy, syllabus, syllabus_version, data={}, schedule_obj=None):
+    schedule_value = data.get("schedule", 0)
+    if schedule_obj and isinstance(schedule_value, int):
+        schedule_data = {
+            "id": schedule_obj.id,
+            "name": schedule_obj.name,
+            "schedule_type": schedule_obj.schedule_type,
+            "description": schedule_obj.description,
+            "syllabus": schedule_obj.syllabus.id if schedule_obj.syllabus else None,
+        }
+    else:
+        schedule_data = schedule_value
+
+    result = {
         "id": 0,
         "slug": "",
         "name": "",
@@ -32,7 +44,7 @@ def post_serializer(self, academy, syllabus, syllabus_version, data={}):
         "remote_available": True,
         "kickoff_date": self.datetime_to_iso(UTC_NOW),
         "current_day": 0,
-        "schedule": 0,
+        "schedule": schedule_data,
         "online_meeting_url": None,
         "timezone": "",
         "is_hidden_on_prework": True,
@@ -40,10 +52,27 @@ def post_serializer(self, academy, syllabus, syllabus_version, data={}):
             "id": academy.id,
             "slug": academy.slug,
             "name": academy.name,
-            "street_address": academy.street_address,
-            "country": academy.country.code,
-            "city": academy.city.id,
-            "is_hidden_on_prework": True,
+            "country": {
+                "id": academy.country.code,
+                "code": academy.country.code,
+                "name": academy.country.name,
+            },
+            "city": {
+                "id": academy.city.id,
+                "name": academy.city.name,
+                "country": {
+                    "id": academy.city.country.code,
+                    "code": academy.city.country.code,
+                    "name": academy.city.country.name,
+                },
+            },
+            "logo_url": academy.logo_url,
+            "is_hidden_on_prework": academy.is_hidden_on_prework,
+            "main_currency": (
+                {"code": academy.main_currency.code, "name": academy.main_currency.name}
+                if academy.main_currency
+                else None
+            ),
         },
         "syllabus_version": syllabus.slug + ".v" + str(syllabus_version.version),
         "ending_date": None,
@@ -51,8 +80,16 @@ def post_serializer(self, academy, syllabus, syllabus_version, data={}):
         "language": "en",
         "created_at": self.datetime_to_iso(UTC_NOW),
         "updated_at": self.datetime_to_iso(UTC_NOW),
-        **data,
+        "shortcuts": None,
+        "micro_cohorts": [],
+        "timeslots": [],
+        "private": False,
+        "current_module": None,
     }
+    result.update(data)
+    if schedule_obj and isinstance(result.get("schedule"), int):
+        result["schedule"] = schedule_data
+    return result
 
 
 def cohort_field(data={}):
@@ -533,7 +570,13 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             "remote_available": True,
             "kickoff_date": self.datetime_to_iso(cohort.kickoff_date),
             "current_day": cohort.current_day,
-            "schedule": cohort.schedule.id,
+            "schedule": {
+                "id": cohort.schedule.id,
+                "name": cohort.schedule.name,
+                "schedule_type": cohort.schedule.schedule_type,
+                "description": cohort.schedule.description,
+                "syllabus": cohort.schedule.syllabus.id if cohort.schedule.syllabus else None,
+            },
             "online_meeting_url": cohort.online_meeting_url,
             "timezone": cohort.timezone,
             "is_hidden_on_prework": cohort.is_hidden_on_prework,
@@ -542,10 +585,27 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 "id": cohort.academy.id,
                 "slug": cohort.academy.slug,
                 "name": cohort.academy.name,
-                "street_address": cohort.academy.street_address,
-                "country": cohort.academy.country.code,
-                "city": cohort.academy.city.id,
+                "country": {
+                    "id": cohort.academy.country.code,
+                    "code": cohort.academy.country.code,
+                    "name": cohort.academy.country.name,
+                },
+                "city": {
+                    "id": cohort.academy.city.id,
+                    "name": cohort.academy.city.name,
+                    "country": {
+                        "id": cohort.academy.city.country.code,
+                        "code": cohort.academy.city.country.code,
+                        "name": cohort.academy.city.country.name,
+                    },
+                },
+                "logo_url": cohort.academy.logo_url,
                 "is_hidden_on_prework": cohort.academy.is_hidden_on_prework,
+                "main_currency": (
+                    {"code": cohort.academy.main_currency.code, "name": cohort.academy.main_currency.name}
+                    if cohort.academy.main_currency
+                    else None
+                ),
             },
             "syllabus_version": model["syllabus"].slug + ".v" + str(model["syllabus_version"].version),
             "ending_date": cohort.ending_date,
@@ -553,6 +613,11 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             "language": cohort.language.lower(),
             "created_at": self.datetime_to_iso(cohort.created_at),
             "updated_at": self.datetime_to_iso(cohort.updated_at),
+            "shortcuts": cohort.shortcuts,
+            "micro_cohorts": [],
+            "timeslots": [],
+            "private": cohort.private,
+            "current_module": cohort.current_module,
         }
 
         del data["kickoff_date"]
@@ -670,7 +735,13 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             "remote_available": True,
             "kickoff_date": self.datetime_to_iso(cohort.kickoff_date),
             "current_day": cohort.current_day,
-            "schedule": cohort.schedule.id,
+            "schedule": {
+                "id": cohort.schedule.id,
+                "name": cohort.schedule.name,
+                "schedule_type": cohort.schedule.schedule_type,
+                "description": cohort.schedule.description,
+                "syllabus": cohort.schedule.syllabus.id if cohort.schedule.syllabus else None,
+            },
             "online_meeting_url": cohort.online_meeting_url,
             "timezone": model.academy.timezone,
             "available_as_saas": cohort.available_as_saas,
@@ -679,11 +750,27 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 "id": cohort.academy.id,
                 "slug": cohort.academy.slug,
                 "name": cohort.academy.name,
-                "street_address": cohort.academy.street_address,
-                "country": cohort.academy.country.code,
-                "city": cohort.academy.city.id,
-                "city": cohort.academy.city.id,
+                "country": {
+                    "id": cohort.academy.country.code,
+                    "code": cohort.academy.country.code,
+                    "name": cohort.academy.country.name,
+                },
+                "city": {
+                    "id": cohort.academy.city.id,
+                    "name": cohort.academy.city.name,
+                    "country": {
+                        "id": cohort.academy.city.country.code,
+                        "code": cohort.academy.city.country.code,
+                        "name": cohort.academy.city.country.name,
+                    },
+                },
+                "logo_url": cohort.academy.logo_url,
                 "is_hidden_on_prework": cohort.academy.is_hidden_on_prework,
+                "main_currency": (
+                    {"code": cohort.academy.main_currency.code, "name": cohort.academy.main_currency.name}
+                    if cohort.academy.main_currency
+                    else None
+                ),
             },
             "syllabus_version": model["syllabus"].slug + ".v" + str(model["syllabus_version"].version),
             "ending_date": self.datetime_to_iso(cohort.ending_date),
@@ -691,6 +778,11 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             "language": cohort.language.lower(),
             "created_at": self.datetime_to_iso(cohort.created_at),
             "updated_at": self.datetime_to_iso(cohort.updated_at),
+            "shortcuts": cohort.shortcuts,
+            "micro_cohorts": [],
+            "timeslots": [],
+            "private": cohort.private,
+            "current_module": cohort.current_module,
         }
 
         del data["kickoff_date"]
@@ -777,7 +869,13 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             "remote_available": True,
             "kickoff_date": self.datetime_to_iso(cohort.kickoff_date),
             "current_day": cohort.current_day,
-            "schedule": cohort.schedule.id,
+            "schedule": {
+                "id": cohort.schedule.id,
+                "name": cohort.schedule.name,
+                "schedule_type": cohort.schedule.schedule_type,
+                "description": cohort.schedule.description,
+                "syllabus": cohort.schedule.syllabus.id if cohort.schedule.syllabus else None,
+            },
             "online_meeting_url": cohort.online_meeting_url,
             "timezone": "Pacific/Pago_Pago",
             "is_hidden_on_prework": cohort.is_hidden_on_prework,
@@ -786,10 +884,27 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 "id": cohort.academy.id,
                 "slug": cohort.academy.slug,
                 "name": cohort.academy.name,
-                "street_address": cohort.academy.street_address,
-                "country": cohort.academy.country.code,
-                "city": cohort.academy.city.id,
+                "country": {
+                    "id": cohort.academy.country.code,
+                    "code": cohort.academy.country.code,
+                    "name": cohort.academy.country.name,
+                },
+                "city": {
+                    "id": cohort.academy.city.id,
+                    "name": cohort.academy.city.name,
+                    "country": {
+                        "id": cohort.academy.city.country.code,
+                        "code": cohort.academy.city.country.code,
+                        "name": cohort.academy.city.country.name,
+                    },
+                },
+                "logo_url": cohort.academy.logo_url,
                 "is_hidden_on_prework": cohort.academy.is_hidden_on_prework,
+                "main_currency": (
+                    {"code": cohort.academy.main_currency.code, "name": cohort.academy.main_currency.name}
+                    if cohort.academy.main_currency
+                    else None
+                ),
             },
             "syllabus_version": model["syllabus"].slug + ".v" + str(model["syllabus_version"].version),
             "ending_date": self.datetime_to_iso(cohort.ending_date),
@@ -797,6 +912,11 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             "language": cohort.language.lower(),
             "created_at": self.datetime_to_iso(cohort.created_at),
             "updated_at": self.datetime_to_iso(cohort.updated_at),
+            "shortcuts": cohort.shortcuts,
+            "micro_cohorts": [],
+            "timeslots": [],
+            "private": cohort.private,
+            "current_module": cohort.current_module,
         }
 
         del data["kickoff_date"]
@@ -888,6 +1008,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 "schedule": 1,
                 "available_as_saas": False,
             },
+            schedule_obj=model.syllabus_schedule,
         )
 
         self.assertEqual(json, expected)
@@ -990,6 +1111,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 "schedule": 1,
                 "available_as_saas": False,
             },
+            schedule_obj=model.syllabus_schedule,
         )
 
         self.assertEqual(json, expected)
@@ -1092,6 +1214,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 "schedule": 1,
                 "available_as_saas": True,
             },
+            schedule_obj=model.syllabus_schedule,
         )
 
         self.assertEqual(json, expected)
@@ -1194,6 +1317,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 "schedule": 1,
                 "available_as_saas": False,
             },
+            schedule_obj=model.syllabus_schedule,
         )
 
         self.assertEqual(json, expected)
@@ -1295,6 +1419,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 "schedule": 1,
                 "available_as_saas": model.academy.available_as_saas,
             },
+            schedule_obj=model.syllabus_schedule,
         )
 
         self.assertEqual(json, expected)
@@ -1477,6 +1602,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 "schedule": {
                     "id": model["cohort"].schedule.id,
                     "name": model["cohort"].schedule.name,
+                    "schedule_type": model["cohort"].schedule.schedule_type,
+                    "description": model["cohort"].schedule.description,
                     "syllabus": model["cohort"].schedule.syllabus.id,
                 },
                 "syllabus_version": {
@@ -1497,14 +1624,29 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                     "slug": model["cohort"].academy.slug,
                     "name": model["cohort"].academy.name,
                     "country": {
+                        "id": model["cohort"].academy.country.code,
                         "code": model["cohort"].academy.country.code,
                         "name": model["cohort"].academy.country.name,
                     },
                     "city": {
+                        "id": model["cohort"].academy.city.id,
                         "name": model["cohort"].academy.city.name,
+                        "country": {
+                            "id": model["cohort"].academy.city.country.code,
+                            "code": model["cohort"].academy.city.country.code,
+                            "name": model["cohort"].academy.city.country.name,
+                        },
                     },
                     "logo_url": model["cohort"].academy.logo_url,
                     "is_hidden_on_prework": model["cohort"].academy.is_hidden_on_prework,
+                    "main_currency": (
+                        {
+                            "code": model["cohort"].academy.main_currency.code,
+                            "name": model["cohort"].academy.main_currency.name,
+                        }
+                        if model["cohort"].academy.main_currency
+                        else None
+                    ),
                 },
             }
         ]
@@ -1607,6 +1749,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 "schedule": {
                     "id": model["cohort"].schedule.id,
                     "name": model["cohort"].schedule.name,
+                    "schedule_type": model["cohort"].schedule.schedule_type,
+                    "description": model["cohort"].schedule.description,
                     "syllabus": model["cohort"].schedule.syllabus.id,
                 },
                 "syllabus_version": {
@@ -1627,14 +1771,29 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                     "slug": model["cohort"].academy.slug,
                     "name": model["cohort"].academy.name,
                     "country": {
+                        "id": model["cohort"].academy.country.code,
                         "code": model["cohort"].academy.country.code,
                         "name": model["cohort"].academy.country.name,
                     },
                     "city": {
+                        "id": model["cohort"].academy.city.id,
                         "name": model["cohort"].academy.city.name,
+                        "country": {
+                            "id": model["cohort"].academy.city.country.code,
+                            "code": model["cohort"].academy.city.country.code,
+                            "name": model["cohort"].academy.city.country.name,
+                        },
                     },
                     "logo_url": model["cohort"].academy.logo_url,
                     "is_hidden_on_prework": model["cohort"].academy.is_hidden_on_prework,
+                    "main_currency": (
+                        {
+                            "code": model["cohort"].academy.main_currency.code,
+                            "name": model["cohort"].academy.main_currency.name,
+                        }
+                        if model["cohort"].academy.main_currency
+                        else None
+                    ),
                 },
             }
         ]
@@ -1735,6 +1894,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 "schedule": {
                     "id": model["cohort"].schedule.id,
                     "name": model["cohort"].schedule.name,
+                    "schedule_type": model["cohort"].schedule.schedule_type,
+                    "description": model["cohort"].schedule.description,
                     "syllabus": model["cohort"].schedule.syllabus.id,
                 },
                 "syllabus_version": {
@@ -1755,14 +1916,29 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                     "slug": model["cohort"].academy.slug,
                     "name": model["cohort"].academy.name,
                     "country": {
+                        "id": model["cohort"].academy.country.code,
                         "code": model["cohort"].academy.country.code,
                         "name": model["cohort"].academy.country.name,
                     },
                     "city": {
+                        "id": model["cohort"].academy.city.id,
                         "name": model["cohort"].academy.city.name,
+                        "country": {
+                            "id": model["cohort"].academy.city.country.code,
+                            "code": model["cohort"].academy.city.country.code,
+                            "name": model["cohort"].academy.city.country.name,
+                        },
                     },
                     "logo_url": model["cohort"].academy.logo_url,
                     "is_hidden_on_prework": model["cohort"].academy.is_hidden_on_prework,
+                    "main_currency": (
+                        {
+                            "code": model["cohort"].academy.main_currency.code,
+                            "name": model["cohort"].academy.main_currency.name,
+                        }
+                        if model["cohort"].academy.main_currency
+                        else None
+                    ),
                 },
             }
         ]
@@ -1827,6 +2003,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 "schedule": {
                     "id": model["cohort"].schedule.id,
                     "name": model["cohort"].schedule.name,
+                    "schedule_type": model["cohort"].schedule.schedule_type,
+                    "description": model["cohort"].schedule.description,
                     "syllabus": model["cohort"].schedule.syllabus.id,
                 },
                 "syllabus_version": {
@@ -1847,14 +2025,29 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                     "slug": model["cohort"].academy.slug,
                     "name": model["cohort"].academy.name,
                     "country": {
+                        "id": model["cohort"].academy.country.code,
                         "code": model["cohort"].academy.country.code,
                         "name": model["cohort"].academy.country.name,
                     },
                     "city": {
+                        "id": model["cohort"].academy.city.id,
                         "name": model["cohort"].academy.city.name,
+                        "country": {
+                            "id": model["cohort"].academy.city.country.code,
+                            "code": model["cohort"].academy.city.country.code,
+                            "name": model["cohort"].academy.city.country.name,
+                        },
                     },
                     "logo_url": model["cohort"].academy.logo_url,
                     "is_hidden_on_prework": model["cohort"].academy.is_hidden_on_prework,
+                    "main_currency": (
+                        {
+                            "code": model["cohort"].academy.main_currency.code,
+                            "name": model["cohort"].academy.main_currency.name,
+                        }
+                        if model["cohort"].academy.main_currency
+                        else None
+                    ),
                 },
             }
         ]
@@ -1928,6 +2121,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 "schedule": {
                     "id": model["cohort"].schedule.id,
                     "name": model["cohort"].schedule.name,
+                    "schedule_type": model["cohort"].schedule.schedule_type,
+                    "description": model["cohort"].schedule.description,
                     "syllabus": model["cohort"].schedule.syllabus.id,
                 },
                 "syllabus_version": {
@@ -1948,14 +2143,29 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                     "slug": model["cohort"].academy.slug,
                     "name": model["cohort"].academy.name,
                     "country": {
+                        "id": model["cohort"].academy.country.code,
                         "code": model["cohort"].academy.country.code,
                         "name": model["cohort"].academy.country.name,
                     },
                     "city": {
+                        "id": model["cohort"].academy.city.id,
                         "name": model["cohort"].academy.city.name,
+                        "country": {
+                            "id": model["cohort"].academy.city.country.code,
+                            "code": model["cohort"].academy.city.country.code,
+                            "name": model["cohort"].academy.city.country.name,
+                        },
                     },
                     "logo_url": model["cohort"].academy.logo_url,
                     "is_hidden_on_prework": model["cohort"].academy.is_hidden_on_prework,
+                    "main_currency": (
+                        {
+                            "code": model["cohort"].academy.main_currency.code,
+                            "name": model["cohort"].academy.main_currency.name,
+                        }
+                        if model["cohort"].academy.main_currency
+                        else None
+                    ),
                 },
             }
             for model in models
@@ -2032,6 +2242,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 "schedule": {
                     "id": model["cohort"].schedule.id,
                     "name": model["cohort"].schedule.name,
+                    "schedule_type": model["cohort"].schedule.schedule_type,
+                    "description": model["cohort"].schedule.description,
                     "syllabus": model["cohort"].schedule.syllabus.id,
                 },
                 "syllabus_version": {
@@ -2052,14 +2264,29 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                     "slug": model["cohort"].academy.slug,
                     "name": model["cohort"].academy.name,
                     "country": {
+                        "id": model["cohort"].academy.country.code,
                         "code": model["cohort"].academy.country.code,
                         "name": model["cohort"].academy.country.name,
                     },
                     "city": {
+                        "id": model["cohort"].academy.city.id,
                         "name": model["cohort"].academy.city.name,
+                        "country": {
+                            "id": model["cohort"].academy.city.country.code,
+                            "code": model["cohort"].academy.city.country.code,
+                            "name": model["cohort"].academy.city.country.name,
+                        },
                     },
                     "logo_url": model["cohort"].academy.logo_url,
                     "is_hidden_on_prework": model["cohort"].academy.is_hidden_on_prework,
+                    "main_currency": (
+                        {
+                            "code": model["cohort"].academy.main_currency.code,
+                            "name": model["cohort"].academy.main_currency.name,
+                        }
+                        if model["cohort"].academy.main_currency
+                        else None
+                    ),
                 },
             }
             for model in ordened_models
@@ -2166,6 +2393,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 "schedule": {
                     "id": model["cohort"].schedule.id,
                     "name": model["cohort"].schedule.name,
+                    "schedule_type": model["cohort"].schedule.schedule_type,
+                    "description": model["cohort"].schedule.description,
                     "syllabus": model["cohort"].schedule.syllabus.id,
                 },
                 "syllabus_version": {
@@ -2186,14 +2415,29 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                     "slug": model["cohort"].academy.slug,
                     "name": model["cohort"].academy.name,
                     "country": {
+                        "id": model["cohort"].academy.country.code,
                         "code": model["cohort"].academy.country.code,
                         "name": model["cohort"].academy.country.name,
                     },
                     "city": {
+                        "id": model["cohort"].academy.city.id,
                         "name": model["cohort"].academy.city.name,
+                        "country": {
+                            "id": model["cohort"].academy.city.country.code,
+                            "code": model["cohort"].academy.city.country.code,
+                            "name": model["cohort"].academy.city.country.name,
+                        },
                     },
                     "logo_url": model["cohort"].academy.logo_url,
                     "is_hidden_on_prework": model["cohort"].academy.is_hidden_on_prework,
+                    "main_currency": (
+                        {
+                            "code": model["cohort"].academy.main_currency.code,
+                            "name": model["cohort"].academy.main_currency.name,
+                        }
+                        if model["cohort"].academy.main_currency
+                        else None
+                    ),
                 },
             }
         ]
@@ -2258,6 +2502,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 "schedule": {
                     "id": model["cohort"].schedule.id,
                     "name": model["cohort"].schedule.name,
+                    "schedule_type": model["cohort"].schedule.schedule_type,
+                    "description": model["cohort"].schedule.description,
                     "syllabus": model["cohort"].schedule.syllabus.id,
                 },
                 "syllabus_version": {
@@ -2278,14 +2524,29 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                     "slug": model["cohort"].academy.slug,
                     "name": model["cohort"].academy.name,
                     "country": {
+                        "id": model["cohort"].academy.country.code,
                         "code": model["cohort"].academy.country.code,
                         "name": model["cohort"].academy.country.name,
                     },
                     "city": {
+                        "id": model["cohort"].academy.city.id,
                         "name": model["cohort"].academy.city.name,
+                        "country": {
+                            "id": model["cohort"].academy.city.country.code,
+                            "code": model["cohort"].academy.city.country.code,
+                            "name": model["cohort"].academy.city.country.name,
+                        },
                     },
                     "logo_url": model["cohort"].academy.logo_url,
                     "is_hidden_on_prework": model["cohort"].academy.is_hidden_on_prework,
+                    "main_currency": (
+                        {
+                            "code": model["cohort"].academy.main_currency.code,
+                            "name": model["cohort"].academy.main_currency.name,
+                        }
+                        if model["cohort"].academy.main_currency
+                        else None
+                    ),
                 },
             }
         ]
@@ -2362,6 +2623,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 "schedule": {
                     "id": model["cohort"].schedule.id,
                     "name": model["cohort"].schedule.name,
+                    "schedule_type": model["cohort"].schedule.schedule_type,
+                    "description": model["cohort"].schedule.description,
                     "syllabus": model["cohort"].schedule.syllabus.id,
                 },
                 "syllabus_version": {
@@ -2382,14 +2645,29 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                     "slug": model["cohort"].academy.slug,
                     "name": model["cohort"].academy.name,
                     "country": {
+                        "id": model["cohort"].academy.country.code,
                         "code": model["cohort"].academy.country.code,
                         "name": model["cohort"].academy.country.name,
                     },
                     "city": {
+                        "id": model["cohort"].academy.city.id,
                         "name": model["cohort"].academy.city.name,
+                        "country": {
+                            "id": model["cohort"].academy.city.country.code,
+                            "code": model["cohort"].academy.city.country.code,
+                            "name": model["cohort"].academy.city.country.name,
+                        },
                     },
                     "logo_url": model["cohort"].academy.logo_url,
                     "is_hidden_on_prework": model["cohort"].academy.is_hidden_on_prework,
+                    "main_currency": (
+                        {
+                            "code": model["cohort"].academy.main_currency.code,
+                            "name": model["cohort"].academy.main_currency.name,
+                        }
+                        if model["cohort"].academy.main_currency
+                        else None
+                    ),
                 },
             }
             for model in models

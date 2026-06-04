@@ -47,8 +47,8 @@ class AuthenticateTestSuite(AuthTestCase):
     def test__generate_tokens(self):
         """Test /token"""
         cases = [
-            (None, "temporal", UTC_NOW + timedelta(minutes=10), 1),
-            ({"token_type": "temporal"}, "temporal", UTC_NOW + timedelta(minutes=10), 2),
+            (None, "temporal", UTC_NOW + timedelta(hours=24), 1),
+            ({"token_type": "temporal"}, "temporal", UTC_NOW + timedelta(hours=24), 2),
             ({"token_type": "one_time"}, "one_time", None, 3),
         ]
         for data, token_type, expires_at, index in cases:

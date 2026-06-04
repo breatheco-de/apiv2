@@ -10,6 +10,8 @@ from django.contrib.auth.models import User
 from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
 
+from breathecode.configurable_settings import ConfigurableSettingsMixin
+
 from . import signals
 from .signals import syllabus_version_json_updated
 
@@ -24,6 +26,82 @@ def get_user_label(self):
 def default_syllabus_version_json():
     """Default value for `SyllabusVersion.json` field."""
     return {"days": []}
+
+
+def default_academy_features():
+    """Default value for `Academy.academy_features` field.
+
+    Feature flags are now available for all academies, not just white label ones.
+    All features default to True, except show_marketing_navigation which is only for white label academies.
+    """
+    return {
+        "acl": {
+            "editable_paths_by_role": {
+                "country_manager": [],
+            }
+        },
+        # Segmented / nested feature flags (top-level groups).
+        "events": {
+            "enabled": True,  # allow events
+            "allow_other_academy_events": True,  # allow other academy events
+        },
+        "mentorship": {
+            "enabled": True,  # allow mentoring
+        },
+        "feedback": {
+            "widget": {
+                "enabled": True,  # allow feedback widget
+            },
+        },
+        "community": {
+            "widget": {
+                "enabled": True,  # allow community widget
+            },
+        },
+        "marketing": {
+            "referral_program": {
+                "enabled": True,  # allow referral program
+            },
+            "dashboard": {
+                "allow_other_academy_courses": True,  # allow other academy courses on dashboard
+            },
+        },
+        "public_portal": {
+            "enabled": False,  # expose public learning content for white label academies
+            "lessons": {
+                "enabled": False,
+            },
+            "interactive_exercises": {
+                "enabled": False,
+            },
+            "interactive_coding_tutorials": {
+                "enabled": False,
+            },
+            "technology": {
+                "enabled": False,
+            },
+        },
+        "certificate": {
+            "auto_ignore_projects_on_delivery": False, # Wether a student's project will be automatically ignored when it's delivered
+        },
+        "commerce": {
+            "reseller": False,  # allow academy to resell courses from other academies (requires white_labeled=True)
+        },
+        "navigation": {
+            "custom_links": [],  # Additional links added to academy navbar (follow frontend structure)
+            "show_marketing_navigation": False,  # Show marketing navigation (url to 4geeks programs) - Only for white label academies
+        },
+    }
+
+
+def default_welcome_video():
+    """Default value for `Academy.welcome_video` field."""
+    return {"url": "", "preview_image": ""}
+
+
+def default_white_label_params():
+    """Default value for `Academy.white_label_params` field."""
+    return {"es": "", "en": ""}
 
 
 User.add_to_class("__str__", get_user_label)
@@ -63,11 +141,12 @@ ACADEMY_STATUS = (
 )
 
 
-class Academy(models.Model):
+class Academy(ConfigurableSettingsMixin, models.Model):
 
     def __init__(self, *args, **kwargs):
         super(Academy, self).__init__(*args, **kwargs)
         self.__old_slug = self.slug
+        self.__old_reseller = self.get_academy_features()["commerce"]["reseller"]
 
     slug = models.SlugField(max_length=100, unique=True, db_index=True)
     name = models.CharField(max_length=150, db_index=True)
@@ -75,12 +154,22 @@ class Academy(models.Model):
     logo_url = models.CharField(max_length=255)
     icon_url = models.CharField(max_length=255, help_text="It has to be a square", default="/static/icons/picture.png")
     website_url = models.CharField(max_length=255, blank=True, null=True, default=None)
+    short_url = models.CharField(
+        max_length=255, blank=True, null=True, default=None, help_text="Use for ShortLinks and redirects"
+    )
     white_label_url = models.CharField(max_length=255, blank=True, null=True, default=None)
 
     street_address = models.CharField(max_length=250)
 
     marketing_email = models.EmailField(blank=True, null=True, default=None)
     feedback_email = models.EmailField(blank=True, null=True, default=None)
+
+    platform_description = models.TextField(
+        blank=True,
+        null=True,
+        default=None,
+        help_text="Description of the platform shown in notification emails and meta description",
+    )
 
     phone_regex = RegexValidator(
         regex=r"^\+?1?\d{9,15}$",
@@ -103,6 +192,24 @@ class Academy(models.Model):
     longitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True, db_index=True)
     zip_code = models.IntegerField(blank=True, null=True, db_index=True)
     white_labeled = models.BooleanField(default=False)
+    academy_features = models.JSONField(
+        default=default_academy_features,
+        blank=True,
+        verbose_name="Academy Features",
+        help_text="JSON field to store feature flag configurations for all academies. Allows enabling/disabling features and customizing navigation. Example: hide dashboard widgets, include custom links, etc.",
+    )
+    welcome_video = models.JSONField(
+        default=default_welcome_video,
+        blank=True,
+        null=True,
+        help_text="Video de bienvenida con preview_image y url. Formato: {'url': 'url', 'preview_image': 'url'}. Si no se especifica en el payload de la invitación, se usará este valor por defecto.",
+    )
+    white_label_params = models.JSONField(
+        default=default_white_label_params,
+        blank=True,
+        null=True,
+        help_text="This is a json with translations {es: '', en: ''} that will include a markdown that can be rendered on the right side of the login when an academy is whitelabel.",
+    )
 
     active_campaign_slug = models.SlugField(
         max_length=100, unique=False, null=True, default=None, blank=True, db_index=True
@@ -124,6 +231,14 @@ class Academy(models.Model):
     main_currency = models.ForeignKey(
         "payments.Currency", on_delete=models.CASCADE, null=True, blank=True, related_name="+"
     )
+    default_plan = models.ForeignKey(
+        "payments.Plan",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="default_for_academies",
+        help_text="Default checkout plan used when no plan is provided for this academy",
+    )
 
     timezone = models.CharField(max_length=50, null=True, default=None, blank=True, db_index=True)
 
@@ -132,8 +247,32 @@ class Academy(models.Model):
 
     logistical_information = models.CharField(max_length=150, blank=True, null=True)
 
+    owner = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=None,
+        related_name="owned_academies",
+        help_text="Primary owner of the academy, typically the first admin with role 'admin'",
+        db_index=True,
+    )
+
     def default_ac_slug(self):
         return self.slug
+
+    def get_academy_features(self):
+        """
+        Returns academy_features merged with defaults.
+        This ensures that if new fields are added to the default structure,
+        existing academies will automatically get them.
+        """
+        return self.get_effective_settings()
+
+    # ConfigurableSettingsMixin configuration
+    SETTINGS_FIELD = "academy_features"
+    DEFAULT_SETTINGS = staticmethod(default_academy_features)
+    PARENT_LOOKUP = None
 
     def __str__(self):
         return self.name
@@ -146,9 +285,12 @@ class Academy(models.Model):
         if self.status:
             self.status = self.status.upper()
 
+        if self.default_plan and self.default_plan.owner not in [None, self]:
+            raise forms.ValidationError("Default plan must be global or belong to this academy")
+
     def save(self, *args, **kwargs):
         from .actions import get_bucket_object
-        from .signals import academy_saved
+        from .signals import academy_reseller_changed, academy_saved
 
         self.full_clean()
         created = not self.id
@@ -161,12 +303,23 @@ class Academy(models.Model):
         if not created and self.__old_slug != self.slug:
             raise Exception("Academy slug cannot be updated")
 
+        reseller_changed = not created and self.__old_reseller != self.get_academy_features()["commerce"]["reseller"]
+
         super().save(*args, **kwargs)  # Call the "real" save() method.
 
         if created:
             self.__old_slug = self.slug
+            self.__old_reseller = self.get_academy_features()["commerce"]["reseller"]
 
         academy_saved.send_robust(instance=self, sender=self.__class__, created=created)
+
+        if reseller_changed:
+            academy_reseller_changed.send_robust(
+                instance=self,
+                sender=self.__class__,
+                value=self.get_academy_features()["commerce"]["reseller"],
+            )
+            self.__old_reseller = self.get_academy_features()["commerce"]["reseller"]
 
 
 PARTIME = "PART-TIME"
@@ -182,6 +335,16 @@ class Syllabus(models.Model):
     name = models.CharField(max_length=150, blank=True, null=True, default=None, db_index=True)
     main_technologies = models.CharField(
         max_length=150, blank=True, null=True, default=None, help_text="Coma separated, E.g: HTML, CSS, Javascript"
+    )
+
+    forked_from = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=None,
+        related_name="forks",
+        help_text="If this syllabus was forked/created based another one",
     )
 
     github_url = models.URLField(max_length=255, blank=True, null=True, default=None)
@@ -206,17 +369,22 @@ class Syllabus(models.Model):
     def save(self, *args, **kwargs):
         created = not self.id
         super().save(*args, **kwargs)
-        
+
         if created:
             from .signals import syllabus_created
+
             syllabus_created.send_robust(instance=self, sender=self.__class__)
 
 
 PUBLISHED = "PUBLISHED"
 DRAFT = "DRAFT"
+DEPRECATED = "DEPRECATED"
+DELETED = "DELETED"
 VERSION_STATUS = (
     (PUBLISHED, "Published"),
     (DRAFT, "Draft"),
+    (DEPRECATED, "Deprecated"),
+    (DELETED, "Deleted"),
 )
 
 ERROR = "ERROR"
@@ -236,8 +404,24 @@ class SyllabusVersion(models.Model):
 
     version = models.PositiveSmallIntegerField(db_index=True)
     syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE)
+    forked_from = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="If this syllabus version was forked/created based another one",
+        related_name="forks",
+    )
     status = models.CharField(max_length=15, choices=VERSION_STATUS, default=PUBLISHED, db_index=True)
     change_log_details = models.TextField(max_length=450, blank=True, null=True, default=None)
+    reasoning = models.TextField(
+        max_length=450,
+        blank=True,
+        null=True,
+        default=None,
+        help_text="Why is this new version being created?",
+    )
 
     integrity_status = models.CharField(max_length=15, choices=INTEGRITY_STATUS, default=PENDING, db_index=True)
     integrity_check_at = models.DateTimeField(null=True, blank=True, default=None, db_index=True)
@@ -338,6 +522,11 @@ class Cohort(models.Model):
     remote_available = models.BooleanField(
         default=True, help_text="True (default) if the students from other cities can take it from home", db_index=True
     )
+
+    enable_assessments_telemetry = models.BooleanField(
+        default=False, help_text="If true, the assessments will be tracked in the database", db_index=True
+    )
+
     online_meeting_url = models.URLField(max_length=255, blank=True, default=None, null=True)
 
     timezone = models.CharField(max_length=50, null=True, default=None, blank=True, db_index=True)
@@ -384,7 +573,7 @@ class Cohort(models.Model):
     )
 
     cohorts_order = models.CharField(
-        max_length=50,
+        max_length=120,
         null=True,
         blank=True,
         default=None,
@@ -501,6 +690,20 @@ EDU_STATUS = (
 
 
 class CohortUser(models.Model):
+    """
+    Represents a user's membership in a cohort with a specific role.
+
+    The role determines the user's permissions and responsibilities within the cohort,
+    and maps to a corresponding ProfileAcademy role for academy-wide permissions.
+    """
+
+    # Mapping of CohortUser roles to ProfileAcademy role slugs
+    ROLE_TO_PROFILE_ACADEMY_SLUG = {
+        TEACHER: "teacher",
+        ASSISTANT: "assistant",
+        REVIEWER: "homework_reviewer",
+        STUDENT: "student",
+    }
 
     def __init__(self, *args, **kwargs):
         super(CohortUser, self).__init__(*args, **kwargs)
@@ -532,6 +735,28 @@ class CohortUser(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def get_profile_academy_role_slug(self) -> str:
+        """
+        Get the ProfileAcademy role slug corresponding to this CohortUser's role.
+
+        Returns:
+            str: The role slug for ProfileAcademy (e.g., 'teacher', 'student')
+        """
+        return self.ROLE_TO_PROFILE_ACADEMY_SLUG.get(self.role, "student")
+
+    @classmethod
+    def map_role_to_profile_academy_slug(cls, cohort_user_role: str) -> str:
+        """
+        Map a CohortUser role to its corresponding ProfileAcademy role slug.
+
+        Args:
+            cohort_user_role: The CohortUser role (e.g., 'TEACHER', 'ASSISTANT')
+
+        Returns:
+            str: The role slug for ProfileAcademy (e.g., 'teacher', 'assistant')
+        """
+        return cls.ROLE_TO_PROFILE_ACADEMY_SLUG.get(cohort_user_role, "student")
 
     def clean(self):
         if self.role:
@@ -659,7 +884,10 @@ class CohortTimeSlot(TimeSlot):
         self.full_clean()
         super().save(*args, **kwargs)
 
-        signals.timeslot_saved.send_robust(instance=self, sender=self.__class__, created=created)
+        force_generation = getattr(self, "_force_generation", False)
+        signals.timeslot_saved.send_robust(
+            instance=self, sender=self.__class__, created=created, force_generation=force_generation
+        )
 
     def __str__(self):
         start_time = datetime.strptime(str(self.starting_at), "%Y%m%d%H%M").strftime("%d/%m/%Y %I%p")

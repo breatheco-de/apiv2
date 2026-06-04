@@ -17,7 +17,8 @@ from breathecode.notify import actions
 from breathecode.services.slack.client import Slack
 from breathecode.utils.decorators import TaskPriority
 
-from .actions import sync_slack_team_channel, sync_slack_team_users
+from .actions import sync_slack_team_channel, sync_slack_team_cohort, sync_slack_team_user, sync_slack_team_users
+from .utils.obfuscation import obfuscate_sensitive_data
 
 
 def get_api_url():
@@ -63,6 +64,18 @@ def send_mentorship_starting_notification(session_id):
 def async_slack_team_users(team_id):
     logger.debug("Starting async_slack_team_users")
     return sync_slack_team_users(team_id)
+
+
+@shared_task(priority=TaskPriority.REALTIME.value)
+def async_slack_team_user(team_id, slack_user_id):
+    logger.debug("Starting async_slack_team_user")
+    return sync_slack_team_user(team_id, slack_user_id)
+
+
+@shared_task(priority=TaskPriority.REALTIME.value)
+def async_slack_team_cohort(team_id, cohort_id):
+    logger.debug("Starting async_slack_team_cohort")
+    return sync_slack_team_cohort(team_id, cohort_id)
 
 
 @shared_task(priority=TaskPriority.REALTIME.value)
@@ -171,10 +184,21 @@ def async_deliver_hook(target, payload, hook_id=None, **_):
                 if not isinstance(data, list):
                     data = []
 
-                if "data" in payload and isinstance(payload["data"], dict):
-                    data.append(payload["data"])
-                elif isinstance(payload, dict):
-                    data.append(json.loads(encoded_payload))
+                # Extract the payload to store as sample data
+                new_payload = None
+                if isinstance(payload, dict):
+                    if "data" in payload and isinstance(payload["data"], dict):
+                        new_payload = payload["data"]
+                    else:
+                        new_payload = payload
+                elif isinstance(payload, list) and len(payload) > 0:
+                    # For list payloads, take the first item as sample
+                    new_payload = payload[0] if isinstance(payload[0], dict) else None
+
+                if new_payload:
+                    # Obfuscate sensitive data before storing
+                    obfuscated_payload = obfuscate_sensitive_data(new_payload)
+                    data.append(obfuscated_payload)
 
                 if len(data) > 10:
                     data = data[1:10]
