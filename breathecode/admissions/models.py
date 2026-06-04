@@ -66,6 +66,21 @@ def default_academy_features():
                 "allow_other_academy_courses": True,  # allow other academy courses on dashboard
             },
         },
+        "public_portal": {
+            "enabled": False,  # expose public learning content for white label academies
+            "lessons": {
+                "enabled": False,
+            },
+            "interactive_exercises": {
+                "enabled": False,
+            },
+            "interactive_coding_tutorials": {
+                "enabled": False,
+            },
+            "technology": {
+                "enabled": False,
+            },
+        },
         "certificate": {
             "auto_ignore_projects_on_delivery": False, # Wether a student's project will be automatically ignored when it's delivered
         },
@@ -216,6 +231,14 @@ class Academy(ConfigurableSettingsMixin, models.Model):
     main_currency = models.ForeignKey(
         "payments.Currency", on_delete=models.CASCADE, null=True, blank=True, related_name="+"
     )
+    default_plan = models.ForeignKey(
+        "payments.Plan",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="default_for_academies",
+        help_text="Default checkout plan used when no plan is provided for this academy",
+    )
 
     timezone = models.CharField(max_length=50, null=True, default=None, blank=True, db_index=True)
 
@@ -261,6 +284,9 @@ class Academy(ConfigurableSettingsMixin, models.Model):
     def clean(self):
         if self.status:
             self.status = self.status.upper()
+
+        if self.default_plan and self.default_plan.owner not in [None, self]:
+            raise forms.ValidationError("Default plan must be global or belong to this academy")
 
     def save(self, *args, **kwargs):
         from .actions import get_bucket_object

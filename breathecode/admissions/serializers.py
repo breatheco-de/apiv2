@@ -287,6 +287,7 @@ class GetBigAcademySerializer(serpy.Serializer):
     welcome_video = serpy.Field()
     available_as_saas = serpy.Field()
     main_currency = serpy.MethodField()
+    default_plan = serpy.MethodField()
     academy_features = serpy.MethodField()
     owner = UserSmallSerializer(required=False)
 
@@ -300,6 +301,16 @@ class GetBigAcademySerializer(serpy.Serializer):
             return {
                 "code": obj.main_currency.code,
                 "name": obj.main_currency.name,
+            }
+        return None
+
+    def get_default_plan(self, obj):
+        """Return default checkout plan details."""
+        if obj.default_plan:
+            return {
+                "id": obj.default_plan.id,
+                "slug": obj.default_plan.slug,
+                "title": obj.default_plan.title,
             }
         return None
 
@@ -856,6 +867,7 @@ class AcademySerializer(serializers.ModelSerializer):
             "logo_url",
             "icon_url",
             "main_currency",
+            "default_plan",
             "welcome_video",
             "white_label_params",
             "available_as_saas",
@@ -871,6 +883,7 @@ class AcademySerializer(serializers.ModelSerializer):
             "welcome_video": {"required": False},
             "white_label_params": {"required": False},
             "available_as_saas": {"required": False},
+            "default_plan": {"required": False},
         }
 
     def validate_logo_url(self, value):
@@ -942,6 +955,21 @@ class AcademySerializer(serializers.ModelSerializer):
             slug="invalid-currency-format",
             code=400,
         )
+
+    def validate_default_plan(self, value):
+        """Ensure the default checkout plan is global or belongs to this academy."""
+        if value is None:
+            return None
+
+        academy = getattr(self, "instance", None)
+        if academy and value.owner_id not in [None, academy.id]:
+            raise ValidationException(
+                "Default plan must be global or belong to this academy",
+                slug="invalid-default-plan",
+                code=400,
+            )
+
+        return value
 
     def validate(self, data):
         # Additional validation: ensure slug is never in the data
