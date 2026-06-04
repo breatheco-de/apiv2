@@ -70,9 +70,41 @@ def test_apply_refund_entitlements_uses_bag_plans_when_no_breakdown(mock_plan, m
 
     actions._apply_refund_entitlements(invoice, {"full-stack": 25.0})
 
-    mock_subscription.objects.filter.assert_called()
+    mock_subscription.objects.filter.assert_called_once_with(
+        user=invoice.user, plans__in=[plan]
+    )
     subscription.save.assert_called_once()
     assert subscription.status == actions.Subscription.Status.EXPIRED
+
+
+@patch.object(actions.Subscription, "objects")
+@patch.object(actions.PlanFinancing, "objects")
+@patch.object(actions.Plan, "objects")
+def test_apply_refund_entitlements_expires_subscription_regardless_of_prior_status(
+    mock_plan, mock_financing, mock_subscription
+):
+    bag = MagicMock()
+    bag.plans.values_list.return_value = []
+    bag.plan_addons.values_list.return_value = []
+    bag.service_items.select_related.return_value.values_list.return_value = []
+
+    invoice = SimpleNamespace(
+        id=100,
+        bag=bag,
+        user=SimpleNamespace(id=8),
+        amount_breakdown={"plans": {"premium-plan": {"amount": 100}}, "service-items": {}},
+    )
+
+    plan = SimpleNamespace(slug="premium-plan")
+    subscription = MagicMock(status=actions.Subscription.Status.CANCELLED)
+    mock_plan.objects.filter.return_value = [plan]
+    mock_financing.objects.filter.return_value = []
+    mock_subscription.objects.filter.return_value = [subscription]
+
+    actions._apply_refund_entitlements(invoice, {"premium-plan": 100.0})
+
+    assert subscription.status == actions.Subscription.Status.EXPIRED
+    assert "refund of invoice 100" in subscription.status_message
 
 
 def test_invoice_breakdown_has_line_items():
