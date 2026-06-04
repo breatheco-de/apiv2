@@ -1104,6 +1104,7 @@ class GetInvoiceSerializer(GetInvoiceSmallSerializer):
     bag = GetBagSerializer(many=False)
 
     amount_refunded = serpy.Field()
+    stripe_id = serpy.Field()
     refund_stripe_id = serpy.Field()
     refunded_at = serpy.Field()
     amount_breakdown = serpy.Field()
