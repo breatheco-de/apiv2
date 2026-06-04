@@ -4568,6 +4568,35 @@ def calculate_invoice_amount_breakdown(
     return calculate_invoice_breakdown(bag=bag, invoice=invoice, lang=lang)
 
 
+def _invoice_breakdown_has_line_items(breakdown: dict[str, Any] | None) -> bool:
+    if not breakdown:
+        return False
+    return bool(breakdown.get("plans")) or bool(breakdown.get("service-items"))
+
+
+def ensure_invoice_amount_breakdown(invoice: Invoice, lang: str) -> None:
+    """
+    Populate invoice.amount_breakdown when missing, using the invoice bag (same logic as admin bulk action).
+    """
+    if _invoice_breakdown_has_line_items(invoice.amount_breakdown):
+        return
+
+    if not invoice.bag_id:
+        return
+
+    bag = invoice.bag
+    try:
+        breakdown = calculate_invoice_breakdown(bag, invoice, lang)
+        invoice.amount_breakdown = breakdown
+        invoice.save(update_fields=["amount_breakdown"])
+    except Exception as e:
+        logger.warning(
+            "Failed to recalculate amount_breakdown for invoice %s: %s",
+            invoice.id,
+            e,
+        )
+
+
 def calculate_refund_breakdown(
     invoice: Invoice, refund_amount: float, items_to_refund: dict[str, float], lang: str = "en"
 ) -> dict[str, Any]:
@@ -4813,6 +4842,12 @@ def _apply_invoice_refund_balance(invoice: Invoice, amount: float) -> None:
     invoice.save()
 
 
+def _bag_plan_slugs(bag: Bag) -> set[str]:
+    slugs = set(bag.plans.values_list("slug", flat=True))
+    slugs.update(bag.plan_addons.values_list("slug", flat=True))
+    return slugs
+
+
 def _apply_refund_entitlements(invoice: Invoice, items_to_refund: dict[str, float]) -> None:
     from breathecode.payments.models import PlanServiceItemHandler, SubscriptionServiceItem
 
@@ -4824,15 +4859,29 @@ def _apply_refund_entitlements(invoice: Invoice, items_to_refund: dict[str, floa
 
     if items_to_refund:
         original_breakdown = invoice.amount_breakdown or {}
+        plan_slugs_in_invoice: set[str] = set()
 
         if original_breakdown.get("plans"):
+            plan_slugs_in_invoice = set(original_breakdown["plans"].keys())
+        elif bag:
+            plan_slugs_in_invoice = _bag_plan_slugs(bag)
+
+        if plan_slugs_in_invoice:
             for plan_slug, refund_amount_for_plan in items_to_refund.items():
-                if plan_slug in original_breakdown["plans"] and refund_amount_for_plan > 0:
+                if plan_slug in plan_slugs_in_invoice and refund_amount_for_plan > 0:
                     plans_to_deprecate.append(plan_slug)
 
+        service_slugs_in_invoice: set[str] = set()
         if original_breakdown.get("service-items"):
+            service_slugs_in_invoice = set(original_breakdown["service-items"].keys())
+        elif bag:
+            service_slugs_in_invoice = set(
+                bag.service_items.select_related("service").values_list("service__slug", flat=True)
+            )
+
+        if service_slugs_in_invoice and bag:
             for service_slug, refund_amount_for_service in items_to_refund.items():
-                if service_slug in original_breakdown["service-items"] and refund_amount_for_service > 0:
+                if service_slug in service_slugs_in_invoice and refund_amount_for_service > 0:
                     service_items = bag.service_items.filter(service__slug=service_slug)
                     for service_item in service_items:
                         service_items_to_remove.append(service_item.id)
@@ -4936,6 +4985,7 @@ def process_refund(
     Returns:
         CreditNote object created for the refund
     """
+    ensure_invoice_amount_breakdown(invoice, lang)
     amount = _validate_refund_request(invoice, amount, lang)
     if breakdown is None:
         breakdown = invoice.amount_breakdown or {}
@@ -4989,6 +5039,7 @@ def process_refund_record_external(
     """
     Record a refund that happened outside this API without calling Stripe.
     """
+    ensure_invoice_amount_breakdown(invoice, lang)
     amount = _validate_refund_request(invoice, amount, lang)
     _apply_invoice_refund_balance(invoice, amount)
 
