@@ -4889,17 +4889,13 @@ def _apply_refund_entitlements(invoice: Invoice, items_to_refund: dict[str, floa
     if plans_to_deprecate:
         plans = Plan.objects.filter(slug__in=plans_to_deprecate)
         for plan in plans:
-            subscriptions = Subscription.objects.filter(
-                user=user, plans__in=[plan], status__in=[Subscription.Status.ACTIVE]
-            )
+            subscriptions = Subscription.objects.filter(user=user, plans__in=[plan])
             for subscription in subscriptions:
                 subscription.status = Subscription.Status.EXPIRED
                 subscription.status_message = f"Subscription expired due to refund of invoice {invoice.id}"
                 subscription.save()
 
-            plan_financings = PlanFinancing.objects.filter(
-                user=user, plans__in=[plan], status__in=[PlanFinancing.Status.ACTIVE]
-            )
+            plan_financings = PlanFinancing.objects.filter(user=user, plans__in=[plan])
             for financing in plan_financings:
                 financing.status = PlanFinancing.Status.EXPIRED
                 financing.status_message = f"Plan financing expired due to refund of invoice {invoice.id}"

@@ -2017,6 +2017,12 @@ class AbstractIOweYou(models.Model):
     status_message = models.CharField(
         max_length=250, null=True, blank=True, default=None, help_text="Error message if status is ERROR"
     )
+    last_status_change_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="When the status was last changed",
+    )
 
     invoices = models.ManyToManyField(Invoice, blank=True, help_text="Invoices")
 
@@ -2285,6 +2291,14 @@ class AbstractIOweYou(models.Model):
         total = invoices.aggregate(total=Sum("amount"))["total"]
         return float(total) if total else 0.0
 
+    def _stamp_last_status_change_at(self, old_status: str | None, **kwargs) -> dict:
+        if old_status is None or old_status != self.status:
+            self.last_status_change_at = timezone.now()
+            update_fields = kwargs.get("update_fields")
+            if update_fields is not None:
+                kwargs["update_fields"] = list(set(update_fields) | {"last_status_change_at"})
+        return kwargs
+
     class Meta:
         abstract = True
 
@@ -2462,6 +2476,8 @@ class PlanFinancing(AbstractIOweYou):
         self.full_clean()
         on_create = self.pk is None
         old_instance = None if on_create else PlanFinancing.objects.get(pk=self.pk)
+        old_status = None if on_create else old_instance.status
+        kwargs = self._stamp_last_status_change_at(old_status, **kwargs)
 
         super().save(*args, **kwargs)
 
@@ -2811,6 +2827,8 @@ class Subscription(AbstractIOweYou):
         self.full_clean()
         on_create = self.pk is None
         old_instance = None if on_create else Subscription.objects.get(pk=self.pk)
+        old_status = None if on_create else old_instance.status
+        kwargs = self._stamp_last_status_change_at(old_status, **kwargs)
 
         super().save(*args, **kwargs)
 

@@ -1222,6 +1222,7 @@ class GetPlanFinancingSerializer(GetAbstractIOweYouSerializer):
 
 class GetSubscriptionHookSerializer(GetAbstractIOweYouSerializer):
     paid_at = serpy.Field()
+    last_status_change_at = serpy.Field()
     is_refundable = serpy.Field()
 
     pay_every = serpy.Field()
@@ -1231,6 +1232,7 @@ class GetSubscriptionHookSerializer(GetAbstractIOweYouSerializer):
 class GetSubscriptionSerializer(GetAbstractIOweYouSerializer):
     paid_at = serpy.Field()
     created_at = serpy.Field()
+    last_status_change_at = serpy.Field()
     is_refundable = serpy.Field()
 
     pay_every = serpy.Field()
