@@ -18,6 +18,7 @@ from breathecode.payments.models import (
     Consumable,
     ConsumptionSession,
     Coupon,
+    CreditLedgerEntry,
     CreditNote,
     Currency,
     EventTypeSet,
@@ -45,7 +46,6 @@ from breathecode.payments.models import (
     ServiceItemFeature,
     ServiceStockScheduler,
     ServiceTranslation,
-    StudentDeposit,
     Subscription,
     SubscriptionBillingTeam,
     SubscriptionSeat,
@@ -397,6 +397,15 @@ class InvoiceForm(forms.ModelForm):
         }
 
 
+class CreditLedgerEntryFromInvoiceInline(admin.TabularInline):
+    model = CreditLedgerEntry
+    fk_name = "source_invoice"
+    extra = 0
+    can_delete = False
+    fields = ("id", "scope", "entry_type", "amount", "plan_financing", "subscription", "notes", "created_at")
+    readonly_fields = ("id", "scope", "entry_type", "amount", "plan_financing", "subscription", "notes", "created_at")
+
+
 @admin.display(description="Recalculate amount breakdown")
 def recalculate_invoice_breakdown(modeladmin, request, queryset):
     from django.contrib import messages
@@ -430,10 +439,10 @@ class InvoiceAdmin(admin.ModelAdmin):
     form = InvoiceForm
     list_display = ("id", "amount", "currency", "paid_at", "status", "stripe_id", "user", "academy")
     list_filter = ["status", "academy"]
-    search_fields = ["id", "status", "user__email"]
+    search_fields = ["id", "status", "user__email", "invoice_notes"]
     raw_id_fields = ["user", "currency", "bag", "academy"]
     actions = [recalculate_invoice_breakdown]
-    inlines = [CreditNoteInline]
+    inlines = [CreditNoteInline, CreditLedgerEntryFromInvoiceInline]
 
     fieldsets = (
         (
@@ -446,6 +455,7 @@ class InvoiceAdmin(admin.ModelAdmin):
                     "currency",
                     "amount",
                     "amount_breakdown",
+                    "invoice_notes",
                     "status",
                     "paid_at",
                     "refunded_at",
@@ -570,8 +580,24 @@ class PlanFinancingInvoiceInline(admin.TabularInline):
     extra = 0
     can_delete = False
     raw_id_fields = ("invoice",)
-    fields = ("invoice", "invoice_amount", "invoice_status", "invoice_paid_at")
-    readonly_fields = ("invoice_amount", "invoice_status", "invoice_paid_at")
+    fields = (
+        "invoice",
+        "invoice_amount",
+        "invoice_status",
+        "invoice_paid_at",
+        "invoice_notes",
+        "credit_added",
+        "credit_consumed",
+    )
+    readonly_fields = (
+        "invoice_amount",
+        "invoice_status",
+        "invoice_paid_at",
+        "invoice_notes",
+        "credit_added",
+        "credit_consumed",
+        "credit_notes",
+    )
     verbose_name = "Associated invoice"
     verbose_name_plural = "Associated invoices"
 
@@ -584,14 +610,48 @@ class PlanFinancingInvoiceInline(admin.TabularInline):
     def invoice_paid_at(self, obj):
         return obj.invoice.paid_at
 
+    def invoice_notes(self, obj):
+        return obj.invoice.invoice_notes or "-"
 
-class StudentDepositInline(admin.TabularInline):
-    model = StudentDeposit
+    def credit_added(self, obj):
+        total = sum(
+            e.amount
+            for e in obj.invoice.credit_entries.filter(entry_type=CreditLedgerEntry.EntryType.CREDIT_ADDED)
+        )
+        return total if total else "-"
+
+    def credit_consumed(self, obj):
+        total = sum(
+            abs(e.amount)
+            for e in obj.invoice.credit_entries.filter(entry_type=CreditLedgerEntry.EntryType.CREDIT_CONSUMED)
+        )
+        return total if total else "-"
+
+    def credit_notes(self, obj):
+        notes = [e.notes.strip() for e in obj.invoice.credit_entries.all() if e.notes and e.notes.strip()]
+        if not notes:
+            return "-"
+        return " | ".join(dict.fromkeys(notes))
+
+
+class PlanFinancingCreditLedgerInline(admin.TabularInline):
+    model = CreditLedgerEntry
+    fk_name = "plan_financing"
     extra = 0
     can_delete = False
-    raw_id_fields = ("invoice", "currency")
-    fields = ("invoice", "amount", "currency", "status", "applied_at", "refunded_at", "notes")
-    readonly_fields = ("invoice", "amount", "currency", "status", "applied_at", "refunded_at", "notes")
+    raw_id_fields = ("source_invoice", "subscription", "user")
+    fields = (
+        "id",
+        "user",
+        "scope",
+        "entry_type",
+        "amount",
+        "source_invoice",
+        "subscription",
+        "notes",
+        "created_at",
+    )
+    readonly_fields = fields
 
 
 @admin.register(PlanFinancing)
@@ -604,6 +664,7 @@ class PlanFinancingAdmin(admin.ModelAdmin):
         "monthly_price",
         "initial_payment_amount",
         "how_many_installments",
+        "installments_paid",
         "grace_period",
         "next_payment_at",
         "valid_until",
@@ -634,8 +695,8 @@ class PlanFinancingAdmin(admin.ModelAdmin):
                     "externally_managed",
                     "monthly_price",
                     "initial_payment_amount",
-                    "initial_payment_notes",
                     "how_many_installments",
+                    "installments_paid",
                     "next_payment_at",
                     "valid_until",
                     "plan_expires_at",
@@ -684,7 +745,7 @@ class PlanFinancingAdmin(admin.ModelAdmin):
             },
         ),
     )
-    inlines = [PlanFinancingInvoiceInline, StudentDepositInline]
+    inlines = [PlanFinancingInvoiceInline, PlanFinancingCreditLedgerInline]
     actions = [renew_plan_financing_consumables, charge_plan_financing, regenerate_service_stock_schedulers]
 
     def grace_period(self, obj):
@@ -703,12 +764,23 @@ class PlanFinancingAdmin(admin.ModelAdmin):
         return format_html("<br>".join(rows))
 
 
-@admin.register(StudentDeposit)
-class StudentDepositAdmin(admin.ModelAdmin):
-    list_display = ("id", "user", "academy", "amount", "currency", "status", "invoice", "plan_financing", "applied_at")
-    list_filter = ("status", "academy", "currency", "applied_at", "refunded_at")
-    search_fields = ("user__email", "user__first_name", "user__last_name", "invoice__id", "plan_financing__id")
-    raw_id_fields = ("user", "academy", "invoice", "plan_financing", "currency")
+@admin.register(CreditLedgerEntry)
+class CreditLedgerEntryAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "user",
+        "scope",
+        "entry_type",
+        "amount",
+        "plan_financing",
+        "subscription",
+        "source_invoice",
+        "created_at",
+    )
+    list_filter = ("scope", "entry_type", "plan_financing__academy")
+    search_fields = ("user__email", "user__first_name", "user__last_name", "plan_financing__id")
+    raw_id_fields = ("user", "plan_financing", "subscription", "source_invoice")
+    readonly_fields = ("created_at",)
 
 
 @admin.register(PlanFinancingTeam)

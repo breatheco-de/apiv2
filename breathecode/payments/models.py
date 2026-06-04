@@ -1812,6 +1812,10 @@ class Invoice(models.Model):
         REFUNDED = "REFUNDED", "Refunded"
         DISPUTED_AS_FRAUD = "DISPUTED_AS_FRAUD", "Disputed as fraud"
 
+    class InvoiceKind(models.TextChoices):
+        GENERAL = "GENERAL", "General"
+        MANUAL_DEPOSIT = "MANUAL_DEPOSIT", "Manual deposit"
+
     amount = models.FloatField(
         default=0, help_text="If amount is 0, transaction will not be sent to stripe or any other payment processor."
     )
@@ -1822,6 +1826,13 @@ class Invoice(models.Model):
     )
     status = models.CharField(
         max_length=18, choices=Status, default=Status.PENDING, db_index=True, help_text="Invoice status"
+    )
+    invoice_kind = models.CharField(
+        max_length=20,
+        choices=InvoiceKind.choices,
+        default=InvoiceKind.GENERAL,
+        db_index=True,
+        help_text="Business origin/classification for this invoice",
     )
 
     bag = models.ForeignKey("Bag", on_delete=models.CASCADE, help_text="Bag", related_name="invoices")
@@ -1877,6 +1888,12 @@ class Invoice(models.Model):
         blank=True,
         default=None,
         help_text="Breakdown of how the invoice amount is divided across plans, plan addons, and service items",
+    )
+    invoice_notes = models.TextField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Staff notes or payment context associated with this invoice.",
     )
 
     coinbase_charge_id = models.CharField(
@@ -1999,6 +2016,12 @@ class AbstractIOweYou(models.Model):
     status = models.CharField(max_length=13, choices=Status, default=Status.ACTIVE, help_text="Status", db_index=True)
     status_message = models.CharField(
         max_length=250, null=True, blank=True, default=None, help_text="Error message if status is ERROR"
+    )
+    last_status_change_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="When the status was last changed",
     )
 
     invoices = models.ManyToManyField(Invoice, blank=True, help_text="Invoices")
@@ -2268,6 +2291,14 @@ class AbstractIOweYou(models.Model):
         total = invoices.aggregate(total=Sum("amount"))["total"]
         return float(total) if total else 0.0
 
+    def _stamp_last_status_change_at(self, old_status: str | None, **kwargs) -> dict:
+        if old_status is None or old_status != self.status:
+            self.last_status_change_at = timezone.now()
+            update_fields = kwargs.get("update_fields")
+            if update_fields is not None:
+                kwargs["update_fields"] = list(set(update_fields) | {"last_status_change_at"})
+        return kwargs
+
     class Meta:
         abstract = True
 
@@ -2317,6 +2348,15 @@ class PlanFinancing(AbstractIOweYou):
         default=0, help_text="How many installments to collect and build the plan financing"
     )
 
+    installments_paid = models.PositiveIntegerField(
+        default=0,
+        help_text=(
+            "Number of billing cycles that have been fully closed, regardless of the payment method "
+            "(cash, Stripe, or internal credit). This is the single source of truth for installment "
+            "progress. plan_financing.invoices contains only real cash receipts."
+        ),
+    )
+
     initial_payment_amount = models.FloatField(
         null=True,
         blank=True,
@@ -2326,16 +2366,6 @@ class PlanFinancing(AbstractIOweYou):
             "(i.e. a negotiated split: upfront + future installments). Set this only when the first payment amount "
             "differs from the recurring installment amount. Keep it null for standard installment plans (even if the "
             "first installment is paid immediately) and for negotiated single-pay purchases."
-        ),
-    )
-    initial_payment_notes = models.CharField(
-        max_length=250,
-        null=True,
-        blank=True,
-        default=None,
-        help_text=(
-            "Staff justification/notes for negotiated payment terms. Used when staff agrees on a discounted "
-            "single-pay amount, or when staff negotiates an upfront amount plus future installments."
         ),
     )
     grace_period_duration = models.PositiveIntegerField(
@@ -2446,6 +2476,8 @@ class PlanFinancing(AbstractIOweYou):
         self.full_clean()
         on_create = self.pk is None
         old_instance = None if on_create else PlanFinancing.objects.get(pk=self.pk)
+        old_status = None if on_create else old_instance.status
+        kwargs = self._stamp_last_status_change_at(old_status, **kwargs)
 
         super().save(*args, **kwargs)
 
@@ -2603,53 +2635,116 @@ class PlanFinancingSeat(models.Model):
         return self.team
 
 
-class StudentDeposit(models.Model):
-    """Trace an initial or manual deposit made by a student."""
+class CreditLedgerEntry(models.Model):
+    """
+    Generic ledger of credit movements for any billable entity (PlanFinancing, Subscription, or global).
+
+    Each row is a signed monetary movement:
+    - Positive amount (CREDIT_ADDED): money received that does not close a full installment
+      (partial payment or overpayment surplus on an intermediate installment).
+    - Negative amount (CREDIT_CONSUMED): credit spent when an installment/charge is closed.
+
+    Overpayment on the last installment is rejected at the API level; no excess entry type is needed.
+
+    Scope rules:
+    - PLAN_FINANCING: credit applies only to the linked plan_financing.
+    - SUBSCRIPTION: credit applies only to the linked subscription (reserved for future use).
+    - GLOBAL: credit applies to any plan or subscription of the user (reserved for future use).
+
+    The current credit balance for a given scope is always computed as SUM(amount) from all
+    matching entries. There is no denormalised cache field — the ledger is the single source of truth.
+    """
 
     if TYPE_CHECKING:
-        objects: TypedManager["StudentDeposit"]
+        objects: TypedManager["CreditLedgerEntry"]
 
-    class Status(models.TextChoices):
-        HELD = "HELD", "Held"
-        APPLIED = "APPLIED", "Applied"
-        REFUNDED = "REFUNDED", "Refunded"
+    class EntryType(models.TextChoices):
+        CREDIT_ADDED = "CREDIT_ADDED", "Credit Added"
+        CREDIT_CONSUMED = "CREDIT_CONSUMED", "Credit Consumed"
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE, help_text="Student who made the deposit")
-    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, help_text="Academy that received the deposit")
-    invoice = models.OneToOneField(
-        Invoice,
+    class Scope(models.TextChoices):
+        PLAN_FINANCING = "PLAN_FINANCING", "Plan Financing"
+        SUBSCRIPTION = "SUBSCRIPTION", "Subscription"
+        GLOBAL = "GLOBAL", "Global"
+
+    user = models.ForeignKey(
+        User,
         on_delete=models.CASCADE,
-        related_name="student_deposit",
-        help_text="Invoice that records this deposit payment",
+        related_name="credit_entries",
+        help_text="User this credit movement belongs to",
+    )
+    scope = models.CharField(
+        max_length=16,
+        choices=Scope.choices,
+        db_index=True,
+        help_text="Scope that determines where this credit can be consumed",
     )
     plan_financing = models.ForeignKey(
         PlanFinancing,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        default=None,
+        related_name="credit_entries",
+        help_text="Plan financing this credit movement belongs to (when scope is PLAN_FINANCING)",
+    )
+    subscription = models.ForeignKey(
+        "payments.Subscription",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        default=None,
+        related_name="credit_entries",
+        help_text="Subscription this credit movement belongs to (when scope is SUBSCRIPTION)",
+    )
+    amount = models.FloatField(
+        help_text="Signed amount: positive when credit is added, negative when consumed",
+    )
+    entry_type = models.CharField(
+        max_length=16,
+        choices=EntryType.choices,
+        db_index=True,
+        help_text="Type of credit movement",
+    )
+    source_invoice = models.ForeignKey(
+        Invoice,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         default=None,
-        related_name="student_deposits",
-        help_text="Plan financing where this deposit was applied",
-    )
-    amount = models.FloatField(help_text="Deposit amount")
-    currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Deposit currency")
-    status = models.CharField(
-        max_length=8, choices=Status.choices, default=Status.HELD, db_index=True, help_text="Deposit status"
+        related_name="credit_entries",
+        help_text="Invoice that originated this credit movement (manual deposits, automatic adjustments, etc.)",
     )
     notes = models.CharField(
         max_length=250,
         null=True,
         blank=True,
         default=None,
-        help_text="Optional staff notes about this deposit",
+        help_text="Optional notes about this credit movement",
     )
-    applied_at = models.DateTimeField(null=True, blank=True, default=None, help_text="When the deposit was applied")
-    refunded_at = models.DateTimeField(null=True, blank=True, default=None, help_text="When the deposit was refunded")
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
-    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def clean(self) -> None:
+        if self.scope == self.Scope.PLAN_FINANCING and self.plan_financing_id is None:
+            raise forms.ValidationError(
+                translation("en", en="plan_financing is required when scope is PLAN_FINANCING")
+            )
+        if self.scope == self.Scope.SUBSCRIPTION and self.subscription_id is None:
+            raise forms.ValidationError(
+                translation("en", en="subscription is required when scope is SUBSCRIPTION")
+            )
 
     def __str__(self) -> str:
-        return f"{self.user.email} - {self.amount} {self.currency.code} ({self.status})"
+        if self.scope == self.Scope.PLAN_FINANCING:
+            target = f"PlanFinancing #{self.plan_financing_id}"
+        elif self.scope == self.Scope.SUBSCRIPTION:
+            target = f"Subscription #{self.subscription_id}"
+        else:
+            target = f"User #{self.user_id} (global)"
+        return f"{self.entry_type} {self.amount:+.2f} → {target}"
+
+
+# Backwards-compatible alias so existing imports keep working during the transition.
 
 
 class Subscription(AbstractIOweYou):
@@ -2732,6 +2827,8 @@ class Subscription(AbstractIOweYou):
         self.full_clean()
         on_create = self.pk is None
         old_instance = None if on_create else Subscription.objects.get(pk=self.pk)
+        old_status = None if on_create else old_instance.status
+        kwargs = self._stamp_last_status_change_at(old_status, **kwargs)
 
         super().save(*args, **kwargs)
 

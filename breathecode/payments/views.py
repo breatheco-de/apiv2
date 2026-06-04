@@ -32,6 +32,8 @@ from breathecode.payments.actions import (
     add_items_to_bag,
     apply_pricing_ratio,
     calculate_refund_breakdown,
+    _invoice_breakdown_has_line_items,
+    ensure_invoice_amount_breakdown,
     filter_consumables,
     filter_void_consumable_balance,
     get_amount,
@@ -52,6 +54,7 @@ from breathecode.payments.models import (
     Consumable,
     ConsumptionSession,
     Coupon,
+    CreditLedgerEntry,
     Currency,
     EventTypeSet,
     FinancialReputation,
@@ -94,6 +97,7 @@ from breathecode.payments.serializers import (
     GetFinancingOptionSerializer,
     GetInvoiceSerializer,
     GetInvoiceSmallSerializer,
+    GetUserCreditLedgerEntrySerializer,
     GetMentorshipServiceSetSerializer,
     GetMentorshipServiceSetSmallSerializer,
     GetPaymentMethod,
@@ -102,7 +106,6 @@ from breathecode.payments.serializers import (
     GetPlanSerializer,
     GetServiceItemWithFeaturesSerializer,
     GetServiceSerializer,
-    GetStudentDepositSerializer,
     GetSubscriptionSerializer,
     MentorshipServiceSetSerializer,
     PaymentMethodSerializer,
@@ -353,6 +356,107 @@ class AcademyPlanView(APIView):
         plan.save()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademyPlanSyncFinancingExpirationView(APIView):
+    """
+    POST: Recalculate plan_expires_at for all PlanFinancings linked to the given plan
+    based on the plan's current time_of_life / time_of_life_unit.
+
+    Use this endpoint to fix users whose consumables stopped renewing because an admin
+    changed the plan's time_of_life / time_of_life_unit after PlanFinancings were already
+    created.
+
+    For each affected PlanFinancing the endpoint will:
+      1. Recalculate plan_expires_at = first_invoice.paid_at + delta(time_of_life, time_of_life_unit).
+      2. If the financing was wrongly marked EXPIRED and the new expiration is in the future,
+         reactivate it to ACTIVE.
+      3. Enqueue build_service_stock_scheduler_from_plan_financing so consumables are rebuilt.
+
+    Required permission: crud_subscription
+    """
+
+    @capable_of("crud_subscription")
+    def post(self, request, plan_id=None, plan_slug=None, academy_id=None):
+        lang = get_user_language(request)
+
+        plan = (
+            Plan.objects.filter(
+                Q(id=plan_id) | Q(slug=plan_slug, slug__isnull=False),
+                Q(owner__id=academy_id) | Q(owner__isnull=True),
+            )
+            .exclude(status="DELETED")
+            .first()
+        )
+        if not plan:
+            raise ValidationException(
+                translation(lang, en="Plan not found", es="Plan no existe", slug="not-found"),
+                code=404,
+            )
+
+        if not plan.time_of_life or not plan.time_of_life_unit:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Plan does not have time_of_life and time_of_life_unit set, cannot sync expiration",
+                    es="El plan no tiene time_of_life y time_of_life_unit configurados, no se puede sincronizar la expiración",
+                    slug="plan-missing-time-of-life",
+                ),
+                code=400,
+            )
+
+        delta = actions.calculate_relative_delta(plan.time_of_life, plan.time_of_life_unit)
+        utc_now = timezone.now()
+
+        exclude_statuses = [
+            PlanFinancing.Status.CANCELLED,
+            PlanFinancing.Status.DEPRECATED,
+        ]
+
+        financings = PlanFinancing.objects.filter(plans=plan).exclude(status__in=exclude_statuses)
+
+        updated = []
+        reactivated = []
+        charged = []
+        consumables_renewed = []
+
+        for financing in financings:
+            first_invoice = financing.invoices.order_by("paid_at").first()
+            if not first_invoice or not first_invoice.paid_at:
+                continue
+
+            new_plan_expires_at = first_invoice.paid_at + delta
+
+            was_expired = financing.status == PlanFinancing.Status.EXPIRED
+            had_wrong_expires_at = (
+                financing.plan_expires_at is not None and financing.plan_expires_at < utc_now
+            )
+            financing.plan_expires_at = new_plan_expires_at
+
+            if was_expired and new_plan_expires_at > utc_now:
+                financing.status = PlanFinancing.Status.ACTIVE
+                reactivated.append(financing.id)
+
+            financing.save()
+            updated.append(financing.id)
+
+            if (was_expired or had_wrong_expires_at) and new_plan_expires_at > utc_now:
+                if financing.next_payment_at <= utc_now:
+                    tasks.charge_plan_financing.delay(financing.id)
+                    charged.append(financing.id)
+                else:
+                    tasks.renew_plan_financing_consumables.delay(financing.id)
+                    consumables_renewed.append(financing.id)
+
+        return Response(
+            {
+                "updated_financings": updated,
+                "reactivated_financings": reactivated,
+                "enqueued_for_charge": charged,
+                "enqueued_for_consumable_renewal": consumables_renewed,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class AcademyFinancingOptionView(APIView):
@@ -2656,6 +2760,31 @@ class AcademyPlanFinancingView(APIView):
         return Response({"detail": "Plan financing updated successfully"}, status=status.HTTP_200_OK)
 
 
+class AcademyPlanFinancingPaymentScheduleView(APIView):
+    @capable_of("read_invoice")
+    def get(self, request, financing_id, academy_id=None):
+        lang = get_user_language(request)
+        plan_financing = (
+            PlanFinancing.objects.select_related("currency")
+            .prefetch_related("invoices", "credit_entries", "plans")
+            .filter(id=financing_id, academy_id=academy_id)
+            .first()
+        )
+        if not plan_financing:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Plan financing not found",
+                    es="No existe el plan de financiamiento",
+                    slug="not-found",
+                ),
+                code=404,
+            )
+
+        payload = actions.get_plan_financing_payment_schedule(plan_financing, lang=lang)
+        return Response(payload, status=status.HTTP_200_OK)
+
+
 class MeInvoiceView(APIView):
     extensions = APIViewExtensions(sort="-id", paginate=True)
 
@@ -2879,6 +3008,56 @@ class AcademyInvoiceView(APIView):
         return handler.response(serializer.data)
 
 
+class AcademyUserCreditLedgerView(APIView):
+    extensions = APIViewExtensions(sort="-created_at", paginate=True)
+
+    @capable_of("read_invoice")
+    def get(self, request, user_id, academy_id=None):
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+
+        user = User.objects.filter(id=user_id).first()
+        if not user:
+            raise ValidationException(
+                translation(lang, en="User not found", es="Usuario no encontrado", slug="user-not-found"),
+                code=404,
+            )
+
+        items = CreditLedgerEntry.objects.select_related(
+            "user",
+            "plan_financing",
+            "source_invoice",
+            "subscription",
+        ).prefetch_related("plan_financing__plans")
+        items = items.filter(user_id=user_id)
+
+        # Keep academy scope for academy endpoints.
+        items = items.filter(
+            Q(plan_financing__academy_id=academy_id)
+            | Q(subscription__academy_id=academy_id)
+            | Q(source_invoice__academy_id=academy_id)
+        ).distinct()
+
+        if scope := request.GET.get("scope"):
+            items = items.filter(scope=scope)
+
+        if financing_id := request.GET.get("plan_financing"):
+            items = items.filter(plan_financing_id=financing_id)
+
+        if invoice_id := request.GET.get("invoice"):
+            items = items.filter(source_invoice_id=invoice_id)
+
+        date_start, date_end = parse_date_range_from_request(request, lang)
+        if date_start is not None:
+            items = items.filter(created_at__gte=date_start)
+        if date_end is not None:
+            items = items.filter(created_at__lte=date_end)
+
+        items = handler.queryset(items)
+        serializer = GetUserCreditLedgerEntrySerializer(items, many=True)
+        return handler.response(serializer.data)
+
+
 def _parse_and_validate_refund_request(request, invoice: Invoice, lang: str) -> tuple[float, dict[str, float], str, dict[str, Any] | None]:
     already_refunded = invoice.amount_refunded or 0
     available_to_refund = invoice.amount - already_refunded
@@ -3015,8 +3194,11 @@ def _parse_and_validate_refund_request(request, invoice: Invoice, lang: str) -> 
             code=400,
         )
 
+    ensure_invoice_amount_breakdown(invoice, lang)
+
     refund_breakdown = None
-    if invoice.amount_breakdown and refund_amount is not None:
+    breakdown = invoice.amount_breakdown or {}
+    if _invoice_breakdown_has_line_items(breakdown) and refund_amount is not None:
         refund_breakdown = calculate_refund_breakdown(invoice, refund_amount, items_to_refund, lang=lang)
 
     return refund_amount, items_to_refund, reason, refund_breakdown
@@ -6376,9 +6558,15 @@ class AcademyGrantConsumableView(APIView):
 
 class AcademyStudentDepositView(APIView):
     """
-    Academy-only POST to register a manual deposit and apply it to a plan financing installment.
+    Academy-only POST to register a manual payment and apply it toward a plan financing installment.
 
-    ``amount`` must not exceed ``plan_financing.monthly_price`` when that value is greater than zero.
+    ``amount`` can be any positive value:
+    - Equal to monthly_price: closes the current installment.
+    - Greater than monthly_price: closes the installment and records the surplus as credit.
+    - Less than monthly_price: records partial credit; the installment is NOT closed and a warning
+      is returned indicating that the full amount must be paid before next_payment_at.
+
+    On the last installment, overpayment is rejected with a validation error.
     """
 
     @capable_of("crud_subscription")
@@ -6386,13 +6574,31 @@ class AcademyStudentDepositView(APIView):
         lang = get_user_language(request)
         proof = actions.validate_and_create_proof_of_payment(request, request.user, academy_id, lang)
         try:
-            deposit = actions.register_student_deposit(request, proof, academy_id, lang)
+            result = actions.register_student_deposit(request, proof, academy_id, lang)
         except Exception as e:
             proof.delete()
             raise e
 
-        serializer = GetStudentDepositSerializer(deposit, many=False)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        alloc = result.allocation
+        credit_entry_data = None
+        if alloc.credit_entry_type is not None:
+            credit_entry_data = {
+                "amount": alloc.credit_entry_amount,
+                "entry_type": alloc.credit_entry_type,
+            }
+
+        response_data = {
+            "invoice": GetInvoiceSmallSerializer(result.invoice, many=False).data,
+            "installment_applied": alloc.installment_applied,
+            "credit_entry": credit_entry_data,
+            "credit_entries": alloc.credit_entries,
+            "credit_added": alloc.credit_added,
+            "credit_consumed": alloc.credit_consumed,
+            "credit_balance": result.credit_balance,
+            "remaining_installments": result.remaining_installments,
+            "warning": result.warning,
+        }
+        return Response(response_data, status=status.HTTP_201_CREATED)
 
 
 class CurrencyView(APIView):

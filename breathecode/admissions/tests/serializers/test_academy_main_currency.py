@@ -175,3 +175,39 @@ def test_academy_post_serializer_main_currency_invalid_code(database: capy.Datab
     with pytest.raises(ValidationException, match="currency-not-found"):
         serializer.is_valid(raise_exception=True)
 
+
+def test_academy_serializer_default_plan_global_plan(database: capy.Database):
+    model = database.create(academy=1, plan=1)
+
+    serializer = AcademySerializer(model.academy, data={"default_plan": model.plan.id}, partial=True)
+
+    assert serializer.is_valid()
+    academy = serializer.save()
+
+    assert academy.default_plan.id == model.plan.id
+
+
+def test_academy_serializer_default_plan_owned_by_same_academy(database: capy.Database):
+    model = database.create(academy=1, plan=1)
+    model.plan.owner = model.academy
+    model.plan.save()
+
+    serializer = AcademySerializer(model.academy, data={"default_plan": model.plan.id}, partial=True)
+
+    assert serializer.is_valid()
+    academy = serializer.save()
+
+    assert academy.default_plan.id == model.plan.id
+
+
+def test_academy_serializer_default_plan_owned_by_other_academy(database: capy.Database):
+    model = database.create(academy=2, plan=1)
+    academy, other_academy = model.academy
+    model.plan.owner = other_academy
+    model.plan.save()
+
+    serializer = AcademySerializer(academy, data={"default_plan": model.plan.id}, partial=True)
+
+    with pytest.raises(ValidationException, match="invalid-default-plan"):
+        serializer.is_valid(raise_exception=True)
+

@@ -36,6 +36,7 @@ from .models import (
     Consumable,
     ConsumptionSession,
     Coupon,
+    CreditLedgerEntry,
     Invoice,
     PaymentMethod,
     Plan,
@@ -48,7 +49,6 @@ from .models import (
     ProofOfPayment,
     Service,
     ServiceStockScheduler,
-    StudentDeposit,
     Subscription,
     SubscriptionBillingTeam,
     SubscriptionSeat,
@@ -257,6 +257,11 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
     if "user" not in extras:
         extras["user"] = user
 
+    if scheduler.consumables.filter(valid_until=scheduler.valid_until).exists():
+        raise AbortTask(
+            f"Consumable with valid_until {scheduler.valid_until} already exists for scheduler {scheduler.id}, skipping to avoid duplicate"
+        )
+
     consumable = Consumable(
         service_item=service_item,
         unit_type=service_item.unit_type,
@@ -377,13 +382,13 @@ def renew_plan_financing_consumables(
     ]:
         raise AbortTask(f"The plan financing {plan_financing.id} is cancelled, deprecated or expired")
 
-    # Check if plan financing has deleted or discontinued plans
-    if plan_financing.plans.filter(status__in=[Plan.Status.DISCONTINUED, Plan.Status.DELETED]).exists():
-        plan_financing.status = PlanFinancing.Status.DEPRECATED
-        plan_financing.save()
+    # A discontinued catalog plan must not invalidate an already-signed financing contract.
+    # Deleted plans stop consumable renewals, but financing status must not be forced to DEPRECATED
+    # because the model explicitly forbids that status.
+    if plan_financing.plans.filter(status=Plan.Status.DELETED).exists():
         raise AbortTask(
-            f"The plan financing {plan_financing.id} has deleted/discontinued plans, "
-            "marked as deprecated, consumables will not be renewed"
+            f"The plan financing {plan_financing.id} has deleted plans, "
+            "consumables will not be renewed"
         )
 
     utc_now = timezone.now()
@@ -1103,6 +1108,9 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
             if plan_financing.status in statuses and (
                 plan_financing.plan_expires_at < utc_now and plan_financing.valid_until < utc_now
             ):
+                plan_financing.status = PlanFinancing.Status.EXPIRED
+                plan_financing.status_message = "Plan financing has reached its expiration date"
+                plan_financing.save()
                 raise AbortTask(f"PlanFinancing with id {plan_financing_id} is over")
 
             if plan_financing.next_payment_at > utc_now:
@@ -1112,16 +1120,68 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
             payment_settings = AcademyPaymentSettings.objects.filter(academy=plan_financing.academy).first()
             early_renewal_window_days = payment_settings.early_renewal_window_days if payment_settings else 2
-            if early_renewal_window_days == 0:
-                cooldown_days = 5
-            else:
-                cooldown_days = early_renewal_window_days
 
-            # Check if plan financing has deleted or discontinued plans
-            if plan_financing.plans.filter(status__in=[Plan.Status.DISCONTINUED, Plan.Status.DELETED]).exists():
-                plan_financing.status = PlanFinancing.Status.DEPRECATED
-                plan_financing.save()
+            # Inform about discontinued catalog plans without stopping contractual financing charges.
+            if plan_financing.plans.filter(status=Plan.Status.DISCONTINUED).exists():
+                notification_cache_key = f"plan-financing-discontinued-notified:{plan_financing.id}"
+                if not cache.get(notification_cache_key):
+                    plan = plan_financing.plans.first()
+                    link = None
 
+                    if plan and (offer := PlanOffer.objects.filter(original_plan=plan).first()):
+                        link = f"{get_app_url()}/checkout?plan={offer.suggested_plan.slug}"
+
+                    subject = translation(
+                        settings.lang,
+                        en=f"Your 4Geeks plan financing to {plan.slug if plan else 'plan'} has been discontinued",
+                        es=f"Tu financiamiento 4Geeks a {plan.slug if plan else 'plan'} ha sido descontinuado",
+                    )
+
+                    obj = {"SUBJECT": subject}
+
+                    if link:
+                        button = translation(
+                            settings.lang,
+                            en="See suggested plan",
+                            es="Ver plan sugerido",
+                        )
+                        obj["LINK"] = link
+                        obj["BUTTON"] = button
+
+                        message = translation(
+                            settings.lang,
+                            en="Your plan financing contract remains active and charges will continue as scheduled. This catalog plan has been discontinued and may be removed in the future, so we are sharing suggested alternatives.",
+                            es="Tu contrato de financiamiento sigue activo y los cobros continuaran segun lo programado. Este plan del catalogo fue descontinuado y podria eliminarse en el futuro, por eso te compartimos alternativas sugeridas.",
+                        )
+                    else:
+                        message = translation(
+                            settings.lang,
+                            en="Your plan financing contract remains active and charges will continue as scheduled. This catalog plan has been discontinued and may be removed in the future.",
+                            es="Tu contrato de financiamiento sigue activo y los cobros continuaran segun lo programado. Este plan del catalogo fue descontinuado y podria eliminarse en el futuro.",
+                        )
+
+                    obj["MESSAGE"] = message
+
+                    try:
+                        notify_actions.send_email_message(
+                            "message",
+                            plan_financing.user.email,
+                            obj,
+                            academy=plan_financing.academy,
+                        )
+                        cache.set(notification_cache_key, True, 60 * 60 * 24 * 365)
+                    except Exception as e:
+                        logger.error(
+                            "Failed sending discontinued plan financing warning for %s: %s",
+                            plan_financing.id,
+                            str(e),
+                            exc_info=True,
+                        )
+
+            # A discontinued catalog plan must not invalidate an already-signed financing contract.
+            # Deleted plans stop future charges, but financing status must not be forced to DEPRECATED
+            # because the model explicitly forbids that status.
+            if plan_financing.plans.filter(status=Plan.Status.DELETED).exists():
                 # Send notification to user
                 plan = plan_financing.plans.first()
                 link = None
@@ -1131,8 +1191,8 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
                 subject = translation(
                     settings.lang,
-                    en=f"Your 4Geeks plan financing to {plan.slug if plan else 'plan'} has been discontinued",
-                    es=f"Tu financiamiento 4Geeks a {plan.slug if plan else 'plan'} ha sido descontinuado",
+                    en=f"Your 4Geeks plan financing to {plan.slug if plan else 'plan'} is no longer available",
+                    es=f"Tu financiamiento 4Geeks a {plan.slug if plan else 'plan'} ya no esta disponible",
                 )
 
                 obj = {
@@ -1150,29 +1210,36 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
                     message = translation(
                         settings.lang,
-                        en="We regret to inform you that your 4Geeks plan financing has been discontinued. Please check our suggested plans for alternatives.",
-                        es="Lamentamos informarte que tu financiamiento 4Geeks ha sido descontinuado. Por favor, revisa nuestros planes sugeridos para alternativas.",
+                        en="We regret to inform you that your 4Geeks plan financing is no longer available. Please check our suggested plans for alternatives.",
+                        es="Lamentamos informarte que tu financiamiento 4Geeks ya no esta disponible. Por favor, revisa nuestros planes sugeridos para alternativas.",
                     )
                 else:
                     message = translation(
                         settings.lang,
-                        en="We regret to inform you that your 4Geeks plan financing has been discontinued.",
-                        es="Lamentamos informarte que tu financiamiento 4Geeks ha sido descontinuado.",
+                        en="We regret to inform you that your 4Geeks plan financing is no longer available.",
+                        es="Lamentamos informarte que tu financiamiento 4Geeks ya no esta disponible.",
                     )
 
                 obj["MESSAGE"] = message
 
-                notify_actions.send_email_message(
-                    "message",
-                    plan_financing.user.email,
-                    obj,
-                    academy=plan_financing.academy,
-                )
-                raise AbortTask(f"PlanFinancing with id {plan_financing.id} has deleted/discontinued plans")
+                try:
+                    notify_actions.send_email_message(
+                        "message",
+                        plan_financing.user.email,
+                        obj,
+                        academy=plan_financing.academy,
+                    )
+                except Exception as e:
+                    logger.error(
+                        "Failed sending deleted plan financing notification for %s: %s",
+                        plan_financing.id,
+                        str(e),
+                        exc_info=True,
+                    )
+                raise AbortTask(f"PlanFinancing with id {plan_financing.id} has deleted plans")
 
             invoices = plan_financing.invoices.filter(bag__was_delivered=True).order_by("created_at")
             first_invoice = invoices.first()
-            last_invoice = invoices.filter(bag__was_delivered=True).last()
 
             if first_invoice is None:
                 msg = f"No invoices found for PlanFinancing with id {plan_financing_id}"
@@ -1182,9 +1249,10 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
                 raise AbortTask(msg)
 
-            if plan_financing.initial_payment_amount is not None:
-                amount = plan_financing.monthly_price
-            else:
+            # Contract source of truth: monthly_price.
+            amount = float(plan_financing.monthly_price or 0)
+            if amount <= 0:
+                # Legacy fallback for old records where monthly_price was not reliably populated.
                 # Derive the display price per installment from the first invoice amount, but exclude reward coupons.
                 amount = first_invoice.amount
                 coupons = first_invoice.bag.coupons.all() if first_invoice.bag else []
@@ -1209,119 +1277,151 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
             installments = plan_financing.how_many_installments
 
-            if utc_now - last_invoice.paid_at < timedelta(days=cooldown_days):
-                raise AbortTask(f"PlanFinancing with id {plan_financing_id} was paid earlier")
-
-            if plan_financing.initial_payment_amount is not None:
-                paid_future_installments = max(invoices.count() - 1, 0)
-                remaining_installments = installments - paid_future_installments
-            else:
-                remaining_installments = installments - invoices.count()
+            # installments_paid is the authoritative counter of closed billing cycles.
+            remaining_installments = installments - plan_financing.installments_paid
 
             if remaining_installments > 0:
-                # Look for existing payment that hasn't been delivered yet
-                invoice = (
-                    plan_financing.invoices.filter(paid_at__lte=utc_now, status="FULFILLED", bag__was_delivered=False)
-                    .order_by("-paid_at")
-                    .first()
-                )
+                # ── Credit-first: consume CreditLedgerEntry balance before hitting Stripe ────────
+                credit_balance = actions.get_credit_balance(plan_financing)
+                amount_owed = float(amount or 0)
+                _credit_to_consume = 0.0
+                credit_covered = False
 
-                if invoice:
-                    bag = invoice.bag
+                if credit_balance >= amount_owed - 1e-9 and amount_owed > 0:
+                    # Credit covers the full installment.
+                    # No new invoice — the cash was already documented when the user deposited.
+                    # We record the ledger consumption and increment the authoritative counter.
+                    CreditLedgerEntry.objects.create(
+                        user=plan_financing.user,
+                        scope=CreditLedgerEntry.Scope.PLAN_FINANCING,
+                        plan_financing=plan_financing,
+                        amount=-amount_owed,
+                        entry_type=CreditLedgerEntry.EntryType.CREDIT_CONSUMED,
+                        notes="Automatic charge covered by accumulated credit",
+                    )
+                    plan_financing.installments_paid += 1
+                    credit_covered = True
 
                 else:
-                    if plan_financing.externally_managed:
-                        message = translation(
-                            settings.lang,
-                            en="Please make your payment in your academy or use another payment method",
-                            es="Por favor realiza tu pago en tu academia o utiliza otro método de pago",
-                        )
+                    if credit_balance > 1e-9 and amount_owed > 0:
+                        # Partial credit — reduce the Stripe charge by the available credit.
+                        _credit_to_consume = credit_balance
+                        amount = amount_owed - credit_balance
 
-                        button = translation(
-                            settings.lang,
-                            en="Renew with another method",
-                            es="Renovar con otro método",
-                        )
-                        alert_payment_issue(message, button)
+                    # Look for existing payment that hasn't been delivered yet
+                    invoice = (
+                        plan_financing.invoices.filter(paid_at__lte=utc_now, status="FULFILLED", bag__was_delivered=False)
+                        .order_by("-paid_at")
+                        .first()
+                    )
 
-                        if plan_financing.status not in no_charge_statuses:
-                            manager = schedule_task(charge_plan_financing, "1d")
-                            if not manager.exists(plan_financing.id):
-                                manager.call(plan_financing.id)
+                    if invoice:
+                        bag = invoice.bag
 
-                        raise AbortTask(f"Payment to PlanFinancing {plan_financing_id} failed")
                     else:
-                        try:
-                            bag = actions.get_bag_from_plan_financing(plan_financing, settings)
-                        except Exception as e:
-                            plan_financing.status = "ERROR"
-                            plan_financing.status_message = str(e)
-                            plan_financing.save()
+                        if plan_financing.externally_managed:
+                            message = translation(
+                                settings.lang,
+                                en="Please make your payment in your academy or use another payment method",
+                                es="Por favor realiza tu pago en tu academia o utiliza otro método de pago",
+                            )
+
+                            button = translation(
+                                settings.lang,
+                                en="Renew with another method",
+                                es="Renovar con otro método",
+                            )
+                            alert_payment_issue(message, button)
 
                             if plan_financing.status not in no_charge_statuses:
                                 manager = schedule_task(charge_plan_financing, "1d")
                                 if not manager.exists(plan_financing.id):
                                     manager.call(plan_financing.id)
 
-                            raise AbortTask(f"Error getting bag from plan financing {plan_financing_id}: {e}")
-
-                        try:
-                            s = Stripe(academy=plan_financing.academy)
-                            s.set_language(settings.lang)
-                            invoice = s.pay(plan_financing.user, bag, amount, currency=bag.currency)
-
-                        except Exception:
-                            message = translation(
-                                settings.lang,
-                                en="Your payment with credit card was declined, please update your card or use another payment method",
-                                es="Tu pago con tarjeta de crédito fue rechazado, por favor update tu tarjeta o utiliza otro método de pago",
-                            )
-
-                            button = translation(
-                                settings.lang,
-                                en="Change payment method",
-                                es="Cambiar método de pago",
-                            )
-                            alert_payment_issue(message, button)
-
-                            manager = schedule_task(charge_plan_financing, "1d")
-                            if not manager.exists(plan_financing.id):
-                                manager.call(plan_financing.id)
-
                             raise AbortTask(f"Payment to PlanFinancing {plan_financing_id} failed")
+                        else:
+                            try:
+                                bag = actions.get_bag_from_plan_financing(plan_financing, settings)
+                            except Exception as e:
+                                plan_financing.status = "ERROR"
+                                plan_financing.status_message = str(e)
+                                plan_financing.save()
+
+                                if plan_financing.status not in no_charge_statuses:
+                                    manager = schedule_task(charge_plan_financing, "1d")
+                                    if not manager.exists(plan_financing.id):
+                                        manager.call(plan_financing.id)
+
+                                raise AbortTask(f"Error getting bag from plan financing {plan_financing_id}: {e}")
+
+                            try:
+                                s = Stripe(academy=plan_financing.academy)
+                                s.set_language(settings.lang)
+                                invoice = s.pay(plan_financing.user, bag, amount, currency=bag.currency)
+
+                            except Exception:
+                                message = translation(
+                                    settings.lang,
+                                    en="Your payment with credit card was declined, please update your card or use another payment method",
+                                    es="Tu pago con tarjeta de crédito fue rechazado, por favor update tu tarjeta o utiliza otro método de pago",
+                                )
+
+                                button = translation(
+                                    settings.lang,
+                                    en="Change payment method",
+                                    es="Cambiar método de pago",
+                                )
+                                alert_payment_issue(message, button)
+
+                                manager = schedule_task(charge_plan_financing, "1d")
+                                if not manager.exists(plan_financing.id):
+                                    manager.call(plan_financing.id)
+
+                                raise AbortTask(f"Payment to PlanFinancing {plan_financing_id} failed")
+
+                    # If partial credit was applied alongside a successful Stripe charge, record it.
+                    if _credit_to_consume > 1e-9:
+                        CreditLedgerEntry.objects.create(
+                            user=plan_financing.user,
+                            scope=CreditLedgerEntry.Scope.PLAN_FINANCING,
+                            plan_financing=plan_financing,
+                            amount=-_credit_to_consume,
+                            entry_type=CreditLedgerEntry.EntryType.CREDIT_CONSUMED,
+                            notes="Partial credit applied to reduce automatic charge",
+                        )
+
+                    plan_financing.invoices.add(invoice)
+                    plan_financing.installments_paid += 1
+
+                    if bag:
+                        bag.was_delivered = True
+                        bag.save()
+
+                    notify_actions.send_email_message(
+                        "message",
+                        invoice.user.email,
+                        {
+                            "SUBJECT": translation(
+                                settings.lang,
+                                en="Your installment at 4Geeks was successfully charged",
+                                es="Tu cuota en 4Geeks fue cobrada exitosamente",
+                            ),
+                            "MESSAGE": translation(
+                                settings.lang,
+                                en=f"The amount was {invoice.currency.format_price(invoice.amount)}",
+                                es=f"El monto fue {invoice.currency.format_price(invoice.amount)}",
+                            ),
+                            "BUTTON": translation(settings.lang, en="See the invoice", es="Ver la factura"),
+                            "LINK": f"{get_app_url()}/paymentmethod",
+                        },
+                        academy=plan_financing.academy,
+                    )
+
+                # Re-derive remaining after incrementing installments_paid.
+                remaining_installments = installments - plan_financing.installments_paid
 
                 if utc_now > plan_financing.valid_until:
-                    remaining_installments -= 1
                     plan_financing.valid_until = utc_now + relativedelta(months=remaining_installments)
-
-                elif remaining_installments > 0:
-                    remaining_installments -= 1
-
-                plan_financing.invoices.add(invoice)
-
-                value = invoice.currency.format_price(invoice.amount)
-
-                subject = translation(
-                    settings.lang,
-                    en="Your installment at 4Geeks was successfully charged",
-                    es="Tu cuota en 4Geeks fue cobrada exitosamente",
-                )
-
-                message = translation(settings.lang, en=f"The amount was {value}", es=f"El monto fue {value}")
-
-                button = translation(settings.lang, en="See the invoice", es="Ver la factura")
-
-                notify_actions.send_email_message(
-                    "message",
-                    invoice.user.email,
-                    {
-                        "SUBJECT": subject,
-                        "MESSAGE": message,
-                        "BUTTON": button,
-                        "LINK": f"{get_app_url()}/paymentmethod",
-                    },
-                    academy=plan_financing.academy,
-                )
 
             delta = relativedelta(months=1)
 
@@ -1332,11 +1432,6 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
             plan_financing.status = "ACTIVE" if remaining_installments > 0 else "FULLY_PAID"
             plan_financing.status_message = None
             plan_financing.save()
-
-            # if this charge but the client paid all its installments, there hasn't been a new bag created
-            if bag:
-                bag.was_delivered = True
-                bag.save()
 
             renew_plan_financing_consumables.delay(plan_financing.id)
 
@@ -1831,8 +1926,13 @@ def build_plan_financing(
     if not (invoice := Invoice.objects.filter(id=invoice_id, status="FULFILLED").first()):
         raise RetryTask(f"Invoice with id {invoice_id} not found")
 
-    if not is_free and not invoice.amount:
+    zero_initial_payment = initial_payment_amount is not None and principal_amount is not None
+    if not is_free and not invoice.amount and not zero_initial_payment:
         raise AbortTask(f"An invoice without amount is prohibited (id: {invoice_id})")
+
+    if initial_payment_notes is not None:
+        invoice.invoice_notes = initial_payment_notes
+        invoice.save(update_fields=["invoice_notes"])
 
     utc_now = timezone.now()
     months = bag.how_many_installments
@@ -1882,9 +1982,12 @@ def build_plan_financing(
     # Must use next_payment_at (includes grace) so valid_until shifts with grace; do not anchor only to paid_at.
     valid_until = next_payment_at + relativedelta(months=max(months - 1, 0))
 
+    initial_installments_paid = 0 if initial_payment_amount is not None else 1
+
     financing = PlanFinancing.objects.create(
         user=bag.user,
         how_many_installments=bag.how_many_installments,
+        installments_paid=initial_installments_paid,
         next_payment_at=next_payment_at,
         academy=bag.academy,
         selected_cohort_set=cohort_set,
@@ -1894,7 +1997,6 @@ def build_plan_financing(
         plan_expires_at=invoice.paid_at + delta,
         monthly_price=monthly_price,
         initial_payment_amount=initial_payment_amount,
-        initial_payment_notes=initial_payment_notes,
         grace_period_duration=grace_period_duration,
         grace_period_duration_unit=grace_period_duration_unit,
         status="ACTIVE",
@@ -1927,20 +2029,9 @@ def build_plan_financing(
     financing.save()
     financing.invoices.add(invoice)
 
-    if initial_payment_amount is not None:
-        StudentDeposit.objects.get_or_create(
-            invoice=invoice,
-            defaults={
-                "user": bag.user,
-                "academy": bag.academy,
-                "plan_financing": financing,
-                "amount": initial_payment_amount,
-                "currency": invoice.currency,
-                "status": StudentDeposit.Status.APPLIED,
-                "notes": initial_payment_notes,
-                "applied_at": timezone.now(),
-            },
-        )
+    if initial_payment_amount is not None and invoice.invoice_kind != Invoice.InvoiceKind.MANUAL_DEPOSIT:
+        invoice.invoice_kind = Invoice.InvoiceKind.MANUAL_DEPOSIT
+        invoice.save(update_fields=["invoice_kind"])
 
     bag.was_delivered = True
     bag.save()

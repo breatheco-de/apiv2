@@ -17,6 +17,7 @@ from breathecode.payments.models import (
     Currency,
     EventTypeSet,
     FinancingOption,
+    CreditLedgerEntry,
     MentorshipServiceSet,
     PaymentMethod,
     Plan,
@@ -26,7 +27,6 @@ from breathecode.payments.models import (
     Service,
     ServiceItem,
     ServiceItemFeature,
-    StudentDeposit,
 )
 from breathecode.utils import serializers, serpy
 
@@ -630,6 +630,8 @@ class GetInvoiceSmallSerializer(serpy.Serializer):
     currency = GetCurrencySmallSerializer(many=False)
     paid_at = serpy.Field()
     status = serpy.Field()
+    invoice_kind = serpy.Field()
+    invoice_notes = serpy.Field()
     user = GetUserSmallSerializer(many=False)
     standalone_consumables = serpy.MethodField()
     payment_method = GetPaymentMethodSmallSerializer(required=False, many=False)
@@ -1053,20 +1055,43 @@ class CreditNoteSerializer(serpy.Serializer):
             return []
 
 
-class GetStudentDepositSerializer(serpy.Serializer):
+class CreditLedgerEntrySerializer(serpy.Serializer):
     id = serpy.Field()
+    scope = serpy.Field()
     amount = serpy.Field()
-    currency = GetCurrencySmallSerializer(many=False)
-    status = serpy.Field()
+    entry_type = serpy.Field()
     notes = serpy.Field()
-    applied_at = serpy.Field()
-    refunded_at = serpy.Field()
     created_at = serpy.Field()
-    updated_at = serpy.Field()
-    invoice_id = serpy.Field()
+    user_id = serpy.Field()
     plan_financing_id = serpy.Field()
+    subscription_id = serpy.Field()
+    source_invoice_id = serpy.Field()
+
+
+class GetUserCreditLedgerEntrySerializer(CreditLedgerEntrySerializer):
     user = GetUserSmallSerializer(many=False)
-    academy = GetAcademySmallSerializer(many=False)
+    source_invoice = GetInvoiceSmallSerializer(many=False, required=False)
+    plan_financing = serpy.MethodField()
+    plans = serpy.MethodField()
+
+    def get_plan_financing(self, obj):
+        if not obj.plan_financing:
+            return None
+        return {
+            "id": obj.plan_financing.id,
+            "status": obj.plan_financing.status,
+            "how_many_installments": obj.plan_financing.how_many_installments,
+            "installments_paid": obj.plan_financing.installments_paid,
+            "next_payment_at": obj.plan_financing.next_payment_at,
+        }
+
+    def get_plans(self, obj):
+        if not obj.plan_financing:
+            return []
+        return GetPlanSmallTinySerializer(obj.plan_financing.plans.all(), many=True).data
+
+
+# Backwards-compatible alias.
 
 
 class GetInvoiceSerializer(GetInvoiceSmallSerializer):
@@ -1079,14 +1104,15 @@ class GetInvoiceSerializer(GetInvoiceSmallSerializer):
     bag = GetBagSerializer(many=False)
 
     amount_refunded = serpy.Field()
+    stripe_id = serpy.Field()
     refund_stripe_id = serpy.Field()
     refunded_at = serpy.Field()
     amount_breakdown = serpy.Field()
     credit_notes = serpy.MethodField()
+    credit_entries = serpy.MethodField()
     standalone_consumables = serpy.MethodField()
     payment_method = serpy.MethodField()
     proof = serpy.MethodField()
-    student_deposit = serpy.MethodField()
 
     def get_credit_notes(self, obj):
         import logging
@@ -1115,6 +1141,9 @@ class GetInvoiceSerializer(GetInvoiceSmallSerializer):
         consumables = list(consumables_qs)
         return GetConsumableForInvoiceSerializer(consumables, many=True).data
 
+    def get_credit_entries(self, obj):
+        return CreditLedgerEntrySerializer(obj.credit_entries.order_by("created_at"), many=True).data
+
     def get_payment_method(self, obj):
         if obj.payment_method_id and obj.payment_method:
             return GetPaymentMethod(obj.payment_method, many=False).data
@@ -1124,13 +1153,6 @@ class GetInvoiceSerializer(GetInvoiceSmallSerializer):
         if getattr(obj, "proof_id", None) and getattr(obj, "proof", None):
             return GetProofOfPaymentSerializer(obj.proof, many=False).data
         return None
-
-    def get_student_deposit(self, obj):
-        try:
-            return GetStudentDepositSerializer(obj.student_deposit, many=False).data
-        except StudentDeposit.DoesNotExist:
-            return None
-
 
 class GetAbstractIOweYouSerializer(serpy.Serializer):
 
@@ -1178,17 +1200,29 @@ class GetPlanFinancingSerializer(GetAbstractIOweYouSerializer):
     monthly_price = serpy.Field()
     how_many_installments = serpy.Field()
     initial_payment_amount = serpy.Field()
-    initial_payment_notes = serpy.Field()
     grace_period_duration = serpy.Field()
     grace_period_duration_unit = serpy.Field()
-    student_deposits = serpy.MethodField()
+    credit_balance = serpy.MethodField()
+    remaining_installments = serpy.MethodField()
+    credit_entries = serpy.MethodField()
 
-    def get_student_deposits(self, obj):
-        return GetStudentDepositSerializer(obj.student_deposits.all(), many=True).data
+    def get_credit_balance(self, obj):
+        from breathecode.payments.actions import get_credit_balance
+
+        return get_credit_balance(obj)
+
+    def get_remaining_installments(self, obj):
+        from breathecode.payments.actions import get_remaining_installments
+
+        return get_remaining_installments(obj)
+
+    def get_credit_entries(self, obj):
+        return CreditLedgerEntrySerializer(obj.credit_entries.order_by("created_at"), many=True).data
 
 
 class GetSubscriptionHookSerializer(GetAbstractIOweYouSerializer):
     paid_at = serpy.Field()
+    last_status_change_at = serpy.Field()
     is_refundable = serpy.Field()
 
     pay_every = serpy.Field()
@@ -1198,6 +1232,7 @@ class GetSubscriptionHookSerializer(GetAbstractIOweYouSerializer):
 class GetSubscriptionSerializer(GetAbstractIOweYouSerializer):
     paid_at = serpy.Field()
     created_at = serpy.Field()
+    last_status_change_at = serpy.Field()
     is_refundable = serpy.Field()
 
     pay_every = serpy.Field()

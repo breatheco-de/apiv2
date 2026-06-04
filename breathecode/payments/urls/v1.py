@@ -17,13 +17,16 @@ from ..views import (
     AcademyInvoiceRefundView,
     AcademyInvoiceRecordRefundView,
     AcademyInvoiceView,
+    AcademyUserCreditLedgerView,
     AcademyPaymentMethodView,
     AcademyPaymentSettingsView,
     AcademyPlanFinancingView,
+    AcademyPlanFinancingPaymentScheduleView,
     AcademyPlanServiceItemView,
     AcademyPlanServiceStockSchedulersRegenerateView,
     AcademyPlanSpecificServiceItemView,
     AcademyPlanSubscriptionView,
+    AcademyPlanSyncFinancingExpirationView,
     AcademyPlanView,
     AcademyPublishableKeyView,
     AcademyServiceItemView,
@@ -96,6 +99,16 @@ urlpatterns = [
     path("academy/plan", AcademyPlanView.as_view(), name="academy_plan"),
     path("academy/plan/<int:plan_id>", AcademyPlanView.as_view(), name="academy_plan_id"),
     path("academy/plan/<slug:plan_slug>", AcademyPlanView.as_view(), name="academy_plan_slug"),
+    path(
+        "academy/plan/<int:plan_id>/sync/financing/expiration",
+        AcademyPlanSyncFinancingExpirationView.as_view(),
+        name="academy_plan_id_sync_financing_expiration",
+    ),
+    path(
+        "academy/plan/<slug:plan_slug>/sync/financing/expiration",
+        AcademyPlanSyncFinancingExpirationView.as_view(),
+        name="academy_plan_slug_sync_financing_expiration",
+    ),
     path("academy/financingoption", AcademyFinancingOptionView.as_view(), name="academy_financingoption"),
     path(
         "academy/financingoption/<int:financing_option_id>",
@@ -199,6 +212,11 @@ urlpatterns = [
         MePlanFinancingChargeView.as_view(),
         name="me_planfinancing_id_charge",
     ),
+    path(
+        "academy/planfinancing/<int:financing_id>/payment-schedule",
+        AcademyPlanFinancingPaymentScheduleView.as_view(),
+        name="academy_planfinancing_payment_schedule",
+    ),
     path("academy/planfinancing/<int:financing_id>", AcademyPlanFinancingView.as_view()),
     path("academy/planfinancing", AcademyPlanFinancingView.as_view()),
     path("academy/subscription", AcademySubscriptionView.as_view()),
@@ -207,6 +225,11 @@ urlpatterns = [
     path("me/invoice/<int:invoice_id>", MeInvoiceView.as_view()),
     path("academy/invoice", AcademyInvoiceView.as_view(), name="academy_invoice"),
     path("academy/invoice/<int:invoice_id>", AcademyInvoiceView.as_view(), name="academy_invoice_id"),
+    path(
+        "academy/user/<int:user_id>/credit-ledger",
+        AcademyUserCreditLedgerView.as_view(),
+        name="academy_user_credit_ledger",
+    ),
     path(
         "academy/invoice/<int:invoice_id>/refund", AcademyInvoiceRefundView.as_view(), name="academy_invoice_id_refund"
     ),

@@ -89,6 +89,8 @@ def serialize_invoice(data={}):
         "currency_id": 1,
         "externally_managed": True,
         "id": 1,
+        "invoice_kind": "GENERAL",
+        "invoice_notes": None,
         "paid_at": None,
         "payment_method_id": None,
         "proof_id": 1,
@@ -408,6 +410,7 @@ def test_schedule_plan_financing_with_initial_payment_and_grace_period(
     assert invoices[0]["amount"] == 5000
     assert invoices[0]["paid_at"] == utc_now
     assert invoices[0]["payment_method_id"] == 1
+    assert invoices[0]["invoice_notes"] == "Note made by user 1: Staff discount approved"
     assert invoices[0]["amount_breakdown"] == {
         "plans": {
             model.plan.slug: {
@@ -427,7 +430,7 @@ def test_schedule_plan_financing_with_initial_payment_and_grace_period(
             cohorts=[],
             grace_period_duration=4,
             grace_period_duration_unit="MONTH",
-            initial_payment_notes="Staff discount approved",
+            initial_payment_notes="Note made by user 1: Staff discount approved",
             principal_amount=1200,
             initial_payment_amount=5000,
         )
@@ -456,6 +459,7 @@ def test_schedule_plan_financing_with_unique_payment_negotiated_amount(
         "user": model.user.id,
         "payment_method": 1,
         "unique_payment_negotiated_amount": 8500,
+        "initial_payment_notes": "One-payment negotiated by staff",
         "how_many_installments": 1,
     }
     academy = 1
@@ -468,6 +472,7 @@ def test_schedule_plan_financing_with_unique_payment_negotiated_amount(
     invoices = database.list_of("payments.Invoice")
     assert len(invoices) == 1
     assert invoices[0]["amount"] == 8500
+    assert invoices[0]["invoice_notes"] == "Note made by user 1: One-payment negotiated by staff"
     assert invoices[0]["amount_breakdown"] == {
         "plans": {
             model.plan.slug: {
@@ -481,7 +486,14 @@ def test_schedule_plan_financing_with_unique_payment_negotiated_amount(
     }
 
     assert build_plan_financing.delay.call_args_list == [
-        call(1, 1, conversion_info=None, cohorts=[], principal_amount=8500),
+        call(
+            1,
+            1,
+            conversion_info=None,
+            cohorts=[],
+            initial_payment_notes="Note made by user 1: One-payment negotiated by staff",
+            principal_amount=8500.0,
+        ),
     ]
 
 
@@ -504,6 +516,7 @@ def test_unique_payment_negotiated_amount_conflicts_with_initial_payment(
         "user": model.user.id,
         "payment_method": 1,
         "unique_payment_negotiated_amount": 8500,
+        "initial_payment_notes": "Conflict case note",
         "initial_payment_amount": 3000,
         "how_many_installments": 1,
     }
@@ -516,6 +529,69 @@ def test_unique_payment_negotiated_amount_conflicts_with_initial_payment(
         validate_and_create_subscriptions(data, model.user, model.proof_of_payment, academy, "en")
     assert exc.value.detail == "unique-payment-negotiated-initial-exclusive"
 
+    assert build_plan_financing.delay.call_args_list == []
+
+
+@pytest.mark.parametrize("is_request", [True, False])
+def test_unique_payment_negotiated_amount_requires_notes_for_one_payment(
+    database: capy.Database, format: capy.Format, is_request: bool
+) -> None:
+    model = database.create(
+        user=1,
+        proof_of_payment=1,
+        plan={"time_of_life": None, "time_of_life_unit": None},
+        financing_option={"how_many_months": 1, "monthly_price": 9500},
+        academy=1,
+        city=1,
+        country=1,
+        payment_method=1,
+    )
+    data = {
+        "plans": [model.plan.slug],
+        "user": model.user.id,
+        "payment_method": 1,
+        "unique_payment_negotiated_amount": 8500,
+        "how_many_installments": 1,
+    }
+    academy = 1
+
+    if is_request:
+        data = get_request(data, user=model.user)
+
+    with pytest.raises(ValidationException) as exc:
+        validate_and_create_subscriptions(data, model.user, model.proof_of_payment, academy, "en")
+    assert exc.value.detail == "negotiated-amount-notes-required"
+
+
+@pytest.mark.parametrize("is_request", [True, False])
+def test_initial_payment_amount_requires_notes(
+    database: capy.Database, format: capy.Format, is_request: bool
+) -> None:
+    model = database.create(
+        user=1,
+        proof_of_payment=1,
+        plan={"time_of_life": None, "time_of_life_unit": None},
+        financing_option={"how_many_months": 1, "monthly_price": 1200},
+        academy=1,
+        city=1,
+        country=1,
+        payment_method=1,
+    )
+    data = {
+        "plans": [model.plan.slug],
+        "user": model.user.id,
+        "payment_method": 1,
+        "initial_payment_amount": 0,
+        "how_many_installments": 1,
+    }
+    academy = 1
+
+    if is_request:
+        data = get_request(data, user=model.user)
+
+    with pytest.raises(ValidationException) as exc:
+        validate_and_create_subscriptions(data, model.user, model.proof_of_payment, academy, "en")
+    assert exc.value.detail == "initial-payment-notes-required"
     assert build_plan_financing.delay.call_args_list == []
 
 
