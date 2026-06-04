@@ -32,6 +32,8 @@ from breathecode.payments.actions import (
     add_items_to_bag,
     apply_pricing_ratio,
     calculate_refund_breakdown,
+    _invoice_breakdown_has_line_items,
+    ensure_invoice_amount_breakdown,
     filter_consumables,
     filter_void_consumable_balance,
     get_amount,
@@ -3192,8 +3194,11 @@ def _parse_and_validate_refund_request(request, invoice: Invoice, lang: str) -> 
             code=400,
         )
 
+    ensure_invoice_amount_breakdown(invoice, lang)
+
     refund_breakdown = None
-    if invoice.amount_breakdown and refund_amount is not None:
+    breakdown = invoice.amount_breakdown or {}
+    if _invoice_breakdown_has_line_items(breakdown) and refund_amount is not None:
         refund_breakdown = calculate_refund_breakdown(invoice, refund_amount, items_to_refund, lang=lang)
 
     return refund_amount, items_to_refund, reason, refund_breakdown
