@@ -1,6 +1,7 @@
 import logging
 import os
 import re
+import uuid
 from datetime import datetime, timedelta
 from urllib.parse import urlencode, urlparse
 
@@ -49,6 +50,7 @@ from breathecode.utils import (
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import consume
 from breathecode.utils.multi_status_response import MultiStatusResponse
+from breathecode.utils.request import get_current_academy
 from breathecode.utils.views import private_view, render_message
 
 from .actions import fix_datetime_weekday, update_timeslots_out_of_range  # get_my_event_types,
@@ -1456,7 +1458,16 @@ class AcademyEventTypeView(APIView):
     def get(self, request, academy_id=None, event_type_slug=None):
 
         if event_type_slug is not None:
-            event_type = EventType.objects.filter(academy__id=academy_id, slug=event_type_slug).first()
+            event_type = (
+                EventType.objects.filter(academy__id=academy_id, slug=event_type_slug)
+                .prefetch_related(
+                    "visibility_settings",
+                    "visibility_settings__cohort",
+                    "visibility_settings__syllabus",
+                    "visibility_settings__academy",
+                )
+                .first()
+            )
             if not event_type:
                 raise ValidationException("Event Type not found for this academy", slug="event-type-not-found")
 
@@ -1474,9 +1485,18 @@ class AcademyEventTypeView(APIView):
             value = self.request.GET.get("allow_shared_creation", "").lower()
             lookup["allow_shared_creation"] = value == "true"
 
-        items = items.filter(**lookup).order_by("-created_at")
+        items = (
+            items.prefetch_related(
+                "visibility_settings",
+                "visibility_settings__cohort",
+                "visibility_settings__syllabus",
+                "visibility_settings__academy",
+            )
+            .filter(**lookup)
+            .order_by("-created_at")
+        )
 
-        serializer = EventTypeSerializer(items, many=True)
+        serializer = EventTypeBigSerializer(items, many=True)
         return Response(serializer.data)
 
     @capable_of("crud_event_type")
@@ -1801,6 +1821,119 @@ class EventMeCheckinView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class BulkEventCheckinUploadView(APIView):
+    """
+    POST /v1/events/academy/event/<event_id>/checkin/bulk: start bulk import (202 + job_id) or soft run (?soft=true).
+    GET /v1/events/academy/event/<event_id>/checkin/bulk/<job_id>: poll job status from Redis.
+    """
+
+    @capable_of("crud_eventcheckin")
+    def get(self, request, event_id=None, academy_id=None, job_id=None):
+        from breathecode.events.bulk_event_checkin_manager import get_bulk_job_state
+
+        academy_id = academy_id or get_current_academy(request, return_id=True)
+        if not academy_id:
+            raise ValidationException(
+                "Missing academy_id parameter expected in query string or 'Academy' header",
+                code=403,
+                slug="missing-academy-id",
+            )
+        if not job_id:
+            raise ValidationException("Missing job_id", code=400, slug="missing-job-id")
+
+        state = get_bulk_job_state(job_id)
+        if state is None:
+            raise ValidationException("Bulk job not found or expired", code=404, slug="job-not-found")
+        if state.get("academy_id") != academy_id:
+            raise ValidationException("Job does not belong to this academy", code=404, slug="job-not-found")
+        if state.get("event_id") != event_id:
+            raise ValidationException("Job does not belong to this event", code=404, slug="job-not-found")
+
+        response_state = {k: v for k, v in state.items() if k != "checkins"}
+        return Response(response_state, status=status.HTTP_200_OK)
+
+    @capable_of("crud_eventcheckin")
+    def post(self, request, event_id=None, academy_id=None):
+        from breathecode.events import tasks as events_tasks
+        from breathecode.events.bulk_event_checkin_manager import (
+            set_bulk_job_state,
+            validate_bulk_event_checkin_row,
+        )
+
+        academy_id = academy_id or get_current_academy(request, return_id=True)
+        if not academy_id:
+            raise ValidationException(
+                "Missing academy_id parameter expected in query string or 'Academy' header",
+                code=403,
+                slug="missing-academy-id",
+            )
+
+        event = Event.objects.filter(id=event_id, academy_id=academy_id).first()
+        if not event:
+            raise ValidationException(
+                "Event not found or does not belong to this academy",
+                slug="event-not-found",
+                code=404,
+            )
+
+        data = request.data or {}
+        checkins = data.get("checkins") or []
+        if not isinstance(checkins, list) or len(checkins) == 0:
+            raise ValidationException("checkins must be a non-empty array", code=400, slug="checkins-required")
+
+        for row in checkins:
+            if not (row.get("email") or "").strip():
+                raise ValidationException("Each check-in must have an email", code=400, slug="email-required")
+
+        run_marketing = bool(data.get("run_marketing"))
+        if request.GET.get("run_marketing") == "true":
+            run_marketing = True
+
+        soft = request.GET.get("soft") == "true"
+        if soft:
+            results = []
+            for index, row in enumerate(checkins):
+                result = validate_bulk_event_checkin_row(
+                    event_id=event_id,
+                    academy_id=academy_id,
+                    row_data=row,
+                )
+                result["index"] = index
+                results.append(result)
+            return Response(
+                {"total": len(checkins), "results": results},
+                status=status.HTTP_200_OK,
+            )
+
+        job_id = str(uuid.uuid4())
+        set_bulk_job_state(
+            job_id=job_id,
+            status="pending",
+            academy_id=academy_id,
+            event_id=event_id,
+            total=len(checkins),
+            processed=0,
+            results=[],
+            checkins=checkins,
+            author_user_id=request.user.id,
+            run_marketing=run_marketing,
+        )
+        events_tasks.process_bulk_event_checkin_upload.delay(job_id)
+        return Response(
+            {
+                "job_id": job_id,
+                "status": "pending",
+                "total": len(checkins),
+                "message": (
+                    f"Bulk check-in import started. Poll GET "
+                    f"/v1/events/academy/event/{event_id}/checkin/bulk/{job_id} for status. "
+                    "Recommended batch size is 500 rows or fewer per request."
+                ),
+            },
+            status=status.HTTP_202_ACCEPTED,
+        )
 
 
 class AcademyEventCheckinView(APIView):

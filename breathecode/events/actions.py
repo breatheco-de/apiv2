@@ -842,52 +842,134 @@ def get_ical_cohort_description(item: Cohort):
     return description
 
 
-def register_event_attendee_from_external(
+def upsert_event_checkin(
     *,
     event,
     email: str,
-    first_name: str,
-    last_name: str,
-    utm_source: str,
-    campaign: str,
-    organization,
+    attended: bool = False,
+    attended_at=None,
+    utm_source: str | None = None,
+    utm_medium: str | None = None,
+    utm_campaign: str | None = None,
+    utm_url: str | None = None,
 ):
-    from django.contrib.auth.models import User
+    """
+    Create or update an EventCheckin for the given event and email.
+    Returns (checkin, created, attended_updated).
+    """
+    import breathecode.activity.tasks as tasks_activity
 
-    from breathecode.events.models import EventCheckin
+    from breathecode.events.models import DONE, PENDING, EventCheckin
+
+    email = (email or "").strip().lower()
+    if not email:
+        raise ValueError("Email is required")
+
+    attendee = User.objects.filter(email__iexact=email).first()
+    checkin = EventCheckin.objects.filter(email__iexact=email, event=event).first()
+    created = False
+    attended_updated = False
+    had_attended_at = checkin.attended_at if checkin else None
+
+    if checkin is None:
+        checkin = EventCheckin(
+            email=email,
+            status=PENDING,
+            event=event,
+            attendee=attendee,
+            utm_source=utm_source,
+            utm_medium=utm_medium,
+            utm_campaign=utm_campaign,
+            utm_url=utm_url,
+        )
+        checkin.save()
+        created = True
+    else:
+        update_fields = []
+        if attendee and checkin.attendee_id != attendee.id:
+            checkin.attendee = attendee
+            update_fields.append("attendee")
+        for field, value in (
+            ("utm_source", utm_source),
+            ("utm_medium", utm_medium),
+            ("utm_campaign", utm_campaign),
+            ("utm_url", utm_url),
+        ):
+            if value is not None and getattr(checkin, field) != value:
+                setattr(checkin, field, value)
+                update_fields.append(field)
+        if update_fields:
+            update_fields.append("updated_at")
+            checkin.save(update_fields=update_fields)
+
+    if attended:
+        new_attended_at = attended_at if attended_at is not None else timezone.now()
+        save_attendance = False
+        if checkin.status != DONE:
+            checkin.status = DONE
+            save_attendance = True
+        if checkin.attended_at is None or attended_at is not None:
+            if checkin.attended_at != new_attended_at:
+                checkin.attended_at = new_attended_at
+                save_attendance = True
+        if save_attendance:
+            checkin.save()
+            if had_attended_at is None and checkin.attended_at is not None:
+                attended_updated = True
+
+    if created and checkin.attendee_id:
+        tasks_activity.add_activity.delay(
+            checkin.attendee_id,
+            "event_checkin_created",
+            related_type="events.EventCheckin",
+            related_id=checkin.id,
+        )
+
+    if attended_updated and checkin.attendee_id:
+        tasks_activity.add_activity.delay(
+            checkin.attendee_id,
+            "event_checkin_assisted",
+            related_type="events.EventCheckin",
+            related_id=checkin.id,
+        )
+
+    return checkin, created, attended_updated
+
+
+def run_event_checkin_marketing(
+    *,
+    event,
+    email: str,
+    first_name: str = "",
+    last_name: str = "",
+    utm_source: str | None = None,
+    campaign: str | None = None,
+    enqueue_tags: bool = True,
+):
+    """
+    Add contact to ActiveCampaign event automation and optionally enqueue event tags.
+    Raises Exception when AC is not configured (same as legacy external registration).
+    """
     from breathecode.marketing.actions import add_to_active_campaign, set_optional
     from breathecode.marketing.models import ActiveCampaignAcademy
     from breathecode.marketing.tasks import add_event_tags_to_student
 
-    if organization.academy is None:
-        raise Exception("Organization not have one Academy")
+    if event.academy is None:
+        raise Exception("Event has no academy")
 
-    academy_id = organization.academy.id
-    local_attendee = User.objects.filter(email=email).first()
-
-    if not EventCheckin.objects.filter(email=email, event=event).count():
-        checkin = EventCheckin(
-            email=email, status="PENDING", event=event, attendee=local_attendee, utm_source=utm_source
-        )
-        checkin.save()
-
-    elif not EventCheckin.objects.filter(email=email, event=event, attendee=local_attendee).count():
-        checkin = EventCheckin.objects.filter(email=email, event=event).first()
-        checkin.attendee = local_attendee
-        checkin.save()
-    else:
-        checkin = EventCheckin.objects.filter(email=email, event=event).first()
+    academy_id = event.academy_id
+    email = (email or "").strip().lower()
 
     contact = {
         "email": email,
-        "first_name": first_name,
-        "last_name": last_name,
+        "first_name": first_name or "",
+        "last_name": last_name or "",
     }
 
     custom = {
         "academy": event.academy.slug,
-        "source": utm_source,
-        "campaign": campaign,
+        "source": utm_source or "",
+        "campaign": campaign or "",
         "language": event.lang,
     }
 
@@ -900,8 +982,7 @@ def register_event_attendee_from_external(
 
     academy = ActiveCampaignAcademy.objects.filter(academy__id=academy_id).first()
     if academy is None:
-        message = "ActiveCampaignAcademy doesn't exist"
-        raise Exception(message)
+        raise Exception("ActiveCampaignAcademy doesn't exist")
 
     automation_id = (
         ActiveCampaignAcademy.objects.filter(academy__id=academy_id)
@@ -909,13 +990,40 @@ def register_event_attendee_from_external(
         .first()
     )
 
-    if automation_id:
-        add_to_active_campaign(contact, academy_id, automation_id)
-    else:
-        message = "Automation for event registration doesn't exist"
-        raise Exception(message)
+    if not automation_id:
+        raise Exception("Automation for event registration doesn't exist")
 
-    add_event_tags_to_student.delay(event.id, email=email)
+    add_to_active_campaign(contact, academy_id, automation_id)
+
+    if enqueue_tags:
+        add_event_tags_to_student.delay(event.id, email=email)
+
+
+def register_event_attendee_from_external(
+    *,
+    event,
+    email: str,
+    first_name: str,
+    last_name: str,
+    utm_source: str,
+    campaign: str,
+    organization,
+):
+    if organization.academy is None:
+        raise Exception("Organization not have one Academy")
+
+    email = (email or "").strip().lower()
+    checkin, _, _ = upsert_event_checkin(event=event, email=email, utm_source=utm_source)
+    local_attendee = checkin.attendee
+
+    run_event_checkin_marketing(
+        event=event,
+        email=email,
+        first_name=first_name,
+        last_name=last_name,
+        utm_source=utm_source,
+        campaign=campaign,
+    )
 
     return checkin, local_attendee
 

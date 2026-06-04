@@ -40,7 +40,7 @@ If the session is **learner-only** (authenticated student using `me` / `user/me`
 | **authenticate** | Login, token generation, password reset, permissions, API key management | `bc-authenticate-*` |
 | **career** | Job listings, job applications post-graduation, employer connections | `bc-career-*` |
 | **certificate** | Certificate emission, specialties, certificate-syllabus associations | `bc-certificate-*` |
-| **events** | Workshops, live classes, event RSVPs, event checkins | `bc-events-*` |
+| **events** | Workshops, live classes, event RSVPs, check-ins, bulk check-in import | `bc-events-*`, [`bc-events-bulk-import-checkins`](../bc-events-bulk-import-checkins/SKILL.md) |
 | **feedback** | NPS surveys, student satisfaction studies, feedback forms | `bc-feedback-*` |
 | **marketing** | URL shortener, incoming leads, lead scoring, UTM tracking, **academy-scoped marketing courses** (list/create/clone under `/v1/marketing/academy/course`) | `bc-marketing-*` |
 | **media** | Images, videos, documents used in LMS content, asset management | `bc-media-*` |
@@ -76,6 +76,7 @@ Some user requests touch multiple domains. Load ALL listed skills before proceed
 | Configure academy VPS provisioning (profiles, credentials, settings) | `bc-provisioning-settings-and-credentials` |
 | Create or edit an academy event with tags and workshop asset selection | `bc-events-create-and-edit-event` + `bc-marketing-*` (fetch valid `DISCOVERY` tags) + `bc-registry-*` (search and validate workshop assets by type) |
 | Connect Luma webhooks for real-time guest registration and check-in | `bc-events-configure-luma-webhooks` + `bc-events-create-and-edit-event` (set `luma_id` on the event) + `bc-marketing-*` (ActiveCampaign automation for registrations) |
+| Bulk-import event attendees (RSVP + attended) after event exists | `bc-events-bulk-import-checkins` + `bc-events-create-and-edit-event` (resolve `event_id`) + optional `bc-marketing-*` if `run_marketing=true` |
 | Configure academy Slack integration and manage sync health | `bc-notify-manage-academy-slackintegration` + `bc-admissions-*` (students/cohorts drive Slack mappings) + `bc-authenticate-*` (Slack OAuth endpoints live in auth) |
 | Build or debug a frontend dashboard that reads monitoring reports | `bc-monitoring-read-reports-api` + `bc-authenticate-*` (academy-scoped capability and header requirements drive access outcomes) |
 | Read acquisition monitoring insights (funnel tiers, top assets, top workshops, attribution mix) | `bc-monitoring-read-report-acquisition` + `bc-authenticate-*` (academy-scoped capability and `Academy` header drive access and scope) |

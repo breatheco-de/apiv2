@@ -52,6 +52,7 @@ from django.urls import path
 from .syndication import LatestEventsFeed
 from .views import (
     AcademyEventCheckinView,
+    BulkEventCheckinUploadView,
     AcademyEventHostView,
     AcademyEventJoinView,
     AcademyEventSuspendView,
@@ -113,6 +114,16 @@ urlpatterns = [
     path("event/<int:event_id>/checkin", EventCheckinView.as_view(), name="event_checkin"),
     path("academy/event", AcademyEventView.as_view(), name="academy_event"),
     path("academy/event.csv", AcademyEventView.as_view(), name="academy_event_csv"),
+    path(
+        "academy/event/<int:event_id>/checkin/bulk",
+        BulkEventCheckinUploadView.as_view(),
+        name="academy_event_checkin_bulk",
+    ),
+    path(
+        "academy/event/<int:event_id>/checkin/bulk/<str:job_id>",
+        BulkEventCheckinUploadView.as_view(),
+        name="academy_event_checkin_bulk_id",
+    ),
     path("academy/event/<int:event_id>", AcademyEventView.as_view(), name="academy_event_id"),
     path("academy/event/<int:event_id>/join", AcademyEventJoinView.as_view(), name="academy_event_id_join"),
     path("academy/event/<int:event_id>/suspend", AcademyEventSuspendView.as_view(), name="academy_event_id_suspend"),
