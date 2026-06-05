@@ -1013,7 +1013,10 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
                 serializer = GetProfileAcademySerializer(profile, many=False)
                 return Response(serializer.data)
 
-        invites = UserInvite.objects.filter(academy__id=academy_id)
+        if request.GET.get("academy") == "null":
+            invites = UserInvite.objects.filter(academy__isnull=True)
+        else:
+            invites = UserInvite.objects.filter(academy__id=academy_id)
 
         status = request.GET.get("status", "")
         if status != "":

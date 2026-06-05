@@ -164,6 +164,58 @@ def test_search_with_invalid_value(client, academy_setup):
     assert invite.id in invite_ids
 
 
+def test_filter_by_academy_null(client, academy_setup):
+    academy = academy_setup["academy"]
+    staff = academy_setup["staff"]
+    role = academy_setup["role"]
+
+    null_academy_invite = UserInvite.objects.create(
+        academy=None,
+        email="null-academy@example.com",
+        token="token-null-academy",
+        role=role,
+        author=staff,
+    )
+    UserInvite.objects.create(
+        academy=academy,
+        email="with-academy@example.com",
+        token="token-with-academy",
+        role=role,
+        author=staff,
+    )
+
+    authenticate(client, staff, academy)
+    url = reverse_lazy("authenticate:academy_user_invite") + "?academy=null"
+    response = client.get(url)
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert len(payload) == 1
+    assert payload[0]["id"] == null_academy_invite.id
+    assert payload[0]["academy"] is None
+
+
+def test_filter_by_academy_null_excludes_academy_invites(client, academy_setup):
+    academy = academy_setup["academy"]
+    staff = academy_setup["staff"]
+    role = academy_setup["role"]
+
+    UserInvite.objects.create(
+        academy=academy,
+        email="with-academy@example.com",
+        token="token-with-academy-only",
+        role=role,
+        author=staff,
+    )
+
+    authenticate(client, staff, academy)
+    url = reverse_lazy("authenticate:academy_user_invite") + "?academy=null"
+    response = client.get(url)
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
 def test_search_with_multiple_values(client, academy_setup):
     """Test that multiple comma-separated values work correctly"""
     academy = academy_setup["academy"]

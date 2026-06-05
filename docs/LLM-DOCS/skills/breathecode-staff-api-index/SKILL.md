@@ -42,7 +42,7 @@ If the session is **learner-only** (authenticated student using `me` / `user/me`
 | **certificate** | Certificate emission, specialties, certificate-syllabus associations | `bc-certificate-*` |
 | **events** | Workshops, live classes, event RSVPs, check-ins, bulk check-in import | `bc-events-*`, [`bc-events-bulk-import-checkins`](../bc-events-bulk-import-checkins/SKILL.md) |
 | **feedback** | NPS surveys, student satisfaction studies, feedback forms | `bc-feedback-*` |
-| **marketing** | URL shortener, incoming leads, lead scoring, UTM tracking, **academy-scoped marketing courses** (list/create/clone under `/v1/marketing/academy/course`) | `bc-marketing-*` |
+| **marketing** | URL shortener, **FormEntry create** (public, app, staff, bulk CSV), **FormEntry staff management**, UTM tracking, **academy-scoped marketing courses** (list/create/clone under `/v1/marketing/academy/course`) | `bc-marketing-*`, [`bc-marketing-create-form-entry`](../bc-marketing-create-form-entry/SKILL.md), [`bc-marketing-manage-form-entries`](../bc-marketing-manage-form-entries/SKILL.md), [`bc-marketing-debug-form-entry`](../bc-marketing-debug-form-entry/SKILL.md) |
 | **media** | Images, videos, documents used in LMS content, asset management | `bc-media-*` |
 | **mentorship** | Mentors, mentor availability, session scheduling, session notes | `bc-mentorship-*` |
 | **monitoring** | Platform monitoring endpoints, report retrieval APIs, monitoring webhooks, and operational status resources | `bc-monitoring-*` |
@@ -68,7 +68,16 @@ Some user requests touch multiple domains. Load ALL listed skills before proceed
 | Issue a certificate to a student | `bc-certificate-*` + `bc-admissions-*` (verify cohort completion status) |
 | Schedule a mentorship session | `bc-mentorship-*` + `bc-notify-*` (session confirmation messaging) |
 | Send a notification | `bc-notify-*` + the domain that triggered the notification |
-| Inbound signups, attribution, and acquisition (forms + invites) | `bc-marketing-inbound-leads-attribution-and-acquisition` (covers `/v1/marketing` lead capture/analytics + `/v1/auth` invite-based signup attribution, plus referral and webhook context) |
+| Create a marketing lead (form, app, staff, or CSV bulk) | [`bc-marketing-create-form-entry`](../bc-marketing-create-form-entry/SKILL.md) |
+| Bulk import leads from CSV | [`bc-marketing-create-form-entry`](../bc-marketing-create-form-entry/SKILL.md) (`PUT /v1/marketing/academy/upload`) |
+| Search, update, delete, or re-process existing form entries | [`bc-marketing-manage-form-entries`](../bc-marketing-manage-form-entries/SKILL.md) |
+| Understand ActiveCampaign double sync (salesperson CRM changes reflected on FormEntry) | [`bc-marketing-manage-form-entries`](../bc-marketing-manage-form-entries/SKILL.md) + [`bc-marketing-create-form-entry`](../bc-marketing-create-form-entry/SKILL.md) (outbound half) |
+| Debug FormEntry CRM sync failure (`storage_status=ERROR` / stuck `PENDING`) | [`bc-marketing-debug-form-entry`](../bc-marketing-debug-form-entry/SKILL.md) + [`bc-marketing-create-form-entry`](../bc-marketing-create-form-entry/SKILL.md) (payload requirements) + [`bc-marketing-manage-form-entries`](../bc-marketing-manage-form-entries/SKILL.md) (retry via `process`) |
+| ActiveCampaign double sync not updating FormEntry after salesperson CRM change | [`bc-marketing-debug-form-entry`](../bc-marketing-debug-form-entry/SKILL.md) |
+| Inbound signups, attribution, and acquisition (forms + invites) | [`bc-marketing-inbound-leads-attribution-and-acquisition`](../bc-marketing-inbound-leads-attribution-and-acquisition/SKILL.md) + [`bc-marketing-create-form-entry`](../bc-marketing-create-form-entry/SKILL.md) + [`bc-marketing-manage-form-entries`](../bc-marketing-manage-form-entries/SKILL.md) |
+| Wire lead events to n8n / Zapier | [`bc-marketing-create-form-entry`](../bc-marketing-create-form-entry/SKILL.md) + [`HOOKS_MANAGEMENT.md`](../../HOOKS_MANAGEMENT.md) |
+| Acquisition funnel drill-down to lead detail | [`bc-monitoring-read-report-acquisition`](../bc-monitoring-read-report-acquisition/SKILL.md) + [`bc-marketing-manage-form-entries`](../bc-marketing-manage-form-entries/SKILL.md) |
+| Referral performance (capture marker vs payouts) | [`bc-marketing-inbound-leads-attribution-and-acquisition`](../bc-marketing-inbound-leads-attribution-and-acquisition/SKILL.md) + `bc-payments-*` / commission endpoints |
 | Onboard a new student | `bc-admissions-*` + `bc-payments-*` + `bc-authenticate-*` |
 | Connect a third-party app to student authentication (hosted login redirect + callback token) | `bc-authenticate-student-authentication` |
 | Provision a resource for a student | `bc-provisioning-*` + `bc-admissions-*` (verify enrollment status first) |
@@ -79,7 +88,7 @@ Some user requests touch multiple domains. Load ALL listed skills before proceed
 | Bulk-import event attendees (RSVP + attended) after event exists | `bc-events-bulk-import-checkins` + `bc-events-create-and-edit-event` (resolve `event_id`) + optional `bc-marketing-*` if `run_marketing=true` |
 | Configure academy Slack integration and manage sync health | `bc-notify-manage-academy-slackintegration` + `bc-admissions-*` (students/cohorts drive Slack mappings) + `bc-authenticate-*` (Slack OAuth endpoints live in auth) |
 | Build or debug a frontend dashboard that reads monitoring reports | `bc-monitoring-read-reports-api` + `bc-authenticate-*` (academy-scoped capability and header requirements drive access outcomes) |
-| Read acquisition monitoring insights (funnel tiers, top assets, top workshops, attribution mix) | `bc-monitoring-read-report-acquisition` + `bc-authenticate-*` (academy-scoped capability and `Academy` header drive access and scope) |
+| Read acquisition monitoring insights (funnel tiers, top assets, top workshops, attribution mix) | [`bc-monitoring-read-report-acquisition`](../bc-monitoring-read-report-acquisition/SKILL.md) + `bc-authenticate-*` (academy-scoped capability and `Academy` header drive access and scope) |
 | Create a marketing course from scratch or by cloning another course | `bc-marketing-create-or-clone-course` + `bc-authenticate-*` (staff list: `GET /v1/marketing/academy/course` with comma-separated numeric `Academy` ids and `crud_course` read-aggregate; create/clone: `POST` with `Academy` header; clone requires `crud_course` on source course academy too) |
 | Diagnose why graduation/certificate auto-issuance did not happen for a student or cohort | `bc-certificate-manage-and-assign-specialties` + `bc-admissions-*` (use `GET /v1/certificate/diagnostic` with `kind=graduation|certificate`, plus academy-scoped capability/header) |
 | Align or extend syllabus design with the school skills framework (job role stages, skills on the go) | `bc-admissions-*` (syllabus, cohorts) + `bc-talentdevelopment-manage-skills` (career path, stages, `stage_skill`, domains) |
