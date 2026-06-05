@@ -12,10 +12,11 @@ import breathecode.notify.actions as notify_actions
 from breathecode.admissions.models import CohortTimeSlot
 from breathecode.events.actions import ensure_livekit_room_for_event
 from breathecode.services.eventbrite import Eventbrite
+from breathecode.services.luma import Luma
 from breathecode.utils import TaskPriority
 from breathecode.utils.datetime_integer import DatetimeInteger
 
-from .models import Event, EventCheckin, EventbriteWebhook, EventContext, LiveClass, Organization
+from .models import Event, EventCheckin, EventbriteWebhook, EventContext, LiveClass, LumaWebhook, Organization
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +76,40 @@ def async_eventbrite_webhook(self, eventbrite_webhook_id):
         status = "error"
 
     logger.debug(f"Eventbrite status: {status}")
+
+
+@shared_task(bind=True, priority=TaskPriority.ACADEMY.value)
+def async_luma_webhook(self, luma_webhook_id):
+    logger.debug("Starting async_luma_webhook")
+    status = "ok"
+
+    webhook = LumaWebhook.objects.filter(id=luma_webhook_id).first()
+    if not webhook:
+        logger.debug(f"Luma webhook {luma_webhook_id} not found")
+        return
+
+    organization = Organization.objects.filter(id=webhook.organization_id).first()
+
+    if organization:
+        try:
+            client = Luma()
+            client.execute_action(luma_webhook_id)
+        except Exception as e:
+            logger.debug("Luma exception")
+            logger.debug(str(e))
+            status = "error"
+
+    else:
+        message = f"Organization {webhook.organization_id} doesn't exist"
+
+        webhook.status = "ERROR"
+        webhook.status_text = message
+        webhook.save()
+
+        logger.debug(message)
+        status = "error"
+
+    logger.debug(f"Luma status: {status}")
 
 
 @shared_task(bind=True, priority=TaskPriority.ACADEMY.value)
@@ -394,3 +429,90 @@ def send_event_suspended_notification(event_id: int, suspension_reason: str = No
             logger.error(f"Failed to send suspension notification to {checkin.email} for event {event_id}: {e}")
 
     logger.info(f"Completed sending suspension notifications for event {event_id}")
+
+
+@task(priority=TaskPriority.MARKETING.value)
+def run_event_checkin_marketing_task(
+    event_id: int,
+    email: str,
+    first_name: str = "",
+    last_name: str = "",
+    utm_source: str | None = None,
+    campaign: str | None = None,
+    **_kwargs,
+):
+    from breathecode.events.actions import run_event_checkin_marketing
+
+    event = Event.objects.filter(id=event_id).select_related("academy").first()
+    if event is None:
+        raise AbortTask(f"Event {event_id} not found")
+
+    run_event_checkin_marketing(
+        event=event,
+        email=email,
+        first_name=first_name,
+        last_name=last_name,
+        utm_source=utm_source,
+        campaign=campaign,
+    )
+
+
+@task(priority=TaskPriority.ACADEMY.value)
+def process_bulk_event_checkin_upload(job_id: str, **_kwargs):
+    from breathecode.events.bulk_event_checkin_manager import (
+        get_bulk_job_state,
+        process_bulk_event_checkin_row,
+        update_bulk_job_state,
+    )
+
+    state = get_bulk_job_state(job_id)
+    if state is None:
+        raise AbortTask(f"Bulk job {job_id} not found or expired")
+    if state.get("status") != "pending":
+        raise AbortTask(f"Bulk job {job_id} status is {state.get('status')}, expected pending")
+
+    checkins_list = state.get("checkins") or []
+    event_id = state.get("event_id")
+    academy_id = state.get("academy_id")
+    run_marketing = bool(state.get("run_marketing"))
+    if not checkins_list or not event_id or not academy_id:
+        raise AbortTask(f"Bulk job {job_id} missing checkins, event_id, or academy_id in state")
+
+    logger.info(
+        "Starting process_bulk_event_checkin_upload for job_id=%s event_id=%s total=%s",
+        job_id,
+        event_id,
+        len(checkins_list),
+    )
+
+    update_bulk_job_state(job_id, status="processing")
+    results = list(state.get("results") or [])
+    processed = state.get("processed", 0)
+
+    for index, row_data in enumerate(checkins_list):
+        try:
+            result = process_bulk_event_checkin_row(
+                event_id=event_id,
+                academy_id=academy_id,
+                row_data=row_data,
+                run_marketing=run_marketing,
+            )
+        except Exception as e:
+            logger.exception("process_bulk_event_checkin_row failed at index %s", index)
+            result = {
+                "index": index,
+                "email": (row_data.get("email") or "").strip().lower(),
+                "first_name": row_data.get("first_name"),
+                "last_name": row_data.get("last_name"),
+                "classification": "NEW_CHECKIN",
+                "status": "failed",
+                "message": str(e),
+                "slug": "unexpected-error",
+            }
+        result["index"] = index
+        results.append(result)
+        processed += 1
+        update_bulk_job_state(job_id, processed=processed, results=results)
+
+    update_bulk_job_state(job_id, status="completed", processed=processed, results=results)
+    logger.info("Completed process_bulk_event_checkin_upload for job_id=%s processed=%s", job_id, processed)

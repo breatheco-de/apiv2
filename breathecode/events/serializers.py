@@ -20,7 +20,7 @@ from breathecode.registry.models import Asset
 from breathecode.registry.serializers import AssetSmallSerializer
 from breathecode.utils import serpy
 
-from .models import Event, EventbriteWebhook, EventCheckin, EventType, LiveClass, Organization, Venue
+from .models import Event, EventbriteWebhook, EventCheckin, EventType, LiveClass, LumaWebhook, Organization, Venue
 
 logger = logging.getLogger(__name__)
 
@@ -154,6 +154,7 @@ class OrganizationSmallSerializer(serpy.Serializer):
 class OrganizationBigSerializer(OrganizationSmallSerializer):
     eventbrite_id = serpy.Field()
     eventbrite_key = serpy.Field()
+    luma_calendar_id = serpy.Field()
     updated_at = serpy.Field()
     created_at = serpy.Field()
 
@@ -285,6 +286,8 @@ class EventBigSerializer(EventPublicBigSerializer):
     eventbrite_url = serpy.Field()
     eventbrite_organizer_id = serpy.Field()
     eventbrite_status = serpy.Field()
+    luma_id = serpy.Field()
+    luma_url = serpy.Field()
 
 
 class AcademyEventSmallSerializer(serpy.Serializer):
@@ -750,6 +753,13 @@ class EventbriteWebhookSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = EventbriteWebhook
+        exclude = ()
+
+
+class LumaWebhookSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = LumaWebhook
         exclude = ()
 
 

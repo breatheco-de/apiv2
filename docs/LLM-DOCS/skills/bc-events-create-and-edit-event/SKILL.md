@@ -1,6 +1,6 @@
 ---
 name: bc-events-create-and-edit-event
-description: Use when staff need to create or edit academy events end-to-end (event type, tags, optional workshop asset, host, and meeting setup); do NOT use for attendee checkin/join-only tasks without event authoring.
+description: Use when staff need to create or edit academy events end-to-end (event type, tags, optional workshop asset, host, and meeting setup); do NOT use for bulk attendee import (use bc-events-bulk-import-checkins) or attendee-only join/check-in without event authoring.
 requires: []
 ---
 
@@ -8,7 +8,7 @@ requires: []
 
 ## When to Use
 
-Use this skill when the user needs to create or edit an event through the academy API workflow, including selecting/creating event type, selecting tags, linking workshop assets, assigning hosts, and setting meeting provider behavior. Do NOT use this skill for attendee-only tasks (join/checkin) or for public event browsing without editing.
+Use this skill when the user needs to create or edit an event through the academy API workflow, including selecting/creating event type, selecting tags, linking workshop assets, assigning hosts, and setting meeting provider behavior. Do NOT use this skill for bulk RSVP/attendance import (use [`bc-events-bulk-import-checkins`](../bc-events-bulk-import-checkins/SKILL.md)), learner join/check-in, or public event browsing without editing.
 
 ## Concepts
 
@@ -49,6 +49,10 @@ Use this skill when the user needs to create or edit an event through the academ
    - Include `event_type`, `tags`, and (for online non-draft) `live_stream_url` or `create_meet=true`.
    - For room automation, set `create_meet=true` and optionally `meeting_provider` (`daily`/`livekit`).
    - If `meeting_provider` is omitted, backend uses academy default provider, then env default (`daily`).
+
+### Import attendees (bulk)
+
+After the event exists, use [`bc-events-bulk-import-checkins`](../bc-events-bulk-import-checkins/SKILL.md) to import RSVPs and mark attendance via `POST /v1/events/academy/event/<event_id>/checkin/bulk`. For real-time Luma registration/check-in, use [`bc-events-configure-luma-webhooks`](../bc-events-configure-luma-webhooks/SKILL.md) instead.
 
 7. Add or update host after creation.
    - Assign host and send invite via `POST /v1/events/academy/event/<event_id>/host`.

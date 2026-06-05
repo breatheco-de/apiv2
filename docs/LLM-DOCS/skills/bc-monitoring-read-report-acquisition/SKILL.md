@@ -17,7 +17,7 @@ If you need to trigger regeneration jobs, use `bc-monitoring-read-reports-api` g
 ## Core Concepts
 
 - `source_type`:
-  - `FORM_ENTRY`: Marketing/CRM lead path; row is for the lead’s **creation** day (`FormEntry.created_at` date in the generator).
+  - `FORM_ENTRY`: Marketing/CRM lead path; row is for the lead’s **creation** day (`FormEntry.created_at` date in the generator). Drill down to lead detail: `source_id` is the FormEntry id — use [`bc-marketing-manage-form-entries`](../bc-marketing-manage-form-entries/SKILL.md) (`GET /v1/marketing/academy/lead/<id>`). If CRM sync looks wrong on that lead, load [`bc-marketing-debug-form-entry`](../bc-marketing-debug-form-entry/SKILL.md).
   - `FORM_ENTRY_WON`: Same form lead when the deal was **won**; row is for **`won_at` date** (requires `deal_status=WON` and `won_at` set on `FormEntry`). Pairs with `FORM_ENTRY` for the same `source_id` (form entry id) on different `report_date`s when creation and win fall on different days. Use `by_source_type` for both; do not use win-only filters for a full-funnel story in one period.
   - `USER_INVITE`: Invite/self-serve onboarding path (not only staff-invited users).
   - `EVENT_RSVP`: Event/workshop registration from `events.EventCheckin` on the **RSVP day** (`created_at` date). Funnel tier **nurture_invite** (`4`).

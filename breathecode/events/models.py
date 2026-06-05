@@ -33,6 +33,7 @@ __all__ = [
     "Event",
     "EventCheckin",
     "EventbriteWebhook",
+    "LumaWebhook",
     "EventContext",
 ]
 
@@ -41,6 +42,8 @@ class Organization(models.Model):
     eventbrite_id = models.CharField(unique=True, max_length=30, blank=True)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True)
     eventbrite_key = models.CharField(max_length=255, blank=True, null=True, default=None)
+    luma_calendar_id = models.CharField(max_length=80, blank=True, null=True, default=None)
+    luma_webhook_secret = models.CharField(max_length=255, blank=True, null=True, default=None)
     name = models.CharField(max_length=100, blank=True, null=True, default="")
 
     sync_status = models.CharField(
@@ -306,6 +309,8 @@ class Event(models.Model):
     eventbrite_id = models.CharField(unique=True, max_length=80, blank=True, default=None, null=True)
     eventbrite_url = models.CharField(max_length=255, blank=True, default=None, null=True)
     eventbrite_organizer_id = models.CharField(max_length=80, blank=True, default=None, null=True)
+    luma_id = models.CharField(unique=True, max_length=80, blank=True, default=None, null=True)
+    luma_url = models.CharField(max_length=255, blank=True, default=None, null=True)
 
     status = models.CharField(max_length=9, choices=EVENT_STATUS, default=DRAFT, blank=True)
     eventbrite_status = models.CharField(
@@ -396,6 +401,7 @@ class EventCheckin(models.Model):
     utm_source = models.CharField(max_length=70, blank=True, null=True, default=None)
     utm_location = models.CharField(max_length=70, blank=True, null=True, default=None)
     utm_url = models.CharField(max_length=2000, null=True, default=None, blank=True)
+    luma_guest_id = models.CharField(max_length=80, blank=True, null=True, default=None)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -492,6 +498,33 @@ class EventbriteWebhook(models.Model):
 
     def __str__(self):
         return f"Action {self.action} {self.status} => {self.api_url}"
+
+
+LUMA_WEBHOOK_STATUS = (
+    (PENDING, "Pending"),
+    (DONE, "Done"),
+    (ERROR, "Error"),
+)
+
+
+class LumaWebhook(models.Model):
+    type = models.CharField(max_length=40, blank=True, null=True, default=None)
+    webhook_id = models.CharField(max_length=80, blank=True, null=True, default=None)
+    luma_guest_id = models.CharField(max_length=80, blank=True, null=True, default=None)
+    payload = models.JSONField(blank=True, null=True, default=None)
+    event = models.ForeignKey(Event, on_delete=models.SET_NULL, blank=True, null=True, default=None)
+    attendee = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True, default=None)
+
+    organization_id = models.CharField(max_length=20, blank=True, null=True, default=None)
+
+    status = models.CharField(max_length=9, choices=LUMA_WEBHOOK_STATUS, default=PENDING)
+    status_text = models.CharField(max_length=255, default=None, null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f"Type {self.type} {self.status} => org {self.organization_id}"
 
 
 class LiveClass(models.Model):

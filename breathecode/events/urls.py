@@ -52,6 +52,7 @@ from django.urls import path
 from .syndication import LatestEventsFeed
 from .views import (
     AcademyEventCheckinView,
+    BulkEventCheckinUploadView,
     AcademyEventHostView,
     AcademyEventJoinView,
     AcademyEventSuspendView,
@@ -80,6 +81,7 @@ from .views import (
     PublicLiveClassView,
     UserEventCheckinView,
     eventbrite_webhook,
+    luma_webhook,
     get_events,
     join_event,
     join_live_class,
@@ -112,6 +114,16 @@ urlpatterns = [
     path("event/<int:event_id>/checkin", EventCheckinView.as_view(), name="event_checkin"),
     path("academy/event", AcademyEventView.as_view(), name="academy_event"),
     path("academy/event.csv", AcademyEventView.as_view(), name="academy_event_csv"),
+    path(
+        "academy/event/<int:event_id>/checkin/bulk",
+        BulkEventCheckinUploadView.as_view(),
+        name="academy_event_checkin_bulk",
+    ),
+    path(
+        "academy/event/<int:event_id>/checkin/bulk/<str:job_id>",
+        BulkEventCheckinUploadView.as_view(),
+        name="academy_event_checkin_bulk_id",
+    ),
     path("academy/event/<int:event_id>", AcademyEventView.as_view(), name="academy_event_id"),
     path("academy/event/<int:event_id>/join", AcademyEventJoinView.as_view(), name="academy_event_id_join"),
     path("academy/event/<int:event_id>/suspend", AcademyEventSuspendView.as_view(), name="academy_event_id_suspend"),
@@ -154,6 +166,7 @@ urlpatterns = [
     path("academy/checkin", AcademyEventCheckinView.as_view(), name="academy_checkin"),
     path("academy/checkin.csv", AcademyEventCheckinView.as_view(), name="academy_checkin_csv"),
     path("eventbrite/webhook/<int:organization_id>", eventbrite_webhook, name="eventbrite_webhook_id"),
+    path("luma/webhook/<int:organization_id>", luma_webhook, name="luma_webhook_id"),
     path("live-workshop-status", live_workshop_status, name="live_workshop_status"),
     path("event/<int:event_id>/livekit/token", LiveKitTokenView.as_view(), name="event_livekit_token"),
 ]
