@@ -520,6 +520,10 @@ class GetSmallCohortSerializer(serpy.Serializer):
     available_as_saas = serpy.Field()
     shortcuts = serpy.Field()
     syllabus_version = SyllabusVersionTinySerializer(required=False)
+    micro_cohorts = serpy.MethodField()
+
+    def get_micro_cohorts(self, obj):
+        return list(obj.micro_cohorts.values_list("id", flat=True))
 
 
 class GetTeacherAcademySmallSerializer(serpy.Serializer):
