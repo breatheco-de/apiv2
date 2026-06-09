@@ -380,7 +380,7 @@ def resolve_llm_client_and_external_id(request, ensure_llm_user_record: bool = F
     synchronously (used by POST endpoints).  When False (default) only an
     existing row is looked up (used by DELETE).
 
-    Returns: (client, external_user_id)
+    Returns: (client, external_user_id, team_id)
     """
     user = request.user
     lang = get_user_language(request)
@@ -486,7 +486,12 @@ def resolve_llm_client_and_external_id(request, ensure_llm_user_record: bool = F
     if provisioning_llm and provisioning_llm.external_user_id:
         external_user_id = provisioning_llm.external_user_id
 
-    return client, external_user_id
+    vendor_settings = getattr(provisioning_academy, "vendor_settings", None) or {}
+    team_id = ""
+    if isinstance(vendor_settings, dict):
+        team_id = str(vendor_settings.get("team_id") or "").strip()
+
+    return client, external_user_id, team_id
 
 
 def _get_vps_consumables_for_academy(user, academy: Academy):

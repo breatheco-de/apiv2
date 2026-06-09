@@ -2061,6 +2061,7 @@ class MeLLMKeysView(APIView):
                         or None,
                         "metadata": item.get("metadata") or {},
                         "models": effective_models,
+                        "expires": item.get("expires"),
                     }
                 )
 
@@ -2096,11 +2097,27 @@ class MeLLMKeysView(APIView):
                 )
             plan_title = plan.title
         try:
-            client, external_user_id = resolve_llm_client_and_external_id(request, ensure_llm_user_record=True)
+            client, external_user_id, team_id = resolve_llm_client_and_external_id(request, ensure_llm_user_record=True)
+            if not team_id:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="LLM team is not configured for your academy.",
+                        es="El equipo de LLM no está configurado para tu academia.",
+                        slug="litellm-team-id-missing",
+                    ),
+                    code=400,
+                )
             metadata = {"plan_title": plan_title} if plan_title else None
-            created = client.create_api_key(external_user_id=external_user_id, name=alias, metadata=metadata)
+            created = client.create_api_key(
+                external_user_id=external_user_id,
+                team_id=team_id,
+                name=alias,
+                metadata=metadata,
+            )
             created_token_id = created.get("id") or created.get("token_id") or created.get("token")
             effective_models = []
+            created_item = None
             if created_token_id and hasattr(client, "get_user_info"):
                 try:
                     user_info = client.get_user_info(user_id=external_user_id)
@@ -2113,7 +2130,6 @@ class MeLLMKeysView(APIView):
                             teams_map[str(team_id)] = team
 
                     keys_data = user_info.get("keys") or []
-                    created_item = None
                     for item in keys_data:
                         token_id = item.get("token_id") or item.get("token")
                         if token_id == created_token_id:
@@ -2124,6 +2140,8 @@ class MeLLMKeysView(APIView):
                 except LLMClientError:
                     effective_models = []
             created["models"] = effective_models
+            if created_item:
+                created["expires"] = created_item.get("expires")
             raw_academy_id = request.headers.get("Academy") or request.headers.get("academy")
             try:
                 academy_id = int(str(raw_academy_id).strip())
@@ -2168,7 +2186,7 @@ class MeLLMKeyByIdView(APIView):
     def delete(self, request, key_id):
         lang = get_user_language(request)
         try:
-            client, external_user_id = resolve_llm_client_and_external_id(request)
+            client, external_user_id, _team_id = resolve_llm_client_and_external_id(request)
             client.delete_api_keys(user_id=external_user_id, token_ids=[key_id])
             raw_academy_id = request.headers.get("Academy") or request.headers.get("academy")
             try:
