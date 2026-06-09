@@ -56,6 +56,7 @@ from breathecode.utils.views import private_view, render_message
 from .actions import fix_datetime_weekday, update_timeslots_out_of_range  # get_my_event_types,
 from .models import (
     ACTIVE,
+    FINISHED,
     SUSPENDED,
     AcademyEventSettings,
     Event,
@@ -1226,6 +1227,56 @@ class AcademyEventSuspendView(APIView):
 
         # Queue email notification task with optional reason
         send_event_suspended_notification.delay(event.id, suspension_reason=suspension_reason)
+
+        serializer = EventSerializer(event, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AcademyEventRecordingView(APIView):
+
+    @capable_of("crud_event")
+    def put(self, request, event_id, academy_id=None):
+        lang = get_user_language(request)
+
+        event = Event.objects.filter(academy__id=int(academy_id), id=event_id).first()
+
+        if not event:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Event not found for this academy {academy_id}",
+                    es=f"Evento no encontrado para esta academia {academy_id}",
+                    slug="event-not-found",
+                )
+            )
+
+        recording_url = request.data.get("recording_url")
+        if not recording_url or not str(recording_url).startswith(("http://", "https://")):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="The recording URL must be a valid URL starting with http:// or https://",
+                    es="La URL de grabación debe ser una URL válida que comience con http:// o https://",
+                    slug="invalid-recording-url",
+                ),
+                code=400,
+            )
+
+        now = timezone.now()
+        event_finished = event.status == FINISHED or (event.ending_at is not None and event.ending_at < now)
+        if not event_finished:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="The recording can only be published after the event has finished",
+                    es="La grabación solo puede publicarse después de que el evento haya terminado",
+                    slug="event-not-finished",
+                ),
+                code=400,
+            )
+
+        event.recording_url = recording_url
+        event.save()
 
         serializer = EventSerializer(event, many=False)
         return Response(serializer.data, status=status.HTTP_200_OK)
