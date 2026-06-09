@@ -46,6 +46,7 @@ def post_serializer(self, cohort, user, profile_academy=None, data={}):
             "stage": cohort.stage,
             "available_as_saas": cohort.available_as_saas,
             "shortcuts": cohort.shortcuts,
+            "micro_cohorts": list(cohort.micro_cohorts.values_list("id", flat=True)),
         },
         "created_at": self.bc.datetime.to_iso_string(UTC_NOW),
         "updated_at": self.bc.datetime.to_iso_string(UTC_NOW),
@@ -89,6 +90,7 @@ def put_serializer(self, cohort_user, cohort, user, profile_academy=None, data={
             "stage": cohort.stage,
             "available_as_saas": cohort.available_as_saas,
             "shortcuts": cohort.shortcuts,
+            "micro_cohorts": list(cohort.micro_cohorts.values_list("id", flat=True)),
         },
         "created_at": self.bc.datetime.to_iso_string(cohort_user.created_at),
         "updated_at": self.bc.datetime.to_iso_string(cohort_user.updated_at),
@@ -196,6 +198,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "stage": model["cohort_user"].cohort.stage,
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
                     "shortcuts": model["cohort_user"].cohort.shortcuts,
+                    "micro_cohorts": [],
                 },
                 "user": {
                     "id": model["cohort_user"].user.id,
@@ -278,6 +281,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "stage": model["cohort_user"].cohort.stage,
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
                     "shortcuts": model["cohort_user"].cohort.shortcuts,
+                    "micro_cohorts": [],
                 },
                 "user": {
                     "id": model["cohort_user"].user.id,
@@ -343,6 +347,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "stage": model["cohort_user"].cohort.stage,
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
                     "shortcuts": model["cohort_user"].cohort.shortcuts,
+                    "micro_cohorts": [],
                 },
                 "role": model["cohort_user"].role,
                 "finantial_status": model["cohort_user"].finantial_status,
@@ -422,6 +427,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "stage": model["cohort_user"].cohort.stage,
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
                     "shortcuts": model["cohort_user"].cohort.shortcuts,
+                    "micro_cohorts": [],
                 },
                 "user": {
                     "id": model["cohort_user"].user.id,
@@ -496,6 +502,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "stage": model["cohort_user"].cohort.stage,
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
                     "shortcuts": model["cohort_user"].cohort.shortcuts,
+                    "micro_cohorts": [],
                 },
                 "watching": False,
             }
@@ -584,6 +591,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "stage": model["cohort_user"].cohort.stage,
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
                     "shortcuts": model["cohort_user"].cohort.shortcuts,
+                    "micro_cohorts": [],
                 },
                 "watching": False,
             }
@@ -644,6 +652,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "stage": model["cohort_user"].cohort.stage,
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
                     "shortcuts": model["cohort_user"].cohort.shortcuts,
+                    "micro_cohorts": [],
                 },
                 "watching": False,
             }
@@ -708,6 +717,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "stage": model["cohort_user"].cohort.stage,
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
                     "shortcuts": model["cohort_user"].cohort.shortcuts,
+                    "micro_cohorts": [],
                 },
                 "watching": False,
             }
@@ -768,6 +778,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "stage": model["cohort_user"].cohort.stage,
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
                     "shortcuts": model["cohort_user"].cohort.shortcuts,
+                    "micro_cohorts": [],
                 },
                 "watching": False,
             }
@@ -838,6 +849,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "stage": model["cohort_user"].cohort.stage,
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
                     "shortcuts": model["cohort_user"].cohort.shortcuts,
+                    "micro_cohorts": [],
                 },
                 "user": {
                     "id": model["cohort_user"].user.id,
@@ -913,6 +925,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "stage": model["cohort_user"].cohort.stage,
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
                     "shortcuts": model["cohort_user"].cohort.shortcuts,
+                    "micro_cohorts": [],
                 },
                 "watching": False,
             }
@@ -974,6 +987,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "stage": model["cohort_user"].cohort.stage,
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
                     "shortcuts": model["cohort_user"].cohort.shortcuts,
+                    "micro_cohorts": [],
                 },
                 "watching": False,
             }
@@ -1044,6 +1058,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "stage": model["cohort_user"].cohort.stage,
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
                     "shortcuts": model["cohort_user"].cohort.shortcuts,
+                    "micro_cohorts": [],
                 },
                 "watching": False,
             }
@@ -1117,6 +1132,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "stage": model["cohort_user"].cohort.stage,
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
                     "shortcuts": model["cohort_user"].cohort.shortcuts,
+                    "micro_cohorts": [],
                 },
                 "watching": False,
             }
@@ -1198,6 +1214,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "stage": model["cohort_user"].cohort.stage,
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
                     "shortcuts": model["cohort_user"].cohort.shortcuts,
+                    "micro_cohorts": [],
                 },
                 "watching": False,
             }
