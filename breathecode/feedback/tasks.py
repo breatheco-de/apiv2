@@ -202,29 +202,26 @@ def generate_user_cohort_survey_answers(user, survey, status="OPENED", template_
         answer = Answer(cohort=survey.cohort, academy=survey.cohort.academy, lang=survey.lang)
         _answers.append(new_answer(answer))
 
-        if survey.cohort.available_as_saas is False or (
-            survey.cohort.available_as_saas is None and survey.cohort.academy.available_as_saas is False
-        ):
-            # ask for each teacher, with a max of 2 teachers
-            count = 0
-            for ct in cohort_teacher:
-                if count >= survey.max_teachers_to_ask:
-                    break
-                answer = Answer(mentor=ct.user, cohort=survey.cohort, academy=survey.cohort.academy, lang=survey.lang)
-                _answers.append(new_answer(answer))
-                count = count + 1
+        # ask for each teacher, with a max of 2 teachers
+        count = 0
+        for ct in cohort_teacher:
+            if count >= survey.max_teachers_to_ask:
+                break
+            answer = Answer(mentor=ct.user, cohort=survey.cohort, academy=survey.cohort.academy, lang=survey.lang)
+            _answers.append(new_answer(answer))
+            count = count + 1
 
-            # ask for the first TA
-            cohort_assistant = CohortUser.objects.filter(
-                cohort=survey.cohort, role="ASSISTANT", educational_status__in=["ACTIVE", "GRADUATED"]
-            )
-            count = 0
-            for ca in cohort_assistant:
-                if count >= survey.max_assistants_to_ask:
-                    break
-                answer = Answer(mentor=ca.user, cohort=survey.cohort, academy=survey.cohort.academy, lang=survey.lang)
-                _answers.append(new_answer(answer))
-                count = count + 1
+        # ask for the first TA
+        cohort_assistant = CohortUser.objects.filter(
+            cohort=survey.cohort, role="ASSISTANT", educational_status__in=["ACTIVE", "GRADUATED"]
+        )
+        count = 0
+        for ca in cohort_assistant:
+            if count >= survey.max_assistants_to_ask:
+                break
+            answer = Answer(mentor=ca.user, cohort=survey.cohort, academy=survey.cohort.academy, lang=survey.lang)
+            _answers.append(new_answer(answer))
+            count = count + 1
 
         # ask for the whole academy
         answer = Answer(academy=survey.cohort.academy, lang=survey.lang)
