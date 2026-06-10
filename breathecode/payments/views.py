@@ -2662,7 +2662,17 @@ class AcademyPlanFinancingView(APIView):
         now = timezone.now()
 
         if financing_id:
-            item = PlanFinancing.objects.filter(valid_until__gte=now, id=financing_id).first()
+            item = (
+                PlanFinancing.objects.filter(id=financing_id)
+                .annotate(fulfilled_invoices_count=Count("invoices", filter=Q(invoices__status="FULFILLED")))
+                .filter(
+                    Q(valid_until__gte=now)
+                    | Q(fulfilled_invoices_count__gte=F("how_many_installments"))
+                    | Q(installments_paid__gte=F("how_many_installments"))
+                    | Q(status=PlanFinancing.Status.FULLY_PAID)
+                )
+                .first()
+            )
 
             if not item:
                 raise ValidationException(
