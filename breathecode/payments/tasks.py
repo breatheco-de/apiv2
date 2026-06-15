@@ -784,6 +784,10 @@ def charge_subscription(self, subscription_id: int, **_: Any):
                         invoice = s.pay(
                             subscription.user, bag, amount, currency=bag.currency, subscription_billing_team=team
                         )
+                        invoice.amount_breakdown = actions.calculate_invoice_breakdown(
+                            bag, invoice, settings.lang, chosen_period=bag.chosen_period
+                        )
+                        invoice.save(update_fields=["amount_breakdown"])
 
                     except Exception:
                         message = translation(
@@ -1358,6 +1362,13 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                                 s = Stripe(academy=plan_financing.academy)
                                 s.set_language(settings.lang)
                                 invoice = s.pay(plan_financing.user, bag, amount, currency=bag.currency)
+                                invoice.amount_breakdown = actions.calculate_invoice_breakdown(
+                                    bag,
+                                    invoice,
+                                    settings.lang,
+                                    how_many_installments=plan_financing.how_many_installments,
+                                )
+                                invoice.save(update_fields=["amount_breakdown"])
 
                             except Exception:
                                 message = translation(
