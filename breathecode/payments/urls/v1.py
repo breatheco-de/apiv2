@@ -14,6 +14,7 @@ from ..views import (
     AcademyMentorshipServiceSetView,
     AcademyCouponView,
     AcademyFinancingOptionView,
+    AcademyInvoiceRecalculateBreakdownView,
     AcademyInvoiceRefundView,
     AcademyInvoiceRecordRefundView,
     AcademyInvoiceView,
@@ -229,6 +230,11 @@ urlpatterns = [
         "academy/user/<int:user_id>/credit-ledger",
         AcademyUserCreditLedgerView.as_view(),
         name="academy_user_credit_ledger",
+    ),
+    path(
+        "academy/invoice/<int:invoice_id>/recalculate-breakdown",
+        AcademyInvoiceRecalculateBreakdownView.as_view(),
+        name="academy_invoice_id_recalculate_breakdown",
     ),
     path(
         "academy/invoice/<int:invoice_id>/refund", AcademyInvoiceRefundView.as_view(), name="academy_invoice_id_refund"
