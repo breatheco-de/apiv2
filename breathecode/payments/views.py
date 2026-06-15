@@ -3204,6 +3204,50 @@ def _parse_and_validate_refund_request(request, invoice: Invoice, lang: str) -> 
     return refund_amount, items_to_refund, reason, refund_breakdown
 
 
+class AcademyInvoiceRecalculateBreakdownView(APIView):
+    """
+    Recalculate and persist amount_breakdown for an invoice using its bag.
+    """
+
+    @capable_of("issue_refund")
+    def post(self, request, invoice_id, academy_id=None):
+        lang = get_user_language(request)
+        invoice = (
+            Invoice.objects.select_related("bag", "currency", "academy")
+            .filter(id=invoice_id, academy__id=academy_id)
+            .first()
+        )
+
+        if not invoice:
+            raise ValidationException(
+                translation(lang, en="Invoice not found", es="La factura no existe", slug="not-found"), code=404
+            )
+
+        if not invoice.bag_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Invoice does not have a bag associated",
+                    es="La factura no tiene un bag asociado",
+                    slug="invoice-has-no-bag",
+                ),
+                code=400,
+            )
+
+        bag = invoice.bag
+        invoice.amount_breakdown = actions.calculate_invoice_breakdown(
+            bag,
+            invoice,
+            lang,
+            chosen_period=bag.chosen_period,
+            how_many_installments=bag.how_many_installments,
+        )
+        invoice.save(update_fields=["amount_breakdown"])
+
+        serializer = GetInvoiceSerializer(invoice, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 class AcademyInvoiceRefundView(APIView):
     """
     Process a refund for an invoice.
