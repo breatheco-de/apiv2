@@ -64,45 +64,9 @@ def syllabus_weeks_to_days(json):
 def get_assets_from_syllabus(
     syllabus_version: SyllabusVersion | int, task_types: Optional[list[str]] = None, only_mandatory=False
 ):
-    # Lazy import avoids circular import at module load time.
-    from breathecode.admissions.actions import resolve_syllabus_json
+    from breathecode.admissions.services.completion import get_assets_from_syllabus as get_completion_assets
 
-    if not isinstance(syllabus_version, SyllabusVersion):
-        syllabus = SyllabusVersion.objects.filter(id=syllabus_version).first()
-
-    else:
-        syllabus = syllabus_version
-
-    key_map = {
-        "QUIZ": "quizzes",
-        "LESSON": "lessons",
-        "EXERCISE": "replits",
-        "PROJECT": "assignments",
-    }
-
-    if task_types is None:
-        task_types = key_map.keys()
-
-    findings = []
-
-    if isinstance(syllabus.json, str):
-        syllabus.json = json.loads(syllabus.json)
-
-    syllabus.json = resolve_syllabus_json(syllabus.json)
-
-    for day in syllabus.json["days"]:
-        for atype in key_map:
-            if key_map[atype] not in day:
-                continue
-
-            if atype not in task_types:
-                continue
-
-            for asset in day[key_map[atype]]:
-                if (only_mandatory and asset.get("mandatory", True) == True) or only_mandatory is False:
-                    findings.append(asset["slug"])
-
-    return findings
+    return get_completion_assets(syllabus_version, task_types=task_types, only_mandatory=only_mandatory)
 
 
 def how_many_pending_tasks(
@@ -246,15 +210,12 @@ def generate_certificate(user, cohort=None, layout=None):
 
     try:
         uspe.academy = cohort.academy
-        pending_tasks = how_many_pending_tasks(
-            cohort.syllabus_version,
-            user,
-            task_types=["PROJECT"],
-            only_mandatory=True,
-            cohort_id=cohort.id,
-        )
+        from breathecode.admissions.services.completion import get_cached_or_evaluate_cohort_user_completion
 
-        if pending_tasks and pending_tasks > 0:
+        completion = get_cached_or_evaluate_cohort_user_completion(cohort_user)
+        pending_tasks = completion["pending_required_count"]
+
+        if completion["strategy"]["type"] != "NO_COMPLETION_STRATEGY" and not completion["is_complete"]:
             raise ValidationException(
                 f"The student has {pending_tasks} pending tasks", slug=f"with-pending-tasks-{pending_tasks}"
             )
@@ -372,13 +333,10 @@ def generate_certificate_ignoring_tasks(user, cohort=None, layout=None):
     try:
         uspe.academy = cohort.academy
         # Check pending tasks but don't fail - just record the count
-        pending_tasks = how_many_pending_tasks(
-            cohort.syllabus_version,
-            user,
-            task_types=["PROJECT"],
-            only_mandatory=True,
-            cohort_id=cohort.id,
-        )
+        from breathecode.admissions.services.completion import get_cached_or_evaluate_cohort_user_completion
+
+        completion = get_cached_or_evaluate_cohort_user_completion(cohort_user)
+        pending_tasks = completion["pending_required_count"]
 
         # Skip pending tasks validation - this is the key difference from generate_certificate
 
