@@ -7,6 +7,7 @@ from django.db.models import ObjectDoesNotExist, Q
 from django.utils import timezone
 
 from breathecode.admissions.actions import ImportCohortTimeSlots
+from breathecode.admissions.services.completion import evaluate_cohort_user_completion
 from breathecode.assignments.models import Task
 from breathecode.assignments.serializers import TaskGETSmallSerializer
 from breathecode.authenticate.actions import get_user_settings
@@ -657,10 +658,14 @@ class GetCohortUserSerializer(serpy.Serializer):
     created_at = serpy.Field()
     updated_at = serpy.Field()
     profile_academy = serpy.MethodField()
+    completion = serpy.MethodField()
 
     def get_profile_academy(self, obj):
         profile = ProfileAcademy.objects.filter(user=obj.user, academy=obj.cohort.academy).first()
         return GetProfileAcademySmallSerializer(profile).data if profile else None
+
+    def get_completion(self, obj):
+        return evaluate_cohort_user_completion(obj)
 
 
 class GetCohortUserBigSerializer(serpy.Serializer):
@@ -678,6 +683,7 @@ class GetCohortUserBigSerializer(serpy.Serializer):
     created_at = serpy.Field()
     updated_at = serpy.Field()
     profile_academy = serpy.MethodField()
+    completion = serpy.MethodField()
 
     def get_profile_academy(self, obj):
         profile = ProfileAcademy.objects.filter(user=obj.user, academy=obj.cohort.academy).first()
@@ -686,6 +692,9 @@ class GetCohortUserBigSerializer(serpy.Serializer):
     def get_tasks(self, obj):
         tasks = Task.objects.filter(user=obj.user, cohort=obj.cohort)
         return TaskGETSmallSerializer(tasks, many=True).data
+
+    def get_completion(self, obj):
+        return evaluate_cohort_user_completion(obj)
 
 
 class GetCohortUserTasksSerializer(GetCohortUserSerializer):
@@ -765,6 +774,10 @@ class GETCohortUserSmallSerializer(serpy.Serializer):
     finantial_status = serpy.Field()
     educational_status = serpy.Field()
     created_at = serpy.Field()
+    completion = serpy.MethodField()
+
+    def get_completion(self, obj):
+        return evaluate_cohort_user_completion(obj)
 
 
 # Create your models here.
@@ -1581,32 +1594,17 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
         if is_trying_to_graduate and is_late:
             raise ValidationException("Cannot be marked as `GRADUATED` if its financial " "status is `LATE`")
 
-        tasks_pending = Task.objects.filter(
-            user_id=user.id, task_status="PENDING", task_type="PROJECT", cohort__id=cohort.id
-        ).exclude(revision_status="IGNORED")
+        if is_graduated and cohort_user:
+            completion = evaluate_cohort_user_completion(cohort_user)
+        else:
+            completion = None
 
-        mandatory_slugs = []
-        effective_json = (
-            resolve_syllabus_json(cohort.syllabus_version.__dict__["json"])
-            if cohort and cohort.syllabus_version
-            else {"days": []}
-        )
-        for task in tasks_pending:
-            if "days" in effective_json:
-                for day in effective_json["days"]:
-                    for assignment in day["assignments"]:
-                        if "mandatory" not in assignment or (
-                            "mandatory" in assignment and assignment["mandatory"] == True
-                        ):
-                            mandatory_slugs.append(assignment["slug"])
-
-        has_tasks = (
-            Task.objects.filter(associated_slug__in=mandatory_slugs, user_id=user.id, cohort__id=cohort.id)
-            .exclude(revision_status__in=["APPROVED", "IGNORED"])
-            .count()
-        )
-
-        if is_graduated and has_tasks:
+        if (
+            is_graduated
+            and completion
+            and completion["strategy"]["type"] != "NO_COMPLETION_STRATEGY"
+            and not completion["is_complete"]
+        ):
             raise ValidationException("User has tasks with status pending the educational status cannot be GRADUATED")
 
         return {**data, "cohort": cohort, "user": user, "id": id}

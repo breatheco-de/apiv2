@@ -267,6 +267,66 @@ def test_available_as_saas_true__all_mandatory_tasks(enable_signals, bc: Breathe
     ]
 
 
+def test_available_as_saas_true__partial_lessons_quizzes_graduates_on_assignment_status(
+    enable_signals, bc: Breathecode, arange
+):
+    enable_signals()
+
+    syllabus_version = {
+        "json": {
+            "grading_strategy": {
+                "completion": {
+                    "type": "PARTIAL_COMPLETION",
+                    "requirements": {
+                        "LESSON": {"min_percent": 100},
+                        "QUIZ": {"min_percent": 100},
+                    },
+                }
+            },
+            "days": [
+                {
+                    "lessons": [{"slug": "lesson-1", "mandatory": True}],
+                    "quizzes": [{"slug": "quiz-1", "mandatory": True}],
+                }
+            ],
+        }
+    }
+    tasks = [
+        {
+            "task_status": "DONE",
+            "associated_slug": "lesson-1",
+            "revision_status": "PENDING",
+            "task_type": "LESSON",
+        },
+        {
+            "task_status": "PENDING",
+            "associated_slug": "quiz-1",
+            "revision_status": "PENDING",
+            "task_type": "QUIZ",
+        },
+    ]
+    model = arange(task=tasks, cohort={"available_as_saas": True}, syllabus_version=syllabus_version)
+
+    model.task[1].task_status = "DONE"
+    model.task[1].save()
+
+    assert bc.database.list_of("admissions.CohortUser") == [
+        {
+            **bc.format.to_dict(model.cohort_user),
+            "educational_status": "GRADUATED",
+            "history_log": {
+                "delivered_assignments": [
+                    {
+                        "id": 2,
+                        "type": "QUIZ",
+                    }
+                ],
+                "pending_assignments": [],
+            },
+        },
+    ]
+
+
 @pytest.mark.parametrize("task_type", ["QUIZ", "LESSON", "EXERCISE"])
 @pytest.mark.parametrize("revision_status1, revision_status2", [("PENDING", "REJECTED"), ("REJECTED", "PENDING")])
 def test_available_as_saas_true__all_mandatory_tasks_pending__but_type_is_not_project(

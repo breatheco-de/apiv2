@@ -5,11 +5,11 @@ Certificate issuance diagnostic: explains why a certificate may not have been ge
 from __future__ import annotations
 
 from breathecode.admissions.models import CohortUser, FULLY_PAID, UP_TO_DATE
+from breathecode.admissions.services.completion import evaluate_cohort_user_completion
 from breathecode.admissions.utils.academy_features import has_feature_flag
 from breathecode.assignments.models import Task
 from breathecode.certificate.actions import (
     get_assets_from_syllabus,
-    how_many_pending_tasks,
     resolve_specialty_for_cohort,
 )
 from breathecode.certificate.models import LayoutDesign, UserSpecialty
@@ -29,6 +29,7 @@ def build_certificate_diagnostic(cohort_user: CohortUser) -> dict:
     issues: list[str] = []
     warnings: list[str] = []
     checks: list[dict] = []
+    completion = evaluate_cohort_user_completion(cohort_user)
 
     checks.append(_check("cohort_user_exists", True, f"CohortUser id={cohort_user.id}", "ok"))
 
@@ -61,19 +62,17 @@ def build_certificate_diagnostic(cohort_user: CohortUser) -> dict:
         mandatory_projects = get_assets_from_syllabus(
             cohort.syllabus_version, task_types=["PROJECT"], only_mandatory=True
         )
-        has_mandatory = len(mandatory_projects) > 0
         checks.append(
             _check(
-                "syllabus_mandatory_projects",
-                has_mandatory,
-                f"Syllabus has {len(mandatory_projects)} mandatory PROJECT asset(s)",
-                "ok" if has_mandatory else "warning",
+                "completion_strategy",
+                completion["strategy"]["type"] != "NO_COMPLETION_STRATEGY",
+                f"Completion strategy is {completion['strategy']['type']} from {completion['strategy']['source']}",
+                "ok" if completion["strategy"]["type"] != "NO_COMPLETION_STRATEGY" else "warning",
             )
         )
-        if not has_mandatory:
+        if completion["strategy"]["type"] == "NO_COMPLETION_STRATEGY":
             warnings.append(
-                "Syllabus has no mandatory PROJECT entries: SaaS cohorts will not auto-graduate via project "
-                "completion, and academy reports typically treat such cohorts as not certificate-eligible."
+                "Syllabus has no completion strategy and no mandatory PROJECT entries for legacy completion."
             )
 
         academy = cohort.academy
@@ -168,40 +167,39 @@ def build_certificate_diagnostic(cohort_user: CohortUser) -> dict:
     if not ok_teacher:
         issues.append("Cohort does not have a main teacher")
 
-    pending_tasks = 0
+    pending_tasks = completion["pending_required_count"]
     if cohort.syllabus_version:
         try:
-            pending_tasks = how_many_pending_tasks(
-                cohort.syllabus_version,
-                user,
-                task_types=["PROJECT"],
-                only_mandatory=True,
-                cohort_id=cohort.id,
-            )
             ok_pending = pending_tasks == 0
             checks.append(
                 _check(
-                    "pending_mandatory_projects",
+                    "pending_completion_requirements",
                     ok_pending,
-                    f"Pending mandatory PROJECT tasks: {pending_tasks} (cleared when revision_status is APPROVED or IGNORED)",
+                    f"Pending required assets: {pending_tasks}",
                     "ok" if ok_pending else "error",
                 )
             )
             if pending_tasks > 0:
-                issues.append(f"User has {pending_tasks} pending mandatory PROJECT tasks")
-                if mandatory_projects:
-                    for task in (
-                        Task.objects.filter(
-                            user=user, associated_slug__in=mandatory_projects, cohort=cohort
-                        )
-                        .exclude(revision_status__in=["APPROVED", "IGNORED"])
-                        .order_by("id")[:10]
-                    ):
+                issues.append(f"User has {pending_tasks} pending required asset(s)")
+                pending_slugs = []
+                for slugs in completion["pending_required_slugs"].values():
+                    pending_slugs.extend(slugs)
+                if pending_slugs:
+                    tasks_by_slug = {
+                        task.associated_slug: task
+                        for task in Task.objects.filter(
+                            user=user,
+                            associated_slug__in=pending_slugs,
+                            cohort=cohort,
+                        ).order_by("id")[:10]
+                    }
+                    for slug in pending_slugs[:10]:
+                        task = tasks_by_slug.get(slug)
                         pending_task_samples.append(
                             {
-                                "associated_slug": task.associated_slug,
-                                "task_status": task.task_status,
-                                "revision_status": task.revision_status,
+                                "associated_slug": slug,
+                                "task_status": task.task_status if task else None,
+                                "revision_status": task.revision_status if task else None,
                             }
                         )
         except Exception as e:
@@ -285,6 +283,7 @@ def build_certificate_diagnostic(cohort_user: CohortUser) -> dict:
         "mandatory_project_slugs": list(mandatory_projects),
         "auto_ignore_projects_on_delivery": auto_ignore_enabled,
         "pending_task_samples": pending_task_samples,
+        "completion": completion,
         "summary": summary,
     }
 

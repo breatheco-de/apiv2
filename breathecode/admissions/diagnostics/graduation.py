@@ -5,9 +5,10 @@ Graduation diagnostic: explains why automatic SaaS graduation may not have run f
 from __future__ import annotations
 
 from breathecode.admissions.models import CohortUser
+from breathecode.admissions.services.completion import evaluate_cohort_user_completion
 from breathecode.admissions.utils.academy_features import has_feature_flag
 from breathecode.assignments.models import Task
-from breathecode.certificate.actions import get_assets_from_syllabus, how_many_pending_tasks
+from breathecode.certificate.actions import get_assets_from_syllabus
 
 
 def _check(slug: str, ok: bool, message: str, severity: str | None = None) -> dict:
@@ -34,6 +35,8 @@ def build_graduation_diagnostic(cohort_user: CohortUser) -> dict:
         )
     )
 
+    completion = evaluate_cohort_user_completion(cohort_user)
+
     if cohort_user.educational_status == "GRADUATED":
         return {
             "cohort_user_id": cohort_user.id,
@@ -50,6 +53,7 @@ def build_graduation_diagnostic(cohort_user: CohortUser) -> dict:
             "pending_task_samples": [],
             "auto_ignore_enabled": False,
             "project_revision_summary": None,
+            "completion": completion,
             "summary": "User is already GRADUATED.",
         }
 
@@ -100,18 +104,16 @@ def build_graduation_diagnostic(cohort_user: CohortUser) -> dict:
     mandatory_projects = get_assets_from_syllabus(
         cohort.syllabus_version, task_types=["PROJECT"], only_mandatory=True
     )
-    has_mandatory = len(mandatory_projects) > 0
     checks.append(
         _check(
-            "mandatory_projects",
-            has_mandatory,
-            f"Syllabus has {len(mandatory_projects)} mandatory projects"
-            + (f": {', '.join(mandatory_projects[:10])}" if len(mandatory_projects) <= 10 else ""),
-            "ok" if has_mandatory else "error",
+            "completion_strategy",
+            completion["strategy"]["type"] != "NO_COMPLETION_STRATEGY",
+            f"Completion strategy is {completion['strategy']['type']} from {completion['strategy']['source']}",
+            "ok" if completion["strategy"]["type"] != "NO_COMPLETION_STRATEGY" else "error",
         )
     )
-    if not has_mandatory:
-        issues.append("Syllabus has no mandatory projects (automatic graduation requires mandatory projects)")
+    if completion["strategy"]["type"] == "NO_COMPLETION_STRATEGY":
+        issues.append("Syllabus has no completion strategy and no mandatory projects for legacy graduation")
 
     academy = cohort.academy
     auto_ignore_enabled = has_feature_flag(academy, "certificate.auto_ignore_projects_on_delivery", default=False)
@@ -128,36 +130,33 @@ def build_graduation_diagnostic(cohort_user: CohortUser) -> dict:
             "Auto-ignore feature flag is disabled; projects will not be auto-ignored when delivered."
         )
 
-    pending_tasks = how_many_pending_tasks(
-        cohort.syllabus_version,
-        user,
-        task_types=["PROJECT"],
-        only_mandatory=True,
-        cohort_id=cohort.id,
-    )
+    pending_tasks = completion["pending_required_count"]
     ok_pending = pending_tasks == 0
     checks.append(
         _check(
-            "pending_mandatory_projects",
+            "pending_completion_requirements",
             ok_pending,
-            f"Pending mandatory PROJECT tasks: {pending_tasks}",
+            f"Pending required assets: {pending_tasks}",
             "ok" if ok_pending else "error",
         )
     )
     if pending_tasks > 0:
-        issues.append(f"User has {pending_tasks} pending mandatory PROJECT tasks")
+        issues.append(f"User has {pending_tasks} pending required asset(s)")
 
     pending_task_samples: list[dict] = []
-    if mandatory_projects:
-        user_tasks_pending = Task.objects.filter(
-            user=user, associated_slug__in=mandatory_projects, cohort=cohort
-        ).exclude(revision_status__in=["APPROVED", "IGNORED"])
-        for task in user_tasks_pending[:10]:
+    pending_slugs = []
+    for slugs in completion["pending_required_slugs"].values():
+        pending_slugs.extend(slugs)
+    if pending_slugs:
+        user_tasks_pending = Task.objects.filter(user=user, associated_slug__in=pending_slugs, cohort=cohort)
+        task_samples_by_slug = {task.associated_slug: task for task in user_tasks_pending[:10]}
+        for slug in pending_slugs[:10]:
+            task = task_samples_by_slug.get(slug)
             pending_task_samples.append(
                 {
-                    "associated_slug": task.associated_slug,
-                    "task_status": task.task_status,
-                    "revision_status": task.revision_status,
+                    "associated_slug": slug,
+                    "task_status": task.task_status if task else None,
+                    "revision_status": task.revision_status if task else None,
                 }
             )
 
@@ -224,22 +223,17 @@ def build_graduation_diagnostic(cohort_user: CohortUser) -> dict:
                 "If tasks were already approved before the receiver ran, the user may not auto-graduate."
             )
 
-    conditions_met_but_not_graduated = (
-        len(issues) == 0
-        and bool(all_tasks_approved)
-        and cohort_user.educational_status != "GRADUATED"
-    )
+    conditions_met_but_not_graduated = len(issues) == 0 and completion["is_complete"] and cohort_user.educational_status != "GRADUATED"
 
     summary_parts = []
     if conditions_met_but_not_graduated:
         summary_parts.append(
-            "All automated checks pass and mandatory projects appear approved, but user is not GRADUATED — "
-            "likely the graduation receiver did not run on the last revision_status update."
+            "All automated checks pass and completion requirements are met, but user is not GRADUATED — "
+            "likely the graduation receiver did not run on the last relevant task update."
         )
     elif len(issues) == 0:
         summary_parts.append(
-            "All blocking checks passed; graduation should occur when a mandatory project's revision_status updates "
-            "and pending count reaches zero."
+            "All blocking checks passed; graduation should occur when a required asset update makes completion reach the strategy threshold."
         )
     else:
         summary_parts.append(f"{len(issues)} issue(s) prevent graduation until resolved.")
@@ -259,6 +253,7 @@ def build_graduation_diagnostic(cohort_user: CohortUser) -> dict:
         "pending_task_samples": pending_task_samples,
         "auto_ignore_enabled": auto_ignore_enabled,
         "project_revision_summary": project_revision_summary,
+        "completion": completion,
         "all_mandatory_tasks_approved_pattern": all_tasks_approved,
         "conditions_met_but_not_graduated": conditions_met_but_not_graduated,
         "possible_reasons_if_stuck": (

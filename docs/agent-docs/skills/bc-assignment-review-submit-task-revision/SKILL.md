@@ -16,6 +16,8 @@ requires: []
 
 - **`associated_slug`**: Syllabus asset slug on the **`Task`**; use it with **`GET /v1/registry/asset/{slug}`** to read **`config`** (synced **`learn.json`**). Full field semantics: [reference/learnpack-configuration.md](reference/learnpack-configuration.md).
 - **`revision_status`**: **`PENDING`** (awaiting teacher), **`APPROVED`**, **`REJECTED`**, **`IGNORED`**. There is **no separate HTTP route** to “ignore” — use **`PUT`** with **`revision_status`: `"IGNORED"`**.
+- **Graduation impact**: `APPROVED` and `IGNORED` count as completed PROJECT assets in the completion evaluator. If the cohort syllabus uses a grading strategy that requires projects, changing the last required project to `APPROVED` or `IGNORED` can graduate the student and enqueue certificate generation.
+- **Auto-ignore feature flag**: If `certificate.auto_ignore_projects_on_delivery` is enabled for the academy, delivered PROJECT tasks are marked `IGNORED` automatically. Keep this behavior in mind before manually reviewing a project queue.
 - **Teacher queue**: Filter list **`GET`**s with **`revision_status=PENDING`**, **`task_status=DONE`**, **`task_type=PROJECT`**. Order **oldest delivery first** with **`sort=delivered_at`** on academy/cohort lists.
 - **Solution references (optional):** In **`GET /v1/registry/asset/{slug}`**, check **`solution_url`**, **`solution_video_url`**, and **`with_solutions`**. Treat them as optional guidance links only; primary review contract remains **`readme_url`** + **`config`**.
 - **`AssetContext` (optional LLM context):** Use **`GET /v1/registry/asset/{asset_id}/context`** to retrieve **`ai_context`** plus **`status`**. This is generated asynchronously and may return **`PROCESSING`** first.
