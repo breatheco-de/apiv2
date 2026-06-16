@@ -241,13 +241,14 @@ class PaymentsTestSuite(PaymentsTestCase):
     🔽🔽🔽 Subscription process to charge
     """
 
+    @patch("breathecode.payments.tasks.actions.calculate_invoice_breakdown", MagicMock(return_value={"plans": {"test-plan": {"amount": 10.0, "currency": "USD"}}, "service-items": {}}))
     @patch("logging.Logger.info", MagicMock())
     @patch("logging.Logger.error", MagicMock())
     @patch("breathecode.notify.actions.send_email_message", MagicMock())
     @patch("breathecode.payments.tasks.renew_subscription_consumables.delay", MagicMock())
     @patch("mixer.main.LOGGER.info", MagicMock())
     @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
-    def test_subscription_process_to_charge(self):
+    def test_subscription_process_to_charge(self, mock_calculate_breakdown):
         unit = random.choice([1, 3, 6, 12])
         unit_type = "MONTH"
         subscription = {
@@ -385,6 +386,9 @@ class PaymentsTestSuite(PaymentsTestCase):
                 },
             ],
         )
+
+        mock_calculate_breakdown.assert_called_once()
+        self.assertEqual(mock_calculate_breakdown.call_args.kwargs.get("chosen_period"), "MONTH")
 
         assert notify_actions.send_email_message.call_args_list == [
             call(

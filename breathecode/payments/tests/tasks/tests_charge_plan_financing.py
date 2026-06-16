@@ -309,13 +309,14 @@ class PaymentsTestSuite(PaymentsTestCase):
     🔽🔽🔽 PlanFinancing process to charge
     """
 
+    @patch("breathecode.payments.tasks.actions.calculate_invoice_breakdown", MagicMock(return_value={"plans": {"test-plan": {"amount": 5.0, "currency": "USD"}}, "service-items": {}}))
     @patch("logging.Logger.info", MagicMock())
     @patch("logging.Logger.error", MagicMock())
     @patch("breathecode.notify.actions.send_email_message", MagicMock())
     @patch("breathecode.payments.tasks.renew_plan_financing_consumables.delay", MagicMock())
     @patch("mixer.main.LOGGER.info", MagicMock())
     @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
-    def test_plan_financing_process_to_charge(self):
+    def test_plan_financing_process_to_charge(self, mock_calculate_breakdown):
         delta = relativedelta(months=random.randint(1, 12))
         plan_financing = {
             "valid_until": UTC_NOW + delta,
@@ -409,6 +410,11 @@ class PaymentsTestSuite(PaymentsTestCase):
                     academy=model.academy,
                 )
             ],
+        )
+        mock_calculate_breakdown.assert_called_once()
+        self.assertEqual(
+            mock_calculate_breakdown.call_args.kwargs.get("how_many_installments"),
+            model.plan_financing.how_many_installments,
         )
         self.bc.check.calls(
             activity_tasks.add_activity.delay.call_args_list,
