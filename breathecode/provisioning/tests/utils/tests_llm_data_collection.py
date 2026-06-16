@@ -125,9 +125,18 @@ def test_collect_llm_data_builds_flat_enriched_rows(
             {
                 "team_id": "team-1",
                 "members_with_roles": [{"user_id": "student-miami", "role": "user"}],
+                "models": ["miami/gpt-4", "groq/llama-3.1-8b-instant"],
+                "spend": 1.25,
+                "max_budget": 5.0,
+                "budget_duration": "30d",
+                "metadata": {
+                    "soft_budget_alerting_emails": ["ops@example.com", "lead@example.com"],
+                    "team_member_budget_id": "budget-1",
+                },
             }
         ]
     }
+    client_mock.get_budgets_info.return_value = [{"budget_id": "budget-1", "max_budget": 7.0, "budget_duration": "30d"}]
     get_llm_client_mock.return_value = client_mock
 
     snapshot = collect_llm_data()
@@ -139,40 +148,143 @@ def test_collect_llm_data_builds_flat_enriched_rows(
     assert len(snapshot["llm_external_users"]) == 3
 
     student_key = next(key for key in snapshot["keys"] if key["token_id"] == "tok-1")
-    assert student_key["provisioning_academy"] is pa
     assert student_key["user_id"] == "student-miami"
     assert student_key["team_id"] == "team-1"
     assert student_key["provisioning_llm"] is provisioning_llm
 
     orphan_key = next(key for key in snapshot["keys"] if key["token_id"] == "tok-orphan")
     assert orphan_key["team_id"] is None
-    assert orphan_key["provisioning_academy"] is None
     assert orphan_key["provisioning_llm"] is None
 
     assert snapshot["teams"][0]["team_id"] == "team-1"
     assert snapshot["teams"][0]["member_user_ids"] == frozenset({"student-miami"})
-    assert snapshot["teams"][0]["provisioning_academy"] is pa
+    assert snapshot["teams"][0]["academy_config"] is snapshot["academies"][0]
+    assert snapshot["teams"][0]["models"] == ["miami/gpt-4", "groq/llama-3.1-8b-instant"]
+    assert snapshot["teams"][0]["team_spend"] == 1.25
+    assert snapshot["teams"][0]["team_max_budget"] == 5.0
+    assert snapshot["teams"][0]["team_budget_duration"] == "30d"
+    assert snapshot["teams"][0]["team_member_budget_id"] == "budget-1"
+    assert snapshot["teams"][0]["member_max_budget"] == 7.0
+    assert snapshot["teams"][0]["member_budget_duration"] == "30d"
+    client_mock.get_budgets_info.assert_called_once_with(budgets=["budget-1"])
 
     assert snapshot["academies"][0]["team_id"] == "team-1"
-    assert snapshot["academies"][0]["provisioning_academy"] is pa
+    assert snapshot["academies"][0]["provisioning_academy_id"] == pa.id
+    assert snapshot["academies"][0]["academy_slug"] == "miami"
+    assert snapshot["academies"][0]["alert_emails"] == ["ops@example.com", "lead@example.com"]
+
+    assert student_key["academy_config"] is snapshot["academies"][0]
+    assert orphan_key["academy_config"] is snapshot["academies"][0]
 
     assert snapshot["provisioning_users"][0]["provisioning_academy"] is pa
     assert snapshot["provisioning_users"][0]["provisioning_llm"] is provisioning_llm
 
     student_user = next(user for user in snapshot["llm_external_users"] if user["user_id"] == "student-miami")
-    assert student_user["provisioning_academy"] is pa
     assert student_user["provisioning_llm"] is provisioning_llm
     assert student_user["teams"] == ["team-1"]
     assert student_user["key_count"] == 1
     assert student_user["user_role"] == "internal_user_viewer"
+    assert student_user["academy_config"] is snapshot["academies"][0]
 
     intruder_user = next(user for user in snapshot["llm_external_users"] if user["user_id"] == "intruder-miami")
-    assert intruder_user["provisioning_academy"] is None
     assert intruder_user["provisioning_llm"] is None
     assert intruder_user["teams"] == ["team-1", "team-other"]
     assert intruder_user["key_count"] == 0
+    assert intruder_user["academy_config"] is snapshot["academies"][0]
 
     admin_user = next(user for user in snapshot["llm_external_users"] if user["user_id"] == "default_user_id")
     assert admin_user["user_role"] == "proxy_admin"
-    assert admin_user["provisioning_academy"] is None
     assert admin_user["provisioning_llm"] is None
+
+
+@patch("breathecode.provisioning.utils.llm_data_collection.get_llm_client")
+@patch("breathecode.provisioning.utils.llm_data_collection.ProvisioningLLM.objects")
+@patch("breathecode.provisioning.utils.llm_data_collection.ProvisioningAcademy.objects")
+def test_collect_llm_data_assigns_academy_config_without_alert_emails(
+    provisioning_academy_objects_mock,
+    provisioning_llm_objects_mock,
+    get_llm_client_mock,
+):
+    pa = _make_provisioning_academy_mock()
+    _patch_provisioning_academy_query(provisioning_academy_objects_mock, [pa])
+    _patch_active_provisioning_llms(provisioning_llm_objects_mock, [])
+
+    client_mock = MagicMock()
+    client_mock.list_keys.return_value = _list_keys_page(
+        [
+            {
+                "token_id": "tok-orphan",
+                "key_alias": "orphan",
+                "user_id": None,
+                "team_id": None,
+            },
+        ]
+    )
+    client_mock.list_users.return_value = _list_users_page([])
+    client_mock.list_teams.return_value = {
+        "teams": [
+            {
+                "team_id": "team-1",
+                "members_with_roles": [],
+            }
+        ]
+    }
+    get_llm_client_mock.return_value = client_mock
+
+    snapshot = collect_llm_data()
+
+    assert snapshot["academies"][0]["alert_emails"] == []
+    orphan_key = snapshot["keys"][0]
+    assert orphan_key["academy_config"] is snapshot["academies"][0]
+
+
+@patch("breathecode.provisioning.utils.llm_data_collection.get_llm_client")
+@patch("breathecode.provisioning.utils.llm_data_collection.ProvisioningLLM.objects")
+@patch("breathecode.provisioning.utils.llm_data_collection.ProvisioningAcademy.objects")
+def test_collect_llm_data_enriches_team_without_member_budget(
+    provisioning_academy_objects_mock,
+    provisioning_llm_objects_mock,
+    get_llm_client_mock,
+):
+    pa = _make_provisioning_academy_mock(team_id="team-orphan")
+    _patch_provisioning_academy_query(provisioning_academy_objects_mock, [pa])
+    _patch_active_provisioning_llms(provisioning_llm_objects_mock, [])
+
+    client_mock = MagicMock()
+    client_mock.list_keys.return_value = _list_keys_page([])
+    client_mock.list_users.return_value = _list_users_page([])
+    client_mock.list_teams.return_value = {
+        "teams": [
+            {
+                "team_id": "team-orphan",
+                "members_with_roles": [],
+                "models": [],
+                "metadata": {},
+            },
+            {
+                "team_id": "team-1",
+                "members_with_roles": [],
+                "models": ["miami/gpt-4"],
+                "spend": 0.0,
+                "max_budget": 10.0,
+                "metadata": {"team_member_budget_id": "budget-1"},
+            },
+        ]
+    }
+    client_mock.get_budgets_info.return_value = [{"budget_id": "budget-1", "max_budget": 3.5}]
+    get_llm_client_mock.return_value = client_mock
+
+    snapshot = collect_llm_data()
+
+    orphan_team = next(team for team in snapshot["teams"] if team["team_id"] == "team-orphan")
+    assert orphan_team["academy_config"] is snapshot["academies"][0]
+    assert orphan_team["team_budget_duration"] is None
+    assert orphan_team["team_member_budget_id"] is None
+    assert orphan_team["member_max_budget"] is None
+    assert orphan_team["member_budget_duration"] is None
+
+    configured_team = next(team for team in snapshot["teams"] if team["team_id"] == "team-1")
+    assert configured_team["academy_config"] is None
+    assert configured_team["member_max_budget"] == 3.5
+
+    client_mock.get_budgets_info.assert_called_once_with(budgets=["budget-1"])

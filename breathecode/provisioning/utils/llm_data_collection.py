@@ -24,25 +24,34 @@ __all__ = [
 ]
 
 
+class AcademyConfigRow(TypedDict):
+    provisioning_academy_id: int
+    academy_slug: str
+    team_id: str
+    alert_emails: list[str]
+
+
 class LLMKeyRow(TypedDict):
     token_id: str | None
     key_alias: str | None
     user_id: str | None
     team_id: str | None
     expires: str | None
-    provisioning_academy: ProvisioningAcademy | None
     provisioning_llm: ProvisioningLLM | None
+    academy_config: AcademyConfigRow | None
 
 
 class LLMTeamRow(TypedDict):
     team_id: str
     member_user_ids: frozenset[str]
-    provisioning_academy: ProvisioningAcademy | None
-
-
-class AcademyConfigRow(TypedDict):
-    provisioning_academy: ProvisioningAcademy
-    team_id: str
+    academy_config: AcademyConfigRow | None
+    models: list[str]
+    team_spend: float | None
+    team_max_budget: float | None
+    team_budget_duration: str | None
+    team_member_budget_id: str | None
+    member_max_budget: float | None
+    member_budget_duration: str | None
 
 
 class ProvisioningUserRow(TypedDict):
@@ -55,8 +64,8 @@ class LLMExternalUserRow(TypedDict):
     user_role: str | None
     teams: list[str]
     key_count: int | None
-    provisioning_academy: ProvisioningAcademy | None
     provisioning_llm: ProvisioningLLM | None
+    academy_config: AcademyConfigRow | None
 
 
 class LLMDataCollection(TypedDict):
@@ -67,7 +76,48 @@ class LLMDataCollection(TypedDict):
     llm_external_users: list[LLMExternalUserRow]
 
 
-def _academy_config_rows(provisioning_academies: list[ProvisioningAcademy]) -> list[AcademyConfigRow]:
+def _extract_soft_budget_alert_emails(raw_team: dict) -> list[str]:
+    metadata = raw_team.get("metadata") or {}
+    team_info = raw_team.get("team_info") or {}
+    team_info_metadata = team_info.get("metadata") or {}
+    raw_emails = (
+        metadata.get("soft_budget_alerting_emails") or team_info_metadata.get("soft_budget_alerting_emails") or []
+    )
+    return [str(email).strip() for email in raw_emails if email and str(email).strip()]
+
+
+def _fetch_member_budgets_by_id(client, raw_teams: list[dict]) -> dict[str, dict]:
+    budget_ids: list[str] = []
+    for raw_team in raw_teams:
+        metadata = raw_team.get("metadata") or {}
+        budget_id_raw = metadata.get("team_member_budget_id")
+        if budget_id_raw is None or not str(budget_id_raw).strip():
+            continue
+        budget_ids.append(str(budget_id_raw).strip())
+
+    if not budget_ids or not hasattr(client, "get_budgets_info"):
+        return {}
+
+    try:
+        budgets = client.get_budgets_info(budgets=list(set(budget_ids)))
+    except LLMClientError as exc:
+        logger.warning("LiteLLM member budgets fetch failed: %s", exc)
+        return {}
+
+    return {str(budget["budget_id"]): budget for budget in budgets if budget.get("budget_id")}
+
+
+def _academy_config_rows(
+    provisioning_academies: list[ProvisioningAcademy], raw_teams: list[dict]
+) -> list[AcademyConfigRow]:
+    emails_by_team: dict[str, list[str]] = {}
+    for raw_team in raw_teams:
+        team_id_raw = raw_team.get("team_id")
+        if team_id_raw is None or not str(team_id_raw).strip():
+            continue
+        team_id = str(team_id_raw).strip()
+        emails_by_team[team_id] = _extract_soft_budget_alert_emails(raw_team)
+
     rows: list[AcademyConfigRow] = []
     for provisioning_academy in provisioning_academies:
         vendor_settings = provisioning_academy.vendor_settings or {}
@@ -75,10 +125,13 @@ def _academy_config_rows(provisioning_academies: list[ProvisioningAcademy]) -> l
         if not team_id:
             continue
 
+        academy_slug = getattr(provisioning_academy.academy, "slug", None)
         rows.append(
             {
-                "provisioning_academy": provisioning_academy,
+                "provisioning_academy_id": provisioning_academy.id,
+                "academy_slug": str(academy_slug) if academy_slug else "",
                 "team_id": team_id,
+                "alert_emails": emails_by_team.get(team_id, []),
             }
         )
     return rows
@@ -142,8 +195,9 @@ def _llm_key_rows(
     raw_keys: list[dict],
     group_academies: list[AcademyConfigRow],
     group_provisioning_users: list[ProvisioningUserRow],
+    default_config: AcademyConfigRow | None,
 ) -> list[LLMKeyRow]:
-    academy_by_team = {academy["team_id"]: academy["provisioning_academy"] for academy in group_academies}
+    academy_config_by_team = {academy["team_id"]: academy for academy in group_academies}
     provisioning_by_external_user = {
         provisioning_user["provisioning_llm"].external_user_id: provisioning_user
         for provisioning_user in group_provisioning_users
@@ -154,7 +208,8 @@ def _llm_key_rows(
         team_id_raw = raw_key.get("team_id")
         team_id = str(team_id_raw).strip() if team_id_raw is not None and str(team_id_raw).strip() else None
 
-        provisioning_academy = academy_by_team.get(team_id) if team_id else None
+        team_config = academy_config_by_team.get(team_id) if team_id else None
+        academy_config = team_config or default_config
 
         user_id_raw = raw_key.get("user_id")
         user_id = str(user_id_raw).strip() if user_id_raw is not None and str(user_id_raw).strip() else None
@@ -172,16 +227,20 @@ def _llm_key_rows(
                 "user_id": user_id,
                 "team_id": team_id,
                 "expires": expires,
-                "provisioning_academy": provisioning_academy,
                 "provisioning_llm": provisioning_llm,
+                "academy_config": academy_config,
             }
         )
 
     return rows
 
 
-def _llm_team_rows(raw_teams: list[dict], group_academies: list[AcademyConfigRow]) -> list[LLMTeamRow]:
-    academy_by_team = {academy["team_id"]: academy["provisioning_academy"] for academy in group_academies}
+def _llm_team_rows(
+    raw_teams: list[dict],
+    group_academies: list[AcademyConfigRow],
+    member_budgets_by_id: dict[str, dict],
+) -> list[LLMTeamRow]:
+    academy_config_by_team = {academy["team_id"]: academy for academy in group_academies}
     rows: list[LLMTeamRow] = []
 
     for raw_team in raw_teams:
@@ -190,7 +249,7 @@ def _llm_team_rows(raw_teams: list[dict], group_academies: list[AcademyConfigRow
             continue
 
         team_id = str(team_id_raw).strip()
-        provisioning_academy = academy_by_team.get(team_id)
+        academy_config = academy_config_by_team.get(team_id)
 
         members: set[str] = set()
         for member in raw_team.get("members_with_roles") or []:
@@ -198,11 +257,39 @@ def _llm_team_rows(raw_teams: list[dict], group_academies: list[AcademyConfigRow
             if user_id:
                 members.add(str(user_id))
 
+        metadata = raw_team.get("metadata") or {}
+        team_member_budget_id_raw = metadata.get("team_member_budget_id")
+        team_member_budget_id = (
+            str(team_member_budget_id_raw).strip()
+            if team_member_budget_id_raw is not None and str(team_member_budget_id_raw).strip()
+            else None
+        )
+        member_budget = member_budgets_by_id.get(team_member_budget_id) if team_member_budget_id else None
+        member_budget_duration_raw = member_budget.get("budget_duration") if member_budget else None
+        member_budget_duration = (
+            str(member_budget_duration_raw).strip()
+            if member_budget_duration_raw is not None and str(member_budget_duration_raw).strip()
+            else None
+        )
+        team_budget_duration_raw = raw_team.get("budget_duration")
+        team_budget_duration = (
+            str(team_budget_duration_raw).strip()
+            if team_budget_duration_raw is not None and str(team_budget_duration_raw).strip()
+            else None
+        )
+
         rows.append(
             {
                 "team_id": team_id,
                 "member_user_ids": frozenset(members),
-                "provisioning_academy": provisioning_academy,
+                "academy_config": academy_config,
+                "models": list(raw_team.get("models") or []),
+                "team_spend": raw_team.get("spend"),
+                "team_max_budget": raw_team.get("max_budget"),
+                "team_budget_duration": team_budget_duration,
+                "team_member_budget_id": team_member_budget_id,
+                "member_max_budget": member_budget.get("max_budget") if member_budget else None,
+                "member_budget_duration": member_budget_duration,
             }
         )
 
@@ -212,11 +299,18 @@ def _llm_team_rows(raw_teams: list[dict], group_academies: list[AcademyConfigRow
 def _llm_external_user_rows(
     raw_users: list[dict],
     group_provisioning_users: list[ProvisioningUserRow],
+    group_academies: list[AcademyConfigRow],
+    default_config: AcademyConfigRow | None,
 ) -> list[LLMExternalUserRow]:
     provisioning_by_external_user = {
         provisioning_user["provisioning_llm"].external_user_id: provisioning_user
         for provisioning_user in group_provisioning_users
     }
+    academy_config_by_team = {academy["team_id"]: academy for academy in group_academies}
+    academy_config_by_slug = {
+        academy["academy_slug"]: academy for academy in group_academies if academy["academy_slug"]
+    }
+
     rows: list[LLMExternalUserRow] = []
 
     for raw_user in raw_users:
@@ -228,15 +322,39 @@ def _llm_external_user_rows(
         match = provisioning_by_external_user.get(user_id)
         key_count_raw = raw_user.get("key_count")
         key_count = int(key_count_raw) if key_count_raw is not None else None
+        teams = list(raw_user.get("teams") or [])
+
+        academy_config = None
+        for team_id in teams:
+            config = academy_config_by_team.get(team_id)
+            if config:
+                academy_config = config
+                break
+
+        if academy_config is None and match:
+            for config in group_academies:
+                if config["provisioning_academy_id"] == match["provisioning_academy"].id:
+                    academy_config = config
+                    break
+
+        if academy_config is None:
+            for slug in sorted(academy_config_by_slug.keys(), key=len, reverse=True):
+                suffix = f"-{slug}"
+                if user_id.endswith(suffix) and len(user_id) > len(suffix):
+                    academy_config = academy_config_by_slug[slug]
+                    break
+
+        if academy_config is None:
+            academy_config = default_config
 
         rows.append(
             {
                 "user_id": user_id,
                 "user_role": raw_user.get("user_role"),
-                "teams": list(raw_user.get("teams") or []),
+                "teams": teams,
                 "key_count": key_count,
-                "provisioning_academy": match["provisioning_academy"] if match else None,
                 "provisioning_llm": match["provisioning_llm"] if match else None,
+                "academy_config": academy_config,
             }
         )
 
@@ -298,14 +416,28 @@ def collect_llm_data() -> LLMDataCollection:
             )
             continue
 
-        group_academies = _academy_config_rows(provisioning_academies)
+        group_academies = _academy_config_rows(provisioning_academies, raw_teams)
         group_provisioning_users = _provisioning_user_rows(provisioning_academies)
+        member_budgets_by_id = _fetch_member_budgets_by_id(client, raw_teams)
+        default_config = next(
+            iter(sorted(group_academies, key=lambda row: row["provisioning_academy_id"])),
+            None,
+        )
 
         academies.extend(group_academies)
         provisioning_users.extend(group_provisioning_users)
-        keys.extend(_llm_key_rows(raw_keys, group_academies, group_provisioning_users))
-        teams.extend(_llm_team_rows(raw_teams, group_academies))
-        llm_external_users.extend(_llm_external_user_rows(raw_users, group_provisioning_users))
+        keys.extend(
+            _llm_key_rows(
+                raw_keys,
+                group_academies,
+                group_provisioning_users,
+                default_config,
+            )
+        )
+        teams.extend(_llm_team_rows(raw_teams, group_academies, member_budgets_by_id))
+        llm_external_users.extend(
+            _llm_external_user_rows(raw_users, group_provisioning_users, group_academies, default_config)
+        )
 
     return {
         "keys": keys,
