@@ -60,6 +60,129 @@ def is_deleted_marker(item: Any) -> bool:
     return isinstance(status, str) and status.upper() == "DELETED"
 
 
+def _iter_reference_keys(syllabus_json: dict) -> Iterator[str]:
+    for key in syllabus_json.keys():
+        if key == "days":
+            continue
+        if _parse_reference_key_meta(key) is not None:
+            yield key
+
+
+def _collect_asset_slugs_from_days(days: list) -> set[str]:
+    slugs: set[str] = set()
+    if not isinstance(days, list):
+        return slugs
+
+    for day in days:
+        if not isinstance(day, dict):
+            continue
+
+        for asset_type in ASSET_LIST_KEYS:
+            assets = day.get(asset_type)
+            if not isinstance(assets, list):
+                continue
+
+            for asset in assets:
+                if asset is None or asset == {}:
+                    continue
+
+                if is_deleted_marker(asset):
+                    continue
+
+                if isinstance(asset, dict) and isinstance(asset.get("slug"), str):
+                    slugs.add(asset["slug"])
+
+    return slugs
+
+
+def _resolve_slug_to_asset_id(slugs: set[str]) -> dict[str, int]:
+    if not slugs:
+        return {}
+
+    from breathecode.registry.models import Asset, AssetAlias
+
+    slug_to_id: dict[str, int] = {}
+
+    for alias in AssetAlias.objects.filter(slug__in=slugs).select_related("asset"):
+        slug_to_id[alias.slug] = alias.asset_id
+
+    unresolved = slugs - slug_to_id.keys()
+    if unresolved:
+        for asset in Asset.objects.filter(slug__in=unresolved).only("id", "slug"):
+            slug_to_id[asset.slug] = asset.id
+
+    return slug_to_id
+
+
+def _enrich_days_asset_ids(days: list, slug_to_id: dict[str, int]) -> None:
+    if not isinstance(days, list):
+        return
+
+    for day in days:
+        if not isinstance(day, dict):
+            continue
+
+        for asset_type in ASSET_LIST_KEYS:
+            assets = day.get(asset_type)
+            if not isinstance(assets, list):
+                continue
+
+            for asset in assets:
+                if not isinstance(asset, dict):
+                    continue
+
+                if asset is None or asset == {}:
+                    continue
+
+                if is_deleted_marker(asset):
+                    continue
+
+                slug = asset.get("slug")
+                if not isinstance(slug, str):
+                    continue
+
+                resolved_id = slug_to_id.get(slug)
+                if resolved_id is not None:
+                    asset["id"] = resolved_id
+                elif "id" in asset:
+                    del asset["id"]
+
+
+def enrich_syllabus_asset_ids(syllabus_json: dict | str | None) -> dict:
+    """Resolve registry asset ids for every slug in root days and reference override payloads."""
+    if syllabus_json is None:
+        return {"days": []}
+
+    if isinstance(syllabus_json, str):
+        syllabus_json = json.loads(syllabus_json)
+
+    if not isinstance(syllabus_json, dict):
+        return {"days": []}
+
+    enriched = deepcopy(syllabus_json)
+    slugs: set[str] = set()
+
+    if isinstance(enriched.get("days"), list):
+        slugs |= _collect_asset_slugs_from_days(enriched["days"])
+
+    for key in _iter_reference_keys(enriched):
+        payload = enriched.get(key)
+        if isinstance(payload, dict) and isinstance(payload.get("days"), list):
+            slugs |= _collect_asset_slugs_from_days(payload["days"])
+
+    slug_to_id = _resolve_slug_to_asset_id(slugs)
+
+    if isinstance(enriched.get("days"), list):
+        _enrich_days_asset_ids(enriched["days"], slug_to_id)
+
+    for key in _iter_reference_keys(enriched):
+        payload = enriched.get(key)
+        if isinstance(payload, dict) and isinstance(payload.get("days"), list):
+            _enrich_days_asset_ids(payload["days"], slug_to_id)
+
+    return enriched
+
+
 def _merge_dict_fields(base: dict, override: dict) -> dict:
     merged = deepcopy(base)
     for key, value in override.items():
@@ -538,8 +661,6 @@ def _get_reference_syllabus_version(value: str, academy_id: int | None = None):
 
 
 def test_syllabus(syl, validate_assets=False, ignore=None, academy_id: int | None = None):
-    from breathecode.registry.models import AssetAlias
-
     if ignore is None:
         ignore = []
 
@@ -619,11 +740,22 @@ def test_syllabus(syl, validate_assets=False, ignore=None, academy_id: int | Non
                 continue
             if not isinstance(a["slug"], str):
                 _log.error(f"Slug property must be a string for {_type} on module {index}")
+                continue
+
+            if "id" in a and a["id"] is not None and not isinstance(a["id"], int):
+                _log.error(f"Asset id must be an integer for {_type} on module {index}")
 
             if validate_assets:
-                exists = AssetAlias.objects.filter(slug=a["slug"]).first()
-                if exists is None and not ("target" in a and a["target"] == "blank"):
+                resolved_id = _resolve_slug_to_asset_id({a["slug"]}).get(a["slug"])
+                if resolved_id is None and not ("target" in a and a["target"] == "blank"):
                     _log.error(f'Missing {_type} with slug {a["slug"]} on module {index}')
+                    continue
+
+                if resolved_id is not None and "id" in a and a["id"] is not None and a["id"] != resolved_id:
+                    _log.error(
+                        f'Asset id {a["id"]} does not match slug {a["slug"]} on module {index} '
+                        f"(expected {resolved_id})"
+                    )
 
     def validate_days(days, source_label, *, partial_override: bool = False):
         """

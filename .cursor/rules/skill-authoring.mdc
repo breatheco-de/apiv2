@@ -132,6 +132,17 @@ A skill should cover exactly one task a user would ask for by name. If you find 
 - Background implementation context ("this works because...")
 - Links to related files the agent cannot load or act on
 - **References to Django Admin or any non-API tool.** Skills are API-only. Do not mention Admin, back-office UIs, or where to configure things outside the API. If an operation is not exposed by the API, say so without naming Admin (e.g. "the API does not expose X" or "must be configured first").
+- **Links to human documentation files** (`docs/agent-docs/*.md`, `docs/llm-docs/*.md`, or any non-`SKILL.md` path). Skills may reference **other skills only**. If content exists only in a human doc, create or extend a skill instead of linking the doc.
+
+---
+
+## Cross-references
+
+- Skills must be **self-contained** — include workflows, endpoints, headers, and JSON payloads inline.
+- **Allowed:** links to other skills (`../bc-domain-verb-resource/SKILL.md`) and `requires` in frontmatter.
+- **Forbidden:** links to `BC_STAFF_INVITES.md`, `SYLLABUS.md`, `manage_roles.md`, or any markdown file outside the skills tree.
+- Use `requires` when a skill assumes another skill was loaded first (e.g. staff-authentication before `/academy/*` calls). State what to do if the dependency is missing (load the named skill).
+- When creating or renaming skills, update the staff/student API indexes per [`breathecode-api-index-maintenance.mdc`](breathecode-api-index-maintenance.mdc).
 
 ---
 
@@ -151,6 +162,7 @@ A skill should cover exactly one task a user would ask for by name. If you find 
 | Anti-pattern | Why it's a problem |
 |---|---|
 | Referencing external docs without fallback instructions | Agent silently fails if the doc isn't loaded |
+| Linking to `../../FOO.md` or other human documentation files | Agent cannot load them; create or extend a skill instead |
 | Mixing API tasks with admin/ops tasks | Breaks agents that only have API access |
 | Including code internals (model paths, class names) | Adds noise, agent can't act on them |
 | Vague "when to use" in the opening paragraph | Skill may be applied in wrong contexts |

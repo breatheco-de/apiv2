@@ -3,12 +3,14 @@ Test /certificate
 """
 
 import random
+from copy import deepcopy
 from unittest.mock import MagicMock, patch
 
 from django.urls.base import reverse_lazy
 from django.utils import timezone
 from rest_framework import status
 
+from breathecode.registry.models import AssetAlias
 from breathecode.services import datetime_to_iso_format
 
 from ..mixins import AdmissionsTestCase
@@ -68,6 +70,22 @@ def generate_syllabus_json(lesson_slug, quiz_slug=None, reply_slug=None, project
             for _ in range(n)
         ]
     }
+
+
+def with_asset_ids(syllabus_json, asset_id):
+    enriched = deepcopy(syllabus_json)
+    asset_keys = ("lessons", "quizzes", "replits", "assignments", "projects")
+
+    for day in enriched.get("days", []):
+        for key in asset_keys:
+            if key not in day:
+                continue
+
+            for asset in day[key]:
+                if isinstance(asset, dict) and "slug" in asset:
+                    asset["id"] = asset_id
+
+    return enriched
 
 
 class CertificateTestSuite(AdmissionsTestCase):
@@ -257,6 +275,8 @@ class CertificateTestSuite(AdmissionsTestCase):
             },
         )
         data = {"json": generate_syllabus_json(slug)}
+        asset_id = AssetAlias.objects.get(slug=slug).asset_id
+        enriched_data = {"json": with_asset_ids(data["json"], asset_id)}
         response = self.client.post(url, data, format="json")
         json = response.json()
         expected = {
@@ -264,7 +284,7 @@ class CertificateTestSuite(AdmissionsTestCase):
             "change_log_details": get_change_log(model.user),
             "status": "PUBLISHED",
             "version": 1,
-            **data,
+            **enriched_data,
         }
 
         self.assertEqual(json, expected)
@@ -282,7 +302,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                     "json": {},
                     "syllabus_id": 1,
                     "version": 1,
-                    **data,
+                    **enriched_data,
                 }
             ],
         )
@@ -310,6 +330,8 @@ class CertificateTestSuite(AdmissionsTestCase):
             },
         )
         data = {"json": generate_syllabus_json(slug)}
+        asset_id = AssetAlias.objects.get(slug=slug).asset_id
+        enriched_data = {"json": with_asset_ids(data["json"], asset_id)}
         response = self.client.post(url, data, format="json")
         json = response.json()
         expected = {
@@ -317,7 +339,7 @@ class CertificateTestSuite(AdmissionsTestCase):
             "change_log_details": get_change_log(model.user),
             "status": "PUBLISHED",
             "version": model.syllabus_version.version + 1,
-            **data,
+            **enriched_data,
         }
 
         self.assertEqual(json, expected)
@@ -335,7 +357,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                     "status": "PUBLISHED",
                     "syllabus_id": 1,
                     "version": model.syllabus_version.version + 1,
-                    **data,
+                    **enriched_data,
                 },
             ],
         )
