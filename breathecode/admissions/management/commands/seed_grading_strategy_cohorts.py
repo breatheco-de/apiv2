@@ -4,13 +4,23 @@ from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
-from breathecode.admissions.models import Academy, City, Cohort, CohortUser, Country, Syllabus, SyllabusVersion
+from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus, SyllabusVersion
 from breathecode.assignments.models import Task
 from breathecode.certificate.models import LayoutDesign, Specialty
 from breathecode.payments.models import CohortSet, CohortSetCohort, Currency, FinancingOption, Plan, PlanFinancing
+from breathecode.registry.models import Asset
 
 
 PREFIX = "grading-strategy-demo"
+DEFAULT_ACADEMY_ID = 47
+DEFAULT_TEACHER_USER_ID = 1
+
+PREFERRED_ASSET_SLUGS = {
+    "LESSON": ["intro-to-numpy", "intro-to-python-pandas"],
+    "EXERCISE": ["numpy-exercises-tutorial", "introduction-to-telemetry-en"],
+    "QUIZ": [],
+    "PROJECT": [],
+}
 
 
 class Command(BaseCommand):
@@ -28,23 +38,35 @@ class Command(BaseCommand):
             default=None,
             help="Existing user id, email or username to enroll in the demo plan and cohorts.",
         )
+        parser.add_argument(
+            "--academy",
+            type=int,
+            default=DEFAULT_ACADEMY_ID,
+            help=f"Academy that owns the demo syllabuses and cohorts (default: {DEFAULT_ACADEMY_ID}).",
+        )
+        parser.add_argument(
+            "--teacher",
+            type=int,
+            default=DEFAULT_TEACHER_USER_ID,
+            help=f"Existing user id to assign as TEACHER on each demo cohort (default: {DEFAULT_TEACHER_USER_ID}).",
+        )
 
     def handle(self, *args, **options):
+        academy = Academy.objects.filter(id=options["academy"]).first()
+        if academy is None:
+            raise CommandError(f"Academy {options['academy']} was not found")
+
+        teacher = User.objects.filter(id=options["teacher"]).first()
+        if teacher is None:
+            raise CommandError(f"Teacher user {options['teacher']} was not found")
+
         if options["clear"]:
             self._clear()
 
-        country, _ = Country.objects.get_or_create(code="GS", defaults={"name": "Grading"})
-        city, _ = City.objects.get_or_create(name="Grading City", country=country)
-        academy = self._upsert_academy(country, city)
-        currency, _ = Currency.objects.get_or_create(code="USD", defaults={"name": "US Dollar", "decimals": 2})
-        country.currencies.add(currency)
-        Academy.objects.filter(id=academy.id).update(main_currency=currency)
-        academy = Academy.objects.get(id=academy.id)
+        currency = academy.main_currency or Currency.objects.filter(code="USD").first()
+        if currency is None:
+            raise CommandError("Academy has no main currency and USD is not configured")
 
-        teacher, _ = User.objects.get_or_create(
-            username=f"{PREFIX}-teacher",
-            defaults={"email": f"{PREFIX}-teacher@example.com", "first_name": "Demo", "last_name": "Teacher"},
-        )
         complete_student, _ = User.objects.get_or_create(
             username=f"{PREFIX}-complete",
             defaults={"email": f"{PREFIX}-complete@example.com", "first_name": "Complete", "last_name": "Student"},
@@ -54,13 +76,14 @@ class Command(BaseCommand):
             defaults={"email": f"{PREFIX}-incomplete@example.com", "first_name": "Incomplete", "last_name": "Student"},
         )
         target_user = self._get_target_user(options["user"]) if options["user"] else None
+        demo_assets = self._resolve_demo_assets()
 
         LayoutDesign.objects.update_or_create(
             slug=f"{PREFIX}-layout",
             defaults={
                 "name": "Grading Demo",
                 "academy": academy,
-                "is_default": True,
+                "is_default": False,
                 "background_url": "https://example.com/certificate-bg.png",
             },
         )
@@ -134,9 +157,11 @@ class Command(BaseCommand):
 
         created = []
         cohorts = []
+        micro_syllabus_slugs: list[str] = []
         for slug, name, strategy, required_types in scenarios:
-            syllabus = self._upsert_syllabus(slug, name)
-            syllabus_version = self._upsert_syllabus_version(syllabus, slug, strategy)
+            syllabus = self._upsert_syllabus(slug, name, academy)
+            micro_syllabus_slugs.append(syllabus.slug)
+            syllabus_version = self._upsert_syllabus_version(syllabus, slug, strategy, academy, demo_assets)
             cohort = self._upsert_cohort(academy, syllabus_version, slug, name)
             cohorts.append(cohort)
             self._upsert_specialty(academy, syllabus)
@@ -145,14 +170,22 @@ class Command(BaseCommand):
             incomplete_cu = self._upsert_cohort_user(incomplete_student, cohort, "STUDENT", "ACTIVE")
             if target_user:
                 self._upsert_cohort_user(target_user, cohort, "STUDENT", "ACTIVE")
-            self._upsert_tasks(complete_student, cohort, slug, required_types, complete=True)
-            self._upsert_tasks(incomplete_student, cohort, slug, required_types, complete=False)
+            self._upsert_tasks(complete_student, cohort, demo_assets, required_types, complete=True)
+            self._upsert_tasks(incomplete_student, cohort, demo_assets, required_types, complete=False)
             created.append((cohort.slug, complete_cu.id, incomplete_cu.id))
 
-        cohort_set = self._upsert_cohort_set(academy, cohorts)
+        macro_cohort = self._upsert_macro_cohort(academy, cohorts, micro_syllabus_slugs)
+        self._upsert_cohort_user(teacher, macro_cohort, "TEACHER", "ACTIVE")
+        self._upsert_cohort_user(complete_student, macro_cohort, "STUDENT", "ACTIVE")
+        self._upsert_cohort_user(incomplete_student, macro_cohort, "STUDENT", "ACTIVE")
+        if target_user:
+            self._upsert_cohort_user(target_user, macro_cohort, "STUDENT", "ACTIVE")
+
+        cohorts_with_macro = [macro_cohort, *cohorts]
+        cohort_set = self._upsert_cohort_set(academy, cohorts_with_macro)
         plan = self._upsert_plan(academy, currency, cohort_set)
         if target_user:
-            financing = self._upsert_plan_financing(target_user, academy, currency, plan, cohort_set, cohorts)
+            financing = self._upsert_plan_financing(target_user, academy, currency, plan, cohort_set, cohorts_with_macro)
             self.stdout.write(
                 self.style.SUCCESS(
                     f"Assigned user {target_user.id} ({target_user.email}) to plan {plan.slug} "
@@ -167,6 +200,12 @@ class Command(BaseCommand):
                     f"incomplete cohort_user={incomplete_cu_id}"
                 )
             )
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Created macro cohort {macro_cohort.slug} with micro_cohorts="
+                f"{','.join(c.slug for c in cohorts)}"
+            )
+        )
         self.stdout.write(self.style.SUCCESS(f"Created plan {plan.slug} with cohort_set {cohort_set.slug}"))
 
     def _get_target_user(self, value: str) -> User:
@@ -178,22 +217,81 @@ class Command(BaseCommand):
             raise CommandError(f"User {value} was not found by id, email or username")
         return user
 
-    def _upsert_academy(self, country: Country, city: City) -> Academy:
-        defaults = {
-            "name": "Grading Strategy Demo",
-            "logo_url": "https://example.com/logo.png",
-            "street_address": "Demo street",
-            "city": city,
-            "country": country,
-            "available_as_saas": True,
+    def _resolve_demo_assets(self) -> dict[str, str]:
+        asset_type_map = {
+            "LESSON": "LESSON",
+            "EXERCISE": "EXERCISE",
+            "QUIZ": "QUIZ",
+            "PROJECT": "PROJECT",
         }
-        academy = Academy.objects.filter(slug=PREFIX).first()
-        if academy is None:
-            Academy.objects.bulk_create([Academy(slug=PREFIX, **defaults)])
-            return Academy.objects.get(slug=PREFIX)
+        resolved: dict[str, str] = {}
 
-        Academy.objects.filter(id=academy.id).update(**defaults)
-        return Academy.objects.get(id=academy.id)
+        for key, asset_type in asset_type_map.items():
+            preferred = PREFERRED_ASSET_SLUGS.get(key, [])
+            asset = None
+            if preferred:
+                asset = Asset.objects.filter(slug__in=preferred, status="PUBLISHED").order_by("id").first()
+
+            if asset is None:
+                asset = Asset.objects.filter(asset_type=asset_type, status="PUBLISHED").order_by("id").first()
+
+            if asset is None:
+                resolved[key] = f"{PREFIX}-asset-{key.lower()}"
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"No published {asset_type} asset found in registry; using synthetic slug {resolved[key]}"
+                    )
+                )
+                continue
+
+            resolved[key] = asset.slug
+            self.stdout.write(self.style.SUCCESS(f"Using {asset_type} asset: {asset.slug}"))
+
+        return resolved
+
+    def _asset_entry(self, slug: str) -> dict:
+        asset = Asset.objects.filter(slug=slug).first()
+        title = asset.title if asset and asset.title else slug.replace("-", " ").title()
+        entry = {
+            "slug": slug,
+            "title": title,
+            "mandatory": True,
+            "translations": {
+                "us": {"slug": slug, "title": title},
+                "es": {"slug": slug, "title": title},
+            },
+        }
+        return entry
+
+    def _build_day(
+        self,
+        day_id: int,
+        label_en: str,
+        label_es: str,
+        position: int,
+        *,
+        lessons: list | None = None,
+        replits: list | None = None,
+        quizzes: list | None = None,
+        assignments: list | None = None,
+    ) -> dict:
+        return {
+            "id": day_id,
+            "label": {"en": label_en, "es": label_es},
+            "lessons": lessons or [],
+            "quizzes": quizzes or [],
+            "replits": replits or [],
+            "homework": "",
+            "position": position,
+            "profiles": [],
+            "assignments": assignments or [],
+            "description": {"en": label_en, "es": label_es},
+            "key-concepts": [],
+            "technologies": [],
+            "asset_requests": [],
+            "duration_in_days": 1,
+            "teacher_instructions": {"en": "", "es": ""},
+        }
 
     def _clear(self):
         PlanFinancing.objects.filter(plans__slug=f"{PREFIX}-plan").delete()
@@ -203,17 +301,16 @@ class Command(BaseCommand):
         Specialty.objects.filter(slug__startswith=PREFIX).delete()
         Syllabus.objects.filter(slug__startswith=PREFIX).delete()
         LayoutDesign.objects.filter(slug=f"{PREFIX}-layout").delete()
-        User.objects.filter(username__startswith=PREFIX).delete()
-        Academy.objects.filter(slug=PREFIX).delete()
-        City.objects.filter(name="Grading City", country_id="GS").delete()
-        Country.objects.filter(code="GS").delete()
+        User.objects.filter(username__in=[f"{PREFIX}-complete", f"{PREFIX}-incomplete"]).delete()
 
-    def _upsert_syllabus(self, slug: str, name: str) -> Syllabus:
+    def _upsert_syllabus(self, slug: str, name: str, academy: Academy) -> Syllabus:
         defaults = {
             "name": f"Demo {name}",
             "duration_in_days": 2,
             "duration_in_hours": 2,
             "week_hours": 2,
+            "academy_owner": academy,
+            "private": False,
         }
         syllabus_slug = f"{PREFIX}-{slug}"
         syllabus = Syllabus.objects.filter(slug=syllabus_slug).first()
@@ -224,20 +321,45 @@ class Command(BaseCommand):
         Syllabus.objects.filter(id=syllabus.id).update(**defaults)
         return Syllabus.objects.get(id=syllabus.id)
 
-    def _upsert_syllabus_version(self, syllabus: Syllabus, slug: str, strategy: dict) -> SyllabusVersion:
+    def _upsert_syllabus_version(
+        self,
+        syllabus: Syllabus,
+        slug: str,
+        strategy: dict,
+        academy: Academy,
+        demo_assets: dict[str, str],
+    ) -> SyllabusVersion:
+        lesson = self._asset_entry(demo_assets["LESSON"])
+        exercise = self._asset_entry(demo_assets["EXERCISE"])
+        quiz = self._asset_entry(demo_assets["QUIZ"])
+        project = self._asset_entry(demo_assets["PROJECT"])
+
         syllabus_json = {
             **strategy,
+            "slug": syllabus.slug,
+            "status": "PUBLISHED",
+            "profile": syllabus.slug,
+            "version": 1,
+            "academy_author": academy.id,
+            "duration_in_days": 2,
+            "duration_in_hours": 2,
             "days": [
-                {
-                    "label": "Day 1",
-                    "lessons": [{"slug": f"{PREFIX}-{slug}-lesson-1", "mandatory": True}],
-                    "replits": [{"slug": f"{PREFIX}-{slug}-exercise-1", "mandatory": True}],
-                },
-                {
-                    "label": "Day 2",
-                    "quizzes": [{"slug": f"{PREFIX}-{slug}-quiz-1", "mandatory": True}],
-                    "assignments": [{"slug": f"{PREFIX}-{slug}-project-1", "mandatory": True}],
-                },
+                self._build_day(
+                    1,
+                    "Day 1",
+                    "Día 1",
+                    1,
+                    lessons=[lesson],
+                    replits=[exercise],
+                ),
+                self._build_day(
+                    2,
+                    "Day 2",
+                    "Día 2",
+                    2,
+                    quizzes=[quiz],
+                    assignments=[project],
+                ),
             ],
         }
         syllabus_version = SyllabusVersion.objects.filter(syllabus=syllabus, version=1).first()
@@ -250,7 +372,64 @@ class Command(BaseCommand):
         SyllabusVersion.objects.filter(id=syllabus_version.id).update(json=syllabus_json, status="PUBLISHED")
         return SyllabusVersion.objects.get(id=syllabus_version.id)
 
-    def _upsert_cohort(self, academy: Academy, syllabus_version: SyllabusVersion, slug: str, name: str) -> Cohort:
+    def _upsert_macro_syllabus_version(
+        self,
+        syllabus: Syllabus,
+        academy: Academy,
+        micro_syllabus_slugs: list[str],
+    ) -> SyllabusVersion:
+        syllabus_json = {
+            "slug": syllabus.slug,
+            "status": "PUBLISHED",
+            "profile": syllabus.slug,
+            "version": 1,
+            "academy_author": academy.id,
+            "duration_in_days": len(micro_syllabus_slugs),
+            "duration_in_hours": len(micro_syllabus_slugs) * 2,
+            "days": [],
+        }
+        for index, micro_slug in enumerate(micro_syllabus_slugs):
+            syllabus_json[f"{index}:{micro_slug}.v1"] = {"days": []}
+
+        syllabus_version = SyllabusVersion.objects.filter(syllabus=syllabus, version=1).first()
+        if syllabus_version is None:
+            SyllabusVersion.objects.bulk_create(
+                [SyllabusVersion(syllabus=syllabus, version=1, json=syllabus_json, status="PUBLISHED")]
+            )
+            return SyllabusVersion.objects.get(syllabus=syllabus, version=1)
+
+        SyllabusVersion.objects.filter(id=syllabus_version.id).update(json=syllabus_json, status="PUBLISHED")
+        return SyllabusVersion.objects.get(id=syllabus_version.id)
+
+    def _upsert_macro_cohort(
+        self,
+        academy: Academy,
+        micro_cohorts: list[Cohort],
+        micro_syllabus_slugs: list[str],
+    ) -> Cohort:
+        macro_syllabus = self._upsert_syllabus("macro", "Grading Strategies", academy)
+        macro_syllabus_version = self._upsert_macro_syllabus_version(macro_syllabus, academy, micro_syllabus_slugs)
+        macro_cohort = self._upsert_cohort(
+            academy,
+            macro_syllabus_version,
+            "macro",
+            "Grading Strategies",
+            cohort_slug=f"{PREFIX}-macro",
+        )
+        macro_cohort.micro_cohorts.set(micro_cohorts)
+        cohorts_order = ",".join(str(cohort.id) for cohort in micro_cohorts)
+        Cohort.objects.filter(id=macro_cohort.id).update(cohorts_order=cohorts_order)
+        return Cohort.objects.get(id=macro_cohort.id)
+
+    def _upsert_cohort(
+        self,
+        academy: Academy,
+        syllabus_version: SyllabusVersion,
+        slug: str,
+        name: str,
+        *,
+        cohort_slug: str | None = None,
+    ) -> Cohort:
         defaults = {
             "name": f"Demo {name}",
             "academy": academy,
@@ -262,11 +441,11 @@ class Command(BaseCommand):
             "available_as_saas": True,
             "language": "en",
         }
-        cohort_slug = f"{PREFIX}-{slug}"
-        cohort = Cohort.objects.filter(slug=cohort_slug).first()
+        resolved_slug = cohort_slug or f"{PREFIX}-{slug}"
+        cohort = Cohort.objects.filter(slug=resolved_slug).first()
         if cohort is None:
-            Cohort.objects.bulk_create([Cohort(slug=cohort_slug, **defaults)])
-            return Cohort.objects.get(slug=cohort_slug)
+            Cohort.objects.bulk_create([Cohort(slug=resolved_slug, **defaults)])
+            return Cohort.objects.get(slug=resolved_slug)
 
         Cohort.objects.filter(id=cohort.id).update(**defaults)
         return Cohort.objects.get(id=cohort.id)
@@ -351,12 +530,20 @@ class Command(BaseCommand):
         CohortUser.objects.filter(id=cohort_user.id).update(**defaults)
         return CohortUser.objects.get(id=cohort_user.id)
 
-    def _upsert_tasks(self, user: User, cohort: Cohort, slug: str, required_types: list[str], *, complete: bool):
+    def _upsert_tasks(
+        self,
+        user: User,
+        cohort: Cohort,
+        demo_assets: dict[str, str],
+        required_types: list[str],
+        *,
+        complete: bool,
+    ):
         task_data = [
-            ("LESSON", f"{PREFIX}-{slug}-lesson-1"),
-            ("EXERCISE", f"{PREFIX}-{slug}-exercise-1"),
-            ("QUIZ", f"{PREFIX}-{slug}-quiz-1"),
-            ("PROJECT", f"{PREFIX}-{slug}-project-1"),
+            ("LESSON", demo_assets["LESSON"]),
+            ("EXERCISE", demo_assets["EXERCISE"]),
+            ("QUIZ", demo_assets["QUIZ"]),
+            ("PROJECT", demo_assets["PROJECT"]),
         ]
         for task_type, associated_slug in task_data:
             should_complete = complete or task_type not in required_types
@@ -364,10 +551,13 @@ class Command(BaseCommand):
             task_status = "PENDING"
             if should_complete:
                 task_status = "DONE"
-                revision_status = "APPROVED" if task_type != "PROJECT" else "APPROVED"
+                revision_status = "APPROVED"
+
+            asset = Asset.objects.filter(slug=associated_slug).first()
+            title = asset.title if asset and asset.title else associated_slug.replace("-", " ").title()
 
             defaults = {
-                "title": associated_slug.replace("-", " ").title(),
+                "title": title,
                 "task_status": task_status,
                 "revision_status": revision_status,
             }
