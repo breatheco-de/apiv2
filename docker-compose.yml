@@ -5,7 +5,7 @@ services:
       - "6380:6379"  # 6380 on host to avoid conflict with local Redis
 
   postgres:
-    image: postgres:alpine
+    image: postgres:16-alpine
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     environment:
