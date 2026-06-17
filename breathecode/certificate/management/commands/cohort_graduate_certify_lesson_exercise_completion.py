@@ -1,7 +1,7 @@
 """
-For a single cohort: mark STUDENT cohort users as GRADUATED when LESSON + EXERCISE syllabus
-completion is 100% (by Task.task_status=DONE), then run generate_certificate for every GRADUATED
-STUDENT on that cohort.
+For a single cohort or every micro of a macro cohort: mark STUDENT cohort users as GRADUATED
+when LESSON + EXERCISE syllabus completion is 100% (by Task.task_status=DONE), then run
+generate_certificate for every GRADUATED STUDENT on that cohort.
 
 Does not require PROJECT entries in the syllabus. Certificate issuance still follows
 generate_certificate (financial status, cohort ended / never_ends, etc.).
@@ -19,6 +19,7 @@ from breathecode.certificate.actions import (
     generate_certificate_ignoring_tasks,
     get_assets_from_syllabus,
 )
+from breathecode.certificate.management.commands.macro_cohort_certificates import ordered_micro_cohorts
 
 
 def _completion_rate(user_id: int, cohort_id: int, task_type: str, slugs: list[str]) -> float:
@@ -75,14 +76,18 @@ def _lesson_exercise_completion(user_id: int, cohort: Cohort, *, only_mandatory:
 
 class Command(BaseCommand):
     help = (
-        "Mark STUDENTs as GRADUATED when they have 100% LESSON and 100% EXERCISE completion for the cohort "
-        "syllabus, then call generate_certificate for all GRADUATED STUDENTs on that cohort."
+        "Mark STUDENTs as GRADUATED when they have 100% LESSON and 100% EXERCISE completion, "
+        "then call generate_certificate for all GRADUATED STUDENTs. "
+        "Target one cohort (--cohort-id/--cohort-slug) or every micro of a macro "
+        "(--macro-cohort-id/--macro-cohort-slug)."
     )
 
     def add_arguments(self, parser):
         g = parser.add_mutually_exclusive_group(required=True)
-        g.add_argument("--cohort-id", type=int, help="Cohort primary key")
-        g.add_argument("--cohort-slug", type=str, help="Cohort slug")
+        g.add_argument("--cohort-id", type=int, help="Cohort primary key (single cohort)")
+        g.add_argument("--cohort-slug", type=str, help="Cohort slug (single cohort)")
+        g.add_argument("--macro-cohort-id", type=int, help="Macro cohort primary key (all linked micro cohorts)")
+        g.add_argument("--macro-cohort-slug", type=str, help="Macro cohort slug (all linked micro cohorts)")
         parser.add_argument(
             "--dry-run",
             action="store_true",
@@ -117,21 +122,105 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        macro_id = options.get("macro_cohort_id")
+        macro_slug = options.get("macro_cohort_slug")
+
+        if macro_id is not None or macro_slug is not None:
+            macro = self._resolve_macro(macro_id, macro_slug)
+            micros = ordered_micro_cohorts(macro)
+            if not micros:
+                raise CommandError(
+                    f"Macro cohort '{macro.slug}' has no linked micro cohorts "
+                    "(or all are DELETED). Link micro cohorts via Cohort.micro_cohorts."
+                )
+
+            self.stdout.write(self.style.SUCCESS(f"\n{'=' * 72}"))
+            self.stdout.write(self.style.SUCCESS(f"Macro cohort: {macro.name} (id={macro.id}, slug={macro.slug})"))
+            self.stdout.write(
+                self.style.SUCCESS(f"Micro cohorts ({len(micros)}): {', '.join(f'{m.slug}#{m.id}' for m in micros)}")
+            )
+            self.stdout.write(self.style.SUCCESS(f"{'=' * 72}\n"))
+
+            grand_totals = self._empty_totals()
+            for micro in micros:
+                self.stdout.write(self.style.MIGRATE_HEADING(f"\n▶ Micro cohort: {micro.name} (id={micro.id})"))
+                try:
+                    summary = self._process_cohort(micro, options)
+                except CommandError as e:
+                    self.stdout.write(self.style.ERROR(f"  SKIP micro {micro.slug!r}: {e}"))
+                    grand_totals["micros_skipped"] += 1
+                    continue
+                self._accumulate_totals(grand_totals, summary)
+                grand_totals["micros_processed"] += 1
+
+            self.stdout.write(self.style.SUCCESS(f"\n{'=' * 72}"))
+            self.stdout.write(self.style.SUCCESS("Macro summary"))
+            self._print_totals(grand_totals, options, skip_certificates=options["skip_certificates"])
+            self.stdout.write(self.style.SUCCESS(f"{'=' * 72}\n"))
+            return
+
+        cohort = self._resolve_single_cohort(options)
+        self._process_cohort(cohort, options)
+
+    def _resolve_macro(self, macro_id: int | None, macro_slug: str | None) -> Cohort:
+        if macro_id is not None:
+            macro = Cohort.objects.filter(id=macro_id).first()
+            if macro is None:
+                raise CommandError(f"No cohort found with id={macro_id}")
+            return macro
+
+        slug = macro_slug.strip()
+        macro = Cohort.objects.filter(slug=slug).first()
+        if macro is None:
+            raise CommandError(f"No cohort found with slug={slug!r}")
+        return macro
+
+    def _resolve_single_cohort(self, options) -> Cohort:
+        if options.get("cohort_id") is not None:
+            cohort = Cohort.objects.filter(id=options["cohort_id"]).first()
+            if not cohort:
+                raise CommandError(f"No cohort with id={options['cohort_id']}")
+            return cohort
+
+        slug = options["cohort_slug"].strip()
+        cohort = Cohort.objects.filter(slug=slug).first()
+        if not cohort:
+            raise CommandError(f"No cohort with slug={slug!r}")
+        return cohort
+
+    @staticmethod
+    def _empty_totals() -> dict:
+        return {
+            "micros_processed": 0,
+            "micros_skipped": 0,
+            "graduated_new": 0,
+            "already_graduated_complete": 0,
+            "skipped_incomplete": 0,
+            "skipped_no_assets": 0,
+            "skipped_late": 0,
+            "cert_ok": 0,
+            "cert_fail": 0,
+        }
+
+    @staticmethod
+    def _accumulate_totals(grand: dict, summary: dict) -> None:
+        for key in (
+            "graduated_new",
+            "already_graduated_complete",
+            "skipped_incomplete",
+            "skipped_no_assets",
+            "skipped_late",
+            "cert_ok",
+            "cert_fail",
+        ):
+            grand[key] += summary.get(key, 0)
+
+    def _process_cohort(self, cohort: Cohort, options) -> dict:
         dry_run = options["dry_run"]
         only_mandatory = options["only_mandatory"]
         layout_slug = options["layout_slug"]
         skip_certificates = options["skip_certificates"]
         ignore_pending_projects = options["ignore_pending_projects"]
-
-        if options.get("cohort_id") is not None:
-            cohort = Cohort.objects.filter(id=options["cohort_id"]).first()
-            if not cohort:
-                raise CommandError(f"No cohort with id={options['cohort_id']}")
-        else:
-            slug = options["cohort_slug"].strip()
-            cohort = Cohort.objects.filter(slug=slug).first()
-            if not cohort:
-                raise CommandError(f"No cohort with slug={slug!r}")
 
         if cohort.stage == "DELETED":
             raise CommandError(f"Cohort {cohort.slug!r} is DELETED.")
@@ -169,7 +258,6 @@ class Command(BaseCommand):
         graduated_new = 0
         already_graduated_complete = 0
         dry_run_would_graduate: list[CohortUser] = []
-        dry_run_already_graduated_eligible: list[CohortUser] = []
 
         for cu in students:
             ok, meta = _lesson_exercise_completion(cu.user_id, cohort, only_mandatory=only_mandatory)
@@ -203,7 +291,6 @@ class Command(BaseCommand):
             if cu.educational_status == GRADUATED:
                 already_graduated_complete += 1
                 if dry_run:
-                    dry_run_already_graduated_eligible.append(cu)
                     self.stdout.write(
                         self.style.NOTICE(
                             f"  [dry-run] ya GRADUATED (sin cambio) — cohort_user id={cu.id} "
@@ -238,12 +325,6 @@ class Command(BaseCommand):
                 self.stdout.write(
                     self.style.MIGRATE_HEADING(
                         f"DRY RUN — Certificados (cohort id={cohort.id} slug={cohort.slug!r})"
-                    )
-                )
-                self.stdout.write(
-                    self.style.NOTICE(
-                        "  Igual que en modo escritura después del paso 1: cada STUDENT con GRADUATED en BD "
-                        "más quien este comando graduaría ahora (simulación; mismas validaciones al generar)."
                     )
                 )
                 cert_fn_label = (
@@ -289,18 +370,50 @@ class Command(BaseCommand):
                         )
                         cert_fail += 1
 
+        summary = {
+            "graduated_new": graduated_new,
+            "already_graduated_complete": already_graduated_complete,
+            "skipped_incomplete": skipped_incomplete,
+            "skipped_no_assets": skipped_no_assets,
+            "skipped_late": skipped_late,
+            "cert_ok": cert_ok,
+            "cert_fail": cert_fail,
+        }
+
         self.stdout.write(self.style.NOTICE("\nSummary"))
+        self._print_totals(summary, options, skip_certificates=skip_certificates, cohort=cohort, dry_run=dry_run)
+
+        return summary
+
+    def _print_totals(
+        self,
+        totals: dict,
+        options,
+        *,
+        skip_certificates: bool,
+        cohort: Cohort | None = None,
+        dry_run: bool = False,
+    ) -> None:
         self.stdout.write(
             self.style.NOTICE(
-                f"  graduated_new={graduated_new}, already_GRADUATED_and_complete={already_graduated_complete}, "
-                f"skipped_incomplete={skipped_incomplete}, skipped_no_lesson_or_exercise_slugs={skipped_no_assets}, "
-                f"skipped_late_financial={skipped_late}"
+                f"  graduated_new={totals['graduated_new']}, "
+                f"already_GRADUATED_and_complete={totals['already_graduated_complete']}, "
+                f"skipped_incomplete={totals['skipped_incomplete']}, "
+                f"skipped_no_lesson_or_exercise_slugs={totals['skipped_no_assets']}, "
+                f"skipped_late_financial={totals['skipped_late']}"
             )
         )
+        if "micros_processed" in totals:
+            self.stdout.write(
+                self.style.NOTICE(
+                    f"  micros_processed={totals['micros_processed']}, micros_skipped={totals['micros_skipped']}"
+                )
+            )
         if not skip_certificates:
-            self.stdout.write(self.style.NOTICE(f"  certificate_ok={cert_ok}, certificate_failed={cert_fail}"))
-        if dry_run:
-            self.stdout.write("")
+            self.stdout.write(
+                self.style.NOTICE(f"  certificate_ok={totals['cert_ok']}, certificate_failed={totals['cert_fail']}")
+            )
+        if dry_run and cohort is not None:
             db_grad_total = (
                 CohortUser.objects.filter(cohort=cohort, role=STUDENT, educational_status=GRADUATED)
                 .exclude(cohort__stage="DELETED")
@@ -309,16 +422,15 @@ class Command(BaseCommand):
             self.stdout.write(
                 self.style.NOTICE(
                     f"  [dry-run] Resumen cohort {cohort.slug!r}: "
-                    f"graduaría a {graduated_new} STUDENT(s); "
-                    f"{already_graduated_complete} ya GRADUATED con lecciones+ejs al 100% (sin cambio de estado)."
+                    f"graduaría a {totals['graduated_new']} STUDENT(s); "
+                    f"{totals['already_graduated_complete']} ya GRADUATED con lecciones+ejs al 100%."
                 )
             )
             if not skip_certificates:
-                cert_planned_union = db_grad_total + graduated_new
+                cert_planned_union = db_grad_total + totals["graduated_new"]
                 self.stdout.write(
                     self.style.NOTICE(
                         f"  [dry-run] Tras ejecutar escritura: ~{cert_planned_union} intento(s) de certificado "
-                        f"(GRADUATED en BD hoy={db_grad_total} + nuevos graduados={graduated_new}). "
-                        f"*La lista de arriba desglosa cada email."
+                        f"(GRADUATED en BD hoy={db_grad_total} + nuevos graduados={totals['graduated_new']})."
                     )
                 )
