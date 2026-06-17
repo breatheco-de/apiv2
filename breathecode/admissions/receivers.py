@@ -139,6 +139,16 @@ def post_save_cohort_user(sender: Type[CohortUser], instance: CohortUser, **kwar
         main_cohorts = cohort.main_cohorts.all()
         for main in main_cohorts:
             main_cohort_user = CohortUser.objects.filter(cohort=main, user=instance.user).first()
+            if main_cohort_user is None:
+                logger.warning(
+                    "[graduate] macro cohort sync skipped: user_id=%s micro_cohort_id=%s "
+                    "main_cohort_id=%s reason=no-main-cohort-user",
+                    instance.user_id,
+                    cohort.id,
+                    main.id,
+                )
+                continue
+
             if main_cohort_user.educational_status != "GRADUATED":
                 main_cohort = main_cohort_user.cohort
                 micro_cohorts = main_cohort.micro_cohorts.all()
