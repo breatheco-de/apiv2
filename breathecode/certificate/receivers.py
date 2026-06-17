@@ -26,8 +26,46 @@ def post_save_user_specialty(sender, instance: UserSpecialty, **kwargs):
 
 @receiver(student_edu_status_updated, sender=CohortUser)
 def generate_certificate(sender, instance: CohortUser, **kwargs):
-    if instance.cohort.available_as_saas and instance.educational_status == "GRADUATED":
-        tasks.async_generate_certificate.delay(instance.cohort.id, instance.user.id)
+    cohort = instance.cohort
+    logger.info(
+        "[GENERATE_CERTIFICATE] signal student_edu_status_updated user_id=%s cohort_id=%s "
+        "educational_status=%s available_as_saas=%s",
+        instance.user_id,
+        cohort.id if cohort else None,
+        instance.educational_status,
+        cohort.available_as_saas if cohort else None,
+    )
+
+    if not cohort:
+        logger.warning(
+            "[GENERATE_CERTIFICATE] signal skipped reason=no-cohort user_id=%s",
+            instance.user_id,
+        )
+        return
+
+    if not cohort.available_as_saas:
+        logger.info(
+            "[GENERATE_CERTIFICATE] signal skipped reason=not-saas user_id=%s cohort_id=%s",
+            instance.user_id,
+            cohort.id,
+        )
+        return
+
+    if instance.educational_status != "GRADUATED":
+        logger.info(
+            "[GENERATE_CERTIFICATE] signal skipped reason=not-graduated user_id=%s cohort_id=%s status=%s",
+            instance.user_id,
+            cohort.id,
+            instance.educational_status,
+        )
+        return
+
+    tasks.async_generate_certificate.delay(instance.cohort.id, instance.user.id)
+    logger.info(
+        "[GENERATE_CERTIFICATE] async task enqueued user_id=%s cohort_id=%s task=async_generate_certificate",
+        instance.user_id,
+        cohort.id,
+    )
 
 
 @receiver(m2m_changed, sender=Specialty.syllabuses.through)
