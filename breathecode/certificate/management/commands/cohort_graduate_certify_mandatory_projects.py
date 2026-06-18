@@ -2,12 +2,10 @@
 For a single cohort or every micro of a macro cohort: align STUDENT educational_status
 with mandatory PROJECT completion (every mandatory project must be revision_status APPROVED).
 
+- Set finantial_status to UP_TO_DATE when ACTIVE/GRADUATED and finantial_status is null or empty.
 - Promote to GRADUATED when all mandatory projects are APPROVED.
 - Demote GRADUATED → ACTIVE when any mandatory project is missing, pending, REJECTED, or not APPROVED.
 - Optionally call generate_certificate for every GRADUATED STUDENT on that cohort.
-
-This command intentionally ignores grading_strategy.completion and only checks mandatory
-PROJECT slugs from the syllabus JSON.
 """
 
 from __future__ import annotations
@@ -15,11 +13,28 @@ from __future__ import annotations
 from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand, CommandError
+from django.db.models import Q
 
-from breathecode.admissions.models import ACTIVE, GRADUATED, LATE, STUDENT, Cohort, CohortUser
+from breathecode.admissions.models import ACTIVE, GRADUATED, LATE, STUDENT, UP_TO_DATE, Cohort, CohortUser
 from breathecode.assignments.models import Task
 from breathecode.certificate.actions import generate_certificate, get_assets_from_syllabus
 from breathecode.certificate.management.commands.macro_cohort_certificates import ordered_micro_cohorts
+
+_FINANCIAL_ELIGIBLE_EDUCATIONAL = (ACTIVE, GRADUATED)
+
+
+def _cohort_users_null_financial(cohort: Cohort):
+    return (
+        CohortUser.objects.filter(
+            cohort=cohort,
+            role=STUDENT,
+            educational_status__in=_FINANCIAL_ELIGIBLE_EDUCATIONAL,
+        )
+        .filter(Q(finantial_status__isnull=True) | Q(finantial_status=""))
+        .exclude(cohort__stage="DELETED")
+        .select_related("user")
+        .order_by("id")
+    )
 
 
 def _mandatory_projects_completion(user: User, cohort: Cohort) -> tuple[bool, dict]:
@@ -79,9 +94,8 @@ def _mandatory_projects_completion(user: User, cohort: Cohort) -> tuple[bool, di
 
 class Command(BaseCommand):
     help = (
-        "Align STUDENT educational_status with mandatory PROJECT completion. "
-        "Graduates when all mandatory projects are APPROVED; demotes GRADUATED → ACTIVE "
-        "when any is missing, pending, REJECTED, or otherwise not APPROVED. Optionally issues certificates. "
+        "Align STUDENT educational_status with mandatory PROJECT completion, fill null finantial_status "
+        "with UP_TO_DATE (ACTIVE/GRADUATED only), graduate/demote as needed, and optionally issue certificates. "
         "Target one cohort (--cohort-id/--cohort-slug) or every micro of a macro "
         "(--macro-cohort-id/--macro-cohort-slug)."
     )
@@ -133,6 +147,10 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS(f"{'=' * 72}\n"))
 
             grand_totals = self._empty_totals()
+
+            macro_financial = self._apply_finantial_status_up_to_date(macro, options["dry_run"])
+            grand_totals["finantial_filled"] += macro_financial
+
             for micro in micros:
                 self.stdout.write(self.style.MIGRATE_HEADING(f"\n▶ Micro cohort: {micro.name} (id={micro.id})"))
                 try:
@@ -192,6 +210,7 @@ class Command(BaseCommand):
             "skipped_late": 0,
             "cert_ok": 0,
             "cert_fail": 0,
+            "finantial_filled": 0,
         }
 
     @staticmethod
@@ -205,8 +224,44 @@ class Command(BaseCommand):
             "skipped_late",
             "cert_ok",
             "cert_fail",
+            "finantial_filled",
         ):
             grand[key] += summary.get(key, 0)
+
+    def _apply_finantial_status_up_to_date(self, cohort: Cohort, dry_run: bool) -> int:
+        """ACTIVE/GRADUATED STUDENT rows with null or empty finantial_status → UP_TO_DATE."""
+        rows = list(_cohort_users_null_financial(cohort))
+        if not rows:
+            return 0
+
+        self.stdout.write(
+            self.style.MIGRATE_HEADING(
+                f"\n  Finantial status — cohort {cohort.slug!r} (id={cohort.id}): "
+                f"{len(rows)} row(s) with null/empty finantial_status"
+            )
+        )
+
+        filled = 0
+        for cu in rows:
+            if dry_run:
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"    [dry-run] finantial_status → UP_TO_DATE — cohort_user id={cu.id} "
+                        f"user_id={cu.user_id} email={cu.user.email!r} "
+                        f"educational_status={cu.educational_status!r}"
+                    )
+                )
+            else:
+                cu.finantial_status = UP_TO_DATE
+                cu.save(update_fields=["finantial_status", "updated_at"])
+                self.stdout.write(
+                    self.style.SUCCESS(
+                        f"    finantial_status UP_TO_DATE — cohort_user id={cu.id} user={cu.user.email!r}"
+                    )
+                )
+            filled += 1
+
+        return filled
 
     def _process_cohort(self, cohort: Cohort, options) -> dict:
         dry_run = options["dry_run"]
@@ -217,6 +272,8 @@ class Command(BaseCommand):
             raise CommandError(f"Cohort {cohort.slug!r} is DELETED.")
         if not cohort.syllabus_version:
             raise CommandError(f"Cohort {cohort.slug!r} has no syllabus_version.")
+
+        finantial_filled = self._apply_finantial_status_up_to_date(cohort, dry_run)
 
         self.stdout.write(self.style.NOTICE(f"Cohort: {cohort.name} (id={cohort.id}, slug={cohort.slug})"))
         self.stdout.write(
@@ -394,6 +451,7 @@ class Command(BaseCommand):
             "skipped_late": skipped_late,
             "cert_ok": cert_ok,
             "cert_fail": cert_fail,
+            "finantial_filled": finantial_filled,
         }
 
         self.stdout.write(self.style.NOTICE("\nSummary"))
@@ -416,7 +474,8 @@ class Command(BaseCommand):
                 f"already_GRADUATED_and_complete={totals['already_graduated_complete']}, "
                 f"skipped_incomplete={totals['skipped_incomplete']}, "
                 f"skipped_no_mandatory_project_slugs={totals['skipped_no_assets']}, "
-                f"skipped_late_financial={totals['skipped_late']}"
+                f"skipped_late_financial={totals['skipped_late']}, "
+                f"finantial_filled={totals.get('finantial_filled', 0)}"
             )
         )
         if "micros_processed" in totals:
