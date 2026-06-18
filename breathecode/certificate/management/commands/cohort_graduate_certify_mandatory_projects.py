@@ -1,28 +1,24 @@
 """
 For a single cohort or every micro of a macro cohort: align STUDENT educational_status
-with legacy mandatory PROJECT completion (revision_status APPROVED or IGNORED).
+with mandatory PROJECT completion (every mandatory project must be revision_status APPROVED).
 
-- Promote to GRADUATED when all mandatory projects are complete.
-- Demote GRADUATED → ACTIVE when mandatory projects are still pending.
+- Promote to GRADUATED when all mandatory projects are APPROVED.
+- Demote GRADUATED → ACTIVE when any mandatory project is missing, pending, REJECTED, or not APPROVED.
 - Optionally call generate_certificate for every GRADUATED STUDENT on that cohort.
 
 This command intentionally ignores grading_strategy.completion and only checks mandatory
-PROJECT slugs from the syllabus JSON (classic legacy graduation rule).
+PROJECT slugs from the syllabus JSON.
 """
 
 from __future__ import annotations
 
 from capyc.rest_framework.exceptions import ValidationException
+from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand, CommandError
 
-from django.contrib.auth.models import User
-
 from breathecode.admissions.models import ACTIVE, GRADUATED, LATE, STUDENT, Cohort, CohortUser
-from breathecode.certificate.actions import (
-    generate_certificate,
-    get_assets_from_syllabus,
-    how_many_pending_tasks,
-)
+from breathecode.assignments.models import Task
+from breathecode.certificate.actions import generate_certificate, get_assets_from_syllabus
 from breathecode.certificate.management.commands.macro_cohort_certificates import ordered_micro_cohorts
 
 
@@ -39,27 +35,43 @@ def _mandatory_projects_completion(user: User, cohort: Cohort) -> tuple[bool, di
             {
                 "reason": "syllabus has no mandatory PROJECT slugs",
                 "projects_total": 0,
-                "projects_pending": 0,
+                "projects_approved": 0,
+                "projects_not_approved": 0,
             },
         )
 
-    pending = how_many_pending_tasks(
-        cohort.syllabus_version,
-        user,
-        task_types=["PROJECT"],
-        only_mandatory=True,
+    slug_set = set(project_slugs)
+    tasks = Task.objects.filter(
+        user=user,
         cohort_id=cohort.id,
+        task_type=Task.TaskType.PROJECT,
+        associated_slug__in=project_slugs,
     )
-    completed = len(project_slugs) - pending
-    pct = round((completed / len(project_slugs)) * 100, 2)
-    ok = pending == 0
+
+    approved_slugs: set[str] = set()
+    rejected_slugs: set[str] = set()
+    for task in tasks:
+        if task.associated_slug not in slug_set:
+            continue
+        if task.revision_status == Task.RevisionStatus.APPROVED:
+            approved_slugs.add(task.associated_slug)
+        elif task.revision_status == Task.RevisionStatus.REJECTED:
+            rejected_slugs.add(task.associated_slug)
+
+    not_approved = sorted(slug_set - approved_slugs)
+    approved_count = len(approved_slugs & slug_set)
+    pct = round((approved_count / len(project_slugs)) * 100, 2)
+    ok = len(not_approved) == 0
 
     return (
         ok,
         {
             "projects_total": len(project_slugs),
-            "projects_completed": completed,
-            "projects_pending": pending,
+            "projects_approved": approved_count,
+            "projects_not_approved": len(not_approved),
+            "projects_rejected": len(rejected_slugs),
+            "projects_rejected_slugs": sorted(rejected_slugs),
+            "projects_not_approved_slugs": not_approved,
             "projects_done_pct": pct,
         },
     )
@@ -67,9 +79,9 @@ def _mandatory_projects_completion(user: User, cohort: Cohort) -> tuple[bool, di
 
 class Command(BaseCommand):
     help = (
-        "Align STUDENT educational_status with mandatory PROJECT completion (classic legacy rule). "
-        "Graduates when all mandatory projects are APPROVED/IGNORED; demotes GRADUATED → ACTIVE "
-        "when they are not. Optionally issues certificates. "
+        "Align STUDENT educational_status with mandatory PROJECT completion. "
+        "Graduates when all mandatory projects are APPROVED; demotes GRADUATED → ACTIVE "
+        "when any is missing, pending, REJECTED, or otherwise not APPROVED. Optionally issues certificates. "
         "Target one cohort (--cohort-id/--cohort-slug) or every micro of a macro "
         "(--macro-cohort-id/--macro-cohort-slug)."
     )
@@ -210,7 +222,7 @@ class Command(BaseCommand):
         self.stdout.write(
             self.style.NOTICE(
                 f"  Mode: {'DRY RUN (no writes)' if dry_run else 'WRITE'}; "
-                f"rule=mandatory PROJECT (APPROVED/IGNORED); skip_certificates={skip_certificates}"
+                f"rule=mandatory PROJECT (APPROVED only); skip_certificates={skip_certificates}"
             )
         )
 
@@ -249,12 +261,15 @@ class Command(BaseCommand):
                 continue
 
             if cu.educational_status == GRADUATED and not ok:
+                rejected_note = ""
+                if meta.get("projects_rejected"):
+                    rejected_note = f" rejected={meta.get('projects_rejected_slugs')}"
                 if dry_run:
                     self.stdout.write(
                         self.style.ERROR(
                             f"  [dry-run] DEMOTE → ACTIVE — cohort_user id={cu.id} user_id={cu.user_id} "
-                            f"email={cu.user.email!r} pending_mandatory_projects={meta.get('projects_pending')} "
-                            f"({meta.get('projects_done_pct')}% done)"
+                            f"email={cu.user.email!r} not_approved={meta.get('projects_not_approved')} "
+                            f"({meta.get('projects_done_pct')}% APPROVED){rejected_note}"
                         )
                     )
                 else:
@@ -263,7 +278,7 @@ class Command(BaseCommand):
                     self.stdout.write(
                         self.style.ERROR(
                             f"  ACTIVE (demoted) cohort_user id={cu.id} user={cu.user.email!r} — "
-                            f"pending mandatory projects={meta.get('projects_pending')}"
+                            f"not APPROVED={meta.get('projects_not_approved_slugs')}{rejected_note}"
                         )
                     )
                 demoted_to_active += 1
@@ -271,11 +286,15 @@ class Command(BaseCommand):
 
             if not ok:
                 skipped_incomplete += 1
+                rejected_note = ""
+                if meta.get("projects_rejected"):
+                    rejected_note = f" rejected={meta.get('projects_rejected_slugs')}"
                 self.stdout.write(
                     self.style.WARNING(
                         f"  SKIP user_id={cu.user_id} ({cu.user.email}): "
-                        f"projects {meta.get('projects_done_pct')}% "
-                        f"({meta.get('projects_pending')} pending of {meta.get('projects_total')})"
+                        f"projects {meta.get('projects_done_pct')}% APPROVED "
+                        f"({meta.get('projects_not_approved')} not APPROVED of {meta.get('projects_total')})"
+                        f"{rejected_note}"
                     )
                 )
                 continue
@@ -421,7 +440,7 @@ class Command(BaseCommand):
                     f"  [dry-run] Resumen cohort {cohort.slug!r}: "
                     f"graduaría a {totals['graduated_new']}, "
                     f"demovería a ACTIVE {totals['demoted_to_active']}; "
-                    f"{totals['already_graduated_complete']} ya GRADUATED con proyectos obligatorios al 100%."
+                    f"{totals['already_graduated_complete']} ya GRADUATED con todos los proyectos obligatorios APPROVED."
                 )
             )
             if not skip_certificates:
