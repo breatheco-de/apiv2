@@ -1,4 +1,4 @@
-"""Set finantial_status to UP_TO_DATE for ACTIVE CohortUsers whose finantial_status is null or empty."""
+"""Set finantial_status to UP_TO_DATE for ACTIVE/GRADUATED CohortUsers whose finantial_status is null or empty."""
 
 from __future__ import annotations
 
@@ -9,7 +9,9 @@ from django.db.models import Exists, OuterRef, Q
 from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
 
-from breathecode.admissions.models import ACTIVE, Cohort, CohortUser, UP_TO_DATE
+from breathecode.admissions.models import ACTIVE, Cohort, CohortUser, GRADUATED, UP_TO_DATE
+
+_ELIGIBLE_EDUCATIONAL = (ACTIVE, GRADUATED)
 
 
 def parse_created_on_or_after(raw: str):
@@ -47,7 +49,7 @@ def filter_users_with_active_plan_financing_or_subscription(qs):
     ).filter(Q(_has_pf_ok=True) | Q(_has_sub_ok=True))
 
 
-def cohort_users_active_null_financial(
+def cohort_users_null_financial(
     cohort: Cohort,
     *,
     role: str | None,
@@ -55,11 +57,11 @@ def cohort_users_active_null_financial(
     require_active_payment: bool = False,
 ):
     """
-    ACTIVE CohortUsers with finantial_status null or empty string.
+    ACTIVE or GRADUATED CohortUsers with finantial_status null or empty string.
     Rows with LATE, FULLY_PAID, UP_TO_DATE, etc. are excluded.
     """
     qs = (
-        CohortUser.objects.filter(cohort=cohort, educational_status=ACTIVE)
+        CohortUser.objects.filter(cohort=cohort, educational_status__in=_ELIGIBLE_EDUCATIONAL)
         .filter(Q(finantial_status__isnull=True) | Q(finantial_status=""))
         .exclude(cohort__stage="DELETED")
         .select_related("user", "cohort")
@@ -105,7 +107,7 @@ def ordered_micro_cohorts(macro: Cohort) -> list[Cohort]:
 
 class Command(BaseCommand):
     help = (
-        "Set finantial_status to UP_TO_DATE for CohortUsers with educational_status ACTIVE "
+        "Set finantial_status to UP_TO_DATE for CohortUsers with educational_status ACTIVE or GRADUATED "
         "and finantial_status null or empty. Rows with any other finantial_status are not changed. "
         "Target one cohort (--cohort-id/--cohort-slug) or a macro and all its micros "
         "(--macro-cohort-id/--macro-cohort-slug)."
@@ -145,7 +147,7 @@ class Command(BaseCommand):
             action="store_true",
             help=(
                 "Only update users with PlanFinancing (ACTIVE or FULLY_PAID) or an active Subscription. "
-                "By default all matching ACTIVE rows with null finantial_status are updated."
+                "By default all matching ACTIVE/GRADUATED rows with null finantial_status are updated."
             ),
         )
 
@@ -238,7 +240,7 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.NOTICE(
-                "  Rule: educational_status=ACTIVE and finantial_status is null or empty → UP_TO_DATE"
+                "  Rule: educational_status ACTIVE or GRADUATED and finantial_status is null or empty → UP_TO_DATE"
             )
         )
         if require_active_payment:
@@ -261,7 +263,7 @@ class Command(BaseCommand):
                 continue
 
             rows = list(
-                cohort_users_active_null_financial(
+                cohort_users_null_financial(
                     cohort,
                     role=role,
                     created_on_or_after=since_created,
@@ -281,7 +283,8 @@ class Command(BaseCommand):
                 total += 1
                 self.stdout.write(
                     f"  CohortUser id={cu.id} user_id={cu.user_id} email={cu.user.email} "
-                    f"role={cu.role} finantial_status={cu.finantial_status!r}"
+                    f"role={cu.role} educational_status={cu.educational_status} "
+                    f"finantial_status={cu.finantial_status!r}"
                 )
                 if dry_run:
                     continue
