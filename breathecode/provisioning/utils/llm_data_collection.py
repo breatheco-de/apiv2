@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import logging
 from collections import defaultdict
-from typing import TypedDict
+from datetime import date
+from typing import Any, NotRequired, TypedDict
+
+from django.utils import timezone
 
 from breathecode.provisioning.models import ProvisioningAcademy, ProvisioningLLM
 from breathecode.provisioning.utils.llm_client import LLMClientError, get_llm_client
@@ -20,6 +23,7 @@ __all__ = [
     "LLMKeyRow",
     "LLMTeamRow",
     "ProvisioningUserRow",
+    "collect_llm_daily_spend",
     "collect_llm_data",
 ]
 
@@ -39,6 +43,7 @@ class LLMKeyRow(TypedDict):
     expires: str | None
     provisioning_llm: ProvisioningLLM | None
     academy_config: AcademyConfigRow | None
+    daily_spend: NotRequired[float | None]
 
 
 class LLMTeamRow(TypedDict):
@@ -52,6 +57,7 @@ class LLMTeamRow(TypedDict):
     team_member_budget_id: str | None
     member_max_budget: float | None
     member_budget_duration: str | None
+    team_daily_spend: NotRequired[float | None]
 
 
 class ProvisioningUserRow(TypedDict):
@@ -66,6 +72,7 @@ class LLMExternalUserRow(TypedDict):
     key_count: int | None
     provisioning_llm: ProvisioningLLM | None
     academy_config: AcademyConfigRow | None
+    daily_spend: NotRequired[float | None]
 
 
 class LLMDataCollection(TypedDict):
@@ -361,21 +368,7 @@ def _llm_external_user_rows(
     return rows
 
 
-def collect_llm_data() -> LLMDataCollection:
-    """
-    Collect LiteLLM data as flat, enriched rows.
-
-    Fetches once per ``llm_credentials`` (api_url + api_key), enriches vendor payloads with
-    provisioning academy and ProvisioningLLM records, then appends to global lists.
-    """
-    keys: list[LLMKeyRow] = []
-    teams: list[LLMTeamRow] = []
-    academies: list[AcademyConfigRow] = []
-    provisioning_users: list[ProvisioningUserRow] = []
-    llm_external_users: list[LLMExternalUserRow] = []
-
-    # Deduplicate LiteLLM connections (api_url + api_key) to avoid repeated fetches.
-    # Each group holds the academies that share that connection.
+def _build_llm_credentials_groups() -> dict[LLMCredentials, list[ProvisioningAcademy]]:
     llm_credentials_groups: dict[LLMCredentials, list[ProvisioningAcademy]] = defaultdict(list)
     provisioning_academy_queryset = ProvisioningAcademy.objects.select_related("vendor", "academy").filter(
         vendor__isnull=False
@@ -400,7 +393,134 @@ def collect_llm_data() -> LLMDataCollection:
         llm_credentials = (str(api_url).rstrip("/"), str(api_key))
         llm_credentials_groups[llm_credentials].append(provisioning_academy)
 
-    for provisioning_academies in llm_credentials_groups.values():
+    return llm_credentials_groups
+
+
+def _parse_daily_activity_key_spend(payload: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """
+    Parse per-key daily spend from /user/daily/activity/aggregated.
+
+    Uses ``results[].breakdown.api_keys`` where each entry has:
+    - metrics.spend
+    - metadata.key_alias
+    - metadata.team_id
+    """
+    key_spend: dict[str, dict[str, Any]] = {}
+
+    for day in payload.get("results") or []:
+        breakdown = day.get("breakdown") or {}
+        api_keys = breakdown.get("api_keys") or {}
+        for token_id_raw, row in api_keys.items():
+            token_id = str(token_id_raw)
+            metrics = row.get("metrics") or {}
+            metadata = row.get("metadata") or {}
+            spend_raw = metrics.get("spend")
+            try:
+                spend = float(spend_raw) if spend_raw is not None else 0.0
+            except (TypeError, ValueError):
+                spend = 0.0
+
+            if token_id in key_spend:
+                key_spend[token_id]["spend"] += spend
+            else:
+                key_spend[token_id] = {
+                    "spend": spend,
+                    "key_alias": metadata.get("key_alias"),
+                    "team_id": metadata.get("team_id"),
+                }
+
+    return key_spend
+
+
+def _apply_daily_spend_to_snapshot(
+    snapshot: LLMDataCollection,
+    key_spend: dict[str, dict[str, Any]],
+    provisioning_academy_ids: set[int],
+) -> None:
+    team_daily_spend: dict[str, float] = defaultdict(float)
+    user_daily_spend: dict[str, float] = defaultdict(float)
+
+    for key in snapshot["keys"]:
+        academy_config = key.get("academy_config")
+        if not academy_config or academy_config["provisioning_academy_id"] not in provisioning_academy_ids:
+            continue
+
+        token_id = key.get("token_id")
+        if not token_id:
+            continue
+
+        spend_row = key_spend.get(str(token_id))
+        daily_spend = float(spend_row["spend"]) if spend_row else 0.0
+        key["daily_spend"] = daily_spend
+
+        team_id = key.get("team_id")
+        if team_id:
+            team_daily_spend[str(team_id)] += daily_spend
+
+        user_id = key.get("user_id")
+        if user_id:
+            user_daily_spend[str(user_id)] += daily_spend
+
+    for team in snapshot["teams"]:
+        academy_config = team.get("academy_config")
+        if not academy_config or academy_config["provisioning_academy_id"] not in provisioning_academy_ids:
+            continue
+        team["team_daily_spend"] = team_daily_spend.get(str(team["team_id"]), 0.0)
+
+    for user in snapshot["llm_external_users"]:
+        academy_config = user.get("academy_config")
+        if not academy_config or academy_config["provisioning_academy_id"] not in provisioning_academy_ids:
+            continue
+        user["daily_spend"] = user_daily_spend.get(str(user["user_id"]), 0.0)
+
+
+def collect_llm_daily_spend(*, activity_date: date | None = None) -> LLMDataCollection:
+    """
+    Collect LiteLLM data and enrich it with daily spend from daily activity aggregated API.
+
+    Entry point for S3 spend supervisors. Internally calls ``collect_llm_data()`` and then
+    fetches ``GET /user/daily/activity/aggregated`` once per LiteLLM credentials group.
+    """
+    snapshot = collect_llm_data()
+    activity_date = activity_date or timezone.now().date()
+    date_str = activity_date.isoformat()
+
+    for provisioning_academies in _build_llm_credentials_groups().values():
+        client = get_llm_client(provisioning_academies[0])
+        if client is None or not hasattr(client, "get_daily_activity_aggregated"):
+            continue
+
+        try:
+            payload = client.get_daily_activity_aggregated(start_date=date_str, end_date=date_str)
+        except LLMClientError as exc:
+            logger.warning(
+                "LiteLLM daily spend collection failed for provisioning_academy_id=%s: %s",
+                provisioning_academies[0].id,
+                exc,
+            )
+            continue
+
+        key_spend = _parse_daily_activity_key_spend(payload)
+        provisioning_academy_ids = {provisioning_academy.id for provisioning_academy in provisioning_academies}
+        _apply_daily_spend_to_snapshot(snapshot, key_spend, provisioning_academy_ids)
+
+    return snapshot
+
+
+def collect_llm_data() -> LLMDataCollection:
+    """
+    Collect LiteLLM data as flat, enriched rows.
+
+    Fetches once per ``llm_credentials`` (api_url + api_key), enriches vendor payloads with
+    provisioning academy and ProvisioningLLM records, then appends to global lists.
+    """
+    keys: list[LLMKeyRow] = []
+    teams: list[LLMTeamRow] = []
+    academies: list[AcademyConfigRow] = []
+    provisioning_users: list[ProvisioningUserRow] = []
+    llm_external_users: list[LLMExternalUserRow] = []
+
+    for provisioning_academies in _build_llm_credentials_groups().values():
         client = get_llm_client(provisioning_academies[0])
         if client is None:
             continue

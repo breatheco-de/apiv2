@@ -404,6 +404,37 @@ class LiteLLMClient:
 
         return resp.json()
 
+    def get_daily_activity_aggregated(
+        self,
+        start_date: str,
+        end_date: str,
+        user_id: Optional[str] = None,
+        timeout: float = 10.0,
+    ) -> Dict[str, Any]:
+        """
+        Get aggregated daily activity for a date range.
+
+        Endpoint: GET /user/daily/activity/aggregated
+        """
+        url = f"{self.base_url.rstrip('/')}/user/daily/activity/aggregated"
+        params: Dict[str, Any] = {
+            "start_date": start_date,
+            "end_date": end_date,
+        }
+        if user_id:
+            params["user_id"] = user_id
+
+        try:
+            resp = requests.get(url, headers=self.headers, params=params, timeout=timeout)
+        except requests.RequestException as exc:
+            raise LiteLLMError(f"Failed calling LiteLLM daily activity aggregated: {exc}") from exc
+
+        if resp.status_code >= 400:
+            message = self._extract_error_message(resp)
+            raise LiteLLMError(f"Failed to get LiteLLM daily activity aggregated ({resp.status_code}): {message}")
+
+        return resp.json()
+
     def add_user_to_team(
         self,
         team_id: str,

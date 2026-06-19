@@ -55,6 +55,40 @@ def _issues_from_supervisor():
 
 
 @patch("breathecode.provisioning.supervisors.collect_llm_data")
+def test_supervise_llm_key_compliance_groups_multiple_key_alerts_into_one_issue(collect_mock):
+    academy_config = _make_academy_config()
+
+    collect_mock.return_value = {
+        **_empty_snapshot(),
+        "academies": [academy_config],
+        "keys": [
+            {
+                "token_id": "tok-broken",
+                "key_alias": "test_alias",
+                "user_id": None,
+                "team_id": None,
+                "expires": "2026-01-01T00:00:00Z",
+                "provisioning_llm": None,
+                "academy_config": academy_config,
+            },
+        ],
+    }
+
+    issues = _issues_from_supervisor()
+    alert_issues = [issue for issue in issues if issue[1] == "alert-llm-compliance"]
+
+    assert len(alert_issues) == 1
+    assert alert_issues[0][2]["token_id"] == "tok-broken"
+    assert alert_issues[0][2]["issue_count"] == 2
+    message = alert_issues[0][2]["message"]
+    assert message == alert_issues[0][0]
+    assert 'LiteLLM compliance alert — key "test_alias" (2 issues)' in message
+    assert "has no team_id" in message
+    assert "has no user_id" in message
+    assert "tok-broken" not in message
+
+
+@patch("breathecode.provisioning.supervisors.collect_llm_data")
 def test_supervise_llm_key_compliance_returns_no_issues_for_empty_snapshot(collect_mock):
     collect_mock.return_value = _empty_snapshot()
 
@@ -112,9 +146,9 @@ def test_supervise_llm_key_compliance_detects_key_issues(collect_mock):
     assert len(alert_issues) == 2
 
     team_id_issue = next(issue for issue in alert_issues if issue[2]["token_id"] == "tok-no-team")
-    assert "student-key-no-team" in team_id_issue[0]
-    assert "tok-no-team" not in team_id_issue[0]
+    assert team_id_issue[2]["grouped"] is True
     assert team_id_issue[2]["message"] == "LiteLLM key student-key-no-team has no team_id"
+    assert team_id_issue[0] == team_id_issue[2]["message"]
     assert "academy_config" not in team_id_issue[2]
 
     expires_issue = next(issue for issue in issues if issue[1] == "fix-llm-key-missing-expires")
@@ -126,7 +160,7 @@ def test_supervise_llm_key_compliance_detects_key_issues(collect_mock):
 
     missing_user_issue = next(issue for issue in alert_issues if issue[2]["token_id"] == "tok-no-user")
     assert missing_user_issue[2]["token_id"] == "tok-no-user"
-    assert missing_user_issue[2]["message"] == "LiteLLM key tok-no-user has no user_id"
+    assert "has no user_id" in missing_user_issue[2]["message"]
     assert missing_user_issue[2]["academy_config"] == academy_config
 
 
@@ -155,9 +189,9 @@ def test_supervise_llm_key_compliance_detects_too_many_keys_per_user(collect_moc
 
     assert len(issues) == 1
     assert issues[0][1] == "alert-llm-compliance"
+    assert issues[0][2]["grouped"] is True
     assert issues[0][2]["user_id"] == "student-miami"
-    assert issues[0][2]["key_count"] == 7
-    assert issues[0][2]["message"] == "LiteLLM user student-miami has 7 keys (>= 7)"
+    assert "has 7 keys (>= 7)" in issues[0][2]["message"]
     assert issues[0][2]["academy_config"] == academy_config
 
 
@@ -206,7 +240,7 @@ def test_supervise_llm_key_compliance_detects_external_user_issues(collect_mock)
     }
 
     alert_issues = [issue for issue in issues if issue[1] == "alert-llm-compliance"]
-    assert len(alert_issues) == 2
+    assert len(alert_issues) == 1
 
     missing_team_issue = next(issue for issue in issues if issue[1] == "fix-llm-user-missing-team")
     assert missing_team_issue[2] == {
@@ -215,9 +249,12 @@ def test_supervise_llm_key_compliance_detects_external_user_issues(collect_mock)
         "provisioning_academy_id": 1,
     }
 
-    without_provisioning_issue = next(issue for issue in alert_issues if issue[2]["user_id"] == "intruder")
-    assert without_provisioning_issue[2]["message"] == "LiteLLM user intruder has no active ProvisioningLLM record"
-    assert without_provisioning_issue[2]["academy_config"] == academy_config
+    intruder_issue = alert_issues[0]
+    assert intruder_issue[2]["user_id"] == "intruder"
+    assert intruder_issue[2]["issue_count"] == 2
+    assert "has no active ProvisioningLLM record" in intruder_issue[2]["message"]
+    assert "does not follow the username-academy_slug convention" in intruder_issue[2]["message"]
+    assert intruder_issue[2]["academy_config"] == academy_config
 
 
 @patch("breathecode.provisioning.supervisors.collect_llm_data")
@@ -244,7 +281,7 @@ def test_supervise_llm_key_compliance_yields_alert_without_recipients(collect_mo
 
     assert len(issues) == 1
     assert issues[0][1] == "alert-llm-compliance"
-    assert issues[0][2]["message"] == "LiteLLM key tok-no-user has no user_id"
+    assert "has no user_id" in issues[0][2]["message"]
     assert issues[0][2]["academy_config"] == academy_config
     assert issues[0][2]["academy_config"]["alert_emails"] == []
 
@@ -270,10 +307,8 @@ def test_supervise_llm_key_compliance_yields_alert_without_academy_config(collec
 
     assert len(issues) == 1
     assert issues[0][1] == "alert-llm-compliance"
-    assert issues[0][2] == {
-        "message": "LiteLLM key tok-no-user has no user_id",
-        "token_id": "tok-no-user",
-    }
+    assert issues[0][2]["token_id"] == "tok-no-user"
+    assert "has no user_id" in issues[0][2]["message"]
 
 
 @patch("breathecode.provisioning.supervisors.collect_llm_data")
@@ -325,20 +360,18 @@ def test_supervise_llm_key_compliance_detects_team_config_issues(collect_mock):
     issues = _issues_from_supervisor()
     alert_issues = [issue for issue in issues if issue[1] == "alert-llm-compliance"]
 
-    assert len(alert_issues) == 3
+    assert len(alert_issues) == 1
+    assert alert_issues[0][2]["team_id"] == "team-1"
+    assert alert_issues[0][2]["issue_count"] == 3
 
-    messages = {issue[2]["message"] for issue in alert_issues}
-    assert any("models without miami/ prefix" in message and "openai/gpt-4" in message for message in messages)
-    budget_message = next(message for message in messages if "budget fields not defined" in message)
-    assert "team budget_duration" in budget_message
-    assert "team_member_budget_id" in budget_message
-    assert "team max_budget" not in budget_message
-    assert any("spend is 92% of max_budget" in message for message in messages)
-
-    for issue in alert_issues:
-        if "budget fields not defined" in issue[2]["message"] or "spend is" in issue[2]["message"]:
-            assert issue[2]["academy_config"] == academy_config
-            assert issue[2]["team_id"] == "team-1"
+    message = alert_issues[0][2]["message"]
+    assert "models without miami/ prefix" in message and "openai/gpt-4" in message
+    assert "budget fields not defined" in message
+    assert "team budget_duration" in message
+    assert "team_member_budget_id" in message
+    assert "team max_budget" not in message.split("budget fields not defined", 1)[1]
+    assert "spend is 92% of max_budget" in message
+    assert alert_issues[0][2]["academy_config"] == academy_config
 
 
 @patch("breathecode.provisioning.supervisors.collect_llm_data")

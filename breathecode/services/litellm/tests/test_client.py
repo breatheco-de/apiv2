@@ -114,3 +114,22 @@ class TestLiteLLMClient:
 
         with pytest.raises(LiteLLMError, match="key is required"):
             client.update_key(key="", duration="30d")
+
+    @patch("breathecode.services.litellm.client.requests.get")
+    def test_get_daily_activity_aggregated_sends_date_range(self, get_mock):
+        response_mock = MagicMock()
+        response_mock.status_code = 200
+        response_mock.json.return_value = {
+            "results": [],
+            "metadata": {"total_spend": 0.0},
+        }
+        get_mock.return_value = response_mock
+
+        client = LiteLLMClient(base_url="https://litellm.example.com", api_key="master-key")
+        result = client.get_daily_activity_aggregated(start_date="2026-06-18", end_date="2026-06-18")
+
+        get_mock.assert_called_once()
+        assert get_mock.call_args.args[0].endswith("/user/daily/activity/aggregated")
+        params = get_mock.call_args.kwargs["params"]
+        assert params == {"start_date": "2026-06-18", "end_date": "2026-06-18"}
+        assert result["metadata"]["total_spend"] == 0.0

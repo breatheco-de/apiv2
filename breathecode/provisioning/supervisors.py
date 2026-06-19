@@ -1,4 +1,5 @@
 import logging
+from collections import defaultdict
 from datetime import timedelta
 
 from breathecode.notify.actions import send_email_message
@@ -8,6 +9,7 @@ from breathecode.provisioning.tasks import deprovision_litellm_user_task
 from breathecode.provisioning.utils.llm_client import LLMClientError, get_llm_client
 from breathecode.provisioning.utils.llm_data_collection import (
     LLMDataCollection,
+    collect_llm_daily_spend,
     collect_llm_data,
 )
 from breathecode.utils.decorators import issue, supervisor
@@ -16,6 +18,8 @@ logger = logging.getLogger(__name__)
 
 LLM_BUDGET_SERVICE = "free-monthly-llm-budget"
 LLM_EXCLUDED_USER_IDS = frozenset({"default_user_id"})
+LLM_DAILY_SPEND_NEAR_LIMIT_RATIO = 0.9
+LLM_DAILY_SPEND_FALLBACK_MAX_BUDGET = 10.0
 
 
 def _academy_slug_for_user_id(user_id: str, academy_slugs: list[str]) -> str | None:
@@ -33,6 +37,29 @@ def _known_academy_slugs(snapshot: LLMDataCollection) -> list[str]:
         if slug:
             slugs.append(str(slug))
     return slugs
+
+
+def _compliance_entity_display_label(entity_kind: str, entity_id: str, messages: list[str]) -> str:
+    prefix = f"LiteLLM {entity_kind} "
+    for message in messages:
+        if not message.startswith(prefix):
+            continue
+        rest = message[len(prefix) :]
+        for sep in (" has ", " ("):
+            if sep in rest:
+                return rest.split(sep, 1)[0]
+        if rest:
+            return rest
+    return entity_id
+
+
+def _build_grouped_compliance_alert_body(entity_kind: str, entity_id: str, messages: list[str]) -> str:
+    if len(messages) == 1:
+        return messages[0]
+
+    label = _compliance_entity_display_label(entity_kind, entity_id, messages)
+    header = f'LiteLLM compliance alert — {entity_kind} "{label}" ({len(messages)} issues)'
+    return header + ":\n\n" + "\n".join(f"- {line}" for line in messages)
 
 
 def llm_team_models_missing_academy_prefix(snapshot: LLMDataCollection):
@@ -163,6 +190,156 @@ def llm_team_spend_near_limit(snapshot: LLMDataCollection):
                 "academy_config": academy_config,
             },
         )
+
+
+def llm_team_daily_spend_near_limit(snapshot: LLMDataCollection):
+    for team in snapshot["teams"]:
+        academy_config = team.get("academy_config")
+        if not academy_config:
+            continue
+
+        team_max_budget = team.get("team_max_budget")
+        team_daily_spend = team.get("team_daily_spend")
+        if team_max_budget is None or team_daily_spend is None:
+            continue
+
+        try:
+            max_budget = float(team_max_budget)
+            spend = float(team_daily_spend)
+        except (TypeError, ValueError):
+            continue
+
+        if max_budget <= 0 or spend <= 0:
+            continue
+
+        spend_ratio = spend / max_budget
+        if spend_ratio < LLM_DAILY_SPEND_NEAR_LIMIT_RATIO:
+            continue
+
+        team_id = team["team_id"]
+        slug = academy_config.get("academy_slug") or ""
+        percent = int(spend_ratio * 100)
+        message = (
+            f"LiteLLM team {team_id} ({slug}) has high single-day spend: {percent}% of max_budget "
+            f"({spend}/{max_budget} USD for today only, threshold >= 90%)"
+        )
+        yield (
+            message,
+            "alert-llm-spend-anomaly",
+            {
+                "message": message,
+                "team_id": team_id,
+                "academy_config": academy_config,
+            },
+        )
+
+
+def llm_user_daily_spend_near_limit(snapshot: LLMDataCollection):
+    for user in snapshot["llm_external_users"]:
+        user_id = user["user_id"]
+        if user_id in LLM_EXCLUDED_USER_IDS:
+            continue
+
+        daily_spend = user.get("daily_spend")
+        if daily_spend is None:
+            continue
+
+        member_max_budget = None
+        academy_config = user.get("academy_config")
+        team_ids = [str(team_id) for team_id in (user.get("teams") or []) if team_id]
+        for team in snapshot["teams"]:
+            if str(team["team_id"]) in team_ids:
+                member_max_budget = team.get("member_max_budget")
+                academy_config = team.get("academy_config") or academy_config
+                break
+
+        if academy_config is None:
+            continue
+
+        spend = daily_spend
+        if spend <= 0:
+            continue
+
+        if member_max_budget and member_max_budget > 0:
+            max_budget = member_max_budget
+            used_fallback = False
+        else:
+            max_budget = LLM_DAILY_SPEND_FALLBACK_MAX_BUDGET
+            used_fallback = True
+
+        spend_ratio = spend / max_budget
+        if spend_ratio < LLM_DAILY_SPEND_NEAR_LIMIT_RATIO:
+            continue
+
+        slug = academy_config.get("academy_slug") or ""
+        percent = int(spend_ratio * 100)
+        budget_label = f"fallback max_budget ({max_budget} USD)" if used_fallback else "member max_budget"
+        message = (
+            f"LiteLLM user {user_id} ({slug}) has high single-day spend: {percent}% of {budget_label} "
+            f"({spend}/{max_budget} USD for today only, threshold >= 90%)"
+        )
+        yield (
+            message,
+            "alert-llm-spend-anomaly",
+            {
+                "message": message,
+                "user_id": user_id,
+                "academy_config": academy_config,
+            },
+        )
+
+
+def llm_key_without_user_daily_spend(snapshot: LLMDataCollection):
+    for key in snapshot["keys"]:
+        if key.get("user_id"):
+            continue
+
+        daily_spend = key.get("daily_spend")
+        if daily_spend is None:
+            continue
+
+        spend = daily_spend
+        if spend <= 0:
+            continue
+
+        member_max_budget = None
+        team_academy_config = None
+        team_id = key.get("team_id")
+        if team_id:
+            for team in snapshot["teams"]:
+                if str(team["team_id"]) == str(team_id):
+                    member_max_budget = team.get("member_max_budget")
+                    team_academy_config = team.get("academy_config")
+                    break
+
+        academy_config = team_academy_config or key.get("academy_config")
+        if not academy_config:
+            continue
+
+        if member_max_budget and member_max_budget > 0:
+            max_budget = member_max_budget
+            used_fallback = False
+        else:
+            max_budget = LLM_DAILY_SPEND_FALLBACK_MAX_BUDGET
+            used_fallback = True
+
+        spend_ratio = spend / max_budget
+        if spend_ratio < LLM_DAILY_SPEND_NEAR_LIMIT_RATIO:
+            continue
+
+        budget_label = f"fallback max_budget ({max_budget} USD)" if used_fallback else "member max_budget"
+        percent = int(spend_ratio * 100)
+        message = (
+            f"LiteLLM key {key['key_alias'] or key['token_id']} (no user_id) has high single-day spend: "
+            f"{percent}% of {budget_label} ({spend}/{max_budget} USD for today only, threshold >= 90%)"
+        )
+        params = {
+            "message": message,
+            "token_id": key["token_id"],
+            "academy_config": academy_config,
+        }
+
+        yield (message, "alert-llm-spend-anomaly", params)
 
 
 def llm_key_missing_team_id(snapshot: LLMDataCollection):
@@ -385,7 +562,7 @@ def llm_user_missing_budget(user_id: int, academy_id: int):
     return None
 
 
-@supervisor(delta=timedelta(hours=4))
+@supervisor(delta=timedelta(hours=8))
 def supervise_llm_key_compliance():
     """
     Detect LiteLLM compliance issues across provisioning academies.
@@ -395,17 +572,85 @@ def supervise_llm_key_compliance():
     """
     snapshot = collect_llm_data()
 
-    yield from llm_key_missing_team_id(snapshot)
+    # Auto-fixes: one issue per problem, handled by fix_* (no email).
     yield from llm_key_missing_expires(snapshot)
-    yield from llm_user_too_many_keys(snapshot)
-    yield from llm_key_missing_user_id(snapshot)
-    yield from llm_external_user_without_provisioning(snapshot)
-    yield from llm_external_user_invalid_convention(snapshot)
     yield from llm_user_missing_team(snapshot)
 
-    yield from llm_team_models_missing_academy_prefix(snapshot)
-    yield from llm_team_budget_misconfigured(snapshot)
-    yield from llm_team_spend_near_limit(snapshot)
+    # Email alerts: run supervisors into one list first.
+    compliance_alerts: list[tuple[str, str, dict]] = []
+    for detector in (
+        llm_key_missing_team_id,
+        llm_user_too_many_keys,
+        llm_key_missing_user_id,
+        llm_external_user_without_provisioning,
+        llm_external_user_invalid_convention,
+        llm_team_models_missing_academy_prefix,
+        llm_team_budget_misconfigured,
+        llm_team_spend_near_limit,
+    ):
+        compliance_alerts.extend(detector(snapshot))
+
+    # Group by entity so one key/user/team with N problems -> one email.
+    # Order matters: token_id wins over user_id over team_id.
+    group_specs = (
+        ("token_id", "key"),
+        ("user_id", "user"),
+        ("team_id", "team"),
+    )
+    grouped_alerts = {entity_param: defaultdict(list) for entity_param, _ in group_specs}
+
+    for message, code, params in compliance_alerts:
+        if code != "alert-llm-compliance":
+            continue
+
+        params = params or {}
+        for entity_param in grouped_alerts:
+            if entity_id := params.get(entity_param):
+                grouped_alerts[entity_param][str(entity_id)].append((message, params))
+                break
+        else:
+            logger.warning("LiteLLM compliance alert skipped (no group key): %s", message)
+
+    for entity_param, entity_kind in group_specs:
+        for entity_id, items in grouped_alerts[entity_param].items():
+            messages = sorted(message for message, _ in items)
+            # Used by alert_llm_compliance to pick soft_budget_alerting_emails recipients.
+            academy_config = next(
+                (item_params["academy_config"] for _, item_params in items if item_params.get("academy_config")),
+                None,
+            )
+
+            body = _build_grouped_compliance_alert_body(entity_kind, entity_id, messages)
+            issue_params = {
+                "message": body,
+                entity_param: entity_id,
+                "grouped": True,
+                "issue_count": len(messages),
+                "items": [item_params for _, item_params in items],
+            }
+            if academy_config:
+                issue_params["academy_config"] = academy_config
+            yield (body, "alert-llm-compliance", issue_params)
+
+
+@supervisor(delta=timedelta(hours=6))
+def supervise_llm_spend_anomalies():
+    """
+    Detect LiteLLM daily spend anomalies across provisioning academies.
+
+    Uses ``collect_llm_daily_spend()`` which enriches the compliance snapshot with
+    per-key, per-user, and per-team daily spend from daily activity aggregated API.
+    """
+    snapshot = collect_llm_daily_spend()
+
+    yield from llm_user_daily_spend_near_limit(snapshot)
+    yield from llm_team_daily_spend_near_limit(snapshot)
+    yield from llm_key_without_user_daily_spend(snapshot)
+
+
+@issue(supervise_llm_spend_anomalies, delta=timedelta(minutes=30), attempts=1)
+def alert_llm_spend_anomaly(message: str, academy_config: dict | None = None, **_):
+    return _deliver_llm_compliance_alert(message, academy_config, subject="LiteLLM spend alert")
 
 
 @issue(supervise_llm_key_compliance, delta=timedelta(minutes=30), attempts=3)
@@ -468,6 +713,15 @@ def fix_llm_user_missing_team(user_id: str, team_id: str, provisioning_academy_i
 
 @issue(supervise_llm_key_compliance, delta=timedelta(minutes=30), attempts=1)
 def alert_llm_compliance(message: str, academy_config: dict | None = None, **_):
+    return _deliver_llm_compliance_alert(message, academy_config)
+
+
+def _deliver_llm_compliance_alert(
+    message: str,
+    academy_config: dict | None = None,
+    *,
+    subject: str = "LiteLLM compliance alert",
+):
     config = academy_config or {}
     provisioning_academy_id = config.get("provisioning_academy_id")
     alert_emails = config.get("alert_emails") or []
@@ -490,7 +744,7 @@ def alert_llm_compliance(message: str, academy_config: dict | None = None, **_):
         "diagnostic",
         alert_emails,
         {
-            "subject": f"LiteLLM compliance alert: {message}",
+            "subject": subject,
             "details": message,
         },
         academy=provisioning_academy.academy,
