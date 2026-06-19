@@ -84,7 +84,7 @@ def llm_team_models_missing_academy_prefix(snapshot: LLMDataCollection):
 
         team_id = team["team_id"]
         message = (
-            f"LiteLLM team {team_id} ({slug}) has models without {slug}/ prefix: {', '.join(sorted(invalid_models))}"
+            f"LiteLLM team {slug} has models without {slug}/ prefix: {', '.join(sorted(invalid_models))}"
         )
         yield (
             message,
@@ -136,7 +136,7 @@ def llm_team_budget_misconfigured(snapshot: LLMDataCollection):
             continue
 
         message = (
-            f"LiteLLM team {team_id} ({slug}) has budget fields not defined (should be configured): "
+            f"LiteLLM team {slug} has budget fields not defined (should be configured): "
             f"{', '.join(problems)}"
         )
         yield (
@@ -178,7 +178,7 @@ def llm_team_spend_near_limit(snapshot: LLMDataCollection):
         slug = academy_config.get("academy_slug") or ""
         percent = int(spend_ratio * 100)
         message = (
-            f"LiteLLM team {team_id} ({slug}) spend is {percent}% of max_budget "
+            f"LiteLLM team {slug} spend is {percent}% of max_budget "
             f"({spend}/{max_budget} USD, threshold >= 90%)"
         )
         yield (
@@ -220,7 +220,7 @@ def llm_team_daily_spend_near_limit(snapshot: LLMDataCollection):
         slug = academy_config.get("academy_slug") or ""
         percent = int(spend_ratio * 100)
         message = (
-            f"LiteLLM team {team_id} ({slug}) has high single-day spend: {percent}% of max_budget "
+            f"LiteLLM team {slug} has high single-day spend: {percent}% of max_budget "
             f"({spend}/{max_budget} USD for today only, threshold >= 90%)"
         )
         yield (
@@ -488,7 +488,7 @@ def llm_user_missing_team(snapshot: LLMDataCollection):
             continue
 
         yield (
-            f"LiteLLM user {user_id} is not a member of team {team_id}",
+            f"LiteLLM user {user_id} is not a member of team {slug}",
             "fix-llm-user-missing-team",
             {
                 "user_id": user_id,

@@ -124,7 +124,7 @@ def test_alert_llm_compliance_sends_diagnostic_email(provisioning_academy_object
         "diagnostic",
         ["ops@example.com"],
         {
-            "subject": f"LiteLLM compliance alert: {message}",
+            "subject": "LiteLLM compliance alert",
             "details": message,
         },
         academy=provisioning_academy.academy,
