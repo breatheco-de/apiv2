@@ -27,6 +27,8 @@ El CSV contiene las siguientes columnas (en este orden):
 
 **Concepto Clave**: El progreso se calcula comparando lo que el estudiante ha completado vs. lo que está en el **syllabus actual** del cohort. Solo se cuentan tareas que están en el syllabus actual.
 
+**Nota sobre completion strategy**: La graduación y la elegibilidad de certificado usan `evaluate_cohort_user_completion(cohort_user)` en `breathecode/admissions/services/completion.py`. Ese evaluador respeta `grading_strategy.completion` del syllabus y devuelve porcentajes por tipo de asset. El CSV histórico puede mantener columnas y reglas propias de reporte, pero no debe duplicar reglas de graduación/certificado.
+
 **Flujo Simplificado**:
 ```
 1. Obtener enrollments del cohort

@@ -1,83 +1,101 @@
 """
-For a single cohort or every micro of a macro cohort: mark STUDENT cohort users as GRADUATED
-when LESSON + EXERCISE syllabus completion is 100% (by Task.task_status=DONE), then run
-generate_certificate for every GRADUATED STUDENT on that cohort.
+For a single cohort or every micro of a macro cohort: align STUDENT educational_status
+with mandatory PROJECT completion (every mandatory project must be revision_status APPROVED).
 
-Does not require PROJECT entries in the syllabus. Certificate issuance still follows
-generate_certificate (financial status, cohort ended / never_ends, etc.).
+- Set finantial_status to UP_TO_DATE when ACTIVE/GRADUATED and finantial_status is null or empty.
+- Promote to GRADUATED when all mandatory projects are APPROVED.
+- Demote GRADUATED → ACTIVE when any mandatory project is missing, pending, REJECTED, or not APPROVED.
+- Optionally call generate_certificate for every GRADUATED STUDENT on that cohort.
 """
 
 from __future__ import annotations
 
 from capyc.rest_framework.exceptions import ValidationException
+from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand, CommandError
+from django.db.models import Q
 
-from breathecode.admissions.models import GRADUATED, LATE, STUDENT, Cohort, CohortUser
+from breathecode.admissions.models import ACTIVE, GRADUATED, LATE, STUDENT, UP_TO_DATE, Cohort, CohortUser
 from breathecode.assignments.models import Task
-from breathecode.certificate.actions import (
-    generate_certificate,
-    generate_certificate_ignoring_tasks,
-    get_assets_from_syllabus,
-)
+from breathecode.certificate.actions import generate_certificate, get_assets_from_syllabus
 from breathecode.certificate.management.commands.macro_cohort_certificates import ordered_micro_cohorts
 
+_FINANCIAL_ELIGIBLE_EDUCATIONAL = (ACTIVE, GRADUATED)
 
-def _completion_rate(user_id: int, cohort_id: int, task_type: str, slugs: list[str]) -> float:
-    if not slugs:
-        return 100.0
-    done = (
-        Task.objects.filter(
-            user_id=user_id,
-            cohort_id=cohort_id,
-            task_type=task_type,
-            associated_slug__in=slugs,
-            task_status=Task.TaskStatus.DONE,
+
+def _cohort_users_null_financial(cohort: Cohort):
+    return (
+        CohortUser.objects.filter(
+            cohort=cohort,
+            role=STUDENT,
+            educational_status__in=_FINANCIAL_ELIGIBLE_EDUCATIONAL,
         )
-        .values("associated_slug")
-        .distinct()
-        .count()
+        .filter(Q(finantial_status__isnull=True) | Q(finantial_status=""))
+        .exclude(cohort__stage="DELETED")
+        .select_related("user")
+        .order_by("id")
     )
-    return (done / len(slugs)) * 100.0
 
 
-def _lesson_exercise_completion(user_id: int, cohort: Cohort, *, only_mandatory: bool) -> tuple[bool, dict]:
+def _mandatory_projects_completion(user: User, cohort: Cohort) -> tuple[bool, dict]:
     if not cohort.syllabus_version:
         return (False, {"reason": "cohort has no syllabus_version"})
 
-    lesson_slugs = get_assets_from_syllabus(
-        cohort.syllabus_version, task_types=["LESSON"], only_mandatory=only_mandatory
+    project_slugs = get_assets_from_syllabus(
+        cohort.syllabus_version, task_types=["PROJECT"], only_mandatory=True
     )
-    exercise_slugs = get_assets_from_syllabus(
-        cohort.syllabus_version, task_types=["EXERCISE"], only_mandatory=only_mandatory
-    )
-
-    if not lesson_slugs and not exercise_slugs:
+    if not project_slugs:
         return (
             False,
             {
-                "reason": "syllabus has no LESSON or EXERCISE slugs for this cohort version",
-                "lessons_total": 0,
-                "exercises_total": 0,
+                "reason": "syllabus has no mandatory PROJECT slugs",
+                "projects_total": 0,
+                "projects_approved": 0,
+                "projects_not_approved": 0,
             },
         )
 
-    lesson_rate = _completion_rate(user_id, cohort.id, "LESSON", lesson_slugs)
-    exercise_rate = _completion_rate(user_id, cohort.id, "EXERCISE", exercise_slugs)
+    slug_set = set(project_slugs)
+    tasks = Task.objects.filter(
+        user=user,
+        cohort_id=cohort.id,
+        task_type=Task.TaskType.PROJECT,
+        associated_slug__in=project_slugs,
+    )
 
-    ok = lesson_rate >= 100.0 and exercise_rate >= 100.0
-    meta = {
-        "lessons_total": len(lesson_slugs),
-        "exercises_total": len(exercise_slugs),
-        "lessons_done_pct": round(lesson_rate, 2),
-        "exercises_done_pct": round(exercise_rate, 2),
-    }
-    return (ok, meta)
+    approved_slugs: set[str] = set()
+    rejected_slugs: set[str] = set()
+    for task in tasks:
+        if task.associated_slug not in slug_set:
+            continue
+        if task.revision_status == Task.RevisionStatus.APPROVED:
+            approved_slugs.add(task.associated_slug)
+        elif task.revision_status == Task.RevisionStatus.REJECTED:
+            rejected_slugs.add(task.associated_slug)
+
+    not_approved = sorted(slug_set - approved_slugs)
+    approved_count = len(approved_slugs & slug_set)
+    pct = round((approved_count / len(project_slugs)) * 100, 2)
+    ok = len(not_approved) == 0
+
+    return (
+        ok,
+        {
+            "projects_total": len(project_slugs),
+            "projects_approved": approved_count,
+            "projects_not_approved": len(not_approved),
+            "projects_rejected": len(rejected_slugs),
+            "projects_rejected_slugs": sorted(rejected_slugs),
+            "projects_not_approved_slugs": not_approved,
+            "projects_done_pct": pct,
+        },
+    )
 
 
 class Command(BaseCommand):
     help = (
-        "Mark STUDENTs as GRADUATED when they have 100% LESSON and 100% EXERCISE completion, "
-        "then call generate_certificate for all GRADUATED STUDENTs. "
+        "Align STUDENT educational_status with mandatory PROJECT completion, fill null finantial_status "
+        "with UP_TO_DATE (ACTIVE/GRADUATED only), graduate/demote as needed, and optionally issue certificates. "
         "Target one cohort (--cohort-id/--cohort-slug) or every micro of a macro "
         "(--macro-cohort-id/--macro-cohort-slug)."
     )
@@ -92,8 +110,8 @@ class Command(BaseCommand):
             "--dry-run",
             action="store_true",
             help=(
-                "No escribe en BD. Lista por cohort quién pasaría a GRADUATED y a quién se le intentaría "
-                "generar certificado (incluye graduaciones simuladas que aún no están en la BD)."
+                "No escribe en BD. Lista quién pasaría a GRADUATED, quién volvería a ACTIVE "
+                "y a quién se le intentaría generar certificado."
             ),
         )
         parser.add_argument(
@@ -103,22 +121,9 @@ class Command(BaseCommand):
             help="Layout slug passed to generate_certificate.",
         )
         parser.add_argument(
-            "--only-mandatory",
-            action="store_true",
-            help="Count only mandatory LESSON/EXERCISE slugs from the syllabus JSON.",
-        )
-        parser.add_argument(
             "--skip-certificates",
             action="store_true",
-            help="Only perform the graduation step; do not call generate_certificate.",
-        )
-        parser.add_argument(
-            "--ignore-pending-projects",
-            action="store_true",
-            help=(
-                "Call generate_certificate_ignoring_tasks instead of generate_certificate "
-                "(useful when the syllabus has PROJECT slugs still pending)."
-            ),
+            help="Only perform graduation/demotion; do not call generate_certificate.",
         )
 
     def handle(self, *args, **options):
@@ -142,6 +147,10 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS(f"{'=' * 72}\n"))
 
             grand_totals = self._empty_totals()
+
+            macro_financial = self._apply_finantial_status_up_to_date(macro, options["dry_run"])
+            grand_totals["finantial_filled"] += macro_financial
+
             for micro in micros:
                 self.stdout.write(self.style.MIGRATE_HEADING(f"\n▶ Micro cohort: {micro.name} (id={micro.id})"))
                 try:
@@ -155,7 +164,7 @@ class Command(BaseCommand):
 
             self.stdout.write(self.style.SUCCESS(f"\n{'=' * 72}"))
             self.stdout.write(self.style.SUCCESS("Macro summary"))
-            self._print_totals(grand_totals, options, skip_certificates=options["skip_certificates"])
+            self._print_totals(grand_totals, skip_certificates=options["skip_certificates"])
             self.stdout.write(self.style.SUCCESS(f"{'=' * 72}\n"))
             return
 
@@ -194,46 +203,83 @@ class Command(BaseCommand):
             "micros_processed": 0,
             "micros_skipped": 0,
             "graduated_new": 0,
+            "demoted_to_active": 0,
             "already_graduated_complete": 0,
             "skipped_incomplete": 0,
             "skipped_no_assets": 0,
             "skipped_late": 0,
             "cert_ok": 0,
             "cert_fail": 0,
+            "finantial_filled": 0,
         }
 
     @staticmethod
     def _accumulate_totals(grand: dict, summary: dict) -> None:
         for key in (
             "graduated_new",
+            "demoted_to_active",
             "already_graduated_complete",
             "skipped_incomplete",
             "skipped_no_assets",
             "skipped_late",
             "cert_ok",
             "cert_fail",
+            "finantial_filled",
         ):
             grand[key] += summary.get(key, 0)
 
+    def _apply_finantial_status_up_to_date(self, cohort: Cohort, dry_run: bool) -> int:
+        """ACTIVE/GRADUATED STUDENT rows with null or empty finantial_status → UP_TO_DATE."""
+        rows = list(_cohort_users_null_financial(cohort))
+        if not rows:
+            return 0
+
+        self.stdout.write(
+            self.style.MIGRATE_HEADING(
+                f"\n  Finantial status — cohort {cohort.slug!r} (id={cohort.id}): "
+                f"{len(rows)} row(s) with null/empty finantial_status"
+            )
+        )
+
+        filled = 0
+        for cu in rows:
+            if dry_run:
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"    [dry-run] finantial_status → UP_TO_DATE — cohort_user id={cu.id} "
+                        f"user_id={cu.user_id} email={cu.user.email!r} "
+                        f"educational_status={cu.educational_status!r}"
+                    )
+                )
+            else:
+                cu.finantial_status = UP_TO_DATE
+                cu.save(update_fields=["finantial_status", "updated_at"])
+                self.stdout.write(
+                    self.style.SUCCESS(
+                        f"    finantial_status UP_TO_DATE — cohort_user id={cu.id} user={cu.user.email!r}"
+                    )
+                )
+            filled += 1
+
+        return filled
+
     def _process_cohort(self, cohort: Cohort, options) -> dict:
         dry_run = options["dry_run"]
-        only_mandatory = options["only_mandatory"]
         layout_slug = options["layout_slug"]
         skip_certificates = options["skip_certificates"]
-        ignore_pending_projects = options["ignore_pending_projects"]
 
         if cohort.stage == "DELETED":
             raise CommandError(f"Cohort {cohort.slug!r} is DELETED.")
         if not cohort.syllabus_version:
             raise CommandError(f"Cohort {cohort.slug!r} has no syllabus_version.")
 
+        finantial_filled = self._apply_finantial_status_up_to_date(cohort, dry_run)
+
         self.stdout.write(self.style.NOTICE(f"Cohort: {cohort.name} (id={cohort.id}, slug={cohort.slug})"))
-        certify_fn = generate_certificate_ignoring_tasks if ignore_pending_projects else generate_certificate
         self.stdout.write(
             self.style.NOTICE(
                 f"  Mode: {'DRY RUN (no writes)' if dry_run else 'WRITE'}; "
-                f"only_mandatory={only_mandatory}; skip_certificates={skip_certificates}; "
-                f"certificate={'ignoring_projects' if ignore_pending_projects else 'strict'}"
+                f"rule=mandatory PROJECT (APPROVED only); skip_certificates={skip_certificates}"
             )
         )
 
@@ -241,7 +287,7 @@ class Command(BaseCommand):
             self.stdout.write("")
             self.stdout.write(
                 self.style.MIGRATE_HEADING(
-                    f"DRY RUN — Graduaciones (cohort id={cohort.id} slug={cohort.slug!r})"
+                    f"DRY RUN — Graduación / democión (cohort id={cohort.id} slug={cohort.slug!r})"
                 )
             )
 
@@ -256,25 +302,56 @@ class Command(BaseCommand):
         skipped_late = 0
         skipped_no_assets = 0
         graduated_new = 0
+        demoted_to_active = 0
         already_graduated_complete = 0
         dry_run_would_graduate: list[CohortUser] = []
 
         for cu in students:
-            ok, meta = _lesson_exercise_completion(cu.user_id, cohort, only_mandatory=only_mandatory)
-            if meta.get("reason") == "syllabus has no LESSON or EXERCISE slugs for this cohort version":
+            ok, meta = _mandatory_projects_completion(cu.user, cohort)
+            if meta.get("reason") == "syllabus has no mandatory PROJECT slugs":
                 skipped_no_assets += 1
                 self.stdout.write(
                     self.style.WARNING(
-                        f"  SKIP user_id={cu.user_id} ({cu.user.email}): no LESSON/EXERCISE in syllabus scope."
+                        f"  SKIP user_id={cu.user_id} ({cu.user.email}): no mandatory PROJECT slugs in syllabus."
                     )
                 )
                 continue
+
+            if cu.educational_status == GRADUATED and not ok:
+                rejected_note = ""
+                if meta.get("projects_rejected"):
+                    rejected_note = f" rejected={meta.get('projects_rejected_slugs')}"
+                if dry_run:
+                    self.stdout.write(
+                        self.style.ERROR(
+                            f"  [dry-run] DEMOTE → ACTIVE — cohort_user id={cu.id} user_id={cu.user_id} "
+                            f"email={cu.user.email!r} not_approved={meta.get('projects_not_approved')} "
+                            f"({meta.get('projects_done_pct')}% APPROVED){rejected_note}"
+                        )
+                    )
+                else:
+                    cu.educational_status = ACTIVE
+                    cu.save(update_fields=["educational_status", "updated_at"])
+                    self.stdout.write(
+                        self.style.ERROR(
+                            f"  ACTIVE (demoted) cohort_user id={cu.id} user={cu.user.email!r} — "
+                            f"not APPROVED={meta.get('projects_not_approved_slugs')}{rejected_note}"
+                        )
+                    )
+                demoted_to_active += 1
+                continue
+
             if not ok:
                 skipped_incomplete += 1
+                rejected_note = ""
+                if meta.get("projects_rejected"):
+                    rejected_note = f" rejected={meta.get('projects_rejected_slugs')}"
                 self.stdout.write(
                     self.style.WARNING(
                         f"  SKIP user_id={cu.user_id} ({cu.user.email}): "
-                        f"lessons {meta.get('lessons_done_pct')}% / exercises {meta.get('exercises_done_pct')}%"
+                        f"projects {meta.get('projects_done_pct')}% APPROVED "
+                        f"({meta.get('projects_not_approved')} not APPROVED of {meta.get('projects_total')})"
+                        f"{rejected_note}"
                     )
                 )
                 continue
@@ -327,11 +404,6 @@ class Command(BaseCommand):
                         f"DRY RUN — Certificados (cohort id={cohort.id} slug={cohort.slug!r})"
                     )
                 )
-                cert_fn_label = (
-                    "generate_certificate_ignoring_tasks"
-                    if ignore_pending_projects
-                    else "generate_certificate"
-                )
                 graduated_in_db = list(
                     CohortUser.objects.filter(cohort=cohort, role=STUDENT, educational_status=GRADUATED)
                     .exclude(cohort__stage="DELETED")
@@ -346,7 +418,7 @@ class Command(BaseCommand):
                 for _cu_id, (cu, reason) in sorted(by_cu_id.items(), key=lambda x: x[0]):
                     self.stdout.write(
                         self.style.WARNING(
-                            f"  [dry-run] CERT → {cert_fn_label} — {reason} — cohort_user id={cu.id} "
+                            f"  [dry-run] CERT → generate_certificate — {reason} — cohort_user id={cu.id} "
                             f"user_id={cu.user_id} email={cu.user.email!r}"
                         )
                     )
@@ -359,7 +431,7 @@ class Command(BaseCommand):
                     .order_by("id")
                 ):
                     try:
-                        certify_fn(cu.user, cohort, layout_slug)
+                        generate_certificate(cu.user, cohort, layout_slug)
                         self.stdout.write(
                             self.style.SUCCESS(f"  CERT OK user={cu.user.email!r} cohort_user_id={cu.id}")
                         )
@@ -372,23 +444,24 @@ class Command(BaseCommand):
 
         summary = {
             "graduated_new": graduated_new,
+            "demoted_to_active": demoted_to_active,
             "already_graduated_complete": already_graduated_complete,
             "skipped_incomplete": skipped_incomplete,
             "skipped_no_assets": skipped_no_assets,
             "skipped_late": skipped_late,
             "cert_ok": cert_ok,
             "cert_fail": cert_fail,
+            "finantial_filled": finantial_filled,
         }
 
         self.stdout.write(self.style.NOTICE("\nSummary"))
-        self._print_totals(summary, options, skip_certificates=skip_certificates, cohort=cohort, dry_run=dry_run)
+        self._print_totals(summary, skip_certificates=skip_certificates, cohort=cohort, dry_run=dry_run)
 
         return summary
 
     def _print_totals(
         self,
         totals: dict,
-        options,
         *,
         skip_certificates: bool,
         cohort: Cohort | None = None,
@@ -397,10 +470,12 @@ class Command(BaseCommand):
         self.stdout.write(
             self.style.NOTICE(
                 f"  graduated_new={totals['graduated_new']}, "
+                f"demoted_to_active={totals['demoted_to_active']}, "
                 f"already_GRADUATED_and_complete={totals['already_graduated_complete']}, "
                 f"skipped_incomplete={totals['skipped_incomplete']}, "
-                f"skipped_no_lesson_or_exercise_slugs={totals['skipped_no_assets']}, "
-                f"skipped_late_financial={totals['skipped_late']}"
+                f"skipped_no_mandatory_project_slugs={totals['skipped_no_assets']}, "
+                f"skipped_late_financial={totals['skipped_late']}, "
+                f"finantial_filled={totals.get('finantial_filled', 0)}"
             )
         )
         if "micros_processed" in totals:
@@ -422,15 +497,15 @@ class Command(BaseCommand):
             self.stdout.write(
                 self.style.NOTICE(
                     f"  [dry-run] Resumen cohort {cohort.slug!r}: "
-                    f"graduaría a {totals['graduated_new']} STUDENT(s); "
-                    f"{totals['already_graduated_complete']} ya GRADUATED con lecciones+ejs al 100%."
+                    f"graduaría a {totals['graduated_new']}, "
+                    f"demovería a ACTIVE {totals['demoted_to_active']}; "
+                    f"{totals['already_graduated_complete']} ya GRADUATED con todos los proyectos obligatorios APPROVED."
                 )
             )
             if not skip_certificates:
-                cert_planned_union = db_grad_total + totals["graduated_new"]
+                cert_planned_union = db_grad_total + totals["graduated_new"] - totals["demoted_to_active"]
                 self.stdout.write(
                     self.style.NOTICE(
-                        f"  [dry-run] Tras ejecutar escritura: ~{cert_planned_union} intento(s) de certificado "
-                        f"(GRADUATED en BD hoy={db_grad_total} + nuevos graduados={totals['graduated_new']})."
+                        f"  [dry-run] Tras ejecutar escritura: ~{max(cert_planned_union, 0)} intento(s) de certificado."
                     )
                 )

@@ -491,6 +491,84 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
             ],
         )
 
+    @patch(GOOGLE_CLOUD_PATH["client"], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH["bucket"], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH["blob"], apply_google_cloud_blob_mock())
+    @patch("breathecode.certificate.signals.user_specialty_saved.send_robust", MagicMock())
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
+    def test_generate_certificate__with_partial_completion_pending_asset(self):
+        cohort_kwargs = {"stage": "ENDED", "never_ends": True}
+        cohort_user_kwargs = {"finantial_status": "UP_TO_DATE", "educational_status": "GRADUATED"}
+        model = self.generate_models(
+            user=True,
+            cohort=True,
+            cohort_user=True,
+            syllabus_version={
+                "id": 1,
+                "json": {
+                    "grading_strategy": {
+                        "completion": {
+                            "type": "PARTIAL_COMPLETION",
+                            "requirements": {
+                                "LESSON": {"min_percent": 100},
+                                "QUIZ": {"min_percent": 100},
+                            },
+                        }
+                    },
+                    "days": [
+                        {
+                            "lessons": [{"slug": "lesson-1", "mandatory": True}],
+                            "quizzes": [{"slug": "quiz-1", "mandatory": True}],
+                            "assignments": [{"slug": "project-1", "mandatory": True}],
+                        }
+                    ],
+                },
+            },
+            syllabus=True,
+            syllabus_schedule=True,
+            specialty=True,
+            layout_design=True,
+            task=[
+                {"associated_slug": "lesson-1", "task_type": "LESSON", "task_status": "DONE"},
+                {"associated_slug": "project-1", "task_type": "PROJECT", "revision_status": "APPROVED"},
+            ],
+            cohort_kwargs=cohort_kwargs,
+            cohort_user_kwargs=cohort_user_kwargs,
+        )
+
+        base = model.copy()
+        del base["user"]
+        del base["cohort_user"]
+
+        teacher_model = self.generate_models(
+            user=True, cohort_user=True, cohort_user_kwargs={"role": "TEACHER"}, models=base
+        )
+        result = self.remove_dinamics_fields(generate_certificate(model["user"], model["cohort"]).__dict__)
+
+        self.assertToken(result["token"])
+        result["token"] = None
+
+        user_specialty = self.bc.database.get("certificate.UserSpecialty", 1, dict=False)
+        expected = {
+            "academy_id": 1,
+            "cohort_id": 1,
+            "expires_at": None,
+            "id": 1,
+            "layout_id": 1,
+            "preview_url": None,
+            "signed_by": teacher_model["user"].first_name + " " + teacher_model["user"].last_name,
+            "signed_by_role": strings[model["cohort"].language]["Main Instructor"],
+            "specialty_id": 1,
+            "issued_at": None,
+            "status": "ERROR",
+            "token": None,
+            "status_text": "with-pending-tasks-1",
+            "user_id": 1,
+            "update_hash": self.generate_update_hash(user_specialty),
+        }
+        self.assertEqual(result, expected)
+
     """
     🔽🔽🔽 Student with pending tasks without mandatory property
     """

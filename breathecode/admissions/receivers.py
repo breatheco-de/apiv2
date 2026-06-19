@@ -10,10 +10,11 @@ from django.utils import timezone
 
 import breathecode.authenticate.tasks as auth_tasks
 from breathecode.admissions import tasks
+from breathecode.admissions.services.completion import graduate_cohort_user_if_complete
 from breathecode.assignments.models import Task
 from breathecode.assignments.signals import assignment_status_updated, revision_status_updated
 from breathecode.authenticate.models import CredentialsDiscord
-from breathecode.certificate.actions import get_assets_from_syllabus, how_many_pending_tasks
+from breathecode.certificate.actions import get_assets_from_syllabus
 
 from ..activity import tasks as activity_tasks
 from .models import Academy, Cohort, CohortUser, Syllabus, SyllabusVersion
@@ -138,6 +139,16 @@ def post_save_cohort_user(sender: Type[CohortUser], instance: CohortUser, **kwar
         main_cohorts = cohort.main_cohorts.all()
         for main in main_cohorts:
             main_cohort_user = CohortUser.objects.filter(cohort=main, user=instance.user).first()
+            if main_cohort_user is None:
+                logger.warning(
+                    "[graduate] macro cohort sync skipped: user_id=%s micro_cohort_id=%s "
+                    "main_cohort_id=%s reason=no-main-cohort-user",
+                    instance.user_id,
+                    cohort.id,
+                    main.id,
+                )
+                continue
+
             if main_cohort_user.educational_status != "GRADUATED":
                 main_cohort = main_cohort_user.cohort
                 micro_cohorts = main_cohort.micro_cohorts.all()
@@ -178,58 +189,106 @@ def mark_saas_student_as_graduated(sender: Type[Task], instance: Task, **kwargs:
         logger.info("[graduate] cohort is not SaaS -> return")
         return
 
-    mandatory_projects = get_assets_from_syllabus(cohort.syllabus_version, task_types=["PROJECT"], only_mandatory=True)
-    logger.info(
-        "[graduate] mandatory_projects_count=%s mandatory_projects=%s",
-        len(mandatory_projects),
-        mandatory_projects,
-    )
-
-    # Only graduate students if the syllabus has mandatory projects
-    if len(mandatory_projects) == 0:
-        logger.info("[graduate] no mandatory projects in syllabus -> return")
+    cohort_user = CohortUser.objects.filter(user=instance.user.id, cohort=cohort.id).first()
+    if cohort_user is None:
+        logger.info(
+            "[graduate] CohortUser not found for user_id=%s cohort_id=%s -> return",
+            instance.user.id,
+            cohort.id,
+        )
         return
 
-    pending_tasks = how_many_pending_tasks(
-        cohort.syllabus_version,
-        instance.user,
-        task_types=["PROJECT"],
-        only_mandatory=True,
-        cohort_id=cohort.id,
+    if cohort_user.educational_status == "GRADUATED":
+        logger.info("[graduate] CohortUser already GRADUATED -> return")
+        return
+
+    before_status = cohort_user.educational_status
+    graduated, completion = graduate_cohort_user_if_complete(cohort_user)
+    logger.info(
+        "[graduate] completion strategy=%s complete=%s pending=%s",
+        completion["strategy"]["type"],
+        completion["is_complete"],
+        completion["pending_required_count"],
     )
-    logger.info("[graduate] pending_tasks=%s", pending_tasks)
 
-    try:
-        user_tasks = list(
-            Task.objects.filter(user=instance.user, associated_slug__in=mandatory_projects).values(
-                "associated_slug", "revision_status", "task_status"
-            )
-        )
-        logger.info("[graduate] user_tasks_snapshot=%s", user_tasks)
-    except Exception as e:
-        logger.warning("[graduate] unable to fetch user tasks snapshot: %s", str(e))
-
-    if pending_tasks == 0:
-        cohort_user = CohortUser.objects.filter(user=instance.user.id, cohort=cohort.id).first()
-        if cohort_user is None:
-            logger.info(
-                "[graduate] CohortUser not found for user_id=%s cohort_id=%s -> return",
-                instance.user.id,
-                cohort.id,
-            )
-            return
-
-        before_status = cohort_user.educational_status
-        cohort_user.educational_status = "GRADUATED"
-        cohort_user.save()
+    if graduated:
         logger.info(
-            "[graduate] educational_status changed %s -> %s for cohort_user_id=%s",
+            "[graduate] educational_status changed %s -> GRADUATED for cohort_user_id=%s",
             before_status,
-            cohort_user.educational_status,
             cohort_user.id,
         )
     else:
-        logger.info("[graduate] there are still mandatory pending tasks -> do not graduate")
+        logger.info("[graduate] completion requirements are still pending -> do not graduate")
+
+
+@receiver(assignment_status_updated, sender=Task, weak=False)
+def mark_saas_student_as_graduated_on_assignment_completion(sender: Type[Task], instance: Task, **kwargs: Any):
+    logger.info(
+        "[graduate-assignment] start | task_id=%s user_id=%s cohort_id=%s task_type=%s task_status=%s",
+        getattr(instance, "id", None),
+        getattr(instance.user, "id", None),
+        getattr(instance.cohort, "id", None),
+        getattr(instance, "task_type", None),
+        getattr(instance, "task_status", None),
+    )
+
+    if getattr(instance, "task_status", None) != Task.TaskStatus.DONE:
+        logger.info("[graduate-assignment] task_status is not DONE -> return")
+        return
+
+    if getattr(instance, "task_type", None) not in [
+        Task.TaskType.LESSON,
+        Task.TaskType.EXERCISE,
+        Task.TaskType.QUIZ,
+    ]:
+        logger.info("[graduate-assignment] task_type does not graduate through assignment_status -> return")
+        return
+
+    if instance.cohort is None:
+        logger.info("[graduate-assignment] task has no cohort -> return")
+        return
+
+    cohort = Cohort.objects.filter(id=instance.cohort.id).first()
+    if cohort is None:
+        logger.info("[graduate-assignment] cohort not found (id=%s) -> return", getattr(instance.cohort, "id", None))
+        return
+
+    if not cohort.available_as_saas:
+        logger.info("[graduate-assignment] cohort is not SaaS -> return")
+        return
+
+    if not getattr(cohort, "syllabus_version", None):
+        logger.info("[graduate-assignment] cohort has no syllabus_version -> return")
+        return
+
+    cohort_user = CohortUser.objects.filter(user=instance.user.id, cohort=cohort.id).first()
+    if cohort_user is None:
+        logger.info(
+            "[graduate-assignment] CohortUser not found for user_id=%s cohort_id=%s -> return",
+            instance.user.id,
+            cohort.id,
+        )
+        return
+
+    if cohort_user.educational_status == "GRADUATED":
+        logger.info("[graduate-assignment] CohortUser already GRADUATED -> return")
+        return
+
+    before_status = cohort_user.educational_status
+    graduated, completion = graduate_cohort_user_if_complete(cohort_user)
+    logger.info(
+        "[graduate-assignment] completion strategy=%s complete=%s pending=%s",
+        completion["strategy"]["type"],
+        completion["is_complete"],
+        completion["pending_required_count"],
+    )
+
+    if graduated:
+        logger.info(
+            "[graduate-assignment] educational_status changed %s -> GRADUATED for cohort_user_id=%s",
+            before_status,
+            cohort_user.id,
+        )
 
 
 @receiver(assignment_status_updated, sender=Task, weak=False)
