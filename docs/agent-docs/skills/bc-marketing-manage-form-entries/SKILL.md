@@ -32,7 +32,7 @@ requires:
 
 4. Update lead fields (`PUT /v1/marketing/academy/lead/<id>` or `PUT /v1/marketing/academy/lead?id=<id>`). Does not auto-call CRM. If `storage_status=ERROR`, fix fields then go to Step 5.
 
-5. Re-process CRM sync (`PUT /v1/marketing/academy/lead/process?id=<id>`). Use after fixing data or for staff-created leads that were never processed. See debug skill for when **not** to call `process` (`DUPLICATED`).
+5. Re-process CRM sync (`PUT /v1/marketing/academy/lead/process?id=<id>`). Use after fixing data or for staff-created leads that were never processed. Add `sync=true` to process immediately and return `storage_status` in the response (default is async queue). See debug skill for when **not** to call `process` (`DUPLICATED`).
 
 6. Delete leads in bulk (`DELETE /v1/marketing/academy/lead?id=<id1>,<id2>`). Requires `id` query param.
 
@@ -49,7 +49,7 @@ All endpoints below require `Authorization`, `Academy`, and optional `Accept-Lan
 | Update one lead | PUT | `/v1/marketing/academy/lead/<id>` | `crud_lead` | Triggers `form_entry.changed`. |
 | Update multiple leads | PUT | `/v1/marketing/academy/lead?id=<ids>` | `crud_lead` | Comma-separated ids in query. |
 | Delete leads | DELETE | `/v1/marketing/academy/lead?id=<ids>` | `crud_lead` | Bulk only via `?id=` query. |
-| Re-process CRM | PUT | `/v1/marketing/academy/lead/process?id=<ids>` | `crud_lead` | Queues `persist_single_lead` per lead. |
+| Re-process CRM | PUT | `/v1/marketing/academy/lead/process?id=<ids>` | `crud_lead` | Default: queues `persist_single_lead` per lead. `sync=true` processes inline and returns `results`. |
 | List won leads | GET | `/v1/marketing/academy/lead/won` | `read_won_lead` | Filters `deal_status=WON`. Paginated. |
 
 ### List filters
@@ -165,6 +165,11 @@ Content-Type: application/json
 
 Same shape as get-one response with updated fields.
 
+| Query param | Notes |
+|---|---|
+| `id` | Required. Comma-separated lead ids. |
+| `sync` | Optional. `true`, `1`, or `yes` runs CRM sync inline instead of Celery queue. Response includes `results` with `id`, `storage_status`, `storage_status_text` per lead. |
+
 #### Example request — re-process CRM
 
 ```http
@@ -181,7 +186,30 @@ Academy: 4
 }
 ```
 
-Poll `GET /v1/marketing/academy/lead/219384` until `storage_status` is `PERSISTED`, `DUPLICATED`, or stable `ERROR`.
+Poll `GET /v1/marketing/academy/lead/219384` until `storage_status` is `PERSISTED`, `DUPLICATED`, or stable `ERROR` (skip polling when `sync=true` was used).
+
+#### Example request — re-process CRM synchronously
+
+```http
+PUT /v1/marketing/academy/lead/process?id=219384&sync=true
+Authorization: Token <token>
+Academy: 4
+```
+
+#### Example response — process sync
+
+```json
+{
+  "details": "1 leads processed",
+  "results": [
+    {
+      "id": 219384,
+      "storage_status": "PERSISTED",
+      "storage_status_text": ""
+    }
+  ]
+}
+```
 
 #### Example request — delete leads
 

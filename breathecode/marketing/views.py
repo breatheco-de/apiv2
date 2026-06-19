@@ -761,11 +761,37 @@ class AcademyProcessView(APIView, GenerateLookupsMixin):
         if not lookups:
             raise ValidationException("Missing id parameters in the querystring", code=400)
 
-        items = FormEntry.objects.filter(**lookups, academy__id=academy_id)
+        is_sync = str(request.GET.get("sync", "")).lower() in ("1", "true", "yes")
+        items = list(FormEntry.objects.filter(**lookups, academy__id=academy_id))
+
+        if is_sync:
+            results = []
+            for item in items:
+                try:
+                    persist_single_lead(item.to_form_data())
+                except Exception:
+                    pass
+                item.refresh_from_db()
+                results.append(
+                    {
+                        "id": item.id,
+                        "storage_status": item.storage_status,
+                        "storage_status_text": item.storage_status_text,
+                    }
+                )
+
+            return Response(
+                {"details": f"{len(results)} leads processed", "results": results},
+                status=status.HTTP_200_OK,
+            )
+
         for item in items:
             persist_single_lead.delay(item.to_form_data())
 
-        return Response({"details": f"{items.count()} leads added to the processing queue"}, status=status.HTTP_200_OK)
+        return Response(
+            {"details": f"{len(items)} leads added to the processing queue"},
+            status=status.HTTP_200_OK,
+        )
 
 
 class AcademyLeadView(APIView, GenerateLookupsMixin):
