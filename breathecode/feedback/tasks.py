@@ -530,6 +530,51 @@ def send_mentorship_session_survey(session_id, **_):
             answer.save()
 
 
+def _deliver_event_answer_email(answer) -> bool:
+    """Send nps_survey email for an event-linked answer. Returns True if email was sent."""
+    if not answer.user or not answer.user.email or answer.event is None:
+        return False
+
+    if answer.token_id is None:
+        token, _ = Token.get_or_create(answer.user, token_type="temporal", hours_length=48)
+        answer.token_id = token.id
+        answer.save(update_fields=["token_id"])
+
+    token = Token.objects.filter(id=answer.token_id).first()
+    if token is None:
+        return False
+
+    api_url = API_URL if ENV != "test" else os.getenv("API_URL", "")
+    data = {
+        "SUBJECT": answer.title,
+        "MESSAGE": answer.title,
+        "TRACKER_URL": f"{api_url}/v1/feedback/answer/{answer.id}/tracker.png",
+        "BUTTON": strings[answer.lang.lower()]["button_label"],
+        "LINK": f"https://nps.4geeks.com/{answer.id}?token={token.key}",
+    }
+
+    if notify_actions.send_email_message("nps_survey", answer.user.email, data, academy=answer.event.academy):
+        answer.sent_at = timezone.now()
+        answer.status = "SENT"
+        answer.save(update_fields=["sent_at", "status"])
+        return True
+
+    return False
+
+
+@task(bind=False, priority=TaskPriority.NOTIFICATION.value)
+def send_event_answer_email(answer_id, **_):
+    logger.info("Starting send_event_answer_email for answer %s", answer_id)
+    answer = Answer.objects.filter(id=answer_id).select_related("user", "event", "event__academy").first()
+    if answer is None:
+        raise RetryTask("Answer not found")
+
+    if answer.event is None:
+        raise AbortTask("Answer is not linked to an event")
+
+    _deliver_event_answer_email(answer)
+
+
 @task(bind=False, priority=TaskPriority.NOTIFICATION.value)
 def send_event_survey(event_id, **_):
     logger.info("Starting event survey")
@@ -555,20 +600,10 @@ def send_event_survey(event_id, **_):
             answer.save()
 
             token, _ = Token.get_or_create(answer.user, token_type="temporal", hours_length=48)
+            answer.token_id = token.id
+            answer.save(update_fields=["token_id"])
 
-            # lazyload api url in test environment
-            api_url = API_URL if ENV != "test" else os.getenv("API_URL", "")
-            data = {
-                "SUBJECT": answer.title,
-                "MESSAGE": answer.title,
-                "TRACKER_URL": f"{api_url}/v1/feedback/answer/{answer.id}/tracker.png",
-                "BUTTON": strings[answer.lang.lower()]["button_label"],
-                "LINK": f"https://nps.4geeks.com/{answer.id}?token={token.key}",
-            }
-
-            if notify_actions.send_email_message("nps_survey", answer.user.email, data, academy=event.academy):
-                answer.sent_at = timezone.now()
-                answer.save()
+            _deliver_event_answer_email(answer)
 
     except Exception as e:
         raise AbortTask(str(e))

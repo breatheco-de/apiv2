@@ -23,7 +23,7 @@ Do NOT use for:
 - **Attended checkin:** `EventCheckin` with `attended_at` set (usually `status=DONE`). Set live via join/Luma, or imported via bulk check-in skill.
 - **Luma off-platform guests:** guests who registered on Luma (not on 4Geeks) get checkins with `utm_source=luma` and `luma_guest_id`; `guest.updated` webhooks may set attendance.
 - **Publish recording:** `PUT .../recording` saves `recording_url` and asynchronously emails every attended checkin with a valid email. Only the first time a URL goes from empty to set.
-- **Automatic on FINISHED (no staff call):** AI event recap is generated; NPS survey emails go to attended checkins that have a linked platform user (`attendee`).
+- **Automatic on FINISHED (no staff call):** AI event recap is generated; NPS survey emails go to attended checkins that have a linked platform user (`attendee`). Requires `ended_at` and a configured `event_survey_template` — see [`bc-feedback-manage-event-surveys`](../bc-feedback-manage-event-surveys/SKILL.md) for setup, resend, and results.
 
 ## Workflow
 
@@ -32,7 +32,7 @@ Do NOT use for:
 2. Load and verify the event.
    - `GET /v1/events/academy/event/<event_id>` (or list with filters).
    - Confirm `status == FINISHED` or `ending_at < now`.
-   - If still `ACTIVE` but `ending_at` passed, either wait for auto-finish or set `status: FINISHED` via `PUT /v1/events/academy/event/<event_id>`.
+   - If still `ACTIVE` but `ending_at` passed, either wait for auto-finish or set `status: FINISHED` via `PUT /v1/events/academy/event/<event_id>` (ensure `ended_at` is set — otherwise automatic NPS will not fire; see [`bc-feedback-manage-event-surveys`](../bc-feedback-manage-event-surveys/SKILL.md)).
 
 3. Finalize attendance before publishing the recording.
    - `GET /v1/events/academy/checkin?event=<event_id>&status=DONE`
@@ -48,14 +48,14 @@ Do NOT use for:
 5. Verify outcome.
    - Re-fetch event and confirm `recording_url` is set.
    - Optional: confirm check-in count matches expected attendees.
-   - Note: recap and NPS survey are triggered automatically when status becomes `FINISHED`—staff do not call those endpoints.
+   - Note: recap runs automatically on `FINISHED`; NPS also runs automatically when `ended_at` is set and feedback settings include an event survey template — use [`bc-feedback-manage-event-surveys`](../bc-feedback-manage-event-surveys/SKILL.md) to configure, resend, or review scores.
 
 ## Endpoints
 
 | Action | Method | Path | Capability | Body | Notes |
 |---|---|---|---|---|---|
 | Get event | GET | `/v1/events/academy/event/<event_id>` | `read_event` | — | Verify `status`, `ending_at`, `recording_url` |
-| Mark finished | PUT | `/v1/events/academy/event/<event_id>` | `crud_event` | `{ "id": <id>, "status": "FINISHED", ... }` | Triggers recap + NPS automatically |
+| Mark finished | PUT | `/v1/events/academy/event/<event_id>` | `crud_event` | `{ "id": <id>, "status": "FINISHED", ... }` | Triggers recap; NPS only if `ended_at` set and template configured (see `bc-feedback-manage-event-surveys`) |
 | List check-ins | GET | `/v1/events/academy/checkin?event=<event_id>` | `read_eventcheckin` | — | Filter `status=DONE` for attendees |
 | Publish recording | PUT | `/v1/events/academy/event/<event_id>/recording` | `crud_event` | `{ "recording_url": "https://..." }` | `400` if event not finished; emails attended checkins |
 
@@ -76,7 +76,8 @@ Do NOT use for:
 - RSVP-only checkins (`attended_at` null) — not emailed; import or mark attendance first.
 - Luma guests without `attended_at` — check Luma webhook sync or bulk-import with `attended: true`.
 - Recording URL already set — updating to a new URL does not re-notify (only first publish triggers emails).
-- NPS survey audience is narrower than recording emails — requires `attendee` user linked, not just email.
+- NPS survey audience is narrower than recording emails — requires `attendee` user linked, not just email. Setup, resend, and results: [`bc-feedback-manage-event-surveys`](../bc-feedback-manage-event-surveys/SKILL.md).
+- NPS automatic send requires `ended_at` — marking `FINISHED` without `ended_at` does not queue surveys.
 - Setting `recording_url` via general `PUT /v1/events/academy/event/<event_id>` also notifies if event is finished; prefer `.../recording` for explicit validation.
 
 ## Checklist
@@ -86,4 +87,4 @@ Do NOT use for:
 3. Attendance verified or imported (`attended_at` on expected checkins, including Luma/off-platform guests).
 4. Recording published via `PUT .../recording`.
 5. Event re-fetched to confirm `recording_url`.
-6. Staff aware recap/NPS already ran on `FINISHED` (no extra step).
+6. Staff aware recap runs on `FINISHED`; for NPS setup/resend/results load `bc-feedback-manage-event-surveys`.
