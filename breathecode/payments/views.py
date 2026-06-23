@@ -29,6 +29,8 @@ from breathecode.mentorship.models import MentorshipService
 from breathecode.payments import actions, tasks
 from breathecode.payments.actions import (
     PlanFinder,
+    PLAN_ENTITLEMENT_ACTION_CANCEL_IMMEDIATELY,
+    VALID_PLAN_ENTITLEMENT_ACTIONS,
     add_items_to_bag,
     apply_pricing_ratio,
     calculate_refund_breakdown,
@@ -3058,7 +3060,9 @@ class AcademyUserCreditLedgerView(APIView):
         return handler.response(serializer.data)
 
 
-def _parse_and_validate_refund_request(request, invoice: Invoice, lang: str) -> tuple[float, dict[str, float], str, dict[str, Any] | None]:
+def _parse_and_validate_refund_request(
+    request, invoice: Invoice, lang: str
+) -> tuple[float, dict[str, float], str, dict[str, Any] | None, str]:
     already_refunded = invoice.amount_refunded or 0
     available_to_refund = invoice.amount - already_refunded
 
@@ -3201,7 +3205,25 @@ def _parse_and_validate_refund_request(request, invoice: Invoice, lang: str) -> 
     if _invoice_breakdown_has_line_items(breakdown) and refund_amount is not None:
         refund_breakdown = calculate_refund_breakdown(invoice, refund_amount, items_to_refund, lang=lang)
 
-    return refund_amount, items_to_refund, reason, refund_breakdown
+    plan_entitlement_action = request.data.get("plan_entitlement_action", PLAN_ENTITLEMENT_ACTION_CANCEL_IMMEDIATELY)
+    if plan_entitlement_action not in VALID_PLAN_ENTITLEMENT_ACTIONS:
+        raise ValidationException(
+            translation(
+                lang,
+                en=(
+                    "plan_entitlement_action must be one of: cancel_immediately, "
+                    "cancel_at_period_end, keep"
+                ),
+                es=(
+                    "plan_entitlement_action debe ser uno de: cancel_immediately, "
+                    "cancel_at_period_end, keep"
+                ),
+                slug="invalid-plan-entitlement-action",
+            ),
+            code=400,
+        )
+
+    return refund_amount, items_to_refund, reason, refund_breakdown, plan_entitlement_action
 
 
 class AcademyInvoiceRecalculateBreakdownView(APIView):
@@ -3264,7 +3286,9 @@ class AcademyInvoiceRefundView(APIView):
                 translation(lang, en="Invoice not found", es="La factura no existe", slug="not-found"), code=404
             )
 
-        refund_amount, items_to_refund, reason, refund_breakdown = _parse_and_validate_refund_request(request, invoice, lang)
+        refund_amount, items_to_refund, reason, refund_breakdown, plan_entitlement_action = (
+            _parse_and_validate_refund_request(request, invoice, lang)
+        )
 
         credit_note = process_refund(
             invoice=invoice,
@@ -3274,6 +3298,7 @@ class AcademyInvoiceRefundView(APIView):
             reason=reason,
             country_code=invoice.bag.country_code if invoice.bag else None,
             lang=lang,
+            plan_entitlement_action=plan_entitlement_action,
         )
 
         serializer = CreditNoteSerializer(credit_note, many=False)
@@ -3295,7 +3320,9 @@ class AcademyInvoiceRecordRefundView(APIView):
                 translation(lang, en="Invoice not found", es="La factura no existe", slug="not-found"), code=404
             )
 
-        refund_amount, items_to_refund, reason, refund_breakdown = _parse_and_validate_refund_request(request, invoice, lang)
+        refund_amount, items_to_refund, reason, refund_breakdown, plan_entitlement_action = (
+            _parse_and_validate_refund_request(request, invoice, lang)
+        )
 
         external_reference = request.data.get("external_reference")
         if not isinstance(external_reference, str) or not external_reference.strip():
@@ -3342,6 +3369,7 @@ class AcademyInvoiceRecordRefundView(APIView):
             external_reference=external_reference.strip(),
             stripe_refund_id=stripe_refund_id,
             lang=lang,
+            plan_entitlement_action=plan_entitlement_action,
         )
 
         serializer = CreditNoteSerializer(credit_note, many=False)
