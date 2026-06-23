@@ -101,6 +101,7 @@ from breathecode.payments.serializers import (
     GetMentorshipServiceSetSerializer,
     GetMentorshipServiceSetSmallSerializer,
     GetPaymentMethod,
+    GetAcademyPlanOfferSerializer,
     GetPlanFinancingSerializer,
     GetPlanOfferSerializer,
     GetPlanSerializer,
@@ -110,6 +111,7 @@ from breathecode.payments.serializers import (
     MentorshipServiceSetSerializer,
     PaymentMethodSerializer,
     PlanSerializer,
+    PlanOfferSerializer,
     POSTAcademyServiceSerializer,
     PUTAcademyServiceSerializer,
     ServiceItemSerializer,
@@ -4076,6 +4078,134 @@ class PlanOfferView(APIView):
         serializer = GetPlanOfferSerializer(items, many=True, context={"country_code": country_code})
 
         return handler.response(serializer.data)
+
+
+class AcademyPlanOfferView(APIView):
+    """Manage plan upgrade offers for academy-owned plans."""
+
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    def get_academy_plan_offers(self, academy_id):
+        return PlanOffer.objects.filter(original_plan__owner_id=academy_id).select_related(
+            "original_plan", "suggested_plan"
+        )
+
+    def get_lookup(self, key, value):
+        args = ()
+        kwargs = {}
+        slug_key = f"{key}__slug__in"
+        pk_key = f"{key}__id__in"
+
+        for v in value.split(","):
+            if slug_key not in kwargs and not v.isnumeric():
+                kwargs[slug_key] = []
+
+            if pk_key not in kwargs and v.isnumeric():
+                kwargs[pk_key] = []
+
+            if v.isnumeric():
+                kwargs[pk_key].append(int(v))
+
+            else:
+                kwargs[slug_key].append(v)
+
+        if len(kwargs) > 1:
+            args = (Q(**{slug_key: kwargs[slug_key]}) | Q(**{pk_key: kwargs[pk_key]}),)
+            kwargs = {}
+
+        return args, kwargs
+
+    def get_response_context(self, request, academy_id):
+        return {
+            "academy_id": academy_id,
+            "country_code": request.GET.get("country_code"),
+        }
+
+    @capable_of("read_subscription")
+    def get(self, request, plan_offer_id=None, academy_id=None):
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+        items = self.get_academy_plan_offers(academy_id)
+
+        if plan_offer_id:
+            item = items.filter(id=plan_offer_id).first()
+            if not item:
+                raise ValidationException(
+                    translation(lang, en="Plan offer not found", es="Oferta de plan no encontrada", slug="not-found"),
+                    code=404,
+                )
+
+            serializer = GetAcademyPlanOfferSerializer(
+                item, many=False, context=self.get_response_context(request, academy_id)
+            )
+            return handler.response(serializer.data)
+
+        if suggested_plan := request.GET.get("suggested_plan"):
+            args, kwargs = self.get_lookup("suggested_plan", suggested_plan)
+            items = items.filter(*args, **kwargs)
+
+        if original_plan := request.GET.get("original_plan"):
+            args, kwargs = self.get_lookup("original_plan", original_plan)
+            items = items.filter(*args, **kwargs)
+
+        items = handler.queryset(items.distinct())
+        serializer = GetAcademyPlanOfferSerializer(items, many=True, context=self.get_response_context(request, academy_id))
+        return handler.response(serializer.data)
+
+    @capable_of("crud_subscription")
+    def post(self, request, academy_id=None):
+        lang = get_user_language(request)
+        serializer = PlanOfferSerializer(
+            data=request.data,
+            context={"academy_id": int(academy_id), "lang": lang},
+        )
+        serializer.is_valid(raise_exception=True)
+        offer = serializer.save()
+        PlanOfferCache.clear()
+
+        response_serializer = GetAcademyPlanOfferSerializer(
+            offer, many=False, context=self.get_response_context(request, academy_id)
+        )
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+
+    @capable_of("crud_subscription")
+    def put(self, request, plan_offer_id=None, academy_id=None):
+        lang = get_user_language(request)
+        offer = self.get_academy_plan_offers(academy_id).filter(id=plan_offer_id).first()
+        if not offer:
+            raise ValidationException(
+                translation(lang, en="Plan offer not found", es="Oferta de plan no encontrada", slug="not-found"),
+                code=404,
+            )
+
+        serializer = PlanOfferSerializer(
+            offer,
+            data=request.data,
+            partial=True,
+            context={"academy_id": int(academy_id), "lang": lang},
+        )
+        serializer.is_valid(raise_exception=True)
+        offer = serializer.save()
+        PlanOfferCache.clear()
+
+        response_serializer = GetAcademyPlanOfferSerializer(
+            offer, many=False, context=self.get_response_context(request, academy_id)
+        )
+        return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+    @capable_of("crud_subscription")
+    def delete(self, request, plan_offer_id=None, academy_id=None):
+        lang = get_user_language(request)
+        offer = self.get_academy_plan_offers(academy_id).filter(id=plan_offer_id).first()
+        if not offer:
+            raise ValidationException(
+                translation(lang, en="Plan offer not found", es="Oferta de plan no encontrada", slug="not-found"),
+                code=404,
+            )
+
+        offer.delete()
+        PlanOfferCache.clear()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class CouponBaseView(APIView):

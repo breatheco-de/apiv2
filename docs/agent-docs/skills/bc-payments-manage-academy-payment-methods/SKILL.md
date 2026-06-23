@@ -278,9 +278,9 @@ Required on create: `title`, `description`, `lang`.
 Payment setup is the **billing rail** layer. To sell at checkout, staff still need catalog layers. Recommend this **skill order** — do not skip ahead (plans depend on services; courses depend on plans):
 
 1. **Services** — load `bc-payments-manage-services` when available. Defines what the academy sells; must exist before plans.
-2. **Plans** — load `bc-payments-manage-plans` when available. Bundles services into sellable packages priced in `main_currency`.
+2. **Plans** — load [`bc-payments-manage-plans`](../bc-payments-manage-plans/SKILL.md). Bundles services into sellable packages priced in `main_currency`.
 3. **Courses** — load `bc-marketing-create-or-clone-course`. Marketing catalog linked to the plan from step 2.
 
-If a follow-on skill is not published yet, tell staff which skill name to use when it exists and stop — do not improvise endpoint-level instructions in this skill.
+If the services skill is not published yet, staff may still create service items via `POST /v1/payments/academy/serviceitem` as documented in `bc-payments-manage-plans` Path A Phase 2.
 
-**Closing message for staff:** "Payment setup is complete. Next steps: manage academy services, then plans, then create a marketing course — load the skills above in that order."
+**Closing message for staff:** "Payment setup is complete. Next steps: manage academy services, then plans (`bc-payments-manage-plans`), then create a marketing course — load the skills above in that order."
