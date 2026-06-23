@@ -44,6 +44,7 @@ from breathecode.payments.actions import (
     max_coupons_allowed,
     process_refund,
     process_refund_record_external,
+    validate_payment_method_for_checkout,
 )
 from breathecode.payments.caches import PlanFinancingCache, PlanOfferCache, SubscriptionCache
 from breathecode.payments.models import (
@@ -5148,6 +5149,8 @@ class PayView(APIView):
                     bag.how_many_installments = how_many_installments
 
                 coupons = bag.coupons.all()
+                recurring_amount = None
+                plan_addons_amount = 0.0
 
                 if not available_for_free_trial and not available_free and bag.how_many_installments > 0:
                     try:
@@ -5262,6 +5265,127 @@ class PayView(APIView):
                     )
 
                 payment_method = request.data.get("payment_method")
+                payment_method_id = request.data.get("payment_method_id")
+                selected_payment_method = None
+                print("llega hasta aqui", amount, payment_method_id)
+                if amount > 0 and payment_method_id:
+                    selected_payment_method = PaymentMethod.objects.filter(
+                        Q(academy=bag.academy) | Q(academy__isnull=True),
+                        id=payment_method_id,
+                    ).first()
+
+                    if not selected_payment_method:
+                        raise ValidationException(
+                            translation(
+                                lang,
+                                en="Payment method not found",
+                                es="Método de pago no encontrado",
+                                slug="payment-method-not-found",
+                            ),
+                            code=404,
+                        )
+
+                    validate_payment_method_for_checkout(selected_payment_method, bag, lang)
+
+                    provider_settings = selected_payment_method.provider_settings
+                    if (
+                        selected_payment_method.is_financing_managed_by_provider
+                        and isinstance(provider_settings, dict)
+                        and provider_settings
+                        and bag.how_many_installments > 0
+                        and recurring_amount is not None
+                    ):
+                        amount = recurring_amount * bag.how_many_installments + plan_addons_amount
+
+                    stripe_payment_method_types = selected_payment_method.get_stripe_payment_method_types()
+
+                    if stripe_payment_method_types:
+                        if amount < 0.50:
+                            raise ValidationException(
+                                translation(
+                                    lang, en="Amount is too low", es="El monto es muy bajo", slug="amount-is-too-low"
+                                ),
+                                code=400,
+                            )
+
+                        return_url = request.data.get("return_url")
+                        cancel_url = request.data.get("cancel_url")
+
+                        if not return_url:
+                            raise ValidationException(
+                                translation(
+                                    lang,
+                                    en="Return url is required",
+                                    es="Return url es requerido",
+                                    slug="return-url-required",
+                                ),
+                                code=400,
+                            )
+
+                        if not cancel_url:
+                            raise ValidationException(
+                                translation(
+                                    lang,
+                                    en="Cancel url is required",
+                                    es="Cancel url es requerido",
+                                    slug="cancel-url-required",
+                                ),
+                                code=400,
+                            )
+
+                        s = Stripe(academy=bag.academy)
+                        s.set_language(lang)
+
+                        metadata = {
+                            "bag_id": str(bag.id),
+                            "user_id": str(request.user.id),
+                            "payment_method_id": str(selected_payment_method.id),
+                            "amount": str(amount),
+                            "original_price": str(original_price),
+                            "chosen_period": chosen_period or bag.chosen_period or "",
+                            "how_many_installments": str(bag.how_many_installments or 0),
+                            "selected_cohort": request.GET.get("selected_cohort") or "",
+                            "user_email": request.user.email,
+                        }
+
+                        session_id, checkout_url = s.create_checkout_session(
+                            user=request.user,
+                            bag=bag,
+                            amount=amount,
+                            currency=bag.currency.code,
+                            payment_method_types=stripe_payment_method_types,
+                            success_url=return_url,
+                            cancel_url=cancel_url,
+                            metadata=metadata,
+                        )
+
+                        transaction.savepoint_commit(sid)
+
+                        # Stop the flow here, a webhook will finish the process and create the invoice
+                        logger.info(
+                            "PayView: Stripe checkout session created - session_id=%s, bag_id=%s",
+                            session_id,
+                            bag.id,
+                        )
+                        return Response(
+                            {"checkout_url": checkout_url, "session_id": session_id},
+                            status=status.HTTP_201_CREATED,
+                        )
+
+                    if selected_payment_method.is_crypto:
+                        payment_method = "coinbase"
+                    elif selected_payment_method.is_credit_card:
+                        payment_method = "stripe"
+                    else:
+                        raise ValidationException(
+                            translation(
+                                lang,
+                                en="Payment method not supported",
+                                es="Método de pago no soportado",
+                                slug="payment-method-not-supported",
+                            ),
+                            code=400,
+                        )
 
                 if amount > 0 and payment_method == "coinbase":
                     if amount < 0.001:
@@ -6724,7 +6848,7 @@ class PaymentMethodView(APIView):
             custom_fields={"country_code": country_code_filter},
         )
 
-        items = PaymentMethod.objects.filter(query)
+        items = PaymentMethod.objects.filter(query).prefetch_related("plans")
 
         items = handler.queryset(items)
         serializer = GetPaymentMethod(items, many=True)
@@ -6748,7 +6872,7 @@ class AcademyPaymentMethodView(APIView):
             # Get specific payment method
             method = PaymentMethod.objects.filter(
                 Q(academy__id=academy_id) | Q(academy__isnull=True), id=paymentmethod_id
-            ).first()
+            ).prefetch_related("plans").first()
 
             if not method:
                 raise ValidationException(
@@ -6765,7 +6889,9 @@ class AcademyPaymentMethodView(APIView):
             return Response(serializer.data)
 
         # List payment methods for this academy and global ones
-        items = PaymentMethod.objects.filter(Q(academy__id=academy_id) | Q(academy__isnull=True))
+        items = PaymentMethod.objects.filter(Q(academy__id=academy_id) | Q(academy__isnull=True)).prefetch_related(
+            "plans"
+        )
 
         # Optional filters
         visibility = request.GET.get("visibility")

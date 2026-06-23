@@ -1457,13 +1457,16 @@ class GetPaymentMethod(serpy.Serializer):
     lang = serpy.Field()
     is_credit_card = serpy.Field()
     is_crypto = serpy.Field()
+    is_financing_managed_by_provider = serpy.Field()
     description = serpy.Field()
     third_party_link = serpy.Field()
+    provider_settings = serpy.Field()
     academy = GetAcademySmallSerializer(required=False, many=False)
     currency = GetCurrencySmallSerializer(required=False, many=False)
     included_country_codes = serpy.Field()
     visibility = serpy.Field()
     deprecated = serpy.Field()
+    plans = serpy.ManyToManyField(GetPlanSmallTinySerializer(attr="plans", many=True))
 
 
 class PaymentMethodSerializer(serializers.ModelSerializer):
@@ -1474,6 +1477,7 @@ class PaymentMethodSerializer(serializers.ModelSerializer):
         allow_null=True,
     )
     academy = serializers.PrimaryKeyRelatedField(read_only=True)
+    plans = serializers.PrimaryKeyRelatedField(queryset=Plan.objects.all(), many=True, required=False)
 
     class Meta:
         model = PaymentMethod
@@ -1482,15 +1486,58 @@ class PaymentMethodSerializer(serializers.ModelSerializer):
             "title",
             "description",
             "third_party_link",
+            "provider_settings",
+            "plans",
             "is_backed",
             "lang",
             "is_credit_card",
+            "is_crypto",
+            "is_financing_managed_by_provider",
             "currency",
             "academy",
             "included_country_codes",
             "visibility",
             "deprecated",
         )
+
+    def validate_provider_settings(self, value):
+        if value in (None, ""):
+            return {}
+
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("provider_settings must be a JSON object")
+
+        stripe_types = value.get("stripe_payment_method_types")
+        if stripe_types is None:
+            return value
+
+        if not isinstance(stripe_types, list):
+            raise serializers.ValidationError("stripe_payment_method_types must be a list")
+
+        allowed = ", ".join(sorted(PaymentMethod.StripeCheckoutPaymentMethodType.values))
+        for item in stripe_types:
+            if not isinstance(item, str) or item not in PaymentMethod.StripeCheckoutPaymentMethodType.values:
+                raise serializers.ValidationError(
+                    f"Unsupported stripe_payment_method_types value. Allowed values: {allowed}"
+                )
+
+        return value
+
+    def validate(self, attrs):
+        provider_settings = attrs.get("provider_settings", getattr(self.instance, "provider_settings", {}))
+        is_credit_card = attrs.get("is_credit_card", getattr(self.instance, "is_credit_card", False))
+        is_crypto = attrs.get("is_crypto", getattr(self.instance, "is_crypto", False))
+
+        if isinstance(provider_settings, dict):
+            stripe_types = provider_settings.get("stripe_payment_method_types", [])
+            if stripe_types and is_credit_card:
+                raise serializers.ValidationError(
+                    "Credit card payment methods cannot define stripe_payment_method_types."
+                )
+            if stripe_types and is_crypto:
+                raise serializers.ValidationError("Crypto payment methods cannot define stripe_payment_method_types.")
+
+        return attrs
 
 
 class GetConsumptionSessionSerializer(serpy.Serializer):

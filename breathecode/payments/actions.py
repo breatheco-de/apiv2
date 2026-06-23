@@ -7193,3 +7193,86 @@ def calculate_single_coupon_stats(coupon: Coupon) -> dict:
     stats["payment_methods"] = payment_methods
     
     return stats
+
+
+def validate_payment_method_for_checkout(payment_method: PaymentMethod, bag: Bag, lang: str) -> None:
+    if payment_method.deprecated:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Payment method is deprecated",
+                es="El método de pago está deprecado",
+                slug="payment-method-deprecated",
+            ),
+            code=400,
+        )
+
+    if payment_method.visibility != PaymentMethod.Visibility.PUBLIC:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Payment method is not available for checkout",
+                es="El método de pago no está disponible para checkout",
+                slug="payment-method-not-public",
+            ),
+            code=400,
+        )
+
+    if payment_method.academy_id and payment_method.academy_id != bag.academy_id:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Payment method not found for this academy",
+                es="Método de pago no encontrado para esta academia",
+                slug="payment-method-not-found",
+            ),
+            code=404,
+        )
+
+    stripe_types = payment_method.get_stripe_payment_method_types()
+    if stripe_types:
+        allowed = ", ".join(sorted(PaymentMethod.StripeCheckoutPaymentMethodType.values))
+        for value in stripe_types:
+            if value not in PaymentMethod.StripeCheckoutPaymentMethodType.values:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Unsupported Stripe checkout payment method type: {value}. Allowed: {allowed}",
+                        es=f"Tipo de método de pago de Stripe Checkout no soportado: {value}. Permitidos: {allowed}",
+                        slug="unsupported-stripe-payment-method-type",
+                    ),
+                    code=400,
+                )
+
+        plan = bag.plans.first()
+        if not plan:
+            raise ValidationException(
+                translation(lang, en="Bag has no plan", es="La bolsa no tiene plan", slug="bag-has-no-plan"),
+                code=400,
+            )
+
+        if payment_method.plans.exists() and not payment_method.plans.filter(id=plan.id).exists():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Payment method is not available for this plan",
+                    es="El método de pago no está disponible para este plan",
+                    slug="payment-method-not-available-for-plan",
+                ),
+                code=400,
+            )
+
+        return
+
+    if payment_method.is_crypto or payment_method.is_credit_card:
+        return
+
+    raise ValidationException(
+        translation(
+            lang,
+            en="Payment method not supported for checkout",
+            es="Método de pago no soportado para checkout",
+            slug="payment-method-not-supported",
+        ),
+        code=400,
+    )

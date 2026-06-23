@@ -1708,6 +1708,10 @@ class PaymentMethod(models.Model):
         INTERNAL = "INTERNAL", "Internal"
         HIDDEN = "HIDDEN", "Hidden"
 
+    class StripeCheckoutPaymentMethodType(models.TextChoices):
+        KLARNA = "klarna", "Klarna"
+        AFFIRM = "affirm", "Affirm"
+
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True, help_text="Academy owner")
     title = models.CharField(max_length=120, null=False, blank=False)
     is_backed = models.BooleanField(
@@ -1718,6 +1722,7 @@ class PaymentMethod(models.Model):
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency", null=True, blank=True)
     is_credit_card = models.BooleanField(default=False, null=False, blank=False)
     is_crypto = models.BooleanField(default=False, null=False, blank=False)
+
     description = models.CharField(max_length=480, help_text="Description of the payment method")
     third_party_link = models.URLField(
         blank=True, null=True, default=None, help_text="Link of a third party payment method"
@@ -1741,11 +1746,70 @@ class PaymentMethod(models.Model):
         help_text="Visibility level of the payment method",
         db_index=True,
     )
+    plans = models.ManyToManyField(
+        Plan,
+        blank=True,
+        related_name="payment_methods",
+        help_text="Plans where this payment method is available. Empty means it works for all plans on this academy.",
+    )
+    provider_settings = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text=(
+            "Provider-specific settings for this payment method. For Stripe Checkout hosted payments, "
+            "set {'stripe_payment_method_types': ['klarna', 'affirm']}. Use is_financing_managed_by_provider "
+            "for BNPL that finances installments externally."
+        ),
+    )
+
+    is_financing_managed_by_provider = models.BooleanField(
+        default=False,
+        help_text=(
+            "When paying with plan financing (how_many_installments), charge the full financed total "
+            "instead of the first installment. Only applies when provider_settings is non-empty."
+        ),
+    )
     deprecated = models.BooleanField(
         default=False,
         help_text="If true, this payment method is deprecated and cannot be used for new purchases",
         db_index=True,
     )
+
+
+    def get_stripe_payment_method_types(self) -> list[str]:
+        settings = self.provider_settings if isinstance(self.provider_settings, dict) else {}
+        types = settings.get("stripe_payment_method_types", [])
+        if not isinstance(types, list):
+            return []
+
+        return [value for value in types if isinstance(value, str)]
+
+    def clean(self) -> None:
+        stripe_types = self.get_stripe_payment_method_types()
+
+        if stripe_types:
+            allowed = ", ".join(sorted(self.StripeCheckoutPaymentMethodType.values))
+            for value in stripe_types:
+                if value not in self.StripeCheckoutPaymentMethodType.values:
+                    raise forms.ValidationError(
+                        f"Unsupported stripe_payment_method_types value: {value}. Allowed values: {allowed}"
+                    )
+
+        if stripe_types and self.is_credit_card:
+            raise forms.ValidationError(
+                "A credit card payment method cannot define stripe_payment_method_types in provider_settings."
+            )
+
+        if stripe_types and self.is_crypto:
+            raise forms.ValidationError(
+                "A crypto payment method cannot define stripe_payment_method_types in provider_settings."
+            )
+
+        return super().clean()
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+        return super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         return f"{self.title} ({'Credit Card' if self.is_credit_card else 'No Credit Card'})"
