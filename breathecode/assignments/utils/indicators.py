@@ -1,6 +1,6 @@
 import json
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Algorithm version constant to track changes
 ALGO_VERSION = 1.0  # User-defined float, update when algorithms change
@@ -129,20 +129,33 @@ class UserIndicatorCalculator:
         self.workout_session = self.data["workout_session"]
         self.indicators = indicators
 
+    def _normalize_datetime(self, dt):
+        if dt.tzinfo is not None:
+            return dt.replace(tzinfo=None)
+        return dt
+
     def parse_timestamp(self, ts):
         if ts is None:
             return None
 
-        # Check if ts is a string and convert it to a number if needed
+        if isinstance(ts, datetime):
+            return self._normalize_datetime(ts)
+
+        if isinstance(ts, (int, float)):
+            return datetime.fromtimestamp(ts / 1000, tz=timezone.utc).replace(tzinfo=None)
+
         if isinstance(ts, str):
             try:
-                ts = float(ts)  # Convert string to float
+                return datetime.fromtimestamp(float(ts) / 1000, tz=timezone.utc).replace(tzinfo=None)
             except ValueError:
-                # If it's not a numeric string, it might be a date string format
-                # You could add additional parsing here if needed
+                pass
+            try:
+                normalized = ts.replace("Z", "+00:00")
+                return self._normalize_datetime(datetime.fromisoformat(normalized))
+            except ValueError:
                 return None
 
-        return datetime.fromtimestamp(ts / 1000)
+        return None
 
     def calculate_step_metrics(self, step):
         def normalize_timestamps(items):
@@ -163,52 +176,60 @@ class UserIndicatorCalculator:
     
         if "opened_at" in step:
             opened_at = self.parse_timestamp(step["opened_at"])
-    
-            # If the step had no quiz or coding test but it was completed it means that
-            # the student read the whole step
-            if "completed_at" in step:
-                status = "completed"
-                completed_at = self.parse_timestamp(step["completed_at"])
-                time_spent = (completed_at - opened_at).total_seconds()
-    
-                compilations = sorted(compilations, key=lambda x: x.get("started_at") or 0)
-                tests = sorted(tests, key=lambda x: x.get("started_at") or 0)
-    
-                compilable_compilations = [c for c in compilations if "exit_code" in c]
-                first_success_comp = next((i for i, comp in enumerate(compilable_compilations) if comp["exit_code"] == 0), None)
-                if first_success_comp is not None:
-                    comp_struggles = sum(1 for comp in compilable_compilations[:first_success_comp] if comp["exit_code"] != 0)
-                else:
-                    comp_struggles = sum(1 for comp in compilable_compilations if comp["exit_code"] != 0)
-    
-                first_success_test = next((i for i, test in enumerate(tests) if test["exit_code"] == 0), None)
-                if first_success_test is not None:
-                    test_struggles = sum(1 for test in tests[:first_success_test] if test["exit_code"] != 0)
-                else:
-                    test_struggles = sum(1 for test in tests if test["exit_code"] != 0)
-            else:
-                if compilations or tests:
+
+            if opened_at is not None:
+                completed_at = (
+                    self.parse_timestamp(step["completed_at"]) if "completed_at" in step else None
+                )
+
+                # If the step had no quiz or coding test but it was completed it means that
+                # the student read the whole step
+                if completed_at is not None:
+                    status = "completed"
+                    time_spent = (completed_at - opened_at).total_seconds()
+
+                    compilations = sorted(compilations, key=lambda x: x.get("started_at") or 0)
+                    tests = sorted(tests, key=lambda x: x.get("started_at") or 0)
+
+                    compilable_compilations = [c for c in compilations if "exit_code" in c]
+                    first_success_comp = next(
+                        (i for i, comp in enumerate(compilable_compilations) if comp["exit_code"] == 0), None
+                    )
+                    if first_success_comp is not None:
+                        comp_struggles = sum(
+                            1 for comp in compilable_compilations[:first_success_comp] if comp["exit_code"] != 0
+                        )
+                    else:
+                        comp_struggles = sum(1 for comp in compilable_compilations if comp["exit_code"] != 0)
+
+                    first_success_test = next((i for i, test in enumerate(tests) if test["exit_code"] == 0), None)
+                    if first_success_test is not None:
+                        test_struggles = sum(1 for test in tests[:first_success_test] if test["exit_code"] != 0)
+                    else:
+                        test_struggles = sum(1 for test in tests if test["exit_code"] != 0)
+                elif compilations or tests:
                     status = "attempted"
                     comp_ended_ats = [self.parse_timestamp(comp.get("ended_at")) for comp in compilations]
                     test_ended_ats = [self.parse_timestamp(test.get("ended_at")) for test in tests]
                     all_ended_ats = [ts for ts in (comp_ended_ats + test_ended_ats) if ts is not None]
-    
+
                     if all_ended_ats:
                         last_interaction_in_step = max(all_ended_ats)
                     else:
                         last_interaction_in_step = self.last_interaction_at
-    
+
                     if last_interaction_in_step is not None:
                         time_spent = (last_interaction_in_step - opened_at).total_seconds()
                         time_spent = min(time_spent, 1800)
-    
+
                     compilable_compilations = [c for c in compilations if "exit_code" in c]
                     comp_struggles = sum(1 for comp in compilable_compilations if comp["exit_code"] != 0)
                     test_struggles = sum(1 for test in tests if test["exit_code"] != 0)
                 else:
                     status = "skipped"
-                    time_spent = (self.last_interaction_at - opened_at).total_seconds()
-                    time_spent = min(time_spent, 1800)
+                    if self.last_interaction_at is not None:
+                        time_spent = (self.last_interaction_at - opened_at).total_seconds()
+                        time_spent = min(time_spent, 1800)
     
         return {
             "status": status,
@@ -227,7 +248,10 @@ class UserIndicatorCalculator:
         num_skipped = sum(1 for sm in step_metrics if sm["status"] == "skipped")
         num_unread = sum(1 for sm in step_metrics if sm["status"] == "unread")
         completion_rate = (num_completed / total_steps) * 100 if total_steps else 0
-        total_time_on_platform = (self.last_interaction_at - self.tutorial_started_at).total_seconds()
+        if self.last_interaction_at is not None and self.tutorial_started_at is not None:
+            total_time_on_platform = (self.last_interaction_at - self.tutorial_started_at).total_seconds()
+        else:
+            total_time_on_platform = 0
         num_sessions = len(self.workout_session)
         total_interactions = sum(len(step.get("compilations", [])) + len(step.get("tests", [])) for step in self.steps)
         steps_not_completed = num_attempted + num_skipped + num_unread
