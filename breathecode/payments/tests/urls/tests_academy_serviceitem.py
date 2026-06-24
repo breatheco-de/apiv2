@@ -333,6 +333,28 @@ class AcademyServiceItemTestSuite(PaymentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 404)
 
+    def test_put__service_owned_by_other_academy(self):
+        """Service items can be updated even when the linked service belongs to another academy."""
+        model = self.bc.database.create(
+            user=1,
+            role=1,
+            capability="crud_service",
+            profile_academy=1,
+            academy=2,
+            service={"slug": "foreign-service"},
+            service_item={"how_many": 10, "is_team_allowed": False},
+        )
+
+        self.bc.request.authenticate(model.user)
+
+        url = f"/v1/payments/academy/serviceitem/{model.service_item.id}"
+        response = self.client.put(url, {"is_team_allowed": True}, format="json", headers={"academy": 1})
+
+        json = response.json()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(json["is_team_allowed"], True)
+
     """
     🔽🔽🔽 PUT - Validation
     """

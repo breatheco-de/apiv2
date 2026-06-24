@@ -1811,6 +1811,9 @@ class AcademyServiceItemView(APIView):
         - sort_priority (integer)
 
         At least one allowed field must be provided.
+
+        Service items are shared catalog resources: any academy staff with crud_service
+        can update by id, regardless of the linked service owner (same as linking items to plans).
         """
         lang = get_user_language(request)
 
@@ -1825,14 +1828,7 @@ class AcademyServiceItemView(APIView):
                 code=400,
             )
 
-        service_item = (
-            ServiceItem.objects.filter(
-                Q(service__owner__id=academy_id) | Q(service__owner=None),
-                id=service_item_id,
-            )
-            .select_related("service")
-            .first()
-        )
+        service_item = ServiceItem.objects.filter(id=service_item_id).select_related("service").first()
 
         if not service_item:
             raise ValidationException(
