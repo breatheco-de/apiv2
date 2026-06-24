@@ -1438,6 +1438,33 @@ class ServiceItemSerializer(serializers.ModelSerializer):
         return service_item
 
 
+class ServiceItemUpdateSerializer(serializers.ModelSerializer):
+    """Update only mutable ServiceItem fields after creation."""
+
+    class Meta:
+        model = ServiceItem
+        fields = ["is_team_allowed", "sort_priority"]
+
+    def validate(self, attrs):
+        allowed_keys = {"is_team_allowed", "sort_priority"}
+        if not (allowed_keys & set(self.initial_data.keys())):
+            raise ValidationException(
+                translation(
+                    en="At least one updatable field is required: is_team_allowed, sort_priority",
+                    es="Se requiere al menos un campo actualizable: is_team_allowed, sort_priority",
+                    slug="no-updatable-fields",
+                ),
+                code=400,
+            )
+        return attrs
+
+    def update(self, instance, validated_data):
+        for field, value in validated_data.items():
+            setattr(instance, field, value)
+        instance.save()
+        return instance
+
+
 class PlanSerializer(serializers.ModelSerializer):
     status_fields = ["status", "renew_every_unit", "trial_duration_unit", "time_of_life_unit"]
 

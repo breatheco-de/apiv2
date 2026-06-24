@@ -176,6 +176,11 @@ urlpatterns = [
     path("academy/academyservice", AcademyAcademyServiceView.as_view()),
     path("academy/academyservice/<slug:service_slug>", AcademyAcademyServiceView.as_view()),
     path("academy/serviceitem", AcademyServiceItemView.as_view(), name="academy_serviceitem"),
+    path(
+        "academy/serviceitem/<int:service_item_id>",
+        AcademyServiceItemView.as_view(),
+        name="academy_serviceitem_id",
+    ),
     path("academy/user/deposit", AcademyStudentDepositView.as_view(), name="academy_user_deposit"),
     path("academy/publishable-key", AcademyPublishableKeyView.as_view(), name="academy_publishable_key"),
     path("academy/paymentsettings", AcademyPaymentSettingsView.as_view(), name="academy_payment_settings"),
