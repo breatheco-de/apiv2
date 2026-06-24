@@ -300,16 +300,25 @@ Use `country_code` to verify regional pricing adjustments on GET.
 
 ### List / update / delete plan offers (staff)
 
-- **GET** `/v1/payments/academy/planoffer` (paginated; filters `original_plan`, `suggested_plan`)
+- **GET** `/v1/payments/academy/planoffer` (paginated; filters `original_plan`, `suggested_plan`, `like`)
 - **GET** `/v1/payments/academy/planoffer/{id}`
 - **PUT** `/v1/payments/academy/planoffer/{id}` — upserts `translations` by `lang`
 - **DELETE** `/v1/payments/academy/planoffer/{id}`
 - **Permissions:** `read_subscription` (GET), `crud_subscription` (write)
 
+**List filters:**
+
+| Query param | Behavior |
+|-------------|----------|
+| `original_plan` | Exact match on original plan id or slug (comma-separated) |
+| `suggested_plan` | Exact match on suggested plan id or slug (comma-separated) |
+| `like` | Case-insensitive partial match on original plan `slug` or `title` |
+
 ### Verify public catalog
 
 - **GET** `/v1/payments/plan/{slug}?country_code=ES` — no auth
 - **GET** `/v1/payments/planoffer?original_plan={slug}` — no auth
+- **GET** `/v1/payments/planoffer?like=bootcamp` — no auth; partial match on original plan slug/title
 
 ## Edge Cases
 

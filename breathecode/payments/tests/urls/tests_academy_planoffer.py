@@ -76,6 +76,40 @@ class AcademyPlanOfferTestSuite(PaymentsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json(), [])
 
+    def test_get__filter_by_like_on_original_plan(self):
+        model = self._create_owned_plans(capability="read_subscription")
+        model.plan[0].slug = "premium-bootcamp-2025"
+        model.plan[0].title = "Premium Bootcamp"
+        model.plan[0].save()
+        model.plan[1].slug = "basic-plan"
+        model.plan[1].title = "Basic Plan"
+        model.plan[1].save()
+
+        plan_offers = [
+            {
+                "original_plan_id": model.plan[0].id,
+                "suggested_plan_id": model.plan[1].id,
+                "show_modal": True,
+                "expires_at": None,
+            },
+            {
+                "original_plan_id": model.plan[1].id,
+                "suggested_plan_id": model.plan[0].id,
+                "show_modal": False,
+                "expires_at": None,
+            },
+        ]
+        self.bc.database.create(plan_offer=plan_offers, plan_offer_translation=1)
+
+        self.client.force_authenticate(model.user)
+        url = reverse_lazy("payments:academy_planoffer") + "?like=bootcamp"
+        response = self.client.get(url, headers={"academy": 1})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        json = response.json()
+        self.assertEqual(len(json), 1)
+        self.assertEqual(json[0]["original_plan"]["slug"], "premium-bootcamp-2025")
+
     def test_get__by_id(self):
         model = self._create_owned_plans(capability="read_subscription")
         plan_offer = {

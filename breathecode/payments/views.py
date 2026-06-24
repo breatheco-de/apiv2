@@ -4049,6 +4049,11 @@ class PlanOfferView(APIView):
 
         return args, kwargs
 
+    def filter_by_original_plan_like(self, items, like: str):
+        return items.filter(
+            Q(original_plan__slug__icontains=like) | Q(original_plan__title__icontains=like)
+        )
+
     def get(self, request):
         handler = self.extensions(request)
 
@@ -4069,6 +4074,9 @@ class PlanOfferView(APIView):
         if original_plan := request.GET.get("original_plan"):
             args, kwargs = self.get_lookup("original_plan", original_plan)
             items = items.filter(*args, **kwargs)
+
+        if like := request.GET.get("like"):
+            items = self.filter_by_original_plan_like(items, like)
 
         items = items.distinct()
         items = handler.queryset(items)
@@ -4115,6 +4123,11 @@ class AcademyPlanOfferView(APIView):
 
         return args, kwargs
 
+    def filter_by_original_plan_like(self, items, like: str):
+        return items.filter(
+            Q(original_plan__slug__icontains=like) | Q(original_plan__title__icontains=like)
+        )
+
     def get_response_context(self, request, academy_id):
         return {
             "academy_id": academy_id,
@@ -4147,6 +4160,9 @@ class AcademyPlanOfferView(APIView):
         if original_plan := request.GET.get("original_plan"):
             args, kwargs = self.get_lookup("original_plan", original_plan)
             items = items.filter(*args, **kwargs)
+
+        if like := request.GET.get("like"):
+            items = self.filter_by_original_plan_like(items, like)
 
         items = handler.queryset(items.distinct())
         serializer = GetAcademyPlanOfferSerializer(items, many=True, context=self.get_response_context(request, academy_id))
