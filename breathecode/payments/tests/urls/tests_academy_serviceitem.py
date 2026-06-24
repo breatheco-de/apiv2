@@ -285,3 +285,208 @@ class AcademyServiceItemTestSuite(PaymentsTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(json, [])
 
+    """
+    🔽🔽🔽 PUT - Auth and permissions
+    """
+
+    def test_put__no_auth(self):
+        """Test that PUT without authentication returns 401"""
+        url = "/v1/payments/academy/serviceitem/1"
+        response = self.client.put(url, {"is_team_allowed": True}, format="json")
+
+        json = response.json()
+        expected = {"detail": "Authentication credentials were not provided.", "status_code": 401}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 401)
+
+    def test_put__no_capability(self):
+        """Test that PUT without crud_service capability returns 403"""
+        model = self.bc.database.create(user=1)
+
+        self.bc.request.authenticate(model.user)
+
+        url = "/v1/payments/academy/serviceitem/1"
+        response = self.client.put(url, {"is_team_allowed": True}, format="json", headers={"academy": 1})
+
+        json = response.json()
+        expected = {
+            "detail": "You (user: 1) don't have this capability: crud_service for academy 1",
+            "status_code": 403,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 403)
+
+    def test_put__service_item_not_found(self):
+        """Test that PUT with non-existent service item returns 404"""
+        model = self.bc.database.create(user=1, role=1, capability="crud_service", profile_academy=1)
+
+        self.bc.request.authenticate(model.user)
+
+        url = "/v1/payments/academy/serviceitem/999"
+        response = self.client.put(url, {"is_team_allowed": True}, format="json", headers={"academy": 1})
+
+        json = response.json()
+        expected = {"detail": "service-item-not-found", "status_code": 404}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 404)
+
+    """
+    🔽🔽🔽 PUT - Validation
+    """
+
+    def test_put__empty_body(self):
+        """Test that PUT with empty body returns 400"""
+        model = self.bc.database.create(
+            user=1,
+            role=1,
+            capability="crud_service",
+            profile_academy=1,
+            service={"slug": "test-service"},
+            service_item={"how_many": 10, "is_team_allowed": False},
+        )
+
+        self.bc.request.authenticate(model.user)
+
+        url = f"/v1/payments/academy/serviceitem/{model.service_item.id}"
+        response = self.client.put(url, {}, format="json", headers={"academy": 1})
+
+        json = response.json()
+        expected = {"detail": "no-updatable-fields", "status_code": 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 400)
+
+    def test_put__immutable_field_ignored(self):
+        """Test that immutable fields in the body are ignored"""
+        model = self.bc.database.create(
+            user=1,
+            role=1,
+            capability="crud_service",
+            profile_academy=1,
+            service={"slug": "test-service"},
+            service_item={"how_many": 10, "is_team_allowed": False},
+        )
+
+        self.bc.request.authenticate(model.user)
+
+        url = f"/v1/payments/academy/serviceitem/{model.service_item.id}"
+        response = self.client.put(
+            url, {"is_team_allowed": True, "how_many": 999}, format="json", headers={"academy": 1}
+        )
+
+        json = response.json()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(json["is_team_allowed"], True)
+        self.assertEqual(json["how_many"], 10)
+
+    """
+    🔽🔽🔽 PUT - Success
+    """
+
+    def test_put__is_team_allowed(self):
+        """Test updating is_team_allowed"""
+        model = self.bc.database.create(
+            user=1,
+            role=1,
+            capability="crud_service",
+            profile_academy=1,
+            service={"slug": "test-service"},
+            service_item={"how_many": 10, "is_team_allowed": False},
+        )
+
+        self.bc.request.authenticate(model.user)
+
+        url = f"/v1/payments/academy/serviceitem/{model.service_item.id}"
+        response = self.client.put(url, {"is_team_allowed": True}, format="json", headers={"academy": 1})
+
+        json = response.json()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(json["is_team_allowed"], True)
+        self.assertEqual(
+            self.bc.database.list_of("payments.ServiceItem"),
+            [
+                {
+                    "how_many": 10,
+                    "id": model.service_item.id,
+                    "is_renewable": False,
+                    "is_team_allowed": True,
+                    "renew_at": 1,
+                    "renew_at_unit": "MONTH",
+                    "service_id": model.service.id,
+                    "sort_priority": 1,
+                    "unit_type": "UNIT",
+                }
+            ],
+        )
+
+    def test_put__sort_priority(self):
+        """Test updating sort_priority"""
+        model = self.bc.database.create(
+            user=1,
+            role=1,
+            capability="crud_service",
+            profile_academy=1,
+            service={"slug": "test-service"},
+            service_item={"how_many": 10, "sort_priority": 1},
+        )
+
+        self.bc.request.authenticate(model.user)
+
+        url = f"/v1/payments/academy/serviceitem/{model.service_item.id}"
+        response = self.client.put(url, {"sort_priority": 5}, format="json", headers={"academy": 1})
+
+        json = response.json()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(json["sort_priority"], 5)
+
+    def test_put__both_fields(self):
+        """Test updating is_team_allowed and sort_priority together"""
+        model = self.bc.database.create(
+            user=1,
+            role=1,
+            capability="crud_service",
+            profile_academy=1,
+            service={"slug": "test-service"},
+            service_item={"how_many": 10, "is_team_allowed": False, "sort_priority": 1},
+        )
+
+        self.bc.request.authenticate(model.user)
+
+        url = f"/v1/payments/academy/serviceitem/{model.service_item.id}"
+        response = self.client.put(
+            url, {"is_team_allowed": True, "sort_priority": 3}, format="json", headers={"academy": 1}
+        )
+
+        json = response.json()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(json["is_team_allowed"], True)
+        self.assertEqual(json["sort_priority"], 3)
+
+    def test_put__seat_type_forces_is_team_allowed(self):
+        """Test that SEAT type services force is_team_allowed=True on update"""
+        model = self.bc.database.create(
+            user=1,
+            role=1,
+            capability="crud_service",
+            profile_academy=1,
+            service={"slug": "seat-service", "type": "SEAT"},
+            service_item={"how_many": 5, "is_team_allowed": True},
+        )
+
+        self.bc.request.authenticate(model.user)
+
+        url = f"/v1/payments/academy/serviceitem/{model.service_item.id}"
+        response = self.client.put(url, {"is_team_allowed": False}, format="json", headers={"academy": 1})
+
+        json = response.json()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(json["is_team_allowed"], True)
+

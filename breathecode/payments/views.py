@@ -113,6 +113,7 @@ from breathecode.payments.serializers import (
     POSTAcademyServiceSerializer,
     PUTAcademyServiceSerializer,
     ServiceItemSerializer,
+    ServiceItemUpdateSerializer,
     ServiceSerializer,
 )
 from breathecode.payments.services.coinbase import CoinbaseCommerce
@@ -1673,7 +1674,8 @@ class AcademyServiceItemView(APIView):
     """
     Academy endpoint to manage ServiceItems.
     GET: List and filter service items
-    POST: Create new service items (immutable after creation)
+    POST: Create new service items
+    PUT: Update mutable fields (is_team_allowed, sort_priority) on an existing service item
     """
 
     extensions = APIViewExtensions(sort="-id", paginate=True)
@@ -1796,6 +1798,59 @@ class AcademyServiceItemView(APIView):
             service_item.lang = lang
             response_serializer = GetServiceItemWithFeaturesSerializer(service_item)
             return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of("crud_service")
+    def put(self, request, service_item_id=None, academy_id=None):
+        """
+        Update mutable fields on an existing ServiceItem.
+
+        Allowed fields:
+        - is_team_allowed (boolean)
+        - sort_priority (integer)
+
+        At least one allowed field must be provided.
+        """
+        lang = get_user_language(request)
+
+        if service_item_id is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Service item id is required",
+                    es="El id del service item es requerido",
+                    slug="service-item-id-required",
+                ),
+                code=400,
+            )
+
+        service_item = (
+            ServiceItem.objects.filter(
+                Q(service__owner__id=academy_id) | Q(service__owner=None),
+                id=service_item_id,
+            )
+            .select_related("service")
+            .first()
+        )
+
+        if not service_item:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Service item not found",
+                    es="Service item no encontrado",
+                    slug="service-item-not-found",
+                ),
+                code=404,
+            )
+
+        serializer = ServiceItemUpdateSerializer(service_item, data=request.data, partial=True)
+        if serializer.is_valid():
+            service_item = serializer.save()
+            service_item.lang = lang
+            response_serializer = GetServiceItemWithFeaturesSerializer(service_item)
+            return Response(response_serializer.data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
