@@ -1935,8 +1935,7 @@ class Invoice(models.Model):
         help_text="Payment method, null if it uses stripe",
     )
 
-    # it has 27 characters right now
-    stripe_id = models.CharField(max_length=32, null=True, default=None, blank=True, help_text="Stripe id")
+    stripe_id = models.CharField(max_length=255, null=True, default=None, blank=True, help_text="Stripe charge or checkout session id")
 
     # it has 27 characters right now
     refund_stripe_id = models.CharField(
@@ -1988,6 +1987,7 @@ class Invoice(models.Model):
             and self.proof is None
             and self.status == self.Status.FULFILLED
             and not self.payment_method.is_crypto
+            and not self.payment_method.get_stripe_payment_method_types()
         ):
             raise forms.ValidationError(
                 "Proof of payment must be provided when payment method is setted and status is FULFILLED"

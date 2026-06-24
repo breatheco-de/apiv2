@@ -110,6 +110,6 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         self.bc.check.calls(
             signals.stripe_webhook.send_robust.call_args_list,
             [
-                call(event=event, sender=event.__class__),
+                call(instance=event, sender=event.__class__),
             ],
         )

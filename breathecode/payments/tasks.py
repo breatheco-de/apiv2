@@ -1934,7 +1934,7 @@ def build_plan_financing(
     if not (bag := Bag.objects.filter(id=bag_id, status="PAID", was_delivered=False).first()):
         raise RetryTask(f"Bag with id {bag_id} not found")
 
-    if not (invoice := Invoice.objects.filter(id=invoice_id, status="FULFILLED").first()):
+    if not (invoice := Invoice.objects.filter(id=invoice_id, status="FULFILLED").select_related("payment_method").first()):
         raise RetryTask(f"Invoice with id {invoice_id} not found")
 
     zero_initial_payment = initial_payment_amount is not None and principal_amount is not None
@@ -1993,7 +1993,20 @@ def build_plan_financing(
     # Must use next_payment_at (includes grace) so valid_until shifts with grace; do not anchor only to paid_at.
     valid_until = next_payment_at + relativedelta(months=max(months - 1, 0))
 
-    initial_installments_paid = 0 if initial_payment_amount is not None else 1
+    # If a third party (e.g. Klarna/Affirm) manages installments, the invoice amount is the full financing total and all installments count as paid.
+    is_full_financing_amount = (
+        bag.how_many_installments > 0
+        and initial_payment_amount is None
+        and invoice.payment_method is not None
+        and invoice.payment_method.is_financing_managed_by_provider
+    )
+
+    if is_full_financing_amount:
+        initial_installments_paid = bag.how_many_installments
+        financing_status = PlanFinancing.Status.FULLY_PAID
+    else:
+        initial_installments_paid = 0 if initial_payment_amount is not None else 1
+        financing_status = PlanFinancing.Status.ACTIVE
 
     financing = PlanFinancing.objects.create(
         user=bag.user,
@@ -2010,7 +2023,7 @@ def build_plan_financing(
         initial_payment_amount=initial_payment_amount,
         grace_period_duration=grace_period_duration,
         grace_period_duration_unit=grace_period_duration_unit,
-        status="ACTIVE",
+        status=financing_status,
         conversion_info=parsed_conversion_info,
         currency=bag.currency or bag.academy.main_currency,  # Ensure currency is passed from bag
         seat_service_item=bag.seat_service_item,
@@ -2049,17 +2062,18 @@ def build_plan_financing(
 
     build_service_stock_scheduler_from_plan_financing.delay(financing.id)
 
-    # Schedule monthly charges based on days until next payment
-    days_until_next_payment = (next_payment_at - invoice.paid_at).days
-    manager = schedule_task(charge_plan_financing, f"{days_until_next_payment}d")
-    if not manager.exists(financing.id):
-        manager.call(financing.id)
-
-    if days_until_next_payment > 2:
-        notification_day = days_until_next_payment - 2
-        manager = schedule_task(notify_plan_financing_renewal, f"{notification_day}d")
+    if not is_full_financing_amount:
+        # Schedule monthly charges based on days until next payment
+        days_until_next_payment = (next_payment_at - invoice.paid_at).days
+        manager = schedule_task(charge_plan_financing, f"{days_until_next_payment}d")
         if not manager.exists(financing.id):
             manager.call(financing.id)
+
+        if days_until_next_payment > 2:
+            notification_day = days_until_next_payment - 2
+            manager = schedule_task(notify_plan_financing_renewal, f"{notification_day}d")
+            if not manager.exists(financing.id):
+                manager.call(financing.id)
 
     logger.info(f"PlanFinancing was created with id {financing.id}")
 
@@ -2608,3 +2622,97 @@ def send_coinbase_error_email(
             exc_info=True,
         )
         # Don't raise - email failures shouldn't break the flow
+
+
+@task(bind=False, priority=TaskPriority.NOTIFICATION.value)
+def send_checkout_fulfillment_error_email(
+    bag_id: int,
+    session_id: str,
+    error_summary: str,
+    **_: Any,
+):
+    """
+    Notify the user when Stripe Checkout payment succeeded but fulfillment failed.
+    Uses Redis lock to ensure only one email per checkout session.
+    """
+    try:
+        bag = Bag.objects.select_related("user", "academy").filter(id=bag_id).first()
+        if not bag:
+            raise AbortTask(f"Bag {bag_id} not found")
+
+        user = bag.user
+        support_email = bag.academy.feedback_email if bag.academy else "support@4geeks.com"
+
+        user_settings = get_user_settings(user.id)
+        lang = user_settings.lang if user_settings and user_settings.lang else "en"
+
+        lock_key = f"checkout_fulfillment_error_email:{session_id}"
+
+        client = None
+        if IS_DJANGO_REDIS:
+            client = get_redis_connection("default")
+
+        try:
+            with Lock(client, lock_key, timeout=300, blocking_timeout=300):
+                sent_key = f"checkout_fulfillment_error_email_sent:{session_id}"
+                if cache.get(sent_key):
+                    logger.info(
+                        "send_checkout_fulfillment_error_email: already sent for session_id=%s, skipping",
+                        session_id,
+                    )
+                    return
+
+                messages = {
+                    "en": {
+                        "subject": "Payment Processing Issue",
+                        "message": f"Hello {user.first_name or 'there'},<br><br>"
+                        f"We encountered a technical issue while activating "
+                        f"your purchase (reference: {session_id}).<br><br>"
+                        f"Please contact our support team at <a href='mailto:{support_email}'>{support_email}</a> "
+                        f"so we can help you resolve this quickly.<br><br>"
+                    },
+                    "es": {
+                        "subject": "Problema Procesando tu Pago",
+                        "message": f"Hola {user.first_name or ''},<br><br>"
+                        f"Recibimos tu pago pero encontramos un problema técnico al activar "
+                        f"tu compra (referencia: {session_id}).<br><br>"
+                        f"Por favor contacta a nuestro equipo de soporte en <a href='mailto:{support_email}'>{support_email}</a> "
+                        f"para que podamos ayudarte a resolver esto rápidamente.<br><br>"
+                    },
+                }
+
+                selected_lang = lang if lang in messages else "en"
+
+                notify_actions.send_email_message(
+                    "message",
+                    user.email,
+                    {
+                        "SUBJECT": messages[selected_lang]["subject"],
+                        "MESSAGE": messages[selected_lang]["message"],
+                    },
+                    academy=bag.academy,
+                )
+
+                cache.set(sent_key, True, 86400)
+
+                logger.info(
+                    "send_checkout_fulfillment_error_email: sent bag_id=%s session_id=%s summary=%s",
+                    bag_id,
+                    session_id,
+                    error_summary[:80],
+                )
+
+        except LockError:
+            logger.info(
+                "send_checkout_fulfillment_error_email: lock held for session_id=%s, skipping duplicate",
+                session_id,
+            )
+
+    except Exception as e:
+        logger.error(
+            "send_checkout_fulfillment_error_email: failed bag_id=%s session_id=%s error=%s",
+            bag_id,
+            session_id,
+            str(e),
+            exc_info=True,
+        )

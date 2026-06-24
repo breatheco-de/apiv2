@@ -821,3 +821,44 @@ class PaymentsTestSuite(PaymentsTestCase):
             model.invoice.paid_at,
             UTC_NOW,
         )
+
+    """
+    🔽🔽🔽 Full financing amount in one payment (Klarna/Affirm BNPL total)
+    """
+
+    @patch("logging.Logger.info", MagicMock())
+    @patch("logging.Logger.error", MagicMock())
+    @patch.object(timezone, "now", MagicMock(return_value=UTC_NOW))
+    @patch("breathecode.payments.tasks.build_service_stock_scheduler_from_plan_financing.delay", MagicMock())
+    def test_is_full_financing_amount_when_financing_managed_by_provider(self):
+        from breathecode.payments.models import PaymentMethod
+
+        amount = 600.0
+        installments = 6
+        bag = {
+            "status": "PAID",
+            "was_delivered": False,
+            "how_many_installments": installments,
+        }
+        invoice = {"status": "FULFILLED", "amount": amount, "externally_managed": True}
+        plan = {"is_renewable": False}
+        model = self.bc.database.create(bag=bag, invoice=invoice, plan=plan, academy=1)
+
+        payment_method = PaymentMethod.objects.create(
+            academy=model.academy,
+            title="Klarna",
+            description="Klarna",
+            lang="en-US",
+            provider_settings={"stripe_payment_method_types": ["klarna"]},
+            is_financing_managed_by_provider=True,
+        )
+        model.invoice.payment_method = payment_method
+        model.invoice.save()
+
+        build_plan_financing.delay(1, 1, externally_managed=True)
+
+        financing = self.bc.database.list_of("payments.PlanFinancing")[0]
+        assert financing["status"] == "FULLY_PAID"
+        assert financing["installments_paid"] == installments
+        assert financing["externally_managed"] is True
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == []

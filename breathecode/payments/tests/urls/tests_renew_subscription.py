@@ -5,7 +5,7 @@ from django.urls import reverse_lazy
 from django.utils import timezone
 from rest_framework import status
 
-from breathecode.payments.models import AcademyPaymentSettings, Bag, Invoice, Subscription
+from breathecode.payments.models import AcademyPaymentSettings, Bag, Invoice, PaymentMethod, Subscription
 from breathecode.payments.tests.mixins import PaymentsTestCase
 
 UTC_NOW = timezone.now()
@@ -302,3 +302,74 @@ class RenewSubscriptionViewTestSuite(PaymentsTestCase):
         self.assertEqual(call_kwargs["metadata"]["subscription_id"], model.subscription.id)
         self.assertEqual(call_kwargs["metadata"]["is_recurrent"], True)
         self.assertEqual(call_kwargs["return_url"], "https://example.com")
+
+    @patch("breathecode.payments.actions.get_bag_from_subscription")
+    @patch("breathecode.payments.actions.get_amount_by_chosen_period")
+    def test__post__successful_stripe_checkout_renewal(self, mock_get_amount, mock_get_bag):
+        session_id = "cs_renew_klarna_session"
+        checkout_url = "https://checkout.stripe.com/c/pay/cs_renew_klarna_session"
+
+        plan = {
+            "status": "ACTIVE",
+            "price_per_month": 100.0,
+            "is_renewable": True,
+            "time_of_life": 0,
+            "time_of_life_unit": None,
+            "trial_duration": 0,
+        }
+        subscription = {"status": "ACTIVE", "next_payment_at": UTC_NOW + timedelta(days=5)}
+        model = self.bc.database.create(user=1, academy=1, subscription=subscription, plan=plan, currency=1)
+        model.subscription.plans.add(model.plan)
+
+        AcademyPaymentSettings.objects.create(
+            academy=model.academy,
+            early_renewal_window_days=7,
+            stripe_api_key="sk_test",
+        )
+
+        payment_method = PaymentMethod.objects.create(
+            academy=model.academy,
+            title="Klarna",
+            description="Pay with Klarna",
+            lang="en-US",
+            provider_settings={"stripe_payment_method_types": ["klarna"]},
+        )
+
+        bag = Bag.objects.create(
+            user=model.user,
+            academy=model.academy,
+            currency=model.currency,
+            status="RENEWAL",
+            chosen_period="MONTH",
+            amount_per_month=100.0,
+        )
+        bag.plans.add(model.plan)
+        mock_get_bag.return_value = bag
+        mock_get_amount.return_value = 100.0
+
+        self.client.force_authenticate(model.user)
+
+        url = reverse_lazy("payments:renew_subscription")
+        with patch(
+            "stripe.checkout.Session.create",
+            MagicMock(return_value={"id": session_id, "url": checkout_url}),
+        ):
+            response = self.client.post(
+                url,
+                {
+                    "payment_method_id": payment_method.id,
+                    "subscription": model.subscription.id,
+                    "return_url": "https://example.com/success",
+                    "cancel_url": "https://example.com/cancel",
+                },
+                format="json",
+            )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        json = response.json()
+        self.assertEqual(json["checkout_url"], checkout_url)
+        self.assertEqual(json["session_id"], session_id)
+
+        model.subscription.refresh_from_db()
+        self.assertTrue(model.subscription.externally_managed)
+        self.assertEqual(Invoice.objects.count(), 0)

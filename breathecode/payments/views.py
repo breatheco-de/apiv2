@@ -5267,7 +5267,6 @@ class PayView(APIView):
                 payment_method = request.data.get("payment_method")
                 payment_method_id = request.data.get("payment_method_id")
                 selected_payment_method = None
-                print("llega hasta aqui", amount, payment_method_id)
                 if amount > 0 and payment_method_id:
                     selected_payment_method = PaymentMethod.objects.filter(
                         Q(academy=bag.academy) | Q(academy__isnull=True),
@@ -6115,8 +6114,9 @@ class RenewSubscriptionView(APIView):
         settings = get_user_settings(request.user.id)
         subscription_id = request.data.get("subscription")
         payment_method = request.data.get("payment_method")
+        payment_method_id = request.data.get("payment_method_id")
 
-        if not payment_method:
+        if not payment_method and not payment_method_id:
             raise ValidationException(
                 translation(lang, en="Payment method is required", es="El método de pago es requerido"),
                 slug="payment-method-required",
@@ -6243,6 +6243,136 @@ class RenewSubscriptionView(APIView):
 
         try:
             with transaction.atomic():
+                plan = subscription.plans.first()
+
+                if payment_method_id:
+                    existing_bag = (
+                        Bag.objects.filter(
+                            user=subscription.user,
+                            status="RENEWAL",
+                            plans=plan,
+                            amount_per_month=plan.price_per_month if plan else 0,
+                            amount_per_quarter=plan.price_per_quarter if plan else 0,
+                            amount_per_half=plan.price_per_half if plan else 0,
+                            amount_per_year=plan.price_per_year if plan else 0,
+                            was_delivered=False,
+                            created_at__gte=utc_now - timedelta(hours=24),
+                        )
+                        .order_by("-created_at")
+                        .first()
+                    )
+
+                    bag = existing_bag or actions.get_bag_from_subscription(subscription, settings)
+
+                    if not bag:
+                        raise ValidationException(
+                            translation(lang, en="Error getting bag", es="Error al obtener la bolsa"),
+                            slug="error-getting-bag",
+                            code=404,
+                        )
+
+                    original_price = actions.get_amount_by_chosen_period(bag, bag.chosen_period, lang)
+                    amount = original_price
+
+                    coupons = bag.coupons.all()
+                    if coupons:
+                        amount = actions.get_discounted_price(amount, list(coupons))
+
+                    selected_payment_method = PaymentMethod.objects.filter(
+                        Q(academy=subscription.academy) | Q(academy__isnull=True),
+                        id=payment_method_id,
+                    ).first()
+
+                    if not selected_payment_method:
+                        raise ValidationException(
+                            translation(
+                                lang,
+                                en="Payment method not found",
+                                es="Método de pago no encontrado",
+                                slug="payment-method-not-found",
+                            ),
+                            code=404,
+                        )
+
+                    validate_payment_method_for_checkout(selected_payment_method, bag, lang)
+
+                    stripe_payment_method_types = selected_payment_method.get_stripe_payment_method_types()
+                    if not stripe_payment_method_types:
+                        raise ValidationException(
+                            translation(
+                                lang,
+                                en="Payment method not supported",
+                                es="Método de pago no soportado",
+                                slug="payment-method-not-supported",
+                            ),
+                            code=400,
+                        )
+
+                    if amount < 0.50:
+                        raise ValidationException(
+                            translation(
+                                lang, en="Amount is too low", es="El monto es muy bajo", slug="amount-is-too-low"
+                            ),
+                            code=400,
+                        )
+
+                    return_url = request.data.get("return_url")
+                    cancel_url = request.data.get("cancel_url")
+
+                    if not return_url:
+                        raise ValidationException(
+                            translation(
+                                lang,
+                                en="Return url is required",
+                                es="Return url es requerido",
+                                slug="return-url-required",
+                            ),
+                            code=400,
+                        )
+
+                    if not cancel_url:
+                        raise ValidationException(
+                            translation(
+                                lang,
+                                en="Cancel url is required",
+                                es="Cancel url es requerido",
+                                slug="cancel-url-required",
+                            ),
+                            code=400,
+                        )
+
+                    s = Stripe(academy=subscription.academy)
+                    s.set_language(lang)
+
+                    metadata = {
+                        "bag_id": str(bag.id),
+                        "subscription_id": str(subscription.id),
+                        "payment_method_id": str(selected_payment_method.id),
+                        "amount": str(amount),
+                        "original_price": str(original_price),
+                        "chosen_period": bag.chosen_period or "",
+                        "how_many_installments": "0",
+                    }
+
+                    session_id, checkout_url = s.create_checkout_session(
+                        user=request.user,
+                        bag=bag,
+                        amount=amount,
+                        currency=bag.currency.code,
+                        payment_method_types=stripe_payment_method_types,
+                        success_url=return_url,
+                        cancel_url=cancel_url,
+                        metadata=metadata,
+                    )
+
+                    subscription.externally_managed = True
+                    subscription.save()
+
+                    return Response(
+                        {"checkout_url": checkout_url, "session_id": session_id},
+                        status=status.HTTP_201_CREATED,
+                    )
+
                 if payment_method == "coinbase":
                     existing_bag = (
                         Bag.objects.filter(
