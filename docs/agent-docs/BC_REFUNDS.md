@@ -81,6 +81,12 @@ Headers: Academy: {academy_id}
   - Values are the amounts to refund for each item
 - `reason` (string, optional): Refund reason
 
+**Optional fields:**
+- `plan_entitlement_action` (string): What to do with the subscription or plan financing linked to the refunded plan(s). Defaults to `cancel_immediately`. Ignored when `items_to_refund` contains only service slugs (no plan slugs).
+  - `cancel_immediately`: Sets linked `Subscription` / `PlanFinancing` to `EXPIRED` (immediate access loss; no future charges).
+  - `cancel_at_period_end`: Sets linked `Subscription` / `PlanFinancing` to `CANCELLED` (no future charges; access continues until `next_payment_at` / `valid_until`).
+  - `keep`: Does not change subscription or plan financing status; billing resumes on the next cycle as scheduled.
+
 For `record-refund`, add:
 - `external_reference` (string, required): proof/reference for the external payout (ticket id, wire id, dashboard reference)
 - `stripe_refund_id` (string, optional, max 32 chars): existing Stripe refund id when payout was done externally in Stripe
@@ -161,12 +167,14 @@ A `CreditNote` record is created with:
 - `refund_stripe_id` (if applicable)
 - Status `ISSUED`
 
-#### Step 4: Deprecate Plans and Remove Services
-If plans are being refunded:
-- Finds all active `Subscription` for the user with those plans
-- Changes them to `EXPIRED` status with explanatory message
-- Finds all active `PlanFinancing` for the user with those plans
-- Changes them to `EXPIRED` status with explanatory message
+#### Step 4: Update Plan Entitlements and Remove Services
+If plans are being refunded, behavior depends on `plan_entitlement_action` (default: `cancel_immediately`):
+- Resolves the linked `Subscription` or `PlanFinancing` for the invoice first; falls back to user+plan for legacy invoices
+- `cancel_immediately`: sets status to `EXPIRED`
+- `cancel_at_period_end`: sets status to `CANCELLED`
+- `keep`: leaves subscription/plan financing unchanged
+
+The chosen action is stored on the `CreditNote.breakdown` as `plan_entitlement_action` when plan slugs are refunded.
 
 If service-items are being refunded:
 - Deletes associated `SubscriptionServiceItem`
@@ -212,6 +220,7 @@ If service-items are being refunded:
 - `country_code` (str, optional): Country code
 - `legal_text` (str, optional): Country-specific legal text
 - `lang` (str): Language code
+- `plan_entitlement_action` (str, optional): `cancel_immediately` | `cancel_at_period_end` | `keep`
 
 **Returns:**
 - `CreditNote`: The created CreditNote object
@@ -220,7 +229,7 @@ If service-items are being refunded:
 - Creates a refund in Stripe (if applicable)
 - Updates `invoice.amount_refunded` and `invoice.status`
 - Creates a `CreditNote` record
-- Expires associated subscriptions and plan financings
+- Updates or preserves linked subscriptions and plan financings per `plan_entitlement_action`
 - Deletes associated service items
 
 ### `process_refund_record_external()`
@@ -235,6 +244,7 @@ If service-items are being refunded:
 - `items_to_refund` (dict[str, float]): Refunded item slugs and amounts
 - `external_reference` (str): Required external payout reference
 - `stripe_refund_id` (str, optional): Existing Stripe refund id if known
+- `plan_entitlement_action` (str, optional): Same values as `process_refund`
 
 **Returns:**
 - `CreditNote`: The created CreditNote object
@@ -242,7 +252,7 @@ If service-items are being refunded:
 **Side effects:**
 - Updates invoice refund balance and status
 - Creates a `CreditNote` with external refund provenance
-- Expires associated subscriptions and plan financings
+- Updates or preserves linked subscriptions and plan financings per `plan_entitlement_action`
 - Deletes associated service items
 
 ## Reconciliation vs Stripe Refund
@@ -359,8 +369,44 @@ POST /v1/payments/academy/invoice/123/refund
 - A CreditNote is created for $50.00
 - Invoice status changes to `PARTIALLY_REFUNDED`
 - $30 is refunded from the plan and $20 from the service
-- Plan subscription expires
+- Plan subscription is set to `EXPIRED` by default (`plan_entitlement_action` defaults to `cancel_immediately`)
 - Mentoring service items are deleted
+
+### Case 2b: Partial Refund Keeping the Plan Active
+
+```json
+POST /v1/payments/academy/invoice/123/refund
+{
+  "refund_amount": 30.00,
+  "items_to_refund": {
+    "monthly-plan": 30.00
+  },
+  "plan_entitlement_action": "keep",
+  "reason": "Goodwill partial refund"
+}
+```
+
+**Result:**
+- Money is refunded but subscription/plan financing status is unchanged
+- Future charges continue on the normal schedule
+
+### Case 2c: Partial Refund Cancelling at Period End
+
+```json
+POST /v1/payments/academy/invoice/123/refund
+{
+  "refund_amount": 30.00,
+  "items_to_refund": {
+    "monthly-plan": 30.00
+  },
+  "plan_entitlement_action": "cancel_at_period_end",
+  "reason": "Refund now, access until cycle end"
+}
+```
+
+**Result:**
+- Subscription/plan financing moves to `CANCELLED`
+- No further charges; access continues until `next_payment_at` / `valid_until`
 
 ### Case 3: Multiple Partial Refunds
 
@@ -415,6 +461,10 @@ POST /v1/payments/academy/invoice/123/refund
 6. **"Only fulfilled or partially refunded invoices can be refunded"**
    - Invoice is not in a valid state for refunding
    - Solution: Only invoices with status `FULFILLED`, `PARTIALLY_REFUNDED`, or `REFUNDED` can be refunded
+
+7. **Invalid `plan_entitlement_action`**
+   - Value is not one of `cancel_immediately`, `cancel_at_period_end`, or `keep`
+   - Solution: Omit the field to use the default (`cancel_immediately`) or send a supported value
 
 ### Stripe Errors
 
