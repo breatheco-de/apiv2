@@ -1180,18 +1180,22 @@ class GetAbstractIOweYouSerializer(serpy.Serializer):
 
     def get_has_billing_team(self, obj):
         """Check if this financing/subscription has a billing team."""
-        return hasattr(obj, "subscriptionbillingteam")
+        return hasattr(obj, "subscriptionbillingteam") or hasattr(obj, "team")
 
     def get_seats_count(self, obj):
         """Get number of active seats in the billing team."""
         if hasattr(obj, "subscriptionbillingteam"):
             return obj.subscriptionbillingteam.seats.filter(is_active=True).count()
+        if hasattr(obj, "team"):
+            return obj.team.seats.filter(is_active=True).count()
         return None
 
     def get_seats_limit(self, obj):
         """Get total seat limit for the billing team."""
         if hasattr(obj, "subscriptionbillingteam"):
             return obj.subscriptionbillingteam.seats_limit
+        if hasattr(obj, "team"):
+            return obj.team.seats_limit
         return None
 
 

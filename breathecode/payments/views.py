@@ -7103,6 +7103,7 @@ class SubscriptionBillingTeamView(APIView):
             "additional_seats": team.additional_seats,
             "seats_count": team.seats.filter(is_active=True).count(),
             "seats_log": team.seats_log,
+            "consumption_strategy": team.consumption_strategy,
             # Auto-recharge settings
             "auto_recharge_enabled": team.auto_recharge_enabled,
             "recharge_threshold_amount": str(team.recharge_threshold_amount),
