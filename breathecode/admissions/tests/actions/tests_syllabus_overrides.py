@@ -40,6 +40,58 @@ def test_apply_reference_override_merges_by_position_and_deletes_assets():
     assert merged["days"][0]["assignments"] == [{"slug": "another-project", "title": "Another Project"}]
 
 
+def test_apply_reference_override_replaces_asset_when_slug_changes():
+    base = {
+        "days": [
+            {
+                "id": 1,
+                "lessons": [],
+                "quizzes": [],
+                "replits": [
+                    {
+                        "id": 3230,
+                        "slug": "html-fundamentals-building-web-structure-en",
+                        "title": "HTML Fundamentals: Building Web Structure",
+                        "mandatory": True,
+                        "translations": {
+                            "us": {
+                                "slug": "html-fundamentals-building-web-structure-en",
+                                "title": "HTML Fundamentals: Building Web Structure",
+                            }
+                        },
+                    }
+                ],
+                "assignments": [],
+            }
+        ]
+    }
+    override = {
+        "days": [
+            {
+                "replits": [
+                    {
+                        "id": 3395,
+                        "slug": "token-efficiency-with-coding-agents-mastering-a-en",
+                        "title": "Token Efficiency with Coding Agents: Mastering Auto Mode",
+                        "mandatory": True,
+                    }
+                ]
+            }
+        ]
+    }
+
+    merged = apply_reference_override(base, override)
+
+    assert merged["days"][0]["replits"] == [
+        {
+            "id": 3395,
+            "slug": "token-efficiency-with-coding-agents-mastering-a-en",
+            "title": "Token Efficiency with Coding Agents: Mastering Auto Mode",
+            "mandatory": True,
+        }
+    ]
+
+
 def test_resolve_syllabus_json_with_macro_reference():
     micro = {
         "days": [
