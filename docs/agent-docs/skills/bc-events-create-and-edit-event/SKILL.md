@@ -1,6 +1,6 @@
 ---
 name: bc-events-create-and-edit-event
-description: Use when staff need to create or edit academy events end-to-end (event type, tags, optional workshop asset, host, and meeting setup); do NOT use for bulk attendee import (use bc-events-bulk-import-checkins) or attendee-only join/check-in without event authoring.
+description: Use when staff need to create or set up academy events (event type, tags, optional workshop asset, host, and meeting setup); do NOT use for during-event operations (bc-events-during-event), post-event wrap-up (bc-events-post-event), bulk attendee import (bc-events-bulk-import-checkins), or learner join/check-in.
 requires: []
 ---
 
@@ -64,8 +64,9 @@ After the event exists, use [`bc-events-bulk-import-checkins`](../bc-events-bulk
    - Do not try to update `slug` on PUT (`try-update-slug`).
    - If host ownership changes, re-run Step 7.
 
-9. Use specialized lifecycle operations when needed.
-   - Suspend event with `PUT /v1/events/academy/event/<event_id>/suspend` (do not set `SUSPENDED` in normal PUT).
+9. Hand off lifecycle operations after setup.
+   - While scheduled or live: [`bc-events-during-event`](../bc-events-during-event/SKILL.md) (reschedule, suspend, guest list, outside registrations, promo UTM links).
+   - After the workshop ends: [`bc-events-post-event`](../bc-events-post-event/SKILL.md) (attendance, recording publish).
    - Delete only draft events with `DELETE /v1/events/academy/event/<event_id>`.
 
 ## Endpoints
@@ -83,7 +84,6 @@ After the event exists, use [`bc-events-bulk-import-checkins`](../bc-events-bulk
 | Bulk update events | PUT | `/v1/events/academy/event` | `Authorization`, `Academy`, optional `Accept-Language` | List of event updates | `200` list of event objects |
 | Assign host + invite | POST | `/v1/events/academy/event/<event_id>/host` | `Authorization`, `Academy`, optional `Accept-Language` | Host payload | `201` with `user`, `invite`, `event_id` |
 | Update host profile | PUT | `/v1/events/academy/event/<event_id>/host/<user_id>` | `Authorization`, `Academy`, optional `Accept-Language` | Partial profile payload | `200` updated profile |
-| Suspend event | PUT | `/v1/events/academy/event/<event_id>/suspend` | `Authorization`, `Academy`, optional `Accept-Language` | Optional suspension reason | `200` event object |
 | Delete draft event | DELETE | `/v1/events/academy/event/<event_id>` | `Authorization`, `Academy`, optional `Accept-Language` | — | `204` |
 
 **List event types response example (GET `/v1/events/academy/eventype`)**
@@ -314,13 +314,6 @@ After the event exists, use [`bc-events-bulk-import-checkins`](../bc-events-bulk
 }
 ```
 
-**Suspend event request (PUT `/v1/events/academy/event/101/suspend`)**
-```json
-{
-  "suspension_reason": "Speaker unavailable"
-}
-```
-
 ## Edge Cases
 
 - Missing required event create fields (`banner`, `capacity`, `starting_at`, `ending_at`) returns field-level `400` validation errors.
@@ -353,4 +346,4 @@ After the event exists, use [`bc-events-bulk-import-checkins`](../bc-events-bulk
 6. Create event with `POST /v1/events/academy/event` including required fields and access flags (`is_public`, `free_for_all`, `free_for_bootcamps`).
 7. For online meeting automation, use `create_meet=true` and optional `meeting_provider` (`daily`/`livekit`), or provide `live_stream_url` for custom provider.
 8. Assign/update host with host endpoints after create and after any host ownership change.
-9. Use normal PUT for event edits, suspend endpoint for suspension, and delete only when event is draft.
+9. Use normal PUT for event edits; hand off to during-event or post-event skills for lifecycle operations; delete only when event is draft.

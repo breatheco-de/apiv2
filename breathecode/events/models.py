@@ -215,6 +215,7 @@ class Event(models.Model):
         super(Event, self).__init__(*args, **kwargs)
         self.__old_status = self.status
         self.__old_starting_at = self.starting_at
+        self.__old_recording_url = self.recording_url
 
     slug = models.SlugField(max_length=150, blank=True, default=None, null=True)
     uuid = models.UUIDField(default=uuid_lib.uuid4, editable=False, unique=True)
@@ -349,6 +350,9 @@ class Event(models.Model):
             self.free_for_bootcamps = True
 
     def save(self, *args, **kwargs):
+        from django.utils import timezone
+
+        from . import tasks as events_tasks
         from .signals import event_saved
 
         status_updated = False
@@ -358,6 +362,8 @@ class Event(models.Model):
         starting_at_updated = False
         if self.__old_starting_at != self.starting_at:
             starting_at_updated = True
+
+        recording_url_set = not self.__old_recording_url and bool(self.recording_url)
 
         created = not self.id
 
@@ -373,6 +379,13 @@ class Event(models.Model):
 
         if starting_at_updated:
             event_rescheduled.send_robust(instance=self, sender=Event)
+
+        if recording_url_set:
+            event_finished = self.status == FINISHED or (
+                self.ending_at is not None and self.ending_at < timezone.now()
+            )
+            if event_finished:
+                events_tasks.send_event_recording_notification.delay(self.id)
 
 
 PENDING = "PENDING"

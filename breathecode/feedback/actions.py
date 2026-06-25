@@ -13,6 +13,7 @@ from breathecode.admissions.models import Cohort, CohortUser, SyllabusVersion
 from breathecode.assignments.models import Task
 from breathecode.authenticate.models import Token
 from breathecode.certificate.actions import syllabus_weeks_to_days
+from breathecode.events.models import FINISHED, EventCheckin
 
 from . import tasks
 from .models import (
@@ -743,3 +744,122 @@ def save_survey_answers(response_id: int, answers: dict) -> SurveyResponse:
 
     logger.info(f"Survey response {survey_response.id} answered by user {survey_response.user.id}")
     return survey_response
+
+
+def resend_event_surveys(event, user_ids=None, dry_run=False):
+    """
+    Resend event NPS emails to eligible attendees who have not answered yet.
+    Creates missing Answer rows for attended check-ins with a platform user.
+    """
+    from capyc.core.i18n import translation
+
+    if event.status != FINISHED:
+        raise ValidationException(
+            translation(
+                en="Event must be finished before resending surveys",
+                es="El evento debe estar finalizado antes de reenviar encuestas",
+            ),
+            slug="event-not-finished",
+            code=400,
+        )
+
+    if not event.ended_at:
+        raise ValidationException(
+            translation(
+                en="Event must have ended_at set before resending surveys",
+                es="El evento debe tener ended_at antes de reenviar encuestas",
+            ),
+            slug="event-not-finished",
+            code=400,
+        )
+
+    settings = AcademyFeedbackSettings.objects.filter(academy=event.academy).first()
+    if not settings or not settings.event_survey_template:
+        raise ValidationException(
+            translation(
+                en="Academy has no event survey template configured",
+                es="La academia no tiene plantilla de encuesta de eventos configurada",
+            ),
+            slug="event-survey-template-not-configured",
+            code=400,
+        )
+
+    template_slug = settings.event_survey_template.slug
+
+    checkins = EventCheckin.objects.filter(
+        event=event,
+        attended_at__isnull=False,
+        attendee__isnull=False,
+    )
+    if user_ids is not None:
+        checkins = checkins.filter(attendee_id__in=user_ids)
+
+    result = {
+        "event_id": event.id,
+        "academy_id": event.academy_id,
+        "dry_run": dry_run,
+        "resent": [],
+        "created": [],
+        "skipped_answered": [],
+        "skipped_no_email": [],
+        "skipped_ineligible": [],
+    }
+
+    if user_ids is not None:
+        found_ids = set(checkins.values_list("attendee_id", flat=True))
+        for user_id in user_ids:
+            try:
+                uid = int(user_id)
+            except (TypeError, ValueError):
+                result["skipped_ineligible"].append({"user_id": user_id, "reason": "invalid_user_id"})
+                continue
+            if uid not in found_ids:
+                result["skipped_ineligible"].append(
+                    {"user_id": uid, "reason": "not_attended_or_no_platform_user"}
+                )
+
+    for checkin in checkins:
+        user = checkin.attendee
+        answer = Answer.objects.filter(event=event, user=user).first()
+
+        if answer and answer.status == "ANSWERED":
+            result["skipped_answered"].append({"user_id": user.id, "answer_id": answer.id})
+            continue
+
+        if not user.email:
+            result["skipped_no_email"].append({"user_id": user.id, "reason": "no_email"})
+            continue
+
+        if dry_run:
+            entry = {"user_id": user.id, "answer_id": answer.id if answer else None, "scheduled": False}
+            if answer:
+                result["resent"].append(entry)
+            else:
+                result["created"].append(entry)
+            continue
+
+        is_new = answer is None
+        if is_new:
+            answer = Answer(event=event, user=user, status="SENT", lang=event.lang, academy=event.academy)
+            answer = tasks.build_question(answer, template_slug)
+            answer.save()
+        else:
+            if answer.token_id:
+                Token.objects.filter(id=answer.token_id).delete()
+            answer = tasks.build_question(answer, template_slug)
+            answer.status = "SENT"
+            answer.save()
+
+        token, _ = Token.get_or_create(user, token_type="temporal", hours_length=48)
+        answer.token_id = token.id
+        answer.save(update_fields=["token_id"])
+
+        tasks.send_event_answer_email.delay(answer.id)
+
+        entry = {"user_id": user.id, "answer_id": answer.id, "scheduled": True}
+        if is_new:
+            result["created"].append(entry)
+        else:
+            result["resent"].append(entry)
+
+    return result

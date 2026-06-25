@@ -18,6 +18,8 @@ Use this skill when you must:
 
 Do NOT use for Eventbrite (`/v1/events/eventbrite/webhook/...`), creating/editing events without Luma (`bc-events-create-and-edit-event` only), or attendee join/check-in APIs that do not involve Luma webhooks.
 
+After setup, Luma guests who registered **outside the platform** appear as checkins with `utm_source=luma`—reconcile them via [`bc-events-during-event`](../bc-events-during-event/SKILL.md) or [`bc-events-post-event`](../bc-events-post-event/SKILL.md).
+
 ## Concepts
 
 - **Luma calendar**: every Luma API key and webhook belongs to one calendar. Webhooks require **Luma Plus**.

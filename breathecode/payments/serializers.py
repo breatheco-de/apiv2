@@ -3,11 +3,12 @@ from typing import Any
 
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
-from django.core.exceptions import FieldDoesNotExist
+from django.core.exceptions import FieldDoesNotExist, ValidationError as DjangoValidationError
+from django.db import transaction
 from django.db.models.query_utils import Q
 from rest_framework.exceptions import ValidationError
 
-from breathecode.payments.actions import apply_pricing_ratio
+from breathecode.payments.actions import apply_pricing_ratio, resolve_plan_for_academy
 from breathecode.payments.models import (
     AcademyPaymentSettings,
     AcademyService,
@@ -602,6 +603,163 @@ class GetPlanOfferSerializer(serpy.Serializer):
             return GetPlanOfferTranslationSerializer(item, many=False).data
 
         return None
+
+
+class GetAcademyPlanOfferSerializer(serpy.Serializer):
+    id = serpy.Field()
+    original_plan = serpy.MethodField()
+    suggested_plan = serpy.MethodField()
+    translations = serpy.MethodField()
+    show_modal = serpy.Field()
+    expires_at = serpy.Field()
+
+    def get_original_plan(self, obj: PlanOffer):
+        if not obj.original_plan:
+            return None
+        context = getattr(self, "context", {}) or {}
+        return GetPlanSerializer(obj.original_plan, many=False, context=context).data
+
+    def get_suggested_plan(self, obj: PlanOffer):
+        if not obj.suggested_plan:
+            return None
+        context = getattr(self, "context", {}) or {}
+        return GetPlanSerializer(obj.suggested_plan, many=False, context=context).data
+
+    def get_translations(self, obj: PlanOffer):
+        items = PlanOfferTranslation.objects.filter(offer=obj).order_by("lang")
+        return GetPlanOfferTranslationSerializer(items, many=True).data
+
+
+class PlanOfferTranslationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PlanOfferTranslation
+        fields = ["lang", "title", "description", "short_description"]
+
+
+class PlanOfferSerializer(serializers.Serializer):
+    show_modal = serializers.BooleanField(required=False, default=False)
+    expires_at = serializers.DateTimeField(required=False, allow_null=True)
+    translations = PlanOfferTranslationSerializer(many=True, required=False)
+
+    def _resolve_plan_field(self, field_name: str, attrs: dict, *, require_academy_owned: bool, allow_global: bool):
+        if field_name not in self.initial_data:
+            return
+
+        value = self.initial_data.get(field_name)
+        if value is None:
+            attrs[field_name] = None
+            return
+
+        academy_id = self.context["academy_id"]
+        lang = self.context.get("lang", "en")
+        attrs[field_name] = resolve_plan_for_academy(
+            value,
+            academy_id,
+            lang,
+            require_academy_owned=require_academy_owned,
+            allow_global=allow_global,
+        )
+
+    def validate(self, attrs):
+        lang = self.context.get("lang", "en")
+        is_create = self.instance is None
+
+        if is_create:
+            if "original_plan" not in self.initial_data:
+                raise ValidationException(
+                    translation(lang, en="original_plan is required", es="original_plan es requerido", slug="original-plan-required"),
+                    code=400,
+                )
+            self._resolve_plan_field("original_plan", attrs, require_academy_owned=True, allow_global=False)
+        elif "original_plan" in self.initial_data:
+            self._resolve_plan_field("original_plan", attrs, require_academy_owned=True, allow_global=False)
+
+        self._resolve_plan_field("suggested_plan", attrs, require_academy_owned=False, allow_global=True)
+
+        translations = attrs.get("translations")
+        if is_create and not translations:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="At least one translation is required",
+                    es="Se requiere al menos una traducción",
+                    slug="translations-required",
+                ),
+                code=400,
+            )
+
+        return attrs
+
+    def create(self, validated_data):
+        translations_data = validated_data.pop("translations", [])
+        original_plan = validated_data.pop("original_plan")
+        suggested_plan = validated_data.pop("suggested_plan", None)
+
+        try:
+            with transaction.atomic():
+                offer = PlanOffer(
+                    original_plan=original_plan,
+                    suggested_plan=suggested_plan,
+                    show_modal=validated_data.get("show_modal", False),
+                    expires_at=validated_data.get("expires_at"),
+                )
+                offer.save()
+
+                for item in translations_data:
+                    PlanOfferTranslation.objects.create(offer=offer, **item)
+
+                return offer
+        except DjangoValidationError as e:
+            raise ValidationException(
+                translation(
+                    self.context.get("lang", "en"),
+                    en="There is already an active plan offer for this plan",
+                    es="Ya existe una oferta de plan activa para este plan",
+                    slug="active-plan-offer-exists",
+                ),
+                code=400,
+            ) from e
+
+    def update(self, instance, validated_data):
+        translations_data = validated_data.pop("translations", None)
+        original_plan = validated_data.pop("original_plan", None)
+        suggested_plan = validated_data.pop("suggested_plan", None)
+
+        if original_plan is not None:
+            instance.original_plan = original_plan
+        if "suggested_plan" in self.initial_data:
+            instance.suggested_plan = suggested_plan
+
+        for key, value in validated_data.items():
+            setattr(instance, key, value)
+
+        try:
+            with transaction.atomic():
+                instance.save()
+
+                if translations_data is not None:
+                    for item in translations_data:
+                        PlanOfferTranslation.objects.update_or_create(
+                            offer=instance,
+                            lang=item["lang"],
+                            defaults={
+                                "title": item["title"],
+                                "description": item["description"],
+                                "short_description": item["short_description"],
+                            },
+                        )
+
+                return instance
+        except DjangoValidationError as e:
+            raise ValidationException(
+                translation(
+                    self.context.get("lang", "en"),
+                    en="There is already an active plan offer for this plan",
+                    es="Ya existe una oferta de plan activa para este plan",
+                    slug="active-plan-offer-exists",
+                ),
+                code=400,
+            ) from e
 
 
 class GetPaymentMethodSmallSerializer(serpy.Serializer):
@@ -1278,6 +1436,33 @@ class ServiceItemSerializer(serializers.ModelSerializer):
             sort_priority=validated_data.get("sort_priority", 1),
         )
         return service_item
+
+
+class ServiceItemUpdateSerializer(serializers.ModelSerializer):
+    """Update only mutable ServiceItem fields after creation."""
+
+    class Meta:
+        model = ServiceItem
+        fields = ["is_team_allowed", "sort_priority"]
+
+    def validate(self, attrs):
+        allowed_keys = {"is_team_allowed", "sort_priority"}
+        if not (allowed_keys & set(self.initial_data.keys())):
+            raise ValidationException(
+                translation(
+                    en="At least one updatable field is required: is_team_allowed, sort_priority",
+                    es="Se requiere al menos un campo actualizable: is_team_allowed, sort_priority",
+                    slug="no-updatable-fields",
+                ),
+                code=400,
+            )
+        return attrs
+
+    def update(self, instance, validated_data):
+        for field, value in validated_data.items():
+            setattr(instance, field, value)
+        instance.save()
+        return instance
 
 
 class PlanSerializer(serializers.ModelSerializer):

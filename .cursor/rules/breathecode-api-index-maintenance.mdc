@@ -7,8 +7,8 @@ description: Use this rule when creating, renaming, or deleting a BreatheCode AP
 
 These files are the routing entry points for BreatheCode API skills:
 
-- **Staff:** [`docs/LLM-DOCS/skills/breathecode-staff-api-index/SKILL.md`](docs/LLM-DOCS/skills/breathecode-staff-api-index/SKILL.md)
-- **Student (learner):** [`docs/LLM-DOCS/skills/breathecode-student-api-index/SKILL.md`](docs/LLM-DOCS/skills/breathecode-student-api-index/SKILL.md)
+- **Staff:** [`docs/agent-docs/skills/breathecode-staff-api-index/SKILL.md`](docs/agent-docs/skills/breathecode-staff-api-index/SKILL.md)
+- **Student (learner):** [`docs/agent-docs/skills/breathecode-student-api-index/SKILL.md`](docs/agent-docs/skills/breathecode-student-api-index/SKILL.md)
 
 They must reflect the current skill inventory and the API. Follow these rules whenever the API code or skill inventory changes.
 
@@ -55,9 +55,23 @@ Update one or both index files when any of the following happen:
 
 ---
 
+## Skill self-containment
+
+Skills under `docs/agent-docs/skills/` are the **only** agent-facing API workflow source.
+
+- A skill must be **self-contained**: include workflow steps, endpoints, required headers, and JSON payloads so the agent can complete the task without loading external markdown docs.
+- **Allowed cross-references:** other skills (`bc-<domain>-<verb>-<resource>`) via `requires` in frontmatter or relative links to `SKILL.md` files in the skills tree.
+- **Forbidden in skills:** links or pointers to `docs/agent-docs/*.md`, `docs/llm-docs/*.md`, or any file that is not a skill (`SKILL.md`). Examples: `BC_STAFF_INVITES.md`, `manage_roles.md`, `SYLLABUS.md`.
+- **When a skill would reference a human doc:** create a new skill or extend an existing one with the needed workflow and endpoints; update the appropriate index in the same change.
+- **Indexes** may link to skills and to the staff/student index. Indexes must **not** link to human markdown docs for workflow detail (same rule as skills).
+
+For full authoring rules (structure, payloads, anti-patterns), see [`skill-authoring.mdc`](skill-authoring.mdc).
+
+---
+
 ## Rule 1: New skill created
 
-When a new skill is created under `docs/llm-docs/skills`:
+When a new skill is created under `docs/agent-docs/skills`:
 
 1. Identify the domain from the skill name (e.g. `bc-admissions-create-cohort` → domain is `bc-admissions`, bc stands for breathecode).
 2. Using the [persona rule](#which-index-to-update-persona-rule), open **`breathecode-staff-api-index/SKILL.md`**, **`breathecode-student-api-index/SKILL.md`**, or **both**.
@@ -107,6 +121,8 @@ Before finishing any task that involved creating or modifying skills OR API endp
 4. [ ] Domain maps do not list every skill file — wildcard `bc-domain-*` rows are the default (optional single canonical linked skill per row only where already established).
 5. [ ] If an API endpoint was changed, the relevant skill(s) have been updated to reflect the change.
 6. [ ] If a new API domain was added, a new domain row exists in the **staff** index; the **student** index is updated if learners use that app.
+7. [ ] New or edited skills contain no links to non-skill markdown files.
+8. [ ] Any removed doc reference is replaced by a skill link or inlined API detail.
 
 ---
 
@@ -115,7 +131,7 @@ Before finishing any task that involved creating or modifying skills OR API endp
 When an API endpoint is added, modified, or removed:
 
 1. **Identify the domain** from the endpoint path (e.g. `/v1/admissions/...` → `bc-admissions` domain).
-2. **Find all skills in that domain** by scanning `docs/llm-docs/skills` for files and folders matching `bc-admissions-*`.
+2. **Find all skills in that domain** by scanning `docs/agent-docs/skills` for files and folders matching `bc-admissions-*`.
 3. **For each affected skill**, check whether the changed endpoint is documented in its `## Endpoints` section.
 4. **If the endpoint is documented in a skill**, update that skill:
    - Changed method or path → update the endpoint reference
@@ -123,7 +139,7 @@ When an API endpoint is added, modified, or removed:
    - Removed field → remove it and check if any workflow step references it
    - Removed endpoint → remove it from the skill; if it was the only endpoint, flag the skill as needing replacement or deletion
    - Changed response shape → update any step that reads from the response (e.g. "save the returned `id`")
-5. **If no skill exists yet for the changed endpoint**, do nothing — but if the endpoint is part of a cross-domain workflow in either index, add a comment or note that the workflow may be affected.
+5. **If no skill exists yet for the changed endpoint**, do nothing for the skill file — but if the endpoint is part of a cross-domain workflow in either index, note that the workflow may be affected. If the workflow was previously documented only in a human `.md` file, **create a skill** instead of linking that doc from an existing skill.
 6. **If a new domain app was added to the API**, add a new row to the **staff** index **Domain Map**; add to the **student** index only if learner routes exist, per the [persona rule](#which-index-to-update-persona-rule).
 
 **Do not silently skip this step.** If you are unsure which skill covers a changed endpoint, scan the skills directory and check. If no skill covers it, explicitly note this to the user.
@@ -137,6 +153,7 @@ When an API endpoint is added, modified, or removed:
 - Workflow step-by-step instructions for a single use case (those belong in use-case skills)
 - Speculative cross-domain workflows that have not been confirmed by an actual skill
 - References to Django Admin or non-API tools (see skill-authoring rules)
+- Links to human markdown documentation files for workflow or endpoint detail (use skills only)
 
 ---
 

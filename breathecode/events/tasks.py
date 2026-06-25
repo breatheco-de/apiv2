@@ -431,6 +431,79 @@ def send_event_suspended_notification(event_id: int, suspension_reason: str = No
     logger.info(f"Completed sending suspension notifications for event {event_id}")
 
 
+@task(priority=TaskPriority.NOTIFICATION.value)
+def send_event_recording_notification(event_id: int, **kwargs):
+    """
+    Send email notifications to attendees who actually attended when an event recording is published.
+    """
+    logger.info(f"Starting send_event_recording_notification for event {event_id}")
+
+    event = Event.objects.filter(id=event_id).first()
+    if not event:
+        raise AbortTask(f"Event {event_id} not found. Task cannot continue.")
+
+    if not event.recording_url:
+        raise AbortTask(f"Event {event_id} has no recording URL. Task cannot continue.")
+
+    event_finished = event.status == "FINISHED" or (
+        event.ending_at is not None and event.ending_at < timezone.now()
+    )
+    if not event_finished:
+        raise AbortTask(f"Event {event_id} has not finished yet. Task cannot continue.")
+
+    checkins = (
+        EventCheckin.objects.filter(event=event, attended_at__isnull=False)
+        .exclude(email__isnull=True)
+        .exclude(email="")
+    )
+
+    if not checkins.exists():
+        logger.info(f"No attended checkins found for event {event_id}")
+        return
+
+    lang = (event.lang or "en").lower()
+    if lang not in ["en", "es"]:
+        lang = "en"
+
+    event_title = event.title or f"Event {event.id}"
+    messages = {
+        "en": {
+            "subject": f"Recording available: {event_title}",
+            "message": (
+                f"The recording for '{event_title}' is now available.<br><br>"
+                f"Click the button below to watch it at your convenience."
+            ),
+            "button": "Watch recording",
+        },
+        "es": {
+            "subject": f"Grabación disponible: {event_title}",
+            "message": (
+                f"La grabación de '{event_title}' ya está disponible.<br><br>"
+                f"Haz clic en el botón de abajo para verla cuando quieras."
+            ),
+            "button": "Ver grabación",
+        },
+    }
+
+    selected_lang = messages.get(lang, messages["en"])
+
+    for checkin in checkins:
+        try:
+            data = {
+                "SUBJECT": selected_lang["subject"],
+                "MESSAGE": selected_lang["message"],
+                "BUTTON": selected_lang["button"],
+                "LINK": event.recording_url,
+            }
+
+            notify_actions.send_email_message("message", checkin.email, data, academy=event.academy)
+            logger.debug(f"Sent recording notification to {checkin.email} for event {event_id}")
+        except Exception as e:
+            logger.error(f"Failed to send recording notification to {checkin.email} for event {event_id}: {e}")
+
+    logger.info(f"Completed sending recording notifications for event {event_id}")
+
+
 @task(priority=TaskPriority.MARKETING.value)
 def run_event_checkin_marketing_task(
     event_id: int,

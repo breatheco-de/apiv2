@@ -7191,5 +7191,82 @@ def calculate_single_coupon_stats(coupon: Coupon) -> dict:
             payment_methods["unknown"] = payment_methods.get("unknown", 0) + 1
     
     stats["payment_methods"] = payment_methods
-    
+
     return stats
+
+
+def resolve_plan_for_academy(
+    plan_identifier,
+    academy_id: int,
+    lang: str,
+    *,
+    require_academy_owned: bool = False,
+    allow_global: bool = True,
+) -> "Plan":
+    from breathecode.payments.models import Plan
+
+    plan_kwargs = {}
+    if isinstance(plan_identifier, int):
+        plan_kwargs["id"] = plan_identifier
+    elif isinstance(plan_identifier, str):
+        if plan_identifier.isdigit():
+            plan_kwargs["id"] = int(plan_identifier)
+        else:
+            plan_kwargs["slug"] = plan_identifier
+    else:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Invalid plan identifier. Must be an ID or slug",
+                es="Identificador de plan inválido. Debe ser un ID o slug",
+                slug="invalid-plan-identifier",
+            ),
+            code=400,
+        )
+
+    plan = Plan.objects.filter(**plan_kwargs).exclude(status="DELETED").first()
+    if not plan:
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Plan not found: {plan_identifier}",
+                es=f"Plan no encontrado: {plan_identifier}",
+                slug="plan-not-found",
+            ),
+            code=404,
+        )
+
+    if require_academy_owned:
+        if plan.owner_id != academy_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Plan {plan_identifier} does not belong to this academy",
+                    es=f"El plan {plan_identifier} no pertenece a esta academia",
+                    slug="plan-not-belonging-to-academy",
+                ),
+                code=403,
+            )
+    elif plan.owner_id is not None and plan.owner_id != academy_id:
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Plan {plan_identifier} does not belong to this academy",
+                es=f"El plan {plan_identifier} no pertenece a esta academia",
+                slug="plan-not-belonging-to-academy",
+            ),
+            code=403,
+        )
+
+    if not allow_global and plan.owner_id is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Plan {plan_identifier} must belong to this academy",
+                es=f"El plan {plan_identifier} debe pertenecer a esta academia",
+                slug="plan-not-belonging-to-academy",
+            ),
+            code=403,
+        )
+
+    return plan

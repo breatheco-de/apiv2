@@ -17,10 +17,12 @@ import logging
 
 import breathecode.activity.tasks as tasks_activity
 from breathecode.admissions.models import Academy, CohortUser
+from breathecode.events.models import Event
 from breathecode.utils import GenerateLookupsMixin, HeaderLimitOffsetPagination, capable_of
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 
+from . import actions
 from .caches import AnswerCache
 from .models import (
     AcademyFeedbackSettings,
@@ -266,6 +268,37 @@ class AcademyAnswerView(APIView):
 
         serializer = BigAnswerSerializer(answer)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AcademyEventSurveyResendView(APIView):
+
+    @capable_of("crud_survey")
+    def post(self, request, event_id=None, academy_id=None):
+        event = Event.objects.filter(id=event_id, academy__id=academy_id).first()
+        if event is None:
+            raise ValidationException(
+                translation(
+                    en=f"Event not found for this academy {academy_id}",
+                    es=f"Evento no encontrado para esta academia {academy_id}",
+                ),
+                slug="event-not-found",
+                code=404,
+            )
+
+        user_ids = request.data.get("user_ids")
+        if user_ids is not None and not isinstance(user_ids, list):
+            raise ValidationException(
+                translation(
+                    en="user_ids must be a list when provided",
+                    es="user_ids debe ser una lista cuando se proporciona",
+                ),
+                slug="invalid-user-ids",
+                code=400,
+            )
+
+        dry_run = bool(request.data.get("dry_run", False))
+        result = actions.resend_event_surveys(event, user_ids=user_ids, dry_run=dry_run)
+        return Response(result, status=status.HTTP_200_OK)
 
 
 class AcademySurveyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):

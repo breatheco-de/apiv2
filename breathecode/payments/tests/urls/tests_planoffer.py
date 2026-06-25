@@ -465,3 +465,58 @@ class SignalTestSuite(PaymentsTestCase):
             self.bc.database.list_of("payments.PlanOffer"),
             self.bc.format.to_dict(model.plan_offer),
         )
+
+    def test__without_auth__filter_by_original_plan_like(self):
+        plan_service_items = [{"service_item_id": n, "plan_id": 1} for n in range(1, 3)]
+        plan_service_items += [{"service_item_id": n, "plan_id": 2} for n in range(1, 3)]
+
+        plan_offers = [
+            {"original_plan_id": 1, "suggested_plan_id": 2, "show_modal": bool(random.getrandbits(1))},
+            {"original_plan_id": 2, "suggested_plan_id": 1, "show_modal": bool(random.getrandbits(1))},
+        ]
+
+        plan_offer_translation = [
+            {
+                "lang": "en",
+                "offer_id": n,
+            }
+            for n in range(1, 3)
+        ]
+
+        plan = [
+            {"is_renewable": False, "slug": "premium-bootcamp-2025", "title": "Premium Bootcamp"},
+            {"is_renewable": False, "slug": "basic-plan", "title": "Basic Plan"},
+        ]
+
+        model = self.bc.database.create(
+            plan=plan,
+            service=1,
+            service_item=2,
+            plan_offer=plan_offers,
+            plan_service_item=plan_service_items,
+            group=2,
+            permission=1,
+            plan_offer_translation=plan_offer_translation,
+        )
+
+        url = reverse_lazy("payments:planoffer") + "?like=bootcamp"
+        response = self.client.get(url)
+
+        json = response.json()
+        expected = [
+            get_serializer(
+                self,
+                model.plan_offer[0],
+                model.plan[0],
+                model.plan[1],
+                model.service,
+                model.currency,
+                plan_offer_translation=model.plan_offer_translation[0],
+                groups=model.group,
+                permissions=[model.permission],
+                service_items=model.service_item,
+            )
+        ]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)

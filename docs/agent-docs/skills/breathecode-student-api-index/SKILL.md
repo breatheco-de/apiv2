@@ -43,7 +43,7 @@ These areas are primarily documented for **academy staff** in the staff index. I
 | **activity** | My engagement, daily summaries, login streaks | `bc-activity-*` |
 | **assessment** | My quizzes and attempts | `bc-assessment-*` |
 | **assignment** | My tasks, submissions, final project, LearnPack telemetry ingestion | `bc-assignment-*`, [`bc-assignment-diagnose-asset-telemetry`](../bc-assignment-diagnose-asset-telemetry/SKILL.md) (for `POST …/me/telemetry` and related learner diagnostics) |
-| **authenticate** | Login, token, hosted redirect, permissions for the current user | `bc-authenticate-*`, [`bc-authenticate-student-authentication`](../bc-authenticate-student-authentication/SKILL.md) |
+| **authenticate** | Login, token, hosted redirect, academy-scoped capabilities + academy-less permissions for the current user | `bc-authenticate-*`, [`bc-authenticate-student-authentication`](../bc-authenticate-student-authentication/SKILL.md) |
 | **career** | Job listings and applications after graduation | `bc-career-*` |
 | **certificate** | My issued certificates | `bc-certificate-*` |
 | **events** | My workshops, RSVPs, check-ins, live class join | `bc-events-*`, [`bc-events-create-and-edit-event`](../bc-events-create-and-edit-event/SKILL.md) (where it documents student-facing paths) |

@@ -23,6 +23,7 @@ Do NOT use for:
 - **RSVP:** `attended: false` → `status=PENDING`, no `attended_at`.
 - **Attended:** `attended: true` → `status=DONE` and `attended_at` (defaults to now if omitted).
 - **`run_marketing`:** default `false`. When `true`, enqueues ActiveCampaign per row after DB upsert; import job completes before emails/automations finish.
+- Commonly used in [`bc-events-during-event`](../bc-events-during-event/SKILL.md) (outside registrations) and [`bc-events-post-event`](../bc-events-post-event/SKILL.md) (attendance reconciliation).
 - Jobs live in **Redis** (~24h); poll by `job_id`. No DB job model.
 - Recommended **≤500 rows** per request.
 
