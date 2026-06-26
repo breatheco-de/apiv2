@@ -30,6 +30,8 @@ from breathecode.payments import actions, tasks
 from breathecode.payments.actions import (
     PlanFinder,
     _invoice_breakdown_has_line_items,
+    PLAN_ENTITLEMENT_ACTION_CANCEL_IMMEDIATELY,
+    VALID_PLAN_ENTITLEMENT_ACTIONS,
     add_items_to_bag,
     apply_pricing_ratio,
     calculate_refund_breakdown,
@@ -101,6 +103,7 @@ from breathecode.payments.serializers import (
     GetMentorshipServiceSetSerializer,
     GetMentorshipServiceSetSmallSerializer,
     GetPaymentMethod,
+    GetAcademyPlanOfferSerializer,
     GetPlanFinancingSerializer,
     GetPlanOfferSerializer,
     GetPlanSerializer,
@@ -111,9 +114,11 @@ from breathecode.payments.serializers import (
     MentorshipServiceSetSerializer,
     PaymentMethodSerializer,
     PlanSerializer,
+    PlanOfferSerializer,
     POSTAcademyServiceSerializer,
     PUTAcademyServiceSerializer,
     ServiceItemSerializer,
+    ServiceItemUpdateSerializer,
     ServiceSerializer,
 )
 from breathecode.payments.services.coinbase import CoinbaseCommerce
@@ -1674,7 +1679,8 @@ class AcademyServiceItemView(APIView):
     """
     Academy endpoint to manage ServiceItems.
     GET: List and filter service items
-    POST: Create new service items (immutable after creation)
+    POST: Create new service items
+    PUT: Update mutable fields (is_team_allowed, sort_priority) on an existing service item
     """
 
     extensions = APIViewExtensions(sort="-id", paginate=True)
@@ -1797,6 +1803,55 @@ class AcademyServiceItemView(APIView):
             service_item.lang = lang
             response_serializer = GetServiceItemWithFeaturesSerializer(service_item)
             return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of("crud_service")
+    def put(self, request, service_item_id=None, academy_id=None):
+        """
+        Update mutable fields on an existing ServiceItem.
+
+        Allowed fields:
+        - is_team_allowed (boolean)
+        - sort_priority (integer)
+
+        At least one allowed field must be provided.
+
+        Service items are shared catalog resources: any academy staff with crud_service
+        can update by id, regardless of the linked service owner (same as linking items to plans).
+        """
+        lang = get_user_language(request)
+
+        if service_item_id is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Service item id is required",
+                    es="El id del service item es requerido",
+                    slug="service-item-id-required",
+                ),
+                code=400,
+            )
+
+        service_item = ServiceItem.objects.filter(id=service_item_id).select_related("service").first()
+
+        if not service_item:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Service item not found",
+                    es="Service item no encontrado",
+                    slug="service-item-not-found",
+                ),
+                code=404,
+            )
+
+        serializer = ServiceItemUpdateSerializer(service_item, data=request.data, partial=True)
+        if serializer.is_valid():
+            service_item = serializer.save()
+            service_item.lang = lang
+            response_serializer = GetServiceItemWithFeaturesSerializer(service_item)
+            return Response(response_serializer.data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -2663,7 +2718,17 @@ class AcademyPlanFinancingView(APIView):
         now = timezone.now()
 
         if financing_id:
-            item = PlanFinancing.objects.filter(valid_until__gte=now, id=financing_id).first()
+            item = (
+                PlanFinancing.objects.filter(id=financing_id)
+                .annotate(fulfilled_invoices_count=Count("invoices", filter=Q(invoices__status="FULFILLED")))
+                .filter(
+                    Q(valid_until__gte=now)
+                    | Q(fulfilled_invoices_count__gte=F("how_many_installments"))
+                    | Q(installments_paid__gte=F("how_many_installments"))
+                    | Q(status=PlanFinancing.Status.FULLY_PAID)
+                )
+                .first()
+            )
 
             if not item:
                 raise ValidationException(
@@ -3059,7 +3124,9 @@ class AcademyUserCreditLedgerView(APIView):
         return handler.response(serializer.data)
 
 
-def _parse_and_validate_refund_request(request, invoice: Invoice, lang: str) -> tuple[float, dict[str, float], str, dict[str, Any] | None]:
+def _parse_and_validate_refund_request(
+    request, invoice: Invoice, lang: str
+) -> tuple[float, dict[str, float], str, dict[str, Any] | None, str]:
     already_refunded = invoice.amount_refunded or 0
     available_to_refund = invoice.amount - already_refunded
 
@@ -3202,7 +3269,25 @@ def _parse_and_validate_refund_request(request, invoice: Invoice, lang: str) -> 
     if _invoice_breakdown_has_line_items(breakdown) and refund_amount is not None:
         refund_breakdown = calculate_refund_breakdown(invoice, refund_amount, items_to_refund, lang=lang)
 
-    return refund_amount, items_to_refund, reason, refund_breakdown
+    plan_entitlement_action = request.data.get("plan_entitlement_action", PLAN_ENTITLEMENT_ACTION_CANCEL_IMMEDIATELY)
+    if plan_entitlement_action not in VALID_PLAN_ENTITLEMENT_ACTIONS:
+        raise ValidationException(
+            translation(
+                lang,
+                en=(
+                    "plan_entitlement_action must be one of: cancel_immediately, "
+                    "cancel_at_period_end, keep"
+                ),
+                es=(
+                    "plan_entitlement_action debe ser uno de: cancel_immediately, "
+                    "cancel_at_period_end, keep"
+                ),
+                slug="invalid-plan-entitlement-action",
+            ),
+            code=400,
+        )
+
+    return refund_amount, items_to_refund, reason, refund_breakdown, plan_entitlement_action
 
 
 class AcademyInvoiceRecalculateBreakdownView(APIView):
@@ -3265,7 +3350,9 @@ class AcademyInvoiceRefundView(APIView):
                 translation(lang, en="Invoice not found", es="La factura no existe", slug="not-found"), code=404
             )
 
-        refund_amount, items_to_refund, reason, refund_breakdown = _parse_and_validate_refund_request(request, invoice, lang)
+        refund_amount, items_to_refund, reason, refund_breakdown, plan_entitlement_action = (
+            _parse_and_validate_refund_request(request, invoice, lang)
+        )
 
         credit_note = process_refund(
             invoice=invoice,
@@ -3275,6 +3362,7 @@ class AcademyInvoiceRefundView(APIView):
             reason=reason,
             country_code=invoice.bag.country_code if invoice.bag else None,
             lang=lang,
+            plan_entitlement_action=plan_entitlement_action,
         )
 
         serializer = CreditNoteSerializer(credit_note, many=False)
@@ -3296,7 +3384,9 @@ class AcademyInvoiceRecordRefundView(APIView):
                 translation(lang, en="Invoice not found", es="La factura no existe", slug="not-found"), code=404
             )
 
-        refund_amount, items_to_refund, reason, refund_breakdown = _parse_and_validate_refund_request(request, invoice, lang)
+        refund_amount, items_to_refund, reason, refund_breakdown, plan_entitlement_action = (
+            _parse_and_validate_refund_request(request, invoice, lang)
+        )
 
         external_reference = request.data.get("external_reference")
         if not isinstance(external_reference, str) or not external_reference.strip():
@@ -3343,6 +3433,7 @@ class AcademyInvoiceRecordRefundView(APIView):
             external_reference=external_reference.strip(),
             stripe_refund_id=stripe_refund_id,
             lang=lang,
+            plan_entitlement_action=plan_entitlement_action,
         )
 
         serializer = CreditNoteSerializer(credit_note, many=False)
@@ -4038,6 +4129,11 @@ class PlanOfferView(APIView):
 
         return args, kwargs
 
+    def filter_by_original_plan_like(self, items, like: str):
+        return items.filter(
+            Q(original_plan__slug__icontains=like) | Q(original_plan__title__icontains=like)
+        )
+
     def get(self, request):
         handler = self.extensions(request)
 
@@ -4059,6 +4155,9 @@ class PlanOfferView(APIView):
             args, kwargs = self.get_lookup("original_plan", original_plan)
             items = items.filter(*args, **kwargs)
 
+        if like := request.GET.get("like"):
+            items = self.filter_by_original_plan_like(items, like)
+
         items = items.distinct()
         items = handler.queryset(items)
         items = items.annotate(lang=Value(lang, output_field=CharField()))
@@ -4067,6 +4166,142 @@ class PlanOfferView(APIView):
         serializer = GetPlanOfferSerializer(items, many=True, context={"country_code": country_code})
 
         return handler.response(serializer.data)
+
+
+class AcademyPlanOfferView(APIView):
+    """Manage plan upgrade offers for academy-owned plans."""
+
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    def get_academy_plan_offers(self, academy_id):
+        return PlanOffer.objects.filter(original_plan__owner_id=academy_id).select_related(
+            "original_plan", "suggested_plan"
+        )
+
+    def get_lookup(self, key, value):
+        args = ()
+        kwargs = {}
+        slug_key = f"{key}__slug__in"
+        pk_key = f"{key}__id__in"
+
+        for v in value.split(","):
+            if slug_key not in kwargs and not v.isnumeric():
+                kwargs[slug_key] = []
+
+            if pk_key not in kwargs and v.isnumeric():
+                kwargs[pk_key] = []
+
+            if v.isnumeric():
+                kwargs[pk_key].append(int(v))
+
+            else:
+                kwargs[slug_key].append(v)
+
+        if len(kwargs) > 1:
+            args = (Q(**{slug_key: kwargs[slug_key]}) | Q(**{pk_key: kwargs[pk_key]}),)
+            kwargs = {}
+
+        return args, kwargs
+
+    def filter_by_original_plan_like(self, items, like: str):
+        return items.filter(
+            Q(original_plan__slug__icontains=like) | Q(original_plan__title__icontains=like)
+        )
+
+    def get_response_context(self, request, academy_id):
+        return {
+            "academy_id": academy_id,
+            "country_code": request.GET.get("country_code"),
+        }
+
+    @capable_of("read_subscription")
+    def get(self, request, plan_offer_id=None, academy_id=None):
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+        items = self.get_academy_plan_offers(academy_id)
+
+        if plan_offer_id:
+            item = items.filter(id=plan_offer_id).first()
+            if not item:
+                raise ValidationException(
+                    translation(lang, en="Plan offer not found", es="Oferta de plan no encontrada", slug="not-found"),
+                    code=404,
+                )
+
+            serializer = GetAcademyPlanOfferSerializer(
+                item, many=False, context=self.get_response_context(request, academy_id)
+            )
+            return handler.response(serializer.data)
+
+        if suggested_plan := request.GET.get("suggested_plan"):
+            args, kwargs = self.get_lookup("suggested_plan", suggested_plan)
+            items = items.filter(*args, **kwargs)
+
+        if original_plan := request.GET.get("original_plan"):
+            args, kwargs = self.get_lookup("original_plan", original_plan)
+            items = items.filter(*args, **kwargs)
+
+        if like := request.GET.get("like"):
+            items = self.filter_by_original_plan_like(items, like)
+
+        items = handler.queryset(items.distinct())
+        serializer = GetAcademyPlanOfferSerializer(items, many=True, context=self.get_response_context(request, academy_id))
+        return handler.response(serializer.data)
+
+    @capable_of("crud_subscription")
+    def post(self, request, academy_id=None):
+        lang = get_user_language(request)
+        serializer = PlanOfferSerializer(
+            data=request.data,
+            context={"academy_id": int(academy_id), "lang": lang},
+        )
+        serializer.is_valid(raise_exception=True)
+        offer = serializer.save()
+        PlanOfferCache.clear()
+
+        response_serializer = GetAcademyPlanOfferSerializer(
+            offer, many=False, context=self.get_response_context(request, academy_id)
+        )
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+
+    @capable_of("crud_subscription")
+    def put(self, request, plan_offer_id=None, academy_id=None):
+        lang = get_user_language(request)
+        offer = self.get_academy_plan_offers(academy_id).filter(id=plan_offer_id).first()
+        if not offer:
+            raise ValidationException(
+                translation(lang, en="Plan offer not found", es="Oferta de plan no encontrada", slug="not-found"),
+                code=404,
+            )
+
+        serializer = PlanOfferSerializer(
+            offer,
+            data=request.data,
+            partial=True,
+            context={"academy_id": int(academy_id), "lang": lang},
+        )
+        serializer.is_valid(raise_exception=True)
+        offer = serializer.save()
+        PlanOfferCache.clear()
+
+        response_serializer = GetAcademyPlanOfferSerializer(
+            offer, many=False, context=self.get_response_context(request, academy_id)
+        )
+        return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+    @capable_of("crud_subscription")
+    def delete(self, request, plan_offer_id=None, academy_id=None):
+        lang = get_user_language(request)
+        offer = self.get_academy_plan_offers(academy_id).filter(id=plan_offer_id).first()
+        if not offer:
+            raise ValidationException(
+                translation(lang, en="Plan offer not found", es="Oferta de plan no encontrada", slug="not-found"),
+                code=404,
+            )
+
+        offer.delete()
+        PlanOfferCache.clear()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class CouponBaseView(APIView):

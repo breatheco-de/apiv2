@@ -1117,13 +1117,12 @@ class Plan(AbstractPriceByTime):
         help_text="Required when transitioning the plan status to DISCONTINUED",
     )
 
-    time_of_life = models.IntegerField(default=1, blank=True, null=True, help_text="Plan lifetime (e.g. 1, 2, 3, ...)")
+    time_of_life = models.IntegerField(blank=True, null=True, help_text="Plan lifetime (e.g. 1, 2, 3, ...)")
     time_of_life_unit = models.CharField(
         max_length=10,
         choices=PAY_EVERY_UNIT,
         blank=True,
         null=True,
-        default=MONTH,
         help_text="Lifetime unit (e.g. DAY, WEEK, MONTH or YEAR)",
     )
 
@@ -1223,28 +1222,17 @@ class Plan(AbstractPriceByTime):
         if self.seat_service_price and self.seat_service_price.service.type != Service.Type.SEAT:
             raise forms.ValidationError("Seat service price must be a seat service")
 
-        if not self.is_renewable and (not self.time_of_life or not self.time_of_life_unit):
-            raise forms.ValidationError("If the plan is not renewable, you must set time_of_life and time_of_life_unit")
-
         have_price = self.price_per_month or self.price_per_year or self.price_per_quarter or self.price_per_half
-
-        if self.is_renewable and have_price and (self.time_of_life or self.time_of_life_unit):
-            raise forms.ValidationError(
-                "If the plan is renewable and have price, you must not set time_of_life and " "time_of_life_unit"
-            )
-
         free_trial_available = self.trial_duration
 
-        if (
-            self.is_renewable
-            and not have_price
-            and free_trial_available
-            and (self.time_of_life or self.time_of_life_unit)
-        ):
-            raise forms.ValidationError(
-                "If the plan is renewable and a have free trial available, you must not set time_of_life "
-                "and time_of_life_unit"
-            )
+        # Renewable plans with price or free trial don't use a fixed lifetime. Clear stale defaults
+        # (e.g. time_of_life=1 / MONTH) so admin and partial API updates can save without errors.
+        if self.is_renewable and (have_price or (not have_price and free_trial_available)):
+            self.time_of_life = None
+            self.time_of_life_unit = None
+
+        if not self.is_renewable and (not self.time_of_life or not self.time_of_life_unit):
+            raise forms.ValidationError("If the plan is not renewable, you must set time_of_life and time_of_life_unit")
 
         if (
             self.is_renewable

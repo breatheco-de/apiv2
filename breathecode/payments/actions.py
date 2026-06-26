@@ -47,6 +47,7 @@ from .models import (
     SERVICE_UNITS,
     WEEK,
     YEAR,
+    AbstractIOweYou,
     AcademyPaymentSettings,
     AcademyService,
     Bag,
@@ -4848,29 +4849,72 @@ def _bag_plan_slugs(bag: Bag) -> set[str]:
     return slugs
 
 
-def _apply_refund_entitlements(invoice: Invoice, items_to_refund: dict[str, float]) -> None:
+PLAN_ENTITLEMENT_ACTION_CANCEL_IMMEDIATELY = "cancel_immediately"
+PLAN_ENTITLEMENT_ACTION_CANCEL_AT_PERIOD_END = "cancel_at_period_end"
+PLAN_ENTITLEMENT_ACTION_KEEP = "keep"
+
+VALID_PLAN_ENTITLEMENT_ACTIONS = frozenset(
+    {
+        PLAN_ENTITLEMENT_ACTION_CANCEL_IMMEDIATELY,
+        PLAN_ENTITLEMENT_ACTION_CANCEL_AT_PERIOD_END,
+        PLAN_ENTITLEMENT_ACTION_KEEP,
+    }
+)
+
+
+def _plan_slugs_in_refund_items(invoice: Invoice, items_to_refund: dict[str, float]) -> list[str]:
+    bag = invoice.bag
+    original_breakdown = invoice.amount_breakdown or {}
+    plan_slugs_in_invoice: set[str] = set()
+
+    if original_breakdown.get("plans"):
+        plan_slugs_in_invoice = set(original_breakdown["plans"].keys())
+    elif bag:
+        plan_slugs_in_invoice = _bag_plan_slugs(bag)
+
+    if not plan_slugs_in_invoice:
+        return []
+
+    return [
+        plan_slug
+        for plan_slug, refund_amount_for_plan in items_to_refund.items()
+        if plan_slug in plan_slugs_in_invoice and refund_amount_for_plan > 0
+    ]
+
+
+def _target_status_for_plan_entitlement_action(plan_entitlement_action: str) -> str | None:
+    if plan_entitlement_action == PLAN_ENTITLEMENT_ACTION_CANCEL_IMMEDIATELY:
+        return AbstractIOweYou.Status.EXPIRED
+    if plan_entitlement_action == PLAN_ENTITLEMENT_ACTION_CANCEL_AT_PERIOD_END:
+        return AbstractIOweYou.Status.CANCELLED
+    return None
+
+
+def _apply_plan_entitlement_action_to_iou(iou, target_status: str, invoice: Invoice) -> None:
+    entity = "Subscription" if isinstance(iou, Subscription) else "Plan financing"
+    iou.status = target_status
+    iou.status_message = f"{entity} {target_status.lower()} due to refund of invoice {invoice.id}"
+    iou.save()
+
+
+def _apply_refund_entitlements(
+    invoice: Invoice,
+    items_to_refund: dict[str, float],
+    plan_entitlement_action: str = PLAN_ENTITLEMENT_ACTION_CANCEL_IMMEDIATELY,
+) -> None:
     from breathecode.payments.models import PlanServiceItemHandler, SubscriptionServiceItem
 
     bag = invoice.bag
     user = invoice.user
 
-    plans_to_deprecate: list[str] = []
+    plans_to_update: list[str] = []
     service_items_to_remove: list[int] = []
 
     if items_to_refund:
+        if plan_entitlement_action != PLAN_ENTITLEMENT_ACTION_KEEP:
+            plans_to_update = _plan_slugs_in_refund_items(invoice, items_to_refund)
+
         original_breakdown = invoice.amount_breakdown or {}
-        plan_slugs_in_invoice: set[str] = set()
-
-        if original_breakdown.get("plans"):
-            plan_slugs_in_invoice = set(original_breakdown["plans"].keys())
-        elif bag:
-            plan_slugs_in_invoice = _bag_plan_slugs(bag)
-
-        if plan_slugs_in_invoice:
-            for plan_slug, refund_amount_for_plan in items_to_refund.items():
-                if plan_slug in plan_slugs_in_invoice and refund_amount_for_plan > 0:
-                    plans_to_deprecate.append(plan_slug)
-
         service_slugs_in_invoice: set[str] = set()
         if original_breakdown.get("service-items"):
             service_slugs_in_invoice = set(original_breakdown["service-items"].keys())
@@ -4886,20 +4930,23 @@ def _apply_refund_entitlements(invoice: Invoice, items_to_refund: dict[str, floa
                     for service_item in service_items:
                         service_items_to_remove.append(service_item.id)
 
-    if plans_to_deprecate:
-        plans = Plan.objects.filter(slug__in=plans_to_deprecate)
+    target_status = _target_status_for_plan_entitlement_action(plan_entitlement_action)
+    if plans_to_update and target_status:
+        plans = Plan.objects.filter(slug__in=plans_to_update)
         for plan in plans:
-            subscriptions = Subscription.objects.filter(user=user, plans__in=[plan])
-            for subscription in subscriptions:
-                subscription.status = Subscription.Status.EXPIRED
-                subscription.status_message = f"Subscription expired due to refund of invoice {invoice.id}"
-                subscription.save()
+            subscription = Subscription.objects.filter(invoices=invoice, plans=plan).first()
+            if subscription:
+                _apply_plan_entitlement_action_to_iou(subscription, target_status, invoice)
+            else:
+                for subscription in Subscription.objects.filter(user=user, plans__in=[plan]):
+                    _apply_plan_entitlement_action_to_iou(subscription, target_status, invoice)
 
-            plan_financings = PlanFinancing.objects.filter(user=user, plans__in=[plan])
-            for financing in plan_financings:
-                financing.status = PlanFinancing.Status.EXPIRED
-                financing.status_message = f"Plan financing expired due to refund of invoice {invoice.id}"
-                financing.save()
+            plan_financing = PlanFinancing.objects.filter(invoices=invoice, plans=plan).first()
+            if plan_financing:
+                _apply_plan_entitlement_action_to_iou(plan_financing, target_status, invoice)
+            else:
+                for plan_financing in PlanFinancing.objects.filter(user=user, plans__in=[plan]):
+                    _apply_plan_entitlement_action_to_iou(plan_financing, target_status, invoice)
 
     if service_items_to_remove:
         SubscriptionServiceItem.objects.filter(
@@ -4964,6 +5011,7 @@ def process_refund(
     country_code: str | None = None,
     legal_text: str | None = None,
     lang: str = "en",
+    plan_entitlement_action: str = PLAN_ENTITLEMENT_ACTION_CANCEL_IMMEDIATELY,
 ) -> "CreditNote":
     """
     Process a refund for an invoice.
@@ -4977,6 +5025,7 @@ def process_refund(
         country_code: Country code for legal compliance
         legal_text: Country-specific legal text
         lang: Language code
+        plan_entitlement_action: What to do with linked subscription/plan financing when refunding plans
 
     Returns:
         CreditNote object created for the refund
@@ -4985,6 +5034,9 @@ def process_refund(
     amount = _validate_refund_request(invoice, amount, lang)
     if breakdown is None:
         breakdown = invoice.amount_breakdown or {}
+
+    if _plan_slugs_in_refund_items(invoice, items_to_refund):
+        breakdown = {**breakdown, "plan_entitlement_action": plan_entitlement_action}
 
     refund_stripe_id = None
     if invoice.stripe_id:
@@ -5015,7 +5067,7 @@ def process_refund(
         refund_stripe_id=refund_stripe_id,
     )
 
-    _apply_refund_entitlements(invoice, items_to_refund)
+    _apply_refund_entitlements(invoice, items_to_refund, plan_entitlement_action=plan_entitlement_action)
     _reverse_credit_for_refunded_invoice(invoice)
     return credit_note
 
@@ -5031,6 +5083,7 @@ def process_refund_record_external(
     country_code: str | None = None,
     legal_text: str | None = None,
     lang: str = "en",
+    plan_entitlement_action: str = PLAN_ENTITLEMENT_ACTION_CANCEL_IMMEDIATELY,
 ) -> "CreditNote":
     """
     Record a refund that happened outside this API without calling Stripe.
@@ -5044,6 +5097,8 @@ def process_refund_record_external(
         "recorded_externally": True,
         "external_reference": external_reference,
     }
+    if _plan_slugs_in_refund_items(invoice, items_to_refund):
+        refund_breakdown["plan_entitlement_action"] = plan_entitlement_action
 
     credit_note = CreditNote.objects.create(
         invoice=invoice,
@@ -5057,7 +5112,7 @@ def process_refund_record_external(
         refund_stripe_id=stripe_refund_id,
     )
 
-    _apply_refund_entitlements(invoice, items_to_refund)
+    _apply_refund_entitlements(invoice, items_to_refund, plan_entitlement_action=plan_entitlement_action)
     _reverse_credit_for_refunded_invoice(invoice)
     return credit_note
 
@@ -7191,7 +7246,7 @@ def calculate_single_coupon_stats(coupon: Coupon) -> dict:
             payment_methods["unknown"] = payment_methods.get("unknown", 0) + 1
     
     stats["payment_methods"] = payment_methods
-    
+
     return stats
 
 
@@ -7276,3 +7331,80 @@ def validate_payment_method_for_checkout(payment_method: PaymentMethod, bag: Bag
         ),
         code=400,
     )
+
+
+def resolve_plan_for_academy(
+    plan_identifier,
+    academy_id: int,
+    lang: str,
+    *,
+    require_academy_owned: bool = False,
+    allow_global: bool = True,
+) -> "Plan":
+    from breathecode.payments.models import Plan
+
+    plan_kwargs = {}
+    if isinstance(plan_identifier, int):
+        plan_kwargs["id"] = plan_identifier
+    elif isinstance(plan_identifier, str):
+        if plan_identifier.isdigit():
+            plan_kwargs["id"] = int(plan_identifier)
+        else:
+            plan_kwargs["slug"] = plan_identifier
+    else:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Invalid plan identifier. Must be an ID or slug",
+                es="Identificador de plan inválido. Debe ser un ID o slug",
+                slug="invalid-plan-identifier",
+            ),
+            code=400,
+        )
+
+    plan = Plan.objects.filter(**plan_kwargs).exclude(status="DELETED").first()
+    if not plan:
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Plan not found: {plan_identifier}",
+                es=f"Plan no encontrado: {plan_identifier}",
+                slug="plan-not-found",
+            ),
+            code=404,
+        )
+
+    if require_academy_owned:
+        if plan.owner_id != academy_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Plan {plan_identifier} does not belong to this academy",
+                    es=f"El plan {plan_identifier} no pertenece a esta academia",
+                    slug="plan-not-belonging-to-academy",
+                ),
+                code=403,
+            )
+    elif plan.owner_id is not None and plan.owner_id != academy_id:
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Plan {plan_identifier} does not belong to this academy",
+                es=f"El plan {plan_identifier} no pertenece a esta academia",
+                slug="plan-not-belonging-to-academy",
+            ),
+            code=403,
+        )
+
+    if not allow_global and plan.owner_id is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Plan {plan_identifier} must belong to this academy",
+                es=f"El plan {plan_identifier} debe pertenecer a esta academia",
+                slug="plan-not-belonging-to-academy",
+            ),
+            code=403,
+        )
+
+    return plan

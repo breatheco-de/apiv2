@@ -71,7 +71,7 @@ Do NOT use for: creating leads (create skill), routine list/update without a fai
 
 6. **Fix lead data.** `PUT /v1/marketing/academy/lead/<id>` (manage skill).
 
-7. **Retry outbound.** `PUT /v1/marketing/academy/lead/process?id=<id>` — **skip if `DUPLICATED`**.
+7. **Retry outbound.** `PUT /v1/marketing/academy/lead/process?id=<id>` — add `sync=true` when you need the final `storage_status` in the same response. **Skip if `DUPLICATED`**.
 
 8. **Poll outcome.** Re-read lead until `PERSISTED`, `DUPLICATED`, or stable `ERROR`. Match `storage_status_text` to lookup table below if still failing.
 
@@ -99,7 +99,7 @@ All staff endpoints require `Authorization`, `Academy`, optional `Accept-Languag
 | Sync tags from AC | GET | `/v1/marketing/academy/<academy_id>/tag/sync` | `crud_lead` |
 | Sync automations from AC | GET | `/v1/marketing/academy/<academy_id>/automation/sync` | `crud_lead` |
 | Fix lead fields | PUT | `/v1/marketing/academy/lead/<id>` | `crud_lead` |
-| Retry CRM outbound | PUT | `/v1/marketing/academy/lead/process?id=<id>` | `crud_lead` |
+| Retry CRM outbound | PUT | `/v1/marketing/academy/lead/process?id=<id>` | `crud_lead` | Optional `sync=true` for inline processing |
 
 #### Example — read failing lead
 

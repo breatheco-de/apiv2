@@ -62,23 +62,35 @@ def generate_cohort_certificates(self, cohort_id, **_):
 
 @task(bind=True, priority=TaskPriority.CERTIFICATE.value)
 def async_generate_certificate(self, cohort_id, user_id, layout=None, **_):
-    logger.info("Starting generate_cohort_certificates", slug="starting-generating-certificate")
+    logger.info(
+        "[GENERATE_CERTIFICATE] async task start cohort_id=%s user_id=%s layout=%s",
+        cohort_id,
+        user_id,
+        layout,
+    )
     from .actions import generate_certificate
 
     cohort_user = CohortUser.objects.filter(cohort__id=cohort_id, user__id=user_id, role="STUDENT").first()
 
     if not cohort_user:
-        logger.error(f"Cant generate certificate with {user_id}", slug="cohort-user-not-found")
+        logger.warning(
+            "[GENERATE_CERTIFICATE] async task aborted reason=cohort-user-not-found cohort_id=%s user_id=%s",
+            cohort_id,
+            user_id,
+        )
         return
 
     logger.info(
-        f"Generating gertificate for {str(cohort_user.user)} student that GRADUATED", slug="generating-certificate"
+        "[GENERATE_CERTIFICATE] async task calling generate_certificate cohort_id=%s user_id=%s",
+        cohort_id,
+        user_id,
     )
     try:
         generate_certificate(cohort_user.user, cohort_user.cohort, layout)
 
     except Exception:
         logger.exception(
-            f"Error generating certificate for {str(cohort_user.user.id)}, cohort {str(cohort_user.cohort.id)}",
-            slug="error-generating-certificate",
+            "[GENERATE_CERTIFICATE] async task unhandled error cohort_id=%s user_id=%s",
+            cohort_id,
+            user_id,
         )

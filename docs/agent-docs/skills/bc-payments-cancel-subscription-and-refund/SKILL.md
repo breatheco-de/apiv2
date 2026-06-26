@@ -16,6 +16,7 @@ Do NOT use this skill for void consumption reversals, mentorship session reimbur
 
 - Canceling a subscription changes its status and billing behavior, but does not return money by itself.
 - Refunding an invoice returns money for a specific paid charge and requires explicit amount allocation by item slug.
+- When refunding plan amounts, `plan_entitlement_action` on the refund request decides whether to expire immediately (`cancel_immediately`, default), cancel at period end (`cancel_at_period_end`), or leave billing unchanged (`keep`).
 - Staff refund decisions are invoice-based, so the flow should resolve invoice data before sending refund requests.
 - **Payment rail and where the money goes:** The refund request body does **not** choose a destination card or bank account. What happens depends on how that invoice was paid, as reflected on the invoice:
   - If `stripe_id` is set (Stripe charge id): submitting `POST .../invoice/{invoice_id}/refund` triggers a **Stripe refund** for that charge. Stripe returns funds to the **same payment method that was charged** (for example the same card). How long until the customer sees the credit is governed by **Stripe and the issuer**, not by this API—use cautious copy (for example “refund initiated; may take several business days to appear on the statement”).
@@ -48,6 +49,7 @@ Do NOT use this skill for void consumption reversals, mentorship session reimbur
    - Confirm invoice has refundable balance: `amount - amount_refunded > 0`.
    - Build `items_to_refund` from invoice `amount_breakdown` slugs.
    - Ensure `refund_amount` equals the sum of `items_to_refund` values.
+   - Ask what should happen to the plan when refunding plan slugs: `cancel_immediately`, `cancel_at_period_end`, or `keep` (`plan_entitlement_action` on the refund body; defaults to `cancel_immediately`).
 
 7. Submit refund request.
    - If the refund should move money now, call `POST /v1/payments/academy/invoice/{invoice_id}/refund`.
@@ -269,6 +271,7 @@ Sample response (subset):
   - `items_to_refund` (object mapping item slug to amount)
 - Optional body fields:
   - `reason` (string)
+  - `plan_entitlement_action` (string): `cancel_immediately` (default) | `cancel_at_period_end` | `keep` — only applies when `items_to_refund` includes plan slugs
 - Relevant response fields: credit note `id`, `invoice`, `amount`, `status`, `refund_stripe_id`.
 - **Stripe vs non-Stripe:** If the invoice had `stripe_id`, the backend refunds via Stripe first, then creates the credit note; the response may include `refund_stripe_id`. If the invoice had no `stripe_id`, there is no Stripe refund call—only internal invoice state updates—so do not tell the customer that their card was refunded through Stripe unless `stripe_id` was present on the invoice.
 
@@ -280,6 +283,7 @@ Sample request body:
   "items_to_refund": {
     "full-stack-plan": 120.0
   },
+  "plan_entitlement_action": "cancel_at_period_end",
   "reason": "Customer requested cancellation during trial period."
 }
 ```
@@ -313,6 +317,7 @@ Sample response (subset):
 - Optional body fields:
   - `reason` (string)
   - `stripe_refund_id` (string, max 32 chars) when an external Stripe refund id already exists
+  - `plan_entitlement_action` (string): same values as `/refund`
 - Relevant response fields: credit note `id`, `invoice`, `amount`, `status`, `refund_stripe_id`.
 - **Important:** this endpoint records the refund in BreatheCode without creating a new Stripe refund. Use it to avoid double refunding when money already moved outside this API.
 

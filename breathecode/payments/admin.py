@@ -1092,7 +1092,12 @@ class PlanOfferTranslationAdmin(admin.ModelAdmin):
 class AcademyServiceAdmin(admin.ModelAdmin):
     list_display = ("service", "academy", "price_per_unit", "currency", "bundle_size", "max_amount")
     list_filter = ["academy", "currency"]
-    search_fields = ["service"]
+    search_fields = [
+        "service__slug",
+        "service__title",
+        "academy__slug",
+        "academy__name",
+    ]
     raw_id_fields = ["service", "academy"]
 
 

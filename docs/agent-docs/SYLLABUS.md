@@ -243,9 +243,12 @@ curl -X POST "https://your-api.com/v1/admissions/syllabus/1/version" \
 ```json
 {
   "slug": "lesson-slug",
+  "id": 12345,
   "title": "Lesson Title"
 }
 ```
+
+Note: `id` is the registry asset id. It is auto-populated when the syllabus version is saved; clients may omit it on input.
 
 #### **Quizzes**
 ```json
@@ -792,9 +795,10 @@ curl -X POST "https://api.breatheco.de/v1/admissions/syllabus/test" \
 
 1. **Required Fields**: Each day must have `id` and `label`
 2. **Asset Slugs**: All asset slugs must be strings
-3. **Asset Existence**: Referenced assets must exist in the system
-4. **Teacher Instructions**: Should not be empty (warning only)
-5. **Unique IDs**: Day IDs should be unique within the syllabus
+3. **Asset IDs**: Optional on input; auto-populated on save from the resolved registry asset
+4. **Asset Existence**: Referenced assets must exist in the system
+5. **Teacher Instructions**: Should not be empty (warning only)
+6. **Unique IDs**: Day IDs should be unique within the syllabus
 
 ---
 

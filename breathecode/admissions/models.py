@@ -446,6 +446,11 @@ class SyllabusVersion(models.Model):
 
     def save(self, *args, **kwargs):
 
+        if self.json is not None:
+            from breathecode.admissions.actions import enrich_syllabus_asset_ids
+
+            self.json = enrich_syllabus_asset_ids(self.json)
+
         json_modified = False
 
         if self.__json_hash != self.hashed_json():
