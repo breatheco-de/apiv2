@@ -8,7 +8,7 @@ from capyc.rest_framework.exceptions import PaymentException, ValidationExceptio
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.db import transaction
-from django.db.models import CharField, Count, F, Q, QuerySet, Value
+from django.db.models import CharField, Count, Exists, F, OuterRef, Q, QuerySet, Value
 from django.utils import timezone
 from django_redis import get_redis_connection
 from linked_services.rest_framework.decorators import scope
@@ -29,10 +29,10 @@ from breathecode.mentorship.models import MentorshipService
 from breathecode.payments import actions, tasks
 from breathecode.payments.actions import (
     PlanFinder,
+    _invoice_breakdown_has_line_items,
     add_items_to_bag,
     apply_pricing_ratio,
     calculate_refund_breakdown,
-    _invoice_breakdown_has_line_items,
     ensure_invoice_amount_breakdown,
     filter_consumables,
     filter_void_consumable_balance,
@@ -98,7 +98,6 @@ from breathecode.payments.serializers import (
     GetFinancingOptionSerializer,
     GetInvoiceSerializer,
     GetInvoiceSmallSerializer,
-    GetUserCreditLedgerEntrySerializer,
     GetMentorshipServiceSetSerializer,
     GetMentorshipServiceSetSmallSerializer,
     GetPaymentMethod,
@@ -108,6 +107,7 @@ from breathecode.payments.serializers import (
     GetServiceItemWithFeaturesSerializer,
     GetServiceSerializer,
     GetSubscriptionSerializer,
+    GetUserCreditLedgerEntrySerializer,
     MentorshipServiceSetSerializer,
     PaymentMethodSerializer,
     PlanSerializer,
@@ -6979,6 +6979,21 @@ class PaymentMethodView(APIView):
         )
 
         items = PaymentMethod.objects.filter(query).prefetch_related("plans")
+
+        if plan_slug := request.GET.get("plan"):
+            plan = Plan.objects.filter(slug=plan_slug).first()
+            if not plan:
+                raise ValidationException(
+                    translation(lang, en="Plan not found", es="No existe el Plan", slug="not-found"),
+                    code=404,
+                )
+
+            # PaymentMethod.plans empty means all plans; otherwise only list methods linked to this plan.
+            items = (
+                items.annotate(_plan_count=Count("plans", distinct=True))
+                .filter(Q(_plan_count=0) | Q(plans=plan))
+                .distinct()
+            )
 
         items = handler.queryset(items)
         serializer = GetPaymentMethod(items, many=True)
