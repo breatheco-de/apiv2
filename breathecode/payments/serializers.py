@@ -4,6 +4,7 @@ from typing import Any
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from django.core.exceptions import FieldDoesNotExist, ValidationError as DjangoValidationError
+from django.core.validators import URLValidator
 from django.db import transaction
 from django.db.models.query_utils import Q
 from rest_framework.exceptions import ValidationError
@@ -1645,6 +1646,7 @@ class GetPaymentMethod(serpy.Serializer):
     is_financing_managed_by_provider = serpy.Field()
     description = serpy.Field()
     third_party_link = serpy.Field()
+    logo_urls = serpy.Field()
     provider_settings = serpy.Field()
     academy = GetAcademySmallSerializer(required=False, many=False)
     currency = GetCurrencySmallSerializer(required=False, many=False)
@@ -1671,6 +1673,7 @@ class PaymentMethodSerializer(serializers.ModelSerializer):
             "title",
             "description",
             "third_party_link",
+            "logo_urls",
             "provider_settings",
             "plans",
             "is_backed",
@@ -1684,6 +1687,33 @@ class PaymentMethodSerializer(serializers.ModelSerializer):
             "visibility",
             "deprecated",
         )
+
+    def validate_logo_urls(self, value):
+        if value in (None, ""):
+            return []
+
+        if not isinstance(value, list):
+            raise serializers.ValidationError("logo_urls must be a list")
+
+        if len(value) > 10:
+            raise serializers.ValidationError("logo_urls cannot contain more than 10 items")
+
+        url_validator = URLValidator()
+        validated_urls = []
+
+        for item in value:
+            if not isinstance(item, str) or not item.strip():
+                raise serializers.ValidationError("Each logo URL must be a non-empty string")
+
+            url = item.strip()
+            try:
+                url_validator(url)
+            except DjangoValidationError:
+                raise serializers.ValidationError(f"Invalid logo URL: {url}")
+
+            validated_urls.append(url)
+
+        return validated_urls
 
     def validate_provider_settings(self, value):
         if value in (None, ""):

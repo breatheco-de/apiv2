@@ -1715,6 +1715,11 @@ class PaymentMethod(models.Model):
     third_party_link = models.URLField(
         blank=True, null=True, default=None, help_text="Link of a third party payment method"
     )
+    logo_urls = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Public logo URLs to display in checkout for this payment method",
+    )
     lang = models.CharField(
         max_length=5,
         validators=[validate_language_code],

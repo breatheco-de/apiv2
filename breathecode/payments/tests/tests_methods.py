@@ -60,6 +60,103 @@ def test_methods__with_data(client, database: capy.Database):
     assert len(database.list_of("payments.PaymentMethod")) == 2
 
 
+@pytest.mark.django_db
+def test_methods__returns_logo_urls(client, database: capy.Database):
+    logo_urls = [
+        "https://cdn.example.com/klarna.svg",
+        "https://cdn.example.com/affirm.svg",
+    ]
+    database.create(
+        city=1,
+        country=1,
+        currency=1,
+        academy=1,
+        payment_method={
+            "academy_id": 1,
+            "currency_id": 1,
+            "title": "Buy now, pay later",
+            "lang": "en-US",
+            "logo_urls": logo_urls,
+        },
+    )
+
+    response = client.get(reverse_lazy("payments:methods"))
+    json_response = response.json()
+
+    assert response.status_code == 200
+    assert len(json_response) == 1
+    assert json_response[0]["logo_urls"] == logo_urls
+
+
+@pytest.mark.django_db
+def test_academy_paymentmethod__create_with_logo_urls(client, database: capy.Database):
+    model = database.create(
+        city=1,
+        country=1,
+        currency=1,
+        academy=1,
+        user=1,
+        role=1,
+        capability="crud_paymentmethod",
+        profile_academy=1,
+    )
+    logo_urls = ["https://cdn.example.com/visa.svg"]
+
+    client.force_authenticate(user=model.user)
+
+    url = reverse_lazy("payments:academy_paymentmethod", kwargs={"academy_id": 1})
+    response = client.post(
+        url,
+        {
+            "title": "Credit Card",
+            "description": "Pay with card",
+            "lang": "en-US",
+            "is_credit_card": True,
+            "currency": "USD",
+            "logo_urls": logo_urls,
+        },
+        format="json",
+        headers={"Academy": "1"},
+    )
+
+    assert response.status_code == 201
+    assert response.json()["logo_urls"] == logo_urls
+
+
+@pytest.mark.django_db
+def test_academy_paymentmethod__reject_invalid_logo_urls(client, database: capy.Database):
+    model = database.create(
+        city=1,
+        country=1,
+        currency=1,
+        academy=1,
+        user=1,
+        role=1,
+        capability="crud_paymentmethod",
+        profile_academy=1,
+    )
+
+    client.force_authenticate(user=model.user)
+
+    url = reverse_lazy("payments:academy_paymentmethod", kwargs={"academy_id": 1})
+    response = client.post(
+        url,
+        {
+            "title": "Credit Card",
+            "description": "Pay with card",
+            "lang": "en-US",
+            "is_credit_card": True,
+            "currency": "USD",
+            "logo_urls": ["not-a-url"],
+        },
+        format="json",
+        headers={"Academy": "1"},
+    )
+
+    assert response.status_code == 400
+    assert "logo_urls" in response.json()
+
+
 # --- Grouped Country Code Filter Tests ---
 
 

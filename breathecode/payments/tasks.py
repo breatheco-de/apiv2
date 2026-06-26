@@ -479,23 +479,26 @@ def notify_subscription_renewal(self, subscription_id: int, **_: Any):
     if utc_now < subscription.next_payment_at - timedelta(days=early_renewal_window_days):
         raise AbortTask(f"Subscription {subscription_id} renewal is scheduled too early")
 
+    plan = subscription.plans.first()
+    plan_title = plan.title or plan.slug if plan else "plan"
+
     renewal_date = subscription.next_payment_at.strftime("%B %d, %Y")
     params = {
-        "plan": subscription.plans.first().slug,
+        "plan": plan.slug if plan else "",
         "subscription_id": subscription.id,
     }
 
     days_until_renewal = (subscription.next_payment_at - utc_now).days
     subject = translation(
         settings.lang,
-        en=f"Your 4Geeks subscription renews in {days_until_renewal} days",
-        es=f"Tu suscripción 4Geeks se renueva en {days_until_renewal} días",
+        en=f"Your {plan_title} subscription renews in {days_until_renewal} days",
+        es=f"Tu suscripción {plan_title} se renueva en {days_until_renewal} días",
     )
 
     message = translation(
         settings.lang,
-        en=f"Your subscription will renew on {renewal_date}. If you have a credit card registered, it will be used automatically, or you can pay in advance with another method:",
-        es=f"Tu suscripción se renovará el {renewal_date}. Si tienes una tarjeta de crédito registrada, se utilizará automáticamente, o puedes pagar por adelantado con otro método:",
+        en=f"Your {plan_title} subscription will renew on {renewal_date}. If you have a credit card registered, it will be used automatically, or you can pay in advance with another method:",
+        es=f"Tu suscripción {plan_title} se renovará el {renewal_date}. Si tienes una tarjeta de crédito registrada, se utilizará automáticamente, o puedes pagar por adelantado con otro método:",
     )
 
     button = translation(settings.lang, en="Pay Now", es="Pagar Ahora")
@@ -955,28 +958,31 @@ def notify_plan_financing_renewal(self, plan_financing_id: int, **_: Any):
 
     next_installment = paid_installments + 1
 
+    plan = plan_financing.plans.first()
+    plan_title = plan.title or plan.slug if plan else "plan"
+
     renewal_date = plan_financing.next_payment_at.strftime("%B %d, %Y")
 
     days_until_renewal = (plan_financing.next_payment_at - utc_now).days
 
     subject = translation(
         settings.lang,
-        en=f"Your installment payment is due in {days_until_renewal} days",
-        es=f"Tu pago de cuota vence en {days_until_renewal} días",
+        en=f"Your {plan_title} installment payment is due in {days_until_renewal} days",
+        es=f"El pago de cuota de {plan_title} vence en {days_until_renewal} días",
     )
 
     message = translation(
         settings.lang,
-        en=f"On {renewal_date}, you need to pay the installment {next_installment} of your plan. If you have a credit card registered, "
+        en=f"On {renewal_date}, you need to pay installment {next_installment} of {plan_title}. If you have a credit card registered, "
         "it will be used automatically, or you can pay in advance with another method",
-        es=f"El {renewal_date} debes realizar el pago de la cuota {next_installment} de tu plan. Si tienes una tarjeta de crédito registrada, "
+        es=f"El {renewal_date} debes realizar el pago de la cuota {next_installment} de {plan_title}. Si tienes una tarjeta de crédito registrada, "
         "se utilizará automáticamente, o puedes pagar por adelantado con otro método:",
     )
 
     button = translation(settings.lang, en="Pay Now", es="Pagar Ahora")
 
     params = {
-        "plan": plan_financing.plans.first().slug,
+        "plan": plan.slug if plan else "",
         "plan_financing_id": plan_financing.id,
     }
 

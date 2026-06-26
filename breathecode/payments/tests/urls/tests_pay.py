@@ -138,6 +138,17 @@ def get_amount_per_period(period, data):
     return data[CHOSEN_PERIOD[period]]
 
 
+def create_credit_card_payment_method(academy):
+    return PaymentMethod.objects.create(
+        academy=academy,
+        title="Credit Card",
+        description="Credit card",
+        lang="en-US",
+        is_credit_card=True,
+        is_backed=True,
+    )
+
+
 def invoice_mock():
 
     class FakeInvoice:
@@ -586,12 +597,15 @@ def test_amount_set_with_subscription_seats(bc: Breathecode, client: APIClient):
     )
     client.force_authenticate(user=model.user)
 
+    payment_method = create_credit_card_payment_method(model.academy)
+
     # the seat price is already included in the bag amount, it was added during checking
     amount = get_amount_per_period(chosen_period, bc.format.to_dict(model.bag))
 
     url = reverse_lazy("payments:pay")
     data = {
         "token": "xdxdxdxdxdxdxdxdxdxd",
+        "payment_method_id": payment_method.id,
         "chosen_period": chosen_period,
     }
     response = client.post(url, data, format="json")
@@ -719,9 +733,12 @@ def test_with_chosen_period__amount_set(bc: Breathecode, client: APIClient):
     model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1)
     client.force_authenticate(user=model.user)
 
+    payment_method = create_credit_card_payment_method(model.academy)
+
     url = reverse_lazy("payments:pay")
     data = {
         "token": "xdxdxdxdxdxdxdxdxdxd",
+        "payment_method_id": payment_method.id,
         "chosen_period": chosen_period,
     }
     response = client.post(url, data, format="json")
@@ -788,9 +805,12 @@ def test_with_chosen_period__amount_set_with_conversion_info(bc: Breathecode, cl
     model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1)
     client.force_authenticate(user=model.user)
 
+    payment_method = create_credit_card_payment_method(model.academy)
+
     url = reverse_lazy("payments:pay")
     data = {
         "token": "xdxdxdxdxdxdxdxdxdxd",
+        "payment_method_id": payment_method.id,
         "chosen_period": chosen_period,
         "conversion_info": {"landing_url": "/home"},
     }
@@ -982,9 +1002,12 @@ def test_with_installments(bc: Breathecode, client: APIClient):
     )
     client.force_authenticate(user=model.user)
 
+    payment_method = create_credit_card_payment_method(model.academy)
+
     url = reverse_lazy("payments:pay")
     data = {
         "token": "xdxdxdxdxdxdxdxdxdxd",
+        "payment_method_id": payment_method.id,
         "how_many_installments": how_many_installments,
     }
     response = client.post(url, data, format="json")
@@ -1065,9 +1088,12 @@ def test_with_installments_with_conversion_info(bc: Breathecode, client: APIClie
     )
     client.force_authenticate(user=model.user)
 
+    payment_method = create_credit_card_payment_method(model.academy)
+
     url = reverse_lazy("payments:pay")
     data = {
         "token": "xdxdxdxdxdxdxdxdxdxd",
+        "payment_method_id": payment_method.id,
         "how_many_installments": how_many_installments,
         "conversion_info": {"landing_url": "/home"},
     }
@@ -1172,9 +1198,12 @@ def test_coupons__with_installments(bc: Breathecode, client: APIClient):
     )
     client.force_authenticate(user=model.user)
 
+    payment_method = create_credit_card_payment_method(model.academy)
+
     url = reverse_lazy("payments:pay")
     data = {
         "token": "xdxdxdxdxdxdxdxdxdxd",
+        "payment_method_id": payment_method.id,
         "how_many_installments": how_many_installments,
     }
     response = client.post(url, data, format="json")
@@ -1270,9 +1299,12 @@ def test_coupons__with_chosen_period__amount_set(bc: Breathecode, client: APICli
     model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1, coupon=coupons)
     client.force_authenticate(user=model.user)
 
+    payment_method = create_credit_card_payment_method(model.academy)
+
     url = reverse_lazy("payments:pay")
     data = {
         "token": "xdxdxdxdxdxdxdxdxdxd",
+        "payment_method_id": payment_method.id,
         "chosen_period": chosen_period,
     }
     response = client.post(url, data, format="json")
@@ -1364,9 +1396,12 @@ def test_coupons__with_chosen_period__amount_set_with_conversion_info(bc: Breath
     model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1, coupon=coupons)
     client.force_authenticate(user=model.user)
 
+    payment_method = create_credit_card_payment_method(model.academy)
+
     url = reverse_lazy("payments:pay")
     data = {
         "token": "xdxdxdxdxdxdxdxdxdxd",
+        "payment_method_id": payment_method.id,
         "chosen_period": chosen_period,
         "conversion_info": {"landing_url": "/home"},
     }
@@ -1477,10 +1512,12 @@ def test_pay_for_plan_financing_with_country_code_and_ratio(
     model.plan.save()
 
     client.force_authenticate(user=model.user)
+    payment_method = create_credit_card_payment_method(model.academy)
     url = reverse_lazy("payments:pay")
     data = {
         "token": model.bag.token,
         "how_many_installments": model.bag.how_many_installments,
+        "payment_method_id": payment_method.id,
     }
     response = client.post(url, data, format="json")
 
@@ -1637,10 +1674,12 @@ def test_pay_for_plan_financing_with_country_code_and_price_override(
     model.plan.save()
 
     client.force_authenticate(user=model.user)
+    payment_method = create_credit_card_payment_method(model.academy)
     url = reverse_lazy("payments:pay")
     data = {
         "token": model.bag.token,
         "how_many_installments": model.bag.how_many_installments,
+        "payment_method_id": payment_method.id,
     }
     response = client.post(url, data, format="json")
 

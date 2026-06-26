@@ -5499,10 +5499,20 @@ class PayView(APIView):
                         )
                     )
 
-                payment_method = request.data.get("payment_method")
                 payment_method_id = request.data.get("payment_method_id")
                 selected_payment_method = None
-                if amount > 0 and payment_method_id:
+                if amount > 0:
+                    if not payment_method_id:
+                        raise ValidationException(
+                            translation(
+                                lang,
+                                en="Payment method is required",
+                                es="El método de pago es requerido",
+                                slug="payment-method-required",
+                            ),
+                            code=400,
+                        )
+
                     selected_payment_method = PaymentMethod.objects.filter(
                         Q(academy=bag.academy) | Q(academy__isnull=True),
                         id=payment_method_id,
@@ -5606,11 +5616,63 @@ class PayView(APIView):
                             status=status.HTTP_201_CREATED,
                         )
 
-                    if selected_payment_method.is_crypto:
-                        payment_method = "coinbase"
-                    elif selected_payment_method.is_credit_card:
-                        payment_method = "stripe"
-                    else:
+                    elif selected_payment_method.is_crypto:
+                        if amount < 0.001:
+                            raise ValidationException(
+                                translation(
+                                    lang,
+                                    en="Coinbase doesn't process amounts lower than 0.001",
+                                    es="Coinbase no procesa montos menores a 0.001",
+                                    slug="amount-is-too-low",
+                                ),
+                                code=400,
+                            )
+
+                        return_url = request.data.get("return_url")
+
+                        if not return_url:
+                            logger.warning(
+                                f"Missing return_url for Coinbase payment - user_id={request.user.id}, bag_id={bag.id}"
+                            )
+                            raise ValidationException(
+                                translation(
+                                    lang,
+                                    en="Return url is required",
+                                    es="Return url es requerido",
+                                    slug="return-url-required",
+                                ),
+                                code=400,
+                            )
+
+                        coinbase = CoinbaseCommerce(academy=bag.academy)
+                        coinbase.set_language(lang)
+                        charge = coinbase.create_charge(
+                            bag=bag,
+                            amount=amount,
+                            metadata={
+                                "bag_id": bag.id,
+                                "user_id": request.user.id,
+                                "amount": str(amount),
+                                "chosen_period": chosen_period,
+                                "how_many_installments": bag.how_many_installments,
+                                "is_recurrent": recurrent,
+                                "original_price": original_price,
+                                "selected_cohort": request.GET.get("selected_cohort"),
+                                "user_email": request.user.email,
+                            },
+                            return_url=return_url,
+                        )
+
+                        # Stop the flow here, a webhook will finish the process and create the invoice
+                        logger.info(
+                            f"PayView: Coinbase charge created - charge_id={charge['id']}, hosted_url={charge.get('hosted_url')}"
+                        )
+                        return Response(
+                            {"hosted_url": charge.get("hosted_url"), "charge_id": charge.get("id")},
+                            status=status.HTTP_201_CREATED,
+                        )
+
+                    elif not selected_payment_method.is_credit_card:
                         raise ValidationException(
                             translation(
                                 lang,
@@ -5620,73 +5682,6 @@ class PayView(APIView):
                             ),
                             code=400,
                         )
-
-                if amount > 0 and payment_method == "coinbase":
-                    if amount < 0.001:
-                        raise ValidationException(
-                            translation(
-                                lang,
-                                en="Coinbase doesn't process amounts lower than 0.001",
-                                es="Coinbase no procesa montos menores a 0.001",
-                                slug="amount-is-too-low",
-                            ),
-                            code=400,
-                        )
-
-                    return_url = request.data.get("return_url")
-
-                    if not return_url:
-                        logger.warning(
-                            f"Missing return_url for Coinbase payment - user_id={request.user.id}, bag_id={bag.id}"
-                        )
-                        raise ValidationException(
-                            translation(
-                                lang,
-                                en="Return url is required",
-                                es="Return url es requerido",
-                                slug="return-url-required",
-                            ),
-                            code=400,
-                        )
-
-                    coinbase = CoinbaseCommerce(academy=bag.academy)
-                    coinbase.set_language(lang)
-                    charge = coinbase.create_charge(
-                        bag=bag,
-                        amount=amount,
-                        metadata={
-                            "bag_id": bag.id,
-                            "user_id": request.user.id,
-                            "amount": str(amount),
-                            "chosen_period": chosen_period,
-                            "how_many_installments": bag.how_many_installments,
-                            "is_recurrent": recurrent,
-                            "original_price": original_price,
-                            "selected_cohort": request.GET.get("selected_cohort"),
-                            "user_email": request.user.email,
-                        },
-                        return_url=return_url,
-                    )
-
-                    # Stop the flow here, a webhook will finish the process and create the invoice
-                    logger.info(
-                        f"PayView: Coinbase charge created - charge_id={charge['id']}, hosted_url={charge.get('hosted_url')}"
-                    )
-                    return Response(
-                        {"hosted_url": charge.get("hosted_url"), "charge_id": charge.get("id")},
-                        status=status.HTTP_201_CREATED,
-                    )
-
-                if amount > 0 and payment_method != "stripe":
-                    raise ValidationException(
-                        translation(
-                            lang,
-                            en="Payment method not supported",
-                            es="Método de pago no soportado",
-                            slug="payment-method-not-supported",
-                        ),
-                        code=400,
-                    )
 
                 if amount >= 0.50:
                     s = Stripe(academy=bag.academy)
@@ -6348,10 +6343,9 @@ class RenewSubscriptionView(APIView):
         lang = get_user_language(request)
         settings = get_user_settings(request.user.id)
         subscription_id = request.data.get("subscription")
-        payment_method = request.data.get("payment_method")
         payment_method_id = request.data.get("payment_method_id")
 
-        if not payment_method and not payment_method_id:
+        if not payment_method_id:
             raise ValidationException(
                 translation(lang, en="Payment method is required", es="El método de pago es requerido"),
                 slug="payment-method-required",
@@ -6480,69 +6474,58 @@ class RenewSubscriptionView(APIView):
             with transaction.atomic():
                 plan = subscription.plans.first()
 
-                if payment_method_id:
-                    existing_bag = (
-                        Bag.objects.filter(
-                            user=subscription.user,
-                            status="RENEWAL",
-                            plans=plan,
-                            amount_per_month=plan.price_per_month if plan else 0,
-                            amount_per_quarter=plan.price_per_quarter if plan else 0,
-                            amount_per_half=plan.price_per_half if plan else 0,
-                            amount_per_year=plan.price_per_year if plan else 0,
-                            was_delivered=False,
-                            created_at__gte=utc_now - timedelta(hours=24),
-                        )
-                        .order_by("-created_at")
-                        .first()
+                existing_bag = (
+                    Bag.objects.filter(
+                        user=subscription.user,
+                        status="RENEWAL",
+                        plans=plan,
+                        amount_per_month=plan.price_per_month if plan else 0,
+                        amount_per_quarter=plan.price_per_quarter if plan else 0,
+                        amount_per_half=plan.price_per_half if plan else 0,
+                        amount_per_year=plan.price_per_year if plan else 0,
+                        was_delivered=False,
+                        created_at__gte=utc_now - timedelta(hours=24),
+                    )
+                    .order_by("-created_at")
+                    .first()
+                )
+
+                bag = existing_bag or actions.get_bag_from_subscription(subscription, settings)
+
+                if not bag:
+                    raise ValidationException(
+                        translation(lang, en="Error getting bag", es="Error al obtener la bolsa"),
+                        slug="error-getting-bag",
+                        code=404,
                     )
 
-                    bag = existing_bag or actions.get_bag_from_subscription(subscription, settings)
+                original_price = actions.get_amount_by_chosen_period(bag, bag.chosen_period, lang)
+                amount = original_price
 
-                    if not bag:
-                        raise ValidationException(
-                            translation(lang, en="Error getting bag", es="Error al obtener la bolsa"),
-                            slug="error-getting-bag",
-                            code=404,
-                        )
+                coupons = bag.coupons.all()
+                if coupons:
+                    amount = actions.get_discounted_price(amount, list(coupons))
 
-                    original_price = actions.get_amount_by_chosen_period(bag, bag.chosen_period, lang)
-                    amount = original_price
+                selected_payment_method = PaymentMethod.objects.filter(
+                    Q(academy=subscription.academy) | Q(academy__isnull=True),
+                    id=payment_method_id,
+                ).first()
 
-                    coupons = bag.coupons.all()
-                    if coupons:
-                        amount = actions.get_discounted_price(amount, list(coupons))
+                if not selected_payment_method:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en="Payment method not found",
+                            es="Método de pago no encontrado",
+                            slug="payment-method-not-found",
+                        ),
+                        code=404,
+                    )
 
-                    selected_payment_method = PaymentMethod.objects.filter(
-                        Q(academy=subscription.academy) | Q(academy__isnull=True),
-                        id=payment_method_id,
-                    ).first()
+                validate_payment_method_for_checkout(selected_payment_method, bag, lang)
 
-                    if not selected_payment_method:
-                        raise ValidationException(
-                            translation(
-                                lang,
-                                en="Payment method not found",
-                                es="Método de pago no encontrado",
-                                slug="payment-method-not-found",
-                            ),
-                            code=404,
-                        )
-
-                    validate_payment_method_for_checkout(selected_payment_method, bag, lang)
-
-                    stripe_payment_method_types = selected_payment_method.get_stripe_payment_method_types()
-                    if not stripe_payment_method_types:
-                        raise ValidationException(
-                            translation(
-                                lang,
-                                en="Payment method not supported",
-                                es="Método de pago no soportado",
-                                slug="payment-method-not-supported",
-                            ),
-                            code=400,
-                        )
-
+                stripe_payment_method_types = selected_payment_method.get_stripe_payment_method_types()
+                if stripe_payment_method_types:
                     if amount < 0.50:
                         raise ValidationException(
                             translation(
@@ -6608,41 +6591,7 @@ class RenewSubscriptionView(APIView):
                         status=status.HTTP_201_CREATED,
                     )
 
-                if payment_method == "coinbase":
-                    existing_bag = (
-                        Bag.objects.filter(
-                            user=subscription.user,
-                            status="RENEWAL",
-                            plans=subscription.plans.first(),
-                            amount_per_month=subscription.plans.first().price_per_month,
-                            amount_per_quarter=subscription.plans.first().price_per_quarter,
-                            amount_per_half=subscription.plans.first().price_per_half,
-                            amount_per_year=subscription.plans.first().price_per_year,
-                            was_delivered=False,
-                            created_at__gte=utc_now - timedelta(hours=24),
-                        )
-                        .order_by("-created_at")
-                        .first()
-                    )
-
-                    if existing_bag:
-                        bag = existing_bag
-                    else:
-                        bag = actions.get_bag_from_subscription(subscription, settings)
-
-                    if not bag:
-                        raise ValidationException(
-                            translation(lang, en="Error getting bag", es="Error al obtener la bolsa"),
-                            slug="error-getting-bag",
-                            code=404,
-                        )
-
-                    amount = actions.get_amount_by_chosen_period(bag, bag.chosen_period, lang)
-
-                    coupons = bag.coupons.all()
-                    if coupons:
-                        amount = actions.get_discounted_price(amount, coupons)
-
+                if selected_payment_method.is_crypto:
                     return_url = request.data.get("return_url")
 
                     coinbase = CoinbaseCommerce(academy=subscription.academy)
@@ -6673,14 +6622,7 @@ class RenewSubscriptionView(APIView):
                         status=status.HTTP_200_OK,
                     )
 
-                else:
-                    bag = actions.get_bag_from_subscription(subscription, settings)
-                    amount = actions.get_amount_by_chosen_period(bag, bag.chosen_period, lang)
-
-                    coupons = bag.coupons.all()
-                    if coupons:
-                        amount = actions.get_discounted_price(amount, coupons)
-
+                if selected_payment_method.is_credit_card:
                     try:
                         s = Stripe(academy=subscription.academy)
                         s.set_language(lang)
@@ -6701,14 +6643,12 @@ class RenewSubscriptionView(APIView):
                     subscription.externally_managed = False
                     subscription.save()
 
-                    # Determine if charge_subscription should be called immediately
                     should_charge_now = (
                         utc_now >= subscription.next_payment_at
                         and subscription.status == Subscription.Status.PAYMENT_ISSUE
                     )
 
                     if should_charge_now:
-
                         transaction.on_commit(lambda: tasks.charge_subscription.delay(subscription.id))
 
                     serializer = GetInvoiceSerializer(invoice, many=False)
@@ -6726,6 +6666,16 @@ class RenewSubscriptionView(APIView):
                         data["coupons"] = serializer.data
 
                     return Response(data, status=201)
+
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Payment method not supported",
+                        es="Método de pago no soportado",
+                        slug="payment-method-not-supported",
+                    ),
+                    code=400,
+                )
         except ValidationException:
             raise
         except Exception as e:
@@ -6746,9 +6696,9 @@ class RenewPlanFinancingView(APIView):
         lang = get_user_language(request)
         settings = get_user_settings(request.user.id)
         plan_financing_id = request.data.get("planfinancing")
-        payment_method = request.data.get("payment_method")
+        payment_method_id = request.data.get("payment_method_id")
 
-        if not payment_method:
+        if not payment_method_id:
             raise ValidationException(
                 translation(lang, en="Payment method is required", es="El método de pago es requerido"),
                 slug="payment-method-required",
@@ -6940,7 +6890,34 @@ class RenewPlanFinancingView(APIView):
 
         try:
             with transaction.atomic():
-                if payment_method == "coinbase":
+                selected_payment_method = PaymentMethod.objects.filter(
+                    Q(academy=plan_financing.academy) | Q(academy__isnull=True),
+                    id=payment_method_id,
+                ).first()
+
+                if not selected_payment_method:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en="Payment method not found",
+                            es="Método de pago no encontrado",
+                            slug="payment-method-not-found",
+                        ),
+                        code=404,
+                    )
+
+                if selected_payment_method.is_financing_managed_by_provider:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en="Payment method not supported for plan financing renewal",
+                            es="Método de pago no soportado para renovación de financiamiento",
+                            slug="payment-method-not-supported",
+                        ),
+                        code=400,
+                    )
+
+                if selected_payment_method.is_crypto:
                     existing_bag = (
                         Bag.objects.filter(
                             user=plan_financing.user,
@@ -6968,6 +6945,8 @@ class RenewPlanFinancingView(APIView):
                             slug="error-getting-bag",
                             code=404,
                         )
+
+                    validate_payment_method_for_checkout(selected_payment_method, bag, lang)
 
                     return_url = request.data.get("return_url")
 
@@ -6999,8 +6978,10 @@ class RenewPlanFinancingView(APIView):
                         status=status.HTTP_200_OK,
                     )
 
-                else:
+                if selected_payment_method.is_credit_card:
                     bag = actions.get_bag_from_plan_financing(plan_financing, settings)
+
+                    validate_payment_method_for_checkout(selected_payment_method, bag, lang)
 
                     s = Stripe(academy=plan_financing.academy)
                     s.set_language(lang)
@@ -7032,6 +7013,16 @@ class RenewPlanFinancingView(APIView):
                     )
 
                     return Response(serializer.data, status=201)
+
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Payment method not supported",
+                        es="Método de pago no soportado",
+                        slug="payment-method-not-supported",
+                    ),
+                    code=400,
+                )
 
         except ValidationException:
             raise

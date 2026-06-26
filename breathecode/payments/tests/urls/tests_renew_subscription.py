@@ -50,7 +50,7 @@ class RenewSubscriptionViewTestSuite(PaymentsTestCase):
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy("payments:renew_subscription")
-        response = self.client.post(url, {"payment_method": "stripe"}, format="json")
+        response = self.client.post(url, {"payment_method_id": 1}, format="json")
 
         json = response.json()
         expected = {"detail": "subscription-required", "status_code": 400}
@@ -63,7 +63,7 @@ class RenewSubscriptionViewTestSuite(PaymentsTestCase):
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy("payments:renew_subscription")
-        response = self.client.post(url, {"payment_method": "stripe", "subscription": 999}, format="json")
+        response = self.client.post(url, {"payment_method_id": 1, "subscription": 999}, format="json")
 
         json = response.json()
         expected = {"detail": "subscription-not-found", "status_code": 404}
@@ -77,7 +77,7 @@ class RenewSubscriptionViewTestSuite(PaymentsTestCase):
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy("payments:renew_subscription")
-        response = self.client.post(url, {"payment_method": "stripe", "subscription": 1}, format="json")
+        response = self.client.post(url, {"payment_method_id": 1, "subscription": 1}, format="json")
 
         json = response.json()
         expected = {"detail": "subscription-not-renewable", "status_code": 400}
@@ -100,7 +100,7 @@ class RenewSubscriptionViewTestSuite(PaymentsTestCase):
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy("payments:renew_subscription")
-        response = self.client.post(url, {"payment_method": "stripe", "subscription": 1}, format="json")
+        response = self.client.post(url, {"payment_method_id": 1, "subscription": 1}, format="json")
 
         json = response.json()
         expected = {"detail": "plan-discontinued", "status_code": 400}
@@ -114,7 +114,7 @@ class RenewSubscriptionViewTestSuite(PaymentsTestCase):
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy("payments:renew_subscription")
-        response = self.client.post(url, {"payment_method": "stripe", "subscription": 1}, format="json")
+        response = self.client.post(url, {"payment_method_id": 1, "subscription": 1}, format="json")
 
         json = response.json()
         expected = {"detail": "subscription-expired-permanently", "status_code": 400}
@@ -141,7 +141,7 @@ class RenewSubscriptionViewTestSuite(PaymentsTestCase):
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy("payments:renew_subscription")
-        response = self.client.post(url, {"payment_method": "stripe", "subscription": 1}, format="json")
+        response = self.client.post(url, {"payment_method_id": 1, "subscription": 1}, format="json")
 
         json = response.json()
         expected = {"detail": "too-early-to-renew", "status_code": 400}
@@ -186,7 +186,7 @@ class RenewSubscriptionViewTestSuite(PaymentsTestCase):
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy("payments:renew_subscription")
-        response = self.client.post(url, {"payment_method": "stripe", "subscription": 1}, format="json")
+        response = self.client.post(url, {"payment_method_id": 1, "subscription": 1}, format="json")
 
         json = response.json()
         expected = {"detail": "already-renewed", "status_code": 400}
@@ -224,13 +224,26 @@ class RenewSubscriptionViewTestSuite(PaymentsTestCase):
         mock_get_bag.return_value = bag
         mock_get_amount.return_value = 100.0
 
+        payment_method = PaymentMethod.objects.create(
+            academy=model.academy,
+            title="Card",
+            description="Card",
+            lang="en-US",
+            is_credit_card=True,
+            is_backed=True,
+        )
+
         # Mock Stripe to raise exception
         mock_stripe_pay.side_effect = Exception("Stripe API error")
 
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy("payments:renew_subscription")
-        response = self.client.post(url, {"payment_method": "stripe", "subscription": 1}, format="json")
+        response = self.client.post(
+            url,
+            {"payment_method_id": payment_method.id, "subscription": 1},
+            format="json",
+        )
 
         json = response.json()
         expected = {"detail": "error-paying-with-stripe", "status_code": 500}
@@ -276,12 +289,25 @@ class RenewSubscriptionViewTestSuite(PaymentsTestCase):
             "hosted_url": "https://commerce.coinbase.com/charges/CHARGE123",
         }
 
+        payment_method = PaymentMethod.objects.create(
+            academy=model.academy,
+            title="Crypto",
+            description="Crypto",
+            lang="en-US",
+            is_crypto=True,
+            is_backed=True,
+        )
+
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy("payments:renew_subscription")
         response = self.client.post(
             url,
-            {"payment_method": "coinbase", "subscription": 1, "return_url": "https://example.com"},
+            {
+                "payment_method_id": payment_method.id,
+                "subscription": 1,
+                "return_url": "https://example.com",
+            },
             format="json",
         )
 
