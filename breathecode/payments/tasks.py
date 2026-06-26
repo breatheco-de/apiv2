@@ -555,7 +555,7 @@ def charge_subscription(self, subscription_id: int, **_: Any):
             es="Tu suscripción 4Geeks no pudo ser renovada",
         )
 
-        params = {"plan": subscription.plans.first().id, "subscription_id": subscription.id}
+        params = {"plan": subscription.plans.first().slug, "subscription_id": subscription.id}
 
         notify_actions.send_email_message(
             "message",
@@ -1038,7 +1038,7 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
             es="Tu suscripción 4Geeks no pudo ser renovada",
         )
 
-        params = {"plan": plan_financing.plans.first().id, "plan_financing_id": plan_financing.id}
+        params = {"plan": plan_financing.plans.first().slug, "plan_financing_id": plan_financing.id}
 
         notify_actions.send_email_message(
             "message",

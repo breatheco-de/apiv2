@@ -577,7 +577,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                     "MESSAGE": "Your payment with credit card was declined, please update your card or use another payment method",
                     "BUTTON": "Change payment method",
                     "LINK": os.getenv("APP_URL")[:-1]
-                    + f"/renew?plan={model.plan.id}&plan_financing_id={model.plan_financing.id}",
+                    + f"/renew?plan={model.plan.slug}&plan_financing_id={model.plan_financing.id}",
                 },
                 academy=model.academy,
             )
