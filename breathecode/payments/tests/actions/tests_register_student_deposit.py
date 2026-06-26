@@ -77,6 +77,7 @@ def test_register_student_deposit_applies_payment_to_plan_financing(
     assert invoices[1]["amount"] == 1200
     assert invoices[1]["externally_managed"] is True
     assert invoices[1]["invoice_kind"] == "MANUAL_DEPOSIT"
+    assert invoices[1]["invoice_notes"] == "Cash payment"
     assert invoices[1]["amount_breakdown"] == {
         "plans": {
             model.plan.slug: {

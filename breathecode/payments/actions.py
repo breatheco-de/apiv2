@@ -3494,7 +3494,7 @@ def register_student_deposit(
             code=400,
         )
 
-    notes = data.get("notes") or data.get("deposit_notes")
+    notes = data.get("notes") or data.get("deposit_notes") or data.get("invoice_notes")
     if notes and len(notes) > 250:
         raise ValidationException(
             translation(
@@ -3620,6 +3620,14 @@ def register_student_deposit(
         amount_breakdown=amount_breakdown,
         invoice_kind=Invoice.InvoiceKind.MANUAL_DEPOSIT,
     )
+    staff_user_id = None
+    if isinstance(request, (WSGIRequest, AsyncRequest, HttpRequest, Request)) and getattr(request, "user", None):
+        if request.user.is_authenticated:
+            staff_user_id = request.user.id
+    invoice_notes = format_note_made_by_user(notes, staff_user_id)
+    if invoice_notes:
+        invoice.invoice_notes = invoice_notes
+        invoice.save(update_fields=["invoice_notes"])
     bag.was_delivered = True
     bag.save()
     # Every manual deposit invoice represents real cash received for this financing.
