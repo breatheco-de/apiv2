@@ -573,7 +573,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 "message",
                 model.user.email,
                 {
-                    "SUBJECT": "Your 4Geeks subscription could not be renewed",
+                    "SUBJECT": f"Your {model.plan.title or model.plan.slug} payment could not be processed",
                     "MESSAGE": "Your payment with credit card was declined, please update your card or use another payment method",
                     "BUTTON": "Change payment method",
                     "LINK": os.getenv("APP_URL")[:-1]

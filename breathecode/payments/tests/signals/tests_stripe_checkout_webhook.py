@@ -48,6 +48,8 @@ def setup_mocks(monkeypatch):
     monkeypatch.setattr(tasks.build_subscription, "delay", MagicMock())
     monkeypatch.setattr(tasks.build_plan_financing, "delay", MagicMock())
     monkeypatch.setattr(tasks.build_free_subscription, "delay", MagicMock())
+    monkeypatch.setattr(tasks.charge_subscription, "delay", MagicMock())
+    monkeypatch.setattr(tasks.charge_plan_financing, "delay", MagicMock())
     monkeypatch.setattr("breathecode.activity.tasks.add_activity.delay", MagicMock())
     monkeypatch.setattr("breathecode.commission.tasks.register_referral_from_invoice.delay", MagicMock())
     monkeypatch.setattr("breathecode.payments.actions.grant_student_capabilities", MagicMock())
@@ -311,3 +313,87 @@ def test__stripe_checkout__subscription_id_in_metadata__skips_purchase_fulfillme
 
     assert tasks.build_subscription.delay.call_args_list == []
     assert bc.database.list_of("payments.Invoice") == []
+
+
+def test__stripe_checkout__plan_financing_id_in_metadata__skips_purchase_fulfillment(
+    bc: Breathecode, enable_signals, setup_mocks
+):
+    enable_signals()
+
+    model = bc.database.create(
+        user=1,
+        bag={"status": "CHECKING", "token": "abc", "chosen_period": "NO_SET"},
+        academy=1,
+        currency=1,
+        plan=1,
+        plan_financing={"status": "ACTIVE"},
+    )
+    model.plan_financing.plans.add(model.plan)
+    payment_method = PaymentMethod.objects.create(
+        academy=model.academy,
+        title="Klarna",
+        description="Klarna",
+        lang="en-US",
+        provider_settings={"stripe_payment_method_types": ["klarna"]},
+    )
+    metadata = _checkout_metadata(model, payment_method, plan_financing_id=str(model.plan_financing.id))
+    stripe_event = _stripe_event_payload(metadata, session_id="cs_renew_pf_skip_purchase")
+    event_model = bc.database.create(stripe_event=stripe_event)
+
+    monitoring_signals.stripe_webhook.send(instance=event_model.stripe_event, sender=event_model.stripe_event.__class__)
+
+    assert tasks.build_subscription.delay.call_args_list == []
+    assert tasks.build_plan_financing.delay.call_args_list == []
+    assert bc.database.list_of("payments.Invoice") == []
+
+
+@patch("breathecode.payments.actions.calculate_invoice_breakdown", MagicMock(return_value={}))
+def test__stripe_checkout__plan_financing_renewal_fulfillment(
+    mock_breakdown, bc: Breathecode, enable_signals, setup_mocks
+):
+    enable_signals()
+
+    model = bc.database.create(
+        user=1,
+        bag={"status": "RENEWAL", "chosen_period": "NO_SET"},
+        academy=1,
+        currency=1,
+        plan=1,
+        plan_financing={"status": "ACTIVE"},
+    )
+    model.plan_financing.plans.add(model.plan)
+    payment_method = PaymentMethod.objects.create(
+        academy=model.academy,
+        title="Klarna",
+        description="Klarna",
+        lang="en-US",
+        provider_settings={"stripe_payment_method_types": ["klarna"]},
+    )
+    metadata = _checkout_metadata(
+        model,
+        payment_method,
+        plan_financing_id=str(model.plan_financing.id),
+        chosen_period="NO_SET",
+    )
+    stripe_event = _stripe_event_payload(metadata, session_id="cs_renew_pf_fulfill")
+    event_model = bc.database.create(stripe_event=stripe_event)
+
+    with patch("breathecode.payments.receivers.transaction.on_commit", side_effect=lambda fn: fn()):
+        monitoring_signals.stripe_webhook.send(
+            instance=event_model.stripe_event, sender=event_model.stripe_event.__class__
+        )
+
+    assert tasks.build_subscription.delay.call_args_list == []
+    assert tasks.build_plan_financing.delay.call_args_list == []
+    assert tasks.charge_plan_financing.delay.call_args_list == []
+
+    invoice = bc.database.get("payments.Invoice", 1, dict=True)
+    assert invoice["stripe_id"] == "cs_renew_pf_fulfill"
+    assert invoice["status"] == Invoice.Status.FULFILLED
+    assert invoice["externally_managed"] is True
+    assert invoice["payment_method_id"] == payment_method.id
+
+    bag = bc.database.get("payments.Bag", model.bag.id, dict=True)
+    assert bag["status"] == "PAID"
+
+    assert model.plan_financing.invoices.filter(id=invoice["id"]).exists()

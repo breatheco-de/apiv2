@@ -434,9 +434,7 @@ class AcademyPlanSyncFinancingExpirationView(APIView):
             new_plan_expires_at = first_invoice.paid_at + delta
 
             was_expired = financing.status == PlanFinancing.Status.EXPIRED
-            had_wrong_expires_at = (
-                financing.plan_expires_at is not None and financing.plan_expires_at < utc_now
-            )
+            had_wrong_expires_at = financing.plan_expires_at is not None and financing.plan_expires_at < utc_now
             financing.plan_expires_at = new_plan_expires_at
 
             if was_expired and new_plan_expires_at > utc_now:
@@ -1222,11 +1220,7 @@ class AcademyEventTypeSetView(APIView):
                 | Q(allow_shared_creation=True)
                 | Q(visibility_settings__academy_id=academy_id)
             )
-            event_types_to_add = (
-                EventType.objects.filter(id__in=ids)
-                .filter(event_type_access_q)
-                .distinct()
-            )
+            event_types_to_add = EventType.objects.filter(id__in=ids).filter(event_type_access_q).distinct()
             if not event_types_to_add.exists() or event_types_to_add.count() != len(ids):
                 raise ValidationException(
                     translation(
@@ -1306,9 +1300,7 @@ class AcademyEventTypeSetView(APIView):
 
         # Event types the academy has access to: owns, shared, or visible via visibility_settings
         event_type_access_q = (
-            Q(academy__id=academy_id)
-            | Q(allow_shared_creation=True)
-            | Q(visibility_settings__academy_id=academy_id)
+            Q(academy__id=academy_id) | Q(allow_shared_creation=True) | Q(visibility_settings__academy_id=academy_id)
         )
         items = EventType.objects.filter(query).filter(event_type_access_q).distinct()
 
@@ -2109,12 +2101,12 @@ class AcademyServiceStockConsumableRegenerateView(APIView):
 
 class AcademyPlanServiceStockSchedulersRegenerateView(APIView):
     """
-    Academy POST (manage_service_stock_schedulers): for a given plan, enqueue service stock
-    scheduler rebuild for every related subscription or plan financing in this academy with
-    status ACTIVE or FULLY_PAID.
+      Academy POST (manage_service_stock_schedulers): for a given plan, enqueue service stock
+      scheduler rebuild for every related subscription or plan financing in this academy with
+      status ACTIVE or FULLY_PAID.
 
-  Body:
-    - services (required): non-empty list of service ids (int) or slugs (str) that belong to the plan.
+    Body:
+      - services (required): non-empty list of service ids (int) or slugs (str) that belong to the plan.
     """
 
     @capable_of("manage_service_stock_schedulers")
@@ -2807,7 +2799,7 @@ class AcademyPlanFinancingView(APIView):
             "monthly_price",
             "how_many_installments",
             "status",
-            "selected_cohort_set"
+            "selected_cohort_set",
         ]
 
         def update_financing(financing, data):
@@ -3274,14 +3266,8 @@ def _parse_and_validate_refund_request(
         raise ValidationException(
             translation(
                 lang,
-                en=(
-                    "plan_entitlement_action must be one of: cancel_immediately, "
-                    "cancel_at_period_end, keep"
-                ),
-                es=(
-                    "plan_entitlement_action debe ser uno de: cancel_immediately, "
-                    "cancel_at_period_end, keep"
-                ),
+                en=("plan_entitlement_action must be one of: cancel_immediately, " "cancel_at_period_end, keep"),
+                es=("plan_entitlement_action debe ser uno de: cancel_immediately, " "cancel_at_period_end, keep"),
                 slug="invalid-plan-entitlement-action",
             ),
             code=400,
@@ -4130,9 +4116,7 @@ class PlanOfferView(APIView):
         return args, kwargs
 
     def filter_by_original_plan_like(self, items, like: str):
-        return items.filter(
-            Q(original_plan__slug__icontains=like) | Q(original_plan__title__icontains=like)
-        )
+        return items.filter(Q(original_plan__slug__icontains=like) | Q(original_plan__title__icontains=like))
 
     def get(self, request):
         handler = self.extensions(request)
@@ -4204,9 +4188,7 @@ class AcademyPlanOfferView(APIView):
         return args, kwargs
 
     def filter_by_original_plan_like(self, items, like: str):
-        return items.filter(
-            Q(original_plan__slug__icontains=like) | Q(original_plan__title__icontains=like)
-        )
+        return items.filter(Q(original_plan__slug__icontains=like) | Q(original_plan__title__icontains=like))
 
     def get_response_context(self, request, academy_id):
         return {
@@ -4245,7 +4227,9 @@ class AcademyPlanOfferView(APIView):
             items = self.filter_by_original_plan_like(items, like)
 
         items = handler.queryset(items.distinct())
-        serializer = GetAcademyPlanOfferSerializer(items, many=True, context=self.get_response_context(request, academy_id))
+        serializer = GetAcademyPlanOfferSerializer(
+            items, many=True, context=self.get_response_context(request, academy_id)
+        )
         return handler.response(serializer.data)
 
     @capable_of("crud_subscription")
@@ -6917,6 +6901,84 @@ class RenewPlanFinancingView(APIView):
                         code=400,
                     )
 
+                stripe_payment_method_types = selected_payment_method.get_stripe_payment_method_types()
+                if stripe_payment_method_types:
+                    bag = actions.get_bag_from_plan_financing(plan_financing, settings)
+
+                    if not bag:
+                        raise ValidationException(
+                            translation(lang, en="Error getting bag", es="Error al obtener la bolsa"),
+                            slug="error-getting-bag",
+                            code=404,
+                        )
+
+                    validate_payment_method_for_checkout(selected_payment_method, bag, lang)
+
+                    if amount < 0.50:
+                        raise ValidationException(
+                            translation(
+                                lang, en="Amount is too low", es="El monto es muy bajo", slug="amount-is-too-low"
+                            ),
+                            code=400,
+                        )
+
+                    return_url = request.data.get("return_url")
+                    cancel_url = request.data.get("cancel_url")
+
+                    if not return_url:
+                        raise ValidationException(
+                            translation(
+                                lang,
+                                en="Return url is required",
+                                es="Return url es requerido",
+                                slug="return-url-required",
+                            ),
+                            code=400,
+                        )
+
+                    if not cancel_url:
+                        raise ValidationException(
+                            translation(
+                                lang,
+                                en="Cancel url is required",
+                                es="Cancel url es requerido",
+                                slug="cancel-url-required",
+                            ),
+                            code=400,
+                        )
+
+                    s = Stripe(academy=plan_financing.academy)
+                    s.set_language(lang)
+
+                    metadata = {
+                        "bag_id": str(bag.id),
+                        "plan_financing_id": str(plan_financing.id),
+                        "payment_method_id": str(selected_payment_method.id),
+                        "amount": str(amount),
+                        "original_price": str(first_invoice.amount),
+                        "chosen_period": bag.chosen_period or "",
+                        "how_many_installments": "0",
+                    }
+
+                    session_id, checkout_url = s.create_checkout_session(
+                        user=request.user,
+                        bag=bag,
+                        amount=amount,
+                        currency=bag.currency.code,
+                        payment_method_types=stripe_payment_method_types,
+                        success_url=return_url,
+                        cancel_url=cancel_url,
+                        metadata=metadata,
+                    )
+
+                    plan_financing.externally_managed = True
+                    plan_financing.save()
+
+                    return Response(
+                        {"checkout_url": checkout_url, "session_id": session_id},
+                        status=status.HTTP_201_CREATED,
+                    )
+
                 if selected_payment_method.is_crypto:
                     existing_bag = (
                         Bag.objects.filter(
@@ -7241,9 +7303,11 @@ class AcademyPaymentMethodView(APIView):
 
         if paymentmethod_id:
             # Get specific payment method
-            method = PaymentMethod.objects.filter(
-                Q(academy__id=academy_id) | Q(academy__isnull=True), id=paymentmethod_id
-            ).prefetch_related("plans").first()
+            method = (
+                PaymentMethod.objects.filter(Q(academy__id=academy_id) | Q(academy__isnull=True), id=paymentmethod_id)
+                .prefetch_related("plans")
+                .first()
+            )
 
             if not method:
                 raise ValidationException(

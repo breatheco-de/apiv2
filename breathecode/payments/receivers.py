@@ -439,7 +439,7 @@ post_save.connect(check_consumable_balance_for_auto_recharge, sender=Consumable)
 
 
 def _load_stripe_checkout_fulfillment_context(
-    session: dict, *, require_subscription: bool = False
+    session: dict, *, require_subscription: bool = False, require_plan_financing: bool = False
 ) -> tuple[dict | None, str | None]:
     """
     Parse checkout session metadata and load related models in one pass.
@@ -452,6 +452,8 @@ def _load_stripe_checkout_fulfillment_context(
         return None, None
     if require_subscription and not metadata.get("subscription_id"):
         return None, None
+    if require_plan_financing and not metadata.get("plan_financing_id"):
+        return None, None
 
     session_id = session.get("id")
     if not session_id:
@@ -462,11 +464,12 @@ def _load_stripe_checkout_fulfillment_context(
         amount = float(metadata["amount"])
         original_price = float(metadata["original_price"])
         subscription_id = int(float(metadata["subscription_id"])) if require_subscription else None
+        plan_financing_id = int(float(metadata["plan_financing_id"])) if require_plan_financing else None
     except KeyError as exc:
         return None, f"Missing metadata field: {exc.args[0]}"
     except (TypeError, ValueError):
-        if require_subscription:
-            return None, "Invalid bag_id, subscription_id, amount, or original_price in metadata"
+        if require_subscription or require_plan_financing:
+            return None, "Invalid bag_id, renewal id, amount, or original_price in metadata"
         return None, "Invalid bag_id, amount, or original_price in metadata"
 
     bag = Bag.objects.filter(id=bag_id).select_related("user", "academy", "currency").first()
@@ -474,10 +477,15 @@ def _load_stripe_checkout_fulfillment_context(
         return None, f"Bag {bag_id} not found"
 
     subscription = None
+    plan_financing = None
     if require_subscription:
         subscription = Subscription.objects.filter(id=subscription_id, user=bag.user).first()
         if not subscription:
             return None, f"Subscription {subscription_id} not found"
+    if require_plan_financing:
+        plan_financing = PlanFinancing.objects.filter(id=plan_financing_id, user=bag.user).first()
+        if not plan_financing:
+            return None, f"PlanFinancing {plan_financing_id} not found"
 
     payment_method = None
     if payment_method_id := metadata.get("payment_method_id"):
@@ -505,6 +513,8 @@ def _load_stripe_checkout_fulfillment_context(
 
     if require_subscription:
         ctx["subscription"] = subscription
+    elif require_plan_financing:
+        ctx["plan_financing"] = plan_financing
     else:
         how_many_installments = 0
         if raw_installments := metadata.get("how_many_installments"):
@@ -701,7 +711,14 @@ def stripe_checkout_renewal_fulfillment(sender: Type[StripeEvent], instance: Str
 
     session = instance.data.get("object") or instance.data
     metadata = session.get("metadata") or {}
-    if not metadata.get("bag_id") or not metadata.get("subscription_id"):
+    if not metadata.get("bag_id"):
+        return
+
+    has_subscription = bool(metadata.get("subscription_id"))
+    has_plan_financing = bool(metadata.get("plan_financing_id"))
+    if has_subscription and has_plan_financing:
+        return
+    if not has_subscription and not has_plan_financing:
         return
 
     if instance.type == "checkout.session.async_payment_failed":
@@ -720,7 +737,11 @@ def stripe_checkout_renewal_fulfillment(sender: Type[StripeEvent], instance: Str
     if payment_status != "paid":
         return
 
-    ctx, error = _load_stripe_checkout_fulfillment_context(session, require_subscription=True)
+    ctx, error = _load_stripe_checkout_fulfillment_context(
+        session,
+        require_subscription=has_subscription,
+        require_plan_financing=has_plan_financing,
+    )
     if error:
         instance.status_texts[handler_key] = error
         instance.status = "ERROR"
@@ -737,7 +758,8 @@ def stripe_checkout_renewal_fulfillment(sender: Type[StripeEvent], instance: Str
 
     session_id = ctx["session_id"]
     bag = ctx["bag"]
-    subscription = ctx["subscription"]
+    subscription = ctx.get("subscription")
+    plan_financing = ctx.get("plan_financing")
     amount = ctx["amount"]
     original_price = ctx["original_price"]
     payment_method = ctx["payment_method"]
@@ -803,15 +825,28 @@ def stripe_checkout_renewal_fulfillment(sender: Type[StripeEvent], instance: Str
 
             transaction.savepoint_commit(sid)
 
-            should_charge_now = (
-                utc_now >= subscription.next_payment_at
-                and subscription.status == Subscription.Status.PAYMENT_ISSUE
-            )
+            if subscription:
+                should_charge_now = (
+                    utc_now >= subscription.next_payment_at
+                    and subscription.status == Subscription.Status.PAYMENT_ISSUE
+                )
 
-            transaction.on_commit(lambda: subscription.invoices.add(invoice))
+                transaction.on_commit(lambda: subscription.invoices.add(invoice))
 
-            if should_charge_now:
-                transaction.on_commit(lambda sub_id=subscription.id: tasks.charge_subscription.delay(sub_id))
+                if should_charge_now:
+                    transaction.on_commit(lambda sub_id=subscription.id: tasks.charge_subscription.delay(sub_id))
+            elif plan_financing:
+                should_charge_now = (
+                    utc_now >= plan_financing.next_payment_at
+                    and plan_financing.status == PlanFinancing.Status.PAYMENT_ISSUE
+                )
+
+                transaction.on_commit(lambda: plan_financing.invoices.add(invoice))
+
+                if should_charge_now:
+                    transaction.on_commit(
+                        lambda pf_id=plan_financing.id: tasks.charge_plan_financing.delay(pf_id)
+                    )
 
             tasks_activity.add_activity.delay(
                 invoice.user.id,

@@ -474,6 +474,25 @@ def process_stripe_webhook(request):
     except stripe.error.SignatureVerificationError as e:
         logger.error(f"Webhook signature verification failed: {str(e)}")
         add_stripe_webhook_error(payload, sig_header, slug="not-allowed", message=str(e))
+
+        try:
+            from breathecode.payments import tasks as payment_tasks
+
+            payload_dict = json.loads(payload.decode("utf-8") if isinstance(payload, bytes) else payload)
+            session = payload_dict.get("data", {}).get("object", {})
+            metadata = session.get("metadata") or {}
+            bag_id = metadata.get("bag_id")
+            session_id = session.get("id")
+
+            if bag_id and session_id:
+                payment_tasks.send_checkout_fulfillment_error_email.delay(
+                    int(float(bag_id)),
+                    session_id,
+                    "Webhook signature verification failed",
+                )
+        except Exception as notify_error:
+            logger.debug(f"Could not notify user from unverified stripe webhook payload: {notify_error}")
+
         raise ValidationException("Not allowed", code=403, slug="not-allowed")
 
     if event := add_stripe_webhook(event):
