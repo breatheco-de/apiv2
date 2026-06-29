@@ -19,8 +19,10 @@ logger = logging.getLogger(__name__)
 def bill_was_paid(sender: Type[StripeEvent], instance: StripeEvent, **kwargs):
     if instance.type == "checkout.session.completed":
         try:
-            if instance.data["payment_link"]:
-                ProvisioningBill.objects.filter(stripe_id=instance.data["payment_link"]).update(
+            session = instance.data.get("object") or instance.data
+            payment_link = session.get("payment_link")
+            if payment_link:
+                ProvisioningBill.objects.filter(stripe_id=payment_link).update(
                     status="PAID", paid_at=instance.created_at
                 )
 

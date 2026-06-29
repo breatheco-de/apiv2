@@ -1,5 +1,6 @@
 from unittest.mock import MagicMock, call, patch
 
+import stripe
 from django.http.request import HttpRequest
 from django.urls import reverse_lazy
 from rest_framework import status
@@ -34,7 +35,38 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(self.bc.database.list_of("monitoring.StripeEvent"), [])
+        self.assertEqual(len(self.bc.database.list_of("monitoring.StripeEvent")), 1)
+
+    # When: invalid signature
+    # Then: return 403 and notify user when bag metadata is present
+    @patch("breathecode.payments.tasks.send_checkout_fulfillment_error_email.delay", MagicMock())
+    @patch("breathecode.monitoring.signals.stripe_webhook.send_robust", MagicMock(return_value=None))
+    @patch("stripe.Webhook.construct_event", MagicMock(side_effect=stripe.error.SignatureVerificationError("bad sig", "sig_header")))
+    def tests_invalid_signature(self):
+        url = reverse_lazy("monitoring:stripe_webhook")
+        self.bc.request.set_headers(stripe_signature="bad")
+        response = self.client.post(
+            url,
+            data=(
+                b'{"id":"evt_test","type":"checkout.session.completed","data":{"object":{'
+                b'"id":"cs_test","metadata":{"bag_id":"1"}}}}'
+            ),
+            content_type="application/json",
+        )
+
+        json = response.json()
+        expected = {"detail": "not-allowed", "status_code": 403}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        from breathecode.payments.tasks import send_checkout_fulfillment_error_email
+
+        send_checkout_fulfillment_error_email.delay.assert_called_once_with(
+            1,
+            "cs_test",
+            "Webhook signature verification failed",
+        )
 
     # When: invalid payload
     # Then: return 400
@@ -110,6 +142,6 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         self.bc.check.calls(
             signals.stripe_webhook.send_robust.call_args_list,
             [
-                call(event=event, sender=event.__class__),
+                call(instance=event, sender=event.__class__),
             ],
         )

@@ -38,6 +38,7 @@ from breathecode.payments.signals import consume_service, deprovision_service
 from breathecode.utils import getLogger
 from breathecode.utils.decorators.service_deprovisioner import get_service_deprovisioner
 from breathecode.utils.validate_conversion_info import validate_conversion_info
+from breathecode.monitoring.models import StripeEvent
 from settings import GENERAL_PRICING_RATIOS
 
 from .models import (
@@ -3898,6 +3899,64 @@ def set_virtual_balance(balance: ConsumableBalance, user: User) -> None:
             append("cohort_sets", id, slug, how_many, unit_type)
 
 
+
+
+
+def is_stripe_checkout_already_fulfilled(
+    *,
+    session: dict,
+    exclude_stripe_event_id: int | None = None,
+) -> bool:
+    session_id = session.get("id")
+    if not session_id:
+        return False
+
+    done_events = StripeEvent.objects.filter(status="DONE", data__object__id=session_id)
+    if exclude_stripe_event_id:
+        done_events = done_events.exclude(id=exclude_stripe_event_id)
+    if done_events.exists():
+        return True
+
+    metadata = session.get("metadata") or {}
+    is_purchase = not metadata.get("subscription_id") and not metadata.get("plan_financing_id")
+
+    invoice = Invoice.objects.filter(stripe_id=session_id, status=Invoice.Status.FULFILLED).first()
+    if not invoice:
+        return False
+
+    if raw_sub_id := metadata.get("subscription_id"):
+        try:
+            sub_id = int(float(raw_sub_id))
+        except (TypeError, ValueError):
+            return False
+        return Subscription.objects.filter(id=sub_id, user=invoice.user, invoices=invoice).exists()
+
+    if raw_pf_id := metadata.get("plan_financing_id"):
+        try:
+            pf_id = int(float(raw_pf_id))
+        except (TypeError, ValueError):
+            return False
+        return PlanFinancing.objects.filter(id=pf_id, user=invoice.user, invoices=invoice).exists()
+
+    bag = invoice.bag
+    if not bag:
+        return False
+
+    if bag.was_delivered:
+        return True
+
+    if Subscription.objects.filter(invoices=invoice).exists():
+        return True
+    if PlanFinancing.objects.filter(invoices=invoice).exists():
+        return True
+
+    if is_purchase and bag.status == Bag.Status.PAID and not bag.was_delivered:
+        # Invoice for this session exists but build_* did not finish; pending-bag supervisor owns it.
+        return True
+
+    return False
+
+
 def retry_pending_bag(bag: Bag):
     """
     This function retries the delivery of bags that are paid but not delivered.
@@ -4363,7 +4422,7 @@ def calculate_invoice_breakdown(
     Note: Plan addons are included in the "plans" section with their plan slug.
     """
     breakdown: dict[str, Any] = {"plans": {}, "service-items": {}}
-
+    
     currency = invoice.currency if invoice else (bag.currency or bag.academy.main_currency)
     if not currency:
         raise ValidationException(
@@ -7248,6 +7307,89 @@ def calculate_single_coupon_stats(coupon: Coupon) -> dict:
     stats["payment_methods"] = payment_methods
 
     return stats
+
+
+def validate_payment_method_for_checkout(payment_method: PaymentMethod, bag: Bag, lang: str) -> None:
+    if payment_method.deprecated:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Payment method is deprecated",
+                es="El método de pago está deprecado",
+                slug="payment-method-deprecated",
+            ),
+            code=400,
+        )
+
+    if payment_method.visibility != PaymentMethod.Visibility.PUBLIC:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Payment method is not available for checkout",
+                es="El método de pago no está disponible para checkout",
+                slug="payment-method-not-public",
+            ),
+            code=400,
+        )
+
+    if payment_method.academy_id and payment_method.academy_id != bag.academy_id:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Payment method not found for this academy",
+                es="Método de pago no encontrado para esta academia",
+                slug="payment-method-not-found",
+            ),
+            code=404,
+        )
+
+    stripe_types = payment_method.get_stripe_payment_method_types()
+    if stripe_types:
+        allowed = ", ".join(sorted(PaymentMethod.StripeCheckoutPaymentMethodType.values))
+        for value in stripe_types:
+            if value not in PaymentMethod.StripeCheckoutPaymentMethodType.values:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Unsupported Stripe checkout payment method type: {value}. Allowed: {allowed}",
+                        es=f"Tipo de método de pago de Stripe Checkout no soportado: {value}. Permitidos: {allowed}",
+                        slug="unsupported-stripe-payment-method-type",
+                    ),
+                    code=400,
+                )
+
+        plan = bag.plans.first()
+        if not plan:
+            raise ValidationException(
+                translation(lang, en="Bag has no plan", es="La bolsa no tiene plan", slug="bag-has-no-plan"),
+                code=400,
+            )
+
+        if payment_method.plans.exists() and not payment_method.plans.filter(id=plan.id).exists():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Payment method is not available for this plan",
+                    es="El método de pago no está disponible para este plan",
+                    slug="payment-method-not-available-for-plan",
+                ),
+                code=400,
+            )
+
+        return
+
+    if payment_method.is_crypto or payment_method.is_credit_card:
+        return
+
+    raise ValidationException(
+        translation(
+            lang,
+            en="Payment method not supported for checkout",
+            es="Método de pago no soportado para checkout",
+            slug="payment-method-not-supported",
+        ),
+        code=400,
+    )
 
 
 def resolve_plan_for_academy(

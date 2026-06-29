@@ -557,6 +557,85 @@ class Stripe:
         payment_link_object = self._i18n_validations(callback)
         return payment_link_object["id"], payment_link_object["url"]
 
+    def create_checkout_session(
+        self,
+        user: User,
+        bag: Bag,
+        amount: int | float,
+        currency: str | Currency,
+        payment_method_types: list[str],
+        success_url: str,
+        cancel_url: str,
+        metadata: dict[str, str],
+        product_name: str = "",
+    ) -> tuple[str, str]:
+        """
+        Creates a Stripe Checkout Session for hosted third-party payments (e.g. Klarna, Affirm).
+
+        Returns:
+            tuple[str, str]: Session id and checkout URL.
+        """
+        stripe.api_key = self.api_key
+
+        if isinstance(currency, str):
+            currency_obj = Currency.objects.filter(code__iexact=currency).first()
+            if not currency_obj:
+                raise ValidationException(
+                    translation(
+                        self.language,
+                        en="Cannot determine the currency during process of payment",
+                        es="No se puede determinar la moneda durante el proceso de pago",
+                        slug="currency",
+                    ),
+                    code=500,
+                )
+            currency = currency_obj
+
+        original_amount = amount
+        decimals_factor = 1
+        for _ in range(currency.decimals):
+            decimals_factor *= 10
+
+        unit_amount = math.ceil(original_amount * decimals_factor)
+        if unit_amount <= 0:
+            raise ValidationException(
+                translation(lang=self.language, en="Amount is too low", es="El monto es muy bajo", slug="amount-is-too-low"),
+                code=400,
+            )
+
+        plan = bag.plans.first()
+        description = product_name or (plan.title if plan else "4Geeks purchase")
+
+        line_items = [
+            {
+                "price_data": {
+                    "currency": currency.code.lower(),
+                    "unit_amount": unit_amount,
+                    "product_data": {
+                        "name": description,
+                    },
+                },
+                "quantity": 1,
+            }
+        ]
+
+        contact = PaymentContact.objects.filter(user=user, academy=self.academy).first()
+        customer_params = {"customer": contact.stripe_id} if contact else {"customer_email": user.email}
+
+        def callback():
+            return stripe.checkout.Session.create(
+                mode="payment",
+                payment_method_types=payment_method_types,
+                line_items=line_items,
+                metadata=metadata,
+                success_url=success_url,
+                cancel_url=cancel_url,
+                **customer_params,
+            )
+
+        session = self._i18n_validations(callback)
+        return session["id"], session["url"]
+
     def has_payment_method(self, user: User) -> bool:
         """
         Check if a user has a payment method on file with Stripe.
