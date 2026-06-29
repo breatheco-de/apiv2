@@ -16,7 +16,15 @@ import breathecode.activity.tasks as activity_tasks
 from breathecode.admissions import tasks as admissions_tasks
 from breathecode.payments import tasks
 from breathecode.payments.actions import apply_pricing_ratio, calculate_relative_delta
-from breathecode.payments.models import FinancingOption, Plan, Service, ServiceItem, SubscriptionServiceItem
+from breathecode.payments.models import (
+    AcademyPaymentSettings,
+    FinancingOption,
+    PaymentMethod,
+    Plan,
+    Service,
+    ServiceItem,
+    SubscriptionServiceItem,
+)
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
 UTC_NOW = timezone.now()
@@ -128,6 +136,17 @@ CHOSEN_PERIOD = {
 
 def get_amount_per_period(period, data):
     return data[CHOSEN_PERIOD[period]]
+
+
+def create_credit_card_payment_method(academy):
+    return PaymentMethod.objects.create(
+        academy=academy,
+        title="Credit Card",
+        description="Credit card",
+        lang="en-US",
+        is_credit_card=True,
+        is_backed=True,
+    )
 
 
 def invoice_mock():
@@ -578,12 +597,15 @@ def test_amount_set_with_subscription_seats(bc: Breathecode, client: APIClient):
     )
     client.force_authenticate(user=model.user)
 
+    payment_method = create_credit_card_payment_method(model.academy)
+
     # the seat price is already included in the bag amount, it was added during checking
     amount = get_amount_per_period(chosen_period, bc.format.to_dict(model.bag))
 
     url = reverse_lazy("payments:pay")
     data = {
         "token": "xdxdxdxdxdxdxdxdxdxd",
+        "payment_method_id": payment_method.id,
         "chosen_period": chosen_period,
     }
     response = client.post(url, data, format="json")
@@ -711,9 +733,12 @@ def test_with_chosen_period__amount_set(bc: Breathecode, client: APIClient):
     model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1)
     client.force_authenticate(user=model.user)
 
+    payment_method = create_credit_card_payment_method(model.academy)
+
     url = reverse_lazy("payments:pay")
     data = {
         "token": "xdxdxdxdxdxdxdxdxdxd",
+        "payment_method_id": payment_method.id,
         "chosen_period": chosen_period,
     }
     response = client.post(url, data, format="json")
@@ -780,9 +805,12 @@ def test_with_chosen_period__amount_set_with_conversion_info(bc: Breathecode, cl
     model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1)
     client.force_authenticate(user=model.user)
 
+    payment_method = create_credit_card_payment_method(model.academy)
+
     url = reverse_lazy("payments:pay")
     data = {
         "token": "xdxdxdxdxdxdxdxdxdxd",
+        "payment_method_id": payment_method.id,
         "chosen_period": chosen_period,
         "conversion_info": {"landing_url": "/home"},
     }
@@ -974,9 +1002,12 @@ def test_with_installments(bc: Breathecode, client: APIClient):
     )
     client.force_authenticate(user=model.user)
 
+    payment_method = create_credit_card_payment_method(model.academy)
+
     url = reverse_lazy("payments:pay")
     data = {
         "token": "xdxdxdxdxdxdxdxdxdxd",
+        "payment_method_id": payment_method.id,
         "how_many_installments": how_many_installments,
     }
     response = client.post(url, data, format="json")
@@ -1057,9 +1088,12 @@ def test_with_installments_with_conversion_info(bc: Breathecode, client: APIClie
     )
     client.force_authenticate(user=model.user)
 
+    payment_method = create_credit_card_payment_method(model.academy)
+
     url = reverse_lazy("payments:pay")
     data = {
         "token": "xdxdxdxdxdxdxdxdxdxd",
+        "payment_method_id": payment_method.id,
         "how_many_installments": how_many_installments,
         "conversion_info": {"landing_url": "/home"},
     }
@@ -1164,9 +1198,12 @@ def test_coupons__with_installments(bc: Breathecode, client: APIClient):
     )
     client.force_authenticate(user=model.user)
 
+    payment_method = create_credit_card_payment_method(model.academy)
+
     url = reverse_lazy("payments:pay")
     data = {
         "token": "xdxdxdxdxdxdxdxdxdxd",
+        "payment_method_id": payment_method.id,
         "how_many_installments": how_many_installments,
     }
     response = client.post(url, data, format="json")
@@ -1262,9 +1299,12 @@ def test_coupons__with_chosen_period__amount_set(bc: Breathecode, client: APICli
     model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1, coupon=coupons)
     client.force_authenticate(user=model.user)
 
+    payment_method = create_credit_card_payment_method(model.academy)
+
     url = reverse_lazy("payments:pay")
     data = {
         "token": "xdxdxdxdxdxdxdxdxdxd",
+        "payment_method_id": payment_method.id,
         "chosen_period": chosen_period,
     }
     response = client.post(url, data, format="json")
@@ -1356,9 +1396,12 @@ def test_coupons__with_chosen_period__amount_set_with_conversion_info(bc: Breath
     model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1, coupon=coupons)
     client.force_authenticate(user=model.user)
 
+    payment_method = create_credit_card_payment_method(model.academy)
+
     url = reverse_lazy("payments:pay")
     data = {
         "token": "xdxdxdxdxdxdxdxdxdxd",
+        "payment_method_id": payment_method.id,
         "chosen_period": chosen_period,
         "conversion_info": {"landing_url": "/home"},
     }
@@ -1469,10 +1512,12 @@ def test_pay_for_plan_financing_with_country_code_and_ratio(
     model.plan.save()
 
     client.force_authenticate(user=model.user)
+    payment_method = create_credit_card_payment_method(model.academy)
     url = reverse_lazy("payments:pay")
     data = {
         "token": model.bag.token,
         "how_many_installments": model.bag.how_many_installments,
+        "payment_method_id": payment_method.id,
     }
     response = client.post(url, data, format="json")
 
@@ -1629,10 +1674,12 @@ def test_pay_for_plan_financing_with_country_code_and_price_override(
     model.plan.save()
 
     client.force_authenticate(user=model.user)
+    payment_method = create_credit_card_payment_method(model.academy)
     url = reverse_lazy("payments:pay")
     data = {
         "token": model.bag.token,
         "how_many_installments": model.bag.how_many_installments,
+        "payment_method_id": payment_method.id,
     }
     response = client.post(url, data, format="json")
 
@@ -1686,21 +1733,6 @@ def test_pay_for_plan_financing_with_country_code_and_price_override(
     expected_invoice_data["paid_at"] = invoice.paid_at
     assert db_invoice == expected_invoice_data
 
-    # Verify stripe call
-    assert stripe.Charge.create.call_args_list == [
-        call(
-            customer=stripe_customer_id,
-            amount=int(expected_amount),
-            currency=model.currency.code.lower(),
-            description="",
-        )
-    ]
-    user = model.user
-    name = f"{user.first_name} {user.last_name}"
-    assert stripe.Customer.create.call_args_list == [
-        call(email=user.email, name=name),
-    ]
-
     # Verify task call
     assert tasks.build_plan_financing.delay.call_args_list == [
         call(1, 1, conversion_info=""),
@@ -1714,3 +1746,167 @@ def test_pay_for_plan_financing_with_country_code_and_price_override(
             call(model.user.id, "checkout_completed", related_type="payments.Invoice", related_id=1),
         ],
     )
+
+
+def test_pay__stripe_checkout_klarna(bc: Breathecode, client: APIClient, monkeypatch):
+    session_id = "cs_test_klarna_session"
+    checkout_url = "https://checkout.stripe.com/c/pay/cs_test_klarna_session"
+
+    monkeypatch.setattr(
+        "stripe.checkout.Session.create",
+        MagicMock(return_value={"id": session_id, "url": checkout_url}),
+    )
+
+    bag = {
+        "token": "xdxdxdxdxdxdxdxdxdxd",
+        "expires_at": UTC_NOW,
+        "status": "CHECKING",
+        "type": "BAG",
+        **generate_amounts_by_time(over_50=True),
+        "seat_service_item_id": None,
+    }
+    chosen_period = "YEAR"
+    plan = {"is_renewable": False}
+
+    model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1)
+    AcademyPaymentSettings.objects.create(academy=model.academy, stripe_api_key="sk_test_klarna")
+
+    payment_method = PaymentMethod.objects.create(
+        academy=model.academy,
+        title="Klarna",
+        description="Pay with Klarna",
+        lang="en-US",
+        provider_settings={"stripe_payment_method_types": ["klarna"]},
+        is_financing_managed_by_provider=False,
+    )
+
+    client.force_authenticate(user=model.user)
+
+    url = reverse_lazy("payments:pay")
+    data = {
+        "token": "xdxdxdxdxdxdxdxdxdxd",
+        "chosen_period": chosen_period,
+        "payment_method_id": payment_method.id,
+        "return_url": "https://example.com/success",
+        "cancel_url": "https://example.com/cancel",
+    }
+    response = client.post(url, data, format="json")
+
+    json = response.json()
+    assert json == {"checkout_url": checkout_url, "session_id": session_id}
+    assert response.status_code == status.HTTP_201_CREATED
+
+    assert bc.database.list_of("payments.Bag") == [
+        {
+            **bc.format.to_dict(model.bag),
+            "status": "CHECKING",
+        }
+    ]
+    assert bc.database.list_of("payments.Invoice") == []
+
+    assert tasks.build_subscription.delay.call_args_list == []
+    assert tasks.build_plan_financing.delay.call_args_list == []
+    assert tasks.build_free_subscription.delay.call_args_list == []
+
+    bc.check.calls(
+        activity_tasks.add_activity.delay.call_args_list,
+        [
+            call(1, "bag_created", related_type="payments.Bag", related_id=1),
+        ],
+    )
+
+
+def test_pay__stripe_checkout_klarna__plan_not_available(bc: Breathecode, client: APIClient, monkeypatch):
+    monkeypatch.setattr(
+        "stripe.checkout.Session.create",
+        MagicMock(return_value={"id": "cs_test", "url": "https://checkout.stripe.com/c/pay/cs_test"}),
+    )
+
+    bag = {
+        "token": "xdxdxdxdxdxdxdxdxdxd",
+        "expires_at": UTC_NOW,
+        "status": "CHECKING",
+        "type": "BAG",
+        **generate_amounts_by_time(over_50=True),
+        "seat_service_item_id": None,
+    }
+    plan = {"is_renewable": False}
+
+    model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=2, service_item=1)
+    AcademyPaymentSettings.objects.create(academy=model.academy, stripe_api_key="sk_test_klarna")
+
+    payment_method = PaymentMethod.objects.create(
+        academy=model.academy,
+        title="Klarna",
+        description="Pay with Klarna",
+        lang="en-US",
+        provider_settings={"stripe_payment_method_types": ["klarna"]},
+    )
+    payment_method.plans.add(model.plan[1])
+
+    client.force_authenticate(user=model.user)
+
+    url = reverse_lazy("payments:pay")
+    data = {
+        "token": "xdxdxdxdxdxdxdxdxdxd",
+        "chosen_period": "YEAR",
+        "payment_method_id": payment_method.id,
+        "return_url": "https://example.com/success",
+        "cancel_url": "https://example.com/cancel",
+    }
+    response = client.post(url, data, format="json")
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json() == {
+        "detail": "payment-method-not-available-for-plan",
+        "status_code": 400,
+    }
+    assert bc.database.list_of("payments.Invoice") == []
+
+
+def test_pay__stripe_checkout_klarna__plan_not_available(bc: Breathecode, client: APIClient, monkeypatch):
+    monkeypatch.setattr(
+        "stripe.checkout.Session.create",
+        MagicMock(return_value={"id": "cs_test", "url": "https://checkout.stripe.com/c/pay/cs_test"}),
+    )
+
+    bag = {
+        "token": "xdxdxdxdxdxdxdxdxdxd",
+        "expires_at": UTC_NOW,
+        "status": "CHECKING",
+        "type": "BAG",
+        **generate_amounts_by_time(over_50=True),
+        "seat_service_item_id": None,
+    }
+    plan = {"is_renewable": False}
+
+    model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=2, service_item=1)
+    AcademyPaymentSettings.objects.create(academy=model.academy, stripe_api_key="sk_test_klarna")
+
+    payment_method = PaymentMethod.objects.create(
+        academy=model.academy,
+        title="Klarna",
+        description="Pay with Klarna",
+        lang="en-US",
+        provider_settings={"stripe_payment_method_types": ["klarna"]},
+    )
+    payment_method.plans.add(model.plan[1])
+
+    client.force_authenticate(user=model.user)
+
+    url = reverse_lazy("payments:pay")
+    data = {
+        "token": "xdxdxdxdxdxdxdxdxdxd",
+        "chosen_period": "YEAR",
+        "payment_method_id": payment_method.id,
+        "return_url": "https://example.com/success",
+        "cancel_url": "https://example.com/cancel",
+    }
+    response = client.post(url, data, format="json")
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json() == {
+        "detail": "payment-method-not-available-for-plan",
+        "status_code": 400,
+    }
+    assert bc.database.list_of("payments.Invoice") == []

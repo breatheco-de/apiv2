@@ -21,6 +21,7 @@ requires: []
 - **Credit card setup order:** (1) `main_currency`, (2) Stripe via `bc-payments-configure-academy-stripe`, (3) catalog entry with `is_credit_card: true` and `currency` matching `main_currency`.
 - **Academy-owned vs global:** staff can CRUD only methods owned by their academy (`academy` set). Global methods (`academy=null`) are visible on GET but cannot be updated or deleted by academy staff.
 - **`is_crypto`** is not writable via the payment method API — crypto catalog entries are outside this skill's create/update body.
+- **`logo_urls`:** optional list of public HTTPS URLs (max 10) shown in checkout UI; defaults to `[]`.
 - **Capabilities:** `read_paymentmethod` (list/get), `crud_paymentmethod` (create/update/delete). **`Academy`** header required on all `/academy/` routes.
 - **Staff manual deposits** require a non-card, non-crypto payment method.
 
@@ -137,6 +138,7 @@ requires: []
     "is_credit_card": true,
     "is_crypto": false,
     "third_party_link": null,
+    "logo_urls": [],
     "academy": {
       "id": 55,
       "name": "Miami Academy",
@@ -181,7 +183,11 @@ requires: []
   "lang": "en-US",
   "included_country_codes": "US,CA,MX,BR",
   "visibility": "PUBLIC",
-  "deprecated": false
+  "deprecated": false,
+  "logo_urls": [
+    "https://cdn.example.com/payments/visa.svg",
+    "https://cdn.example.com/payments/mastercard.svg"
+  ]
 }
 ```
 
@@ -197,7 +203,8 @@ requires: []
   "lang": "es-PE",
   "included_country_codes": "PE",
   "visibility": "PUBLIC",
-  "deprecated": false
+  "deprecated": false,
+  "logo_urls": []
 }
 ```
 
@@ -215,7 +222,8 @@ requires: []
   "academy": 55,
   "included_country_codes": "PE",
   "visibility": "PUBLIC",
-  "deprecated": false
+  "deprecated": false,
+  "logo_urls": []
 }
 ```
 

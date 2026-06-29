@@ -1,19 +1,28 @@
+import json
 from datetime import timedelta
+from urllib.parse import parse_qs, urlparse
 
 from django.contrib.auth.models import User
 from django.utils import timezone
 
-from breathecode.payments.actions import retry_pending_bag
+from breathecode.authenticate.actions import get_app_url, get_user_settings
+from breathecode.admissions.models import Cohort
+from breathecode.monitoring import signals as monitoring_signals
+from breathecode.monitoring.models import StripeEvent
+from breathecode.notify import actions as notify_actions
+from breathecode.payments.actions import is_stripe_checkout_already_fulfilled, retry_pending_bag
 from breathecode.payments.models import (
     Bag,
     ConsumptionSession,
     Service,
     Consumable,
+    Invoice,
     Subscription,
     SubscriptionBillingTeam,
     SubscriptionSeat,
     ServiceStockScheduler,
     Plan,
+    STRIPE_CHECKOUT_FULFILLMENT_EVENT_TYPES,
 )
 from breathecode.payments.tasks import (
     build_service_stock_scheduler_from_subscription,
@@ -110,6 +119,176 @@ def supervise_pending_bags_to_be_delivered():
                     "pending-bag-delivery",
                     {"bag_id": bag.id},
                 )
+
+
+@supervisor(delta=timedelta(minutes=30))
+def supervise_stripe_checkout_events_in_error():
+    print("Supervising stripe checkout events in error")
+    """
+    Detect verified Stripe checkout webhooks that failed after payment succeeded.
+
+    Skips events already fulfilled, unverified signatures, unpaid sessions, and purchase bags
+    that should be handled by supervise_pending_bags_to_be_delivered instead.
+    """
+    utc_now = timezone.now()
+
+    events = StripeEvent.objects.filter(
+        status="ERROR",
+        type__in=STRIPE_CHECKOUT_FULFILLMENT_EVENT_TYPES,
+        created_at__lte=utc_now - timedelta(minutes=5),
+        created_at__gte=utc_now - timedelta(days=7),
+    ).order_by("id")
+    print("Eventsss", events)
+    for event in events:
+        if (event.status_texts or {}).get("verified") is False:
+            continue
+
+        event_data = event.data or {}
+        session = event_data.get("object") or event_data
+        if session.get("payment_status") != "paid":
+            continue
+
+        metadata = session.get("metadata") or {}
+        bag_id = metadata.get("bag_id")
+        if not bag_id:
+            print("No bag ID")
+            continue
+
+        try:
+            bag_id_int = int(float(bag_id))
+            print("Bag ID int", bag_id_int)
+        except (TypeError, ValueError):
+            continue
+
+        bag = Bag.objects.filter(id=bag_id_int).select_related("user", "academy").first()
+
+        if is_stripe_checkout_already_fulfilled(
+            session=session,
+            exclude_stripe_event_id=event.id,
+        ):
+            print("Stripe checkout event already fulfilled")
+            continue
+
+        user_email = bag.user.email if bag and bag.user_id else "unknown user"
+        academy_name = bag.academy.name if bag and bag.academy_id else "unknown academy"
+
+        yield (
+            f"Stripe checkout event {event.id} ({event.type}) failed for bag {bag_id_int} "
+            f"user {user_email} academy {academy_name}",
+            "stripe-checkout-fulfillment-error",
+            {"bag_id": bag_id_int, "stripe_event_id": event.id},
+        )
+
+
+@issue(supervise_stripe_checkout_events_in_error, delta=timedelta(minutes=30), attempts=3)
+def stripe_checkout_fulfillment_error(bag_id: int, stripe_event_id: int):
+    """
+    Replay a failed Stripe checkout webhook to retry payment or renewal fulfillment.
+    """
+    event = StripeEvent.objects.filter(id=stripe_event_id).first()
+    if not event:
+        return False
+
+    event_data = event.data or {}
+    session = event_data.get("object") or event_data
+    metadata = session.get("metadata") or {}
+    bag = Bag.objects.filter(id=bag_id).first()
+
+    if is_stripe_checkout_already_fulfilled(
+        session=session,
+        exclude_stripe_event_id=event.id,
+    ):
+        return True
+
+    session_id = session.get("id")
+    has_session_invoice = bool(
+        session_id
+        and Invoice.objects.filter(stripe_id=session_id, status=Invoice.Status.FULFILLED).exists()
+    )
+    is_renewal = metadata.get("subscription_id") or metadata.get("plan_financing_id")
+    if (
+        not is_renewal
+        and bag
+        and bag.status != Bag.Status.CHECKING
+        and not has_session_invoice
+    ):
+        return False
+
+    if bag and (raw_snapshot := metadata.get("fulfillment_snapshot")):
+        try:
+            snapshot = json.loads(raw_snapshot)
+            bag.plans.set(snapshot.get("plan_ids") or [])
+            bag.plan_addons.set(snapshot.get("plan_addon_ids") or [])
+            bag.coupons.set(snapshot.get("coupon_ids") or [])
+            if chosen_period := metadata.get("chosen_period"):
+                bag.chosen_period = chosen_period
+            if raw_installments := metadata.get("how_many_installments"):
+                bag.how_many_installments = int(float(raw_installments))
+            bag.save(update_fields=["chosen_period", "how_many_installments"])
+        except (json.JSONDecodeError, TypeError, ValueError):
+            return False
+
+    if not metadata.get("selected_cohort") and (success_url := session.get("success_url")):
+        if cohort_ref := parse_qs(urlparse(success_url).query).get("cohort", [None])[0]:
+            selected_cohort = cohort_ref
+            try:
+                if slug := Cohort.objects.filter(id=int(cohort_ref)).values_list("slug", flat=True).first():
+                    selected_cohort = slug
+            except (TypeError, ValueError):
+                pass
+            metadata["selected_cohort"] = selected_cohort
+            event.data = event_data
+            event.save(update_fields=["data"])
+
+    monitoring_signals.stripe_webhook.send_robust(instance=event, sender=event.__class__)
+
+    event.refresh_from_db()
+    if event.status == "DONE":
+        user = None
+        if metadata.get("user_id"):
+            try:
+                user = User.objects.filter(id=int(float(metadata["user_id"]))).first()
+            except (TypeError, ValueError):
+                pass
+        if not user and metadata.get("user_email"):
+            user = User.objects.filter(email=metadata["user_email"]).first()
+
+        if user:
+            user_settings = get_user_settings(user.id)
+            lang = user_settings.lang if user_settings and user_settings.lang else "en"
+            invoice = (
+                Invoice.objects.filter(stripe_id=session_id).select_related("academy").first() if session_id else None
+            )
+            academy = invoice.academy if invoice else (bag.academy if bag else None)
+            messages = {
+                "en": {
+                    "subject": "Your plan has been activated",
+                    "message": f"Hello {user.first_name or 'there'},<br><br>"
+                    f"Your plan has been activated successfully.<br><br>",
+                    "button": "Go to programs",
+                },
+                "es": {
+                    "subject": "Tu plan se activó correctamente",
+                    "message": f"Hola {user.first_name or ''},<br><br>"
+                    f"Tu plan se activó correctamente.<br><br>",
+                    "button": "Ir a los programas",
+                },
+            }
+            selected_lang = lang if lang in messages else "en"
+            notify_actions.send_email_message(
+                "message",
+                user.email,
+                {
+                    "SUBJECT": messages[selected_lang]["subject"],
+                    "MESSAGE": messages[selected_lang]["message"],
+                    "BUTTON": messages[selected_lang]["button"],
+                    "LINK": f"{get_app_url(academy)}/choose-program",
+                },
+                academy=academy,
+            )
+        return True
+
+    return None
 
 
 @issue(supervise_pending_bags_to_be_delivered, delta=timedelta(minutes=30), attempts=3)

@@ -386,10 +386,7 @@ def renew_plan_financing_consumables(
     # Deleted plans stop consumable renewals, but financing status must not be forced to DEPRECATED
     # because the model explicitly forbids that status.
     if plan_financing.plans.filter(status=Plan.Status.DELETED).exists():
-        raise AbortTask(
-            f"The plan financing {plan_financing.id} has deleted plans, "
-            "consumables will not be renewed"
-        )
+        raise AbortTask(f"The plan financing {plan_financing.id} has deleted plans, " "consumables will not be renewed")
 
     utc_now = timezone.now()
     if plan_financing.next_payment_at < utc_now and plan_financing.status != PlanFinancing.Status.FULLY_PAID:
@@ -479,23 +476,26 @@ def notify_subscription_renewal(self, subscription_id: int, **_: Any):
     if utc_now < subscription.next_payment_at - timedelta(days=early_renewal_window_days):
         raise AbortTask(f"Subscription {subscription_id} renewal is scheduled too early")
 
+    plan = subscription.plans.first()
+    plan_title = plan.title or plan.slug if plan else "plan"
+
     renewal_date = subscription.next_payment_at.strftime("%B %d, %Y")
     params = {
-        "plan": subscription.plans.first().slug,
+        "plan": plan.slug if plan else "",
         "subscription_id": subscription.id,
     }
 
     days_until_renewal = (subscription.next_payment_at - utc_now).days
     subject = translation(
         settings.lang,
-        en=f"Your 4Geeks subscription renews in {days_until_renewal} days",
-        es=f"Tu suscripción 4Geeks se renueva en {days_until_renewal} días",
+        en=f"Your {plan_title} subscription renews in {days_until_renewal} days",
+        es=f"Tu suscripción {plan_title} se renueva en {days_until_renewal} días",
     )
 
     message = translation(
         settings.lang,
-        en=f"Your subscription will renew on {renewal_date}. If you have a credit card registered, it will be used automatically, or you can pay in advance with another method:",
-        es=f"Tu suscripción se renovará el {renewal_date}. Si tienes una tarjeta de crédito registrada, se utilizará automáticamente, o puedes pagar por adelantado con otro método:",
+        en=f"Your {plan_title} subscription will renew on {renewal_date}. If you have a credit card registered, it will be used automatically, or you can pay in advance with another method:",
+        es=f"Tu suscripción {plan_title} se renovará el {renewal_date}. Si tienes una tarjeta de crédito registrada, se utilizará automáticamente, o puedes pagar por adelantado con otro método:",
     )
 
     button = translation(settings.lang, en="Pay Now", es="Pagar Ahora")
@@ -548,14 +548,16 @@ def charge_subscription(self, subscription_id: int, **_: Any):
     logger.info(f"Starting charge_subscription for subscription {subscription_id}")
 
     def alert_payment_issue(message: str, button: str) -> None:
+        plan = subscription.plans.first()
+        plan_title = plan.title or plan.slug if plan else "plan"
 
         subject = translation(
             settings.lang,
-            en="Your 4Geeks subscription could not be renewed",
-            es="Tu suscripción 4Geeks no pudo ser renovada",
+            en=f"Your {plan_title} subscription could not be renewed",
+            es=f"Tu suscripción {plan_title} no pudo ser renovada",
         )
 
-        params = {"plan": subscription.plans.first().id, "subscription_id": subscription.id}
+        params = {"plan": plan.slug if plan else "", "subscription_id": subscription.id}
 
         notify_actions.send_email_message(
             "message",
@@ -955,28 +957,31 @@ def notify_plan_financing_renewal(self, plan_financing_id: int, **_: Any):
 
     next_installment = paid_installments + 1
 
+    plan = plan_financing.plans.first()
+    plan_title = plan.title or plan.slug if plan else "plan"
+
     renewal_date = plan_financing.next_payment_at.strftime("%B %d, %Y")
 
     days_until_renewal = (plan_financing.next_payment_at - utc_now).days
 
     subject = translation(
         settings.lang,
-        en=f"Your installment payment is due in {days_until_renewal} days",
-        es=f"Tu pago de cuota vence en {days_until_renewal} días",
+        en=f"Your {plan_title} installment payment is due in {days_until_renewal} days",
+        es=f"El pago de cuota de {plan_title} vence en {days_until_renewal} días",
     )
 
     message = translation(
         settings.lang,
-        en=f"On {renewal_date}, you need to pay the installment {next_installment} of your plan. If you have a credit card registered, "
+        en=f"On {renewal_date}, you need to pay installment {next_installment} of {plan_title}. If you have a credit card registered, "
         "it will be used automatically, or you can pay in advance with another method",
-        es=f"El {renewal_date} debes realizar el pago de la cuota {next_installment} de tu plan. Si tienes una tarjeta de crédito registrada, "
+        es=f"El {renewal_date} debes realizar el pago de la cuota {next_installment} de {plan_title}. Si tienes una tarjeta de crédito registrada, "
         "se utilizará automáticamente, o puedes pagar por adelantado con otro método:",
     )
 
     button = translation(settings.lang, en="Pay Now", es="Pagar Ahora")
 
     params = {
-        "plan": plan_financing.plans.first().slug,
+        "plan": plan.slug if plan else "",
         "plan_financing_id": plan_financing.id,
     }
 
@@ -1031,14 +1036,16 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
     logger.info(f"Starting charge_plan_financing for id {plan_financing_id}")
 
     def alert_payment_issue(message: str, button: str) -> None:
+        plan = plan_financing.plans.first()
+        plan_title = plan.title or plan.slug if plan else "plan"
 
         subject = translation(
             settings.lang,
-            en="Your 4Geeks subscription could not be renewed",
-            es="Tu suscripción 4Geeks no pudo ser renovada",
+            en=f"Your {plan_title} payment could not be processed",
+            es=f"No pudimos procesar el pago de {plan_title}",
         )
 
-        params = {"plan": plan_financing.plans.first().id, "plan_financing_id": plan_financing.id}
+        params = {"plan": plan.slug if plan else "", "plan_financing_id": plan_financing.id}
 
         notify_actions.send_email_message(
             "message",
@@ -1314,7 +1321,9 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
                     # Look for existing payment that hasn't been delivered yet
                     invoice = (
-                        plan_financing.invoices.filter(paid_at__lte=utc_now, status="FULFILLED", bag__was_delivered=False)
+                        plan_financing.invoices.filter(
+                            paid_at__lte=utc_now, status="FULFILLED", bag__was_delivered=False
+                        )
                         .order_by("-paid_at")
                         .first()
                     )
@@ -1934,7 +1943,9 @@ def build_plan_financing(
     if not (bag := Bag.objects.filter(id=bag_id, status="PAID", was_delivered=False).first()):
         raise RetryTask(f"Bag with id {bag_id} not found")
 
-    if not (invoice := Invoice.objects.filter(id=invoice_id, status="FULFILLED").first()):
+    if not (
+        invoice := Invoice.objects.filter(id=invoice_id, status="FULFILLED").select_related("payment_method").first()
+    ):
         raise RetryTask(f"Invoice with id {invoice_id} not found")
 
     zero_initial_payment = initial_payment_amount is not None and principal_amount is not None
@@ -1981,7 +1992,9 @@ def build_plan_financing(
         if grace_period_duration
         else relativedelta(0)
     )
-    next_payment_at = invoice.paid_at + grace_delta if grace_period_duration else invoice.paid_at + relativedelta(months=1)
+    next_payment_at = (
+        invoice.paid_at + grace_delta if grace_period_duration else invoice.paid_at + relativedelta(months=1)
+    )
 
     parsed_conversion_info = ast.literal_eval(conversion_info) if conversion_info not in [None, ""] else None
     # principal_amount allows separating the recurring amount (plan base)
@@ -1993,7 +2006,20 @@ def build_plan_financing(
     # Must use next_payment_at (includes grace) so valid_until shifts with grace; do not anchor only to paid_at.
     valid_until = next_payment_at + relativedelta(months=max(months - 1, 0))
 
-    initial_installments_paid = 0 if initial_payment_amount is not None else 1
+    # If a third party (e.g. Klarna/Affirm) manages installments, the invoice amount is the full financing total and all installments count as paid.
+    is_full_financing_amount = (
+        bag.how_many_installments > 0
+        and initial_payment_amount is None
+        and invoice.payment_method is not None
+        and invoice.payment_method.is_financing_managed_by_provider
+    )
+
+    if is_full_financing_amount:
+        initial_installments_paid = bag.how_many_installments
+        financing_status = PlanFinancing.Status.FULLY_PAID
+    else:
+        initial_installments_paid = 0 if initial_payment_amount is not None else 1
+        financing_status = PlanFinancing.Status.ACTIVE
 
     financing = PlanFinancing.objects.create(
         user=bag.user,
@@ -2010,7 +2036,7 @@ def build_plan_financing(
         initial_payment_amount=initial_payment_amount,
         grace_period_duration=grace_period_duration,
         grace_period_duration_unit=grace_period_duration_unit,
-        status="ACTIVE",
+        status=financing_status,
         conversion_info=parsed_conversion_info,
         currency=bag.currency or bag.academy.main_currency,  # Ensure currency is passed from bag
         seat_service_item=bag.seat_service_item,
@@ -2049,17 +2075,18 @@ def build_plan_financing(
 
     build_service_stock_scheduler_from_plan_financing.delay(financing.id)
 
-    # Schedule monthly charges based on days until next payment
-    days_until_next_payment = (next_payment_at - invoice.paid_at).days
-    manager = schedule_task(charge_plan_financing, f"{days_until_next_payment}d")
-    if not manager.exists(financing.id):
-        manager.call(financing.id)
-
-    if days_until_next_payment > 2:
-        notification_day = days_until_next_payment - 2
-        manager = schedule_task(notify_plan_financing_renewal, f"{notification_day}d")
+    if not is_full_financing_amount:
+        # Schedule monthly charges based on days until next payment
+        days_until_next_payment = (next_payment_at - invoice.paid_at).days
+        manager = schedule_task(charge_plan_financing, f"{days_until_next_payment}d")
         if not manager.exists(financing.id):
             manager.call(financing.id)
+
+        if days_until_next_payment > 2:
+            notification_day = days_until_next_payment - 2
+            manager = schedule_task(notify_plan_financing_renewal, f"{notification_day}d")
+            if not manager.exists(financing.id):
+                manager.call(financing.id)
 
     logger.info(f"PlanFinancing was created with id {financing.id}")
 
@@ -2521,12 +2548,19 @@ def send_coinbase_error_email(
         error_summary: Brief description of the error
     """
     try:
-        invoice = Invoice.objects.select_related("bag", "academy", "user").filter(id=invoice_id).first()
+        invoice = (
+            Invoice.objects.select_related("bag", "academy", "user")
+            .prefetch_related("bag__plans")
+            .filter(id=invoice_id)
+            .first()
+        )
 
         if not invoice:
             raise AbortTask(f"Invoice {invoice_id} not found")
 
         user = invoice.user
+        plan = invoice.bag.plans.first() if invoice.bag else None
+        plan_title = plan.title or plan.slug if plan else "your plan"
         support_email = invoice.academy.feedback_email if invoice.academy else "support@4geeks.com"
 
         # Get user language
@@ -2552,18 +2586,18 @@ def send_coinbase_error_email(
                 # Messages in English and Spanish
                 messages = {
                     "en": {
-                        "subject": "Payment Processing Issue",
+                        "subject": f"Payment Processing Issue - {plan_title}",
                         "message": f"Hello {user.first_name or 'there'},<br><br>"
-                        f"We encountered a technical issue while processing your payment "
+                        f"We encountered a technical issue while processing your {plan_title} payment "
                         f"(Invoice ID: {invoice_id}).<br><br>"
                         f"Please contact our support team at <a href='mailto:{support_email}'>{support_email}</a> "
                         f"so we can help you resolve this quickly.<br><br>"
                         f"We apologize for any inconvenience.",
                     },
                     "es": {
-                        "subject": "Problema Procesando tu Pago",
+                        "subject": f"Problema Procesando tu Pago - {plan_title}",
                         "message": f"Hola {user.first_name or ''},<br><br>"
-                        f"Encontramos un problema técnico al procesar tu pago "
+                        f"Encontramos un problema técnico al procesar el pago de {plan_title} "
                         f"(ID de Invoice: {invoice_id}).<br><br>"
                         f"Por favor contacta a nuestro equipo de soporte en <a href='mailto:{support_email}'>{support_email}</a> "
                         f"para que podamos ayudarte a resolver esto rápidamente.<br><br>"
@@ -2608,3 +2642,100 @@ def send_coinbase_error_email(
             exc_info=True,
         )
         # Don't raise - email failures shouldn't break the flow
+
+
+@task(bind=False, priority=TaskPriority.NOTIFICATION.value)
+def send_checkout_fulfillment_error_email(
+    bag_id: int,
+    session_id: str,
+    error_summary: str,
+    **_: Any,
+):
+    """
+    Notify the user when Stripe Checkout payment succeeded but fulfillment failed.
+    Uses Redis lock to ensure only one email per checkout session.
+    """
+    try:
+        bag = Bag.objects.select_related("user", "academy").prefetch_related("plans").filter(id=bag_id).first()
+        if not bag:
+            raise AbortTask(f"Bag {bag_id} not found")
+
+        user = bag.user
+        plan = bag.plans.first()
+        plan_title = plan.title or plan.slug if plan else "your plan"
+        support_email = (bag.academy.marketing_email if bag.academy else None) or "support@4geeks.com"
+
+        user_settings = get_user_settings(user.id)
+        lang = user_settings.lang if user_settings and user_settings.lang else "en"
+
+        lock_key = f"checkout_fulfillment_error_email:{session_id}"
+
+        client = None
+        if IS_DJANGO_REDIS:
+            client = get_redis_connection("default")
+
+        try:
+            with Lock(client, lock_key, timeout=300, blocking_timeout=300):
+                sent_key = f"checkout_fulfillment_error_email_sent:{session_id}"
+                if cache.get(sent_key):
+                    logger.info(
+                        "send_checkout_fulfillment_error_email: already sent for session_id=%s, skipping",
+                        session_id,
+                    )
+                    return
+
+                messages = {
+                    "en": {
+                        "subject": f"Payment Processing Issue - {plan_title}",
+                        "message": f"Hello {user.first_name or 'there'},<br><br>"
+                        f"We encountered a technical issue while activating "
+                        f"your {plan_title} purchase (reference: {session_id}).<br><br>"
+                        f"We will retry shortly. If the problem persists, please contact our support team at <a href='mailto:{support_email}'>{support_email}</a> "
+                        f"so we can help you resolve this quickly.<br><br>",
+                    },
+                    "es": {
+                        "subject": f"Problema Procesando tu Pago - {plan_title}",
+                        "message": f"Hola {user.first_name or ''},<br><br>"
+                        f"Tuvimos un problema al activar "
+                        f"tu compra de {plan_title} (referencia: {session_id}).<br><br>"
+                        f"Lo reintentaremos en breve. Si el problema persiste, favor contacta a nuestro equipo de soporte en <a href='mailto:{support_email}'>{support_email}</a> "
+                        f"para que podamos ayudarte a resolver esto rápidamente.<br><br>",
+                    },
+                }
+
+                selected_lang = lang if lang in messages else "en"
+
+                notify_actions.send_email_message(
+                    "message",
+                    user.email,
+                    {
+                        "SUBJECT": messages[selected_lang]["subject"],
+                        "MESSAGE": messages[selected_lang]["message"],
+                        "COMPANY_INFO_EMAIL": support_email,
+                    },
+                    academy=bag.academy,
+                )
+
+                cache.set(sent_key, True, 86400)
+
+                logger.info(
+                    "send_checkout_fulfillment_error_email: sent bag_id=%s session_id=%s summary=%s",
+                    bag_id,
+                    session_id,
+                    error_summary[:80],
+                )
+
+        except LockError:
+            logger.info(
+                "send_checkout_fulfillment_error_email: lock held for session_id=%s, skipping duplicate",
+                session_id,
+            )
+
+    except Exception as e:
+        logger.error(
+            "send_checkout_fulfillment_error_email: failed bag_id=%s session_id=%s error=%s",
+            bag_id,
+            session_id,
+            str(e),
+            exc_info=True,
+        )
