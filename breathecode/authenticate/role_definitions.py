@@ -692,6 +692,7 @@ def get_extended_roles():
                 "read_mentorship_bill",
                 "read_project_invoice",
                 "crud_project_invoice",
+                "read_invoice",
                 "issue_refund",
                 "get_github_user",
                 "read_provisioning_bill",
