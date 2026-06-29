@@ -1693,11 +1693,13 @@ def build_service_stock_scheduler_from_plan_financing(
         valid_until: datetime,
         *,
         seat: PlanFinancingSeat | None = None,
+        team_owned: bool = False,
     ) -> None:
+        scheduler_team = team if (team_owned and team) else None
         scheduler, created = ServiceStockScheduler.objects.get_or_create(
             plan_handler=handler_obj,
             plan_financing_seat=seat,
-            plan_financing_team=team if (per_team_strategy and seat is None and team) else None,
+            plan_financing_team=scheduler_team,
             defaults={"valid_until": valid_until},
         )
 
@@ -1706,12 +1708,8 @@ def build_service_stock_scheduler_from_plan_financing(
             scheduler.valid_until = valid_until
             update_fields.append("valid_until")
 
-        if per_team_strategy and team and scheduler.plan_financing_team_id != team.id:
-            scheduler.plan_financing_team = team
-            update_fields.append("plan_financing_team")
-
-        if not per_team_strategy and scheduler.plan_financing_team_id is not None:
-            scheduler.plan_financing_team = None
+        if scheduler.plan_financing_team_id != (scheduler_team.id if scheduler_team else None):
+            scheduler.plan_financing_team = scheduler_team
             update_fields.append("plan_financing_team")
 
         if not created and update_fields:
@@ -1752,10 +1750,11 @@ def build_service_stock_scheduler_from_plan_financing(
                 plan_financing=plan_financing, handler=plan_service_item
             )
             valid_until = compute_valid_until(plan_service_item)
+            is_team_allowed = plan_service_item.service_item.is_team_allowed
 
-            if team and per_team_strategy:
-                upsert_scheduler(handler_obj, valid_until)
-            elif seat_scope:
+            if team and per_team_strategy and is_team_allowed:
+                upsert_scheduler(handler_obj, valid_until, team_owned=True)
+            elif seat_scope and is_team_allowed:
                 for seat in seat_scope:
                     upsert_scheduler(handler_obj, valid_until, seat=seat)
             else:
