@@ -2663,7 +2663,7 @@ def send_checkout_fulfillment_error_email(
         user = bag.user
         plan = bag.plans.first()
         plan_title = plan.title or plan.slug if plan else "your plan"
-        support_email = bag.academy.feedback_email if bag.academy else "support@4geeks.com"
+        support_email = (bag.academy.marketing_email if bag.academy else None) or "support@4geeks.com"
 
         user_settings = get_user_settings(user.id)
         lang = user_settings.lang if user_settings and user_settings.lang else "en"
@@ -2690,15 +2690,15 @@ def send_checkout_fulfillment_error_email(
                         "message": f"Hello {user.first_name or 'there'},<br><br>"
                         f"We encountered a technical issue while activating "
                         f"your {plan_title} purchase (reference: {session_id}).<br><br>"
-                        f"Please contact our support team at <a href='mailto:{support_email}'>{support_email}</a> "
+                        f"We will retry shortly. If the problem persists, please contact our support team at <a href='mailto:{support_email}'>{support_email}</a> "
                         f"so we can help you resolve this quickly.<br><br>",
                     },
                     "es": {
                         "subject": f"Problema Procesando tu Pago - {plan_title}",
                         "message": f"Hola {user.first_name or ''},<br><br>"
-                        f"Recibimos tu pago pero encontramos un problema técnico al activar "
+                        f"Tuvimos un problema al activar "
                         f"tu compra de {plan_title} (referencia: {session_id}).<br><br>"
-                        f"Por favor contacta a nuestro equipo de soporte en <a href='mailto:{support_email}'>{support_email}</a> "
+                        f"Lo reintentaremos en breve. Si el problema persiste, favor contacta a nuestro equipo de soporte en <a href='mailto:{support_email}'>{support_email}</a> "
                         f"para que podamos ayudarte a resolver esto rápidamente.<br><br>",
                     },
                 }
@@ -2711,6 +2711,7 @@ def send_checkout_fulfillment_error_email(
                     {
                         "SUBJECT": messages[selected_lang]["subject"],
                         "MESSAGE": messages[selected_lang]["message"],
+                        "COMPANY_INFO_EMAIL": support_email,
                     },
                     academy=bag.academy,
                 )

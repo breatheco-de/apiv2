@@ -212,6 +212,11 @@ PAY_EVERY_UNIT = [
     (YEAR, "Year"),
 ]
 
+STRIPE_CHECKOUT_FULFILLMENT_EVENT_TYPES = (
+    "checkout.session.completed",
+    "checkout.session.async_payment_succeeded",
+)
+
 
 class AbstractAsset(models.Model):
     """This model represents a product or a service that can be sold."""

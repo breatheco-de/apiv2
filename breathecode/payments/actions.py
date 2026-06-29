@@ -38,6 +38,7 @@ from breathecode.payments.signals import consume_service, deprovision_service
 from breathecode.utils import getLogger
 from breathecode.utils.decorators.service_deprovisioner import get_service_deprovisioner
 from breathecode.utils.validate_conversion_info import validate_conversion_info
+from breathecode.monitoring.models import StripeEvent
 from settings import GENERAL_PRICING_RATIOS
 
 from .models import (
@@ -3898,6 +3899,64 @@ def set_virtual_balance(balance: ConsumableBalance, user: User) -> None:
             append("cohort_sets", id, slug, how_many, unit_type)
 
 
+
+
+
+def is_stripe_checkout_already_fulfilled(
+    *,
+    session: dict,
+    exclude_stripe_event_id: int | None = None,
+) -> bool:
+    session_id = session.get("id")
+    if not session_id:
+        return False
+
+    done_events = StripeEvent.objects.filter(status="DONE", data__object__id=session_id)
+    if exclude_stripe_event_id:
+        done_events = done_events.exclude(id=exclude_stripe_event_id)
+    if done_events.exists():
+        return True
+
+    metadata = session.get("metadata") or {}
+    is_purchase = not metadata.get("subscription_id") and not metadata.get("plan_financing_id")
+
+    invoice = Invoice.objects.filter(stripe_id=session_id, status=Invoice.Status.FULFILLED).first()
+    if not invoice:
+        return False
+
+    if raw_sub_id := metadata.get("subscription_id"):
+        try:
+            sub_id = int(float(raw_sub_id))
+        except (TypeError, ValueError):
+            return False
+        return Subscription.objects.filter(id=sub_id, user=invoice.user, invoices=invoice).exists()
+
+    if raw_pf_id := metadata.get("plan_financing_id"):
+        try:
+            pf_id = int(float(raw_pf_id))
+        except (TypeError, ValueError):
+            return False
+        return PlanFinancing.objects.filter(id=pf_id, user=invoice.user, invoices=invoice).exists()
+
+    bag = invoice.bag
+    if not bag:
+        return False
+
+    if bag.was_delivered:
+        return True
+
+    if Subscription.objects.filter(invoices=invoice).exists():
+        return True
+    if PlanFinancing.objects.filter(invoices=invoice).exists():
+        return True
+
+    if is_purchase and bag.status == Bag.Status.PAID and not bag.was_delivered:
+        # Invoice for this session exists but build_* did not finish; pending-bag supervisor owns it.
+        return True
+
+    return False
+
+
 def retry_pending_bag(bag: Bag):
     """
     This function retries the delivery of bags that are paid but not delivered.
@@ -4363,7 +4422,7 @@ def calculate_invoice_breakdown(
     Note: Plan addons are included in the "plans" section with their plan slug.
     """
     breakdown: dict[str, Any] = {"plans": {}, "service-items": {}}
-
+    
     currency = invoice.currency if invoice else (bag.currency or bag.academy.main_currency)
     if not currency:
         raise ValidationException(

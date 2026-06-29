@@ -1,4 +1,5 @@
 from datetime import timedelta
+import json
 from typing import Any
 
 from adrf.views import APIView
@@ -5574,6 +5575,14 @@ class PayView(APIView):
                             "how_many_installments": str(bag.how_many_installments or 0),
                             "selected_cohort": request.GET.get("selected_cohort") or "",
                             "user_email": request.user.email,
+                            "fulfillment_snapshot": json.dumps(
+                                {
+                                    "plan_ids": list(bag.plans.values_list("id", flat=True)),
+                                    "plan_addon_ids": list(bag.plan_addons.values_list("id", flat=True)),
+                                    "coupon_ids": list(bag.coupons.values_list("id", flat=True)),
+                                },
+                                separators=(",", ":"),
+                            ),
                         }
 
                         session_id, checkout_url = s.create_checkout_session(
@@ -6554,6 +6563,14 @@ class RenewSubscriptionView(APIView):
                         "original_price": str(original_price),
                         "chosen_period": bag.chosen_period or "",
                         "how_many_installments": "0",
+                        "fulfillment_snapshot": json.dumps(
+                            {
+                                "plan_ids": list(bag.plans.values_list("id", flat=True)),
+                                "plan_addon_ids": list(bag.plan_addons.values_list("id", flat=True)),
+                                "coupon_ids": list(bag.coupons.values_list("id", flat=True)),
+                            },
+                            separators=(",", ":"),
+                        ),
                     }
 
                     session_id, checkout_url = s.create_checkout_session(
@@ -6958,6 +6975,14 @@ class RenewPlanFinancingView(APIView):
                         "original_price": str(first_invoice.amount),
                         "chosen_period": bag.chosen_period or "",
                         "how_many_installments": "0",
+                        "fulfillment_snapshot": json.dumps(
+                            {
+                                "plan_ids": list(bag.plans.values_list("id", flat=True)),
+                                "plan_addon_ids": list(bag.plan_addons.values_list("id", flat=True)),
+                                "coupon_ids": list(bag.coupons.values_list("id", flat=True)),
+                            },
+                            separators=(",", ":"),
+                        ),
                     }
 
                     session_id, checkout_url = s.create_checkout_session(
