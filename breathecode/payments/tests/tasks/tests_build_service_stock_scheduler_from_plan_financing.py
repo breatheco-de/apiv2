@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, call, patch
 from django.utils import timezone
 from breathecode.payments import tasks
 from breathecode.payments.actions import calculate_relative_delta
+from breathecode.payments.models import PlanFinancingTeam, ServiceStockScheduler
 
 from ...tasks import build_service_stock_scheduler_from_plan_financing
 
@@ -292,3 +293,58 @@ class PaymentsTestSuite(PaymentsTestCase):
                 ),
             ],
         )
+
+    @patch("logging.Logger.info", MagicMock())
+    @patch("logging.Logger.error", MagicMock())
+    @patch("breathecode.payments.tasks.renew_plan_financing_consumables.delay", MagicMock())
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test_per_team_strategy_only_assigns_team_to_team_allowed_service_items(self):
+        plan_financing = {
+            "next_payment_at": UTC_NOW + relativedelta(months=1),
+            "plan_expires_at": UTC_NOW + relativedelta(months=2),
+            "valid_until": UTC_NOW + relativedelta(months=3),
+            "monthly_price": (random.random() * 99.99) + 0.01,
+        }
+        plan = {"is_renewable": False, "consumption_strategy": "PER_TEAM"}
+        service_items = [
+            {"is_team_allowed": True},
+            {"is_team_allowed": False},
+        ]
+        plan_service_items = [
+            {"plan_id": 1, "service_item_id": 1},
+            {"plan_id": 1, "service_item_id": 2},
+        ]
+        model = self.bc.database.create(
+            plan_financing=plan_financing,
+            plan=plan,
+            service_item=service_items,
+            plan_service_item=plan_service_items,
+        )
+        team = PlanFinancingTeam.objects.create(
+            financing=model.plan_financing,
+            name=f"Financing Team {model.plan_financing.id}",
+            additional_seats=1,
+            consumption_strategy=PlanFinancingTeam.ConsumptionStrategy.PER_TEAM,
+        )
+
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
+        build_service_stock_scheduler_from_plan_financing.delay(model.plan_financing.id)
+
+        schedulers = ServiceStockScheduler.objects.order_by("plan_handler__handler__service_item_id")
+        self.assertEqual(schedulers.count(), 2)
+
+        team_allowed_scheduler = schedulers[0]
+        owner_scheduler = schedulers[1]
+
+        self.assertEqual(team_allowed_scheduler.plan_handler.handler.service_item.is_team_allowed, True)
+        self.assertEqual(team_allowed_scheduler.plan_financing_team_id, team.id)
+        self.assertEqual(team_allowed_scheduler.plan_financing_seat_id, None)
+
+        self.assertEqual(owner_scheduler.plan_handler.handler.service_item.is_team_allowed, False)
+        self.assertEqual(owner_scheduler.plan_financing_team_id, None)
+        self.assertEqual(owner_scheduler.plan_financing_seat_id, None)
+
+        self.assertEqual(tasks.renew_plan_financing_consumables.delay.call_args_list, [call(model.plan_financing.id)])
+        self.assertEqual(logging.Logger.error.call_args_list, [])
