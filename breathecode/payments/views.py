@@ -7934,7 +7934,11 @@ class SubscriptionSeatView(APIView):
 
         for seat in add_seats:
             try:
-                result.append(actions.create_seat(seat["email"], seat["user"], team, lang))
+                plan = subscription.plans.first()
+                cohort = actions.validate_seat_cohort_for_owner(
+                    request.user, plan, subscription, seat.get("cohort_id"), lang
+                )
+                result.append(actions.create_seat(seat["email"], seat["user"], team, lang, cohort))
             except ValidationException as e:
                 errors.append(e)
 
@@ -8214,6 +8218,13 @@ class PlanFinancingSeatView(APIView):
                         new_user,
                         team,
                         lang,
+                        actions.validate_seat_cohort_for_owner(
+                            request.user,
+                            financing.plans.first(),
+                            financing,
+                            seat.get("cohort_id"),
+                            lang,
+                        ),
                         seat.get("first_name", ""),
                         seat.get("last_name", ""),
                     )

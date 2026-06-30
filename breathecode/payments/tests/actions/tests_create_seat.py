@@ -2,10 +2,20 @@ import pytest
 from unittest.mock import MagicMock, patch
 
 
+@pytest.fixture
+def mock_cohort():
+    cohort = MagicMock()
+    cohort.slug = "test-cohort"
+    cohort.id = 1
+    return cohort
+
+
 @patch("breathecode.payments.actions.tasks")
 @patch("breathecode.payments.actions.invite_user_to_subscription_team")
 @patch("breathecode.payments.actions.SubscriptionSeat")
-def test_create_seat_happy_path_creates_seat_and_invites_and_schedules(mock_seat_cls, mock_invite, mock_tasks):
+def test_create_seat_happy_path_creates_seat_and_invites_and_schedules(
+    mock_seat_cls, mock_invite, mock_tasks, mock_cohort
+):
     """Creates seat, logs entry, invites when user is None, and schedules stock build."""
     from breathecode.payments.actions import create_seat
 
@@ -25,7 +35,7 @@ def test_create_seat_happy_path_creates_seat_and_invites_and_schedules(mock_seat
     # new seat id will be used by scheduler now
     seat_instance.id = 1001
 
-    seat = create_seat("new@example.com", user=None, billing_team=team, lang="en")
+    seat = create_seat("new@example.com", user=None, billing_team=team, lang="en", cohort=mock_cohort)
 
     assert seat is seat_instance
     assert len(seat_instance.seat_log) == 1
@@ -45,7 +55,9 @@ def test_create_seat_happy_path_creates_seat_and_invites_and_schedules(mock_seat
 @patch("breathecode.payments.actions.tasks")
 @patch("breathecode.payments.actions.invite_user_to_subscription_team")
 @patch("breathecode.payments.actions.SubscriptionSeat")
-def test_create_seat_with_per_team_consumption_does_not_schedule(mock_seat_cls, mock_invite, mock_tasks):
+def test_create_seat_with_per_team_consumption_does_not_schedule(
+    mock_seat_cls, mock_invite, mock_tasks, mock_cohort
+):
     """When team's consumption strategy is PER_TEAM, do not schedule stock creation; invite is still sent for pending seats."""
     from breathecode.payments.actions import create_seat
 
@@ -63,7 +75,7 @@ def test_create_seat_with_per_team_consumption_does_not_schedule(mock_seat_cls, 
     team.subscription = subscription
     team.consumption_strategy = "PER_TEAM"
 
-    seat = create_seat("team.member@example.com", user=None, billing_team=team, lang="en")
+    seat = create_seat("team.member@example.com", user=None, billing_team=team, lang="en", cohort=mock_cohort)
 
     assert seat is seat_instance
     mock_invite.assert_called_once()  # invite still happens for pending seat
@@ -71,7 +83,7 @@ def test_create_seat_with_per_team_consumption_does_not_schedule(mock_seat_cls, 
 
 
 @patch("breathecode.payments.actions.SubscriptionSeat")
-def test_create_seat_duplicate_raises(mock_seat_cls):
+def test_create_seat_duplicate_raises(mock_seat_cls, mock_cohort):
     """Raises when a seat with the same email already exists in team."""
     from breathecode.payments.actions import create_seat, ValidationException
 
@@ -80,7 +92,7 @@ def test_create_seat_duplicate_raises(mock_seat_cls):
     team = MagicMock()
 
     with pytest.raises(ValidationException):
-        create_seat("dup@example.com", user=None, billing_team=team, lang="en")
+        create_seat("dup@example.com", user=None, billing_team=team, lang="en", cohort=mock_cohort)
 
     # ensure filter checked for duplicate with correct args
     mock_seat_cls.objects.filter.assert_called_with(billing_team=team, email="dup@example.com")
@@ -89,7 +101,9 @@ def test_create_seat_duplicate_raises(mock_seat_cls):
 @patch("breathecode.payments.actions.tasks")
 @patch("breathecode.payments.actions.invite_user_to_subscription_team")
 @patch("breathecode.payments.actions.SubscriptionSeat")
-def test_create_seat_with_user_does_not_invite_but_schedules(mock_seat_cls, mock_invite, mock_tasks):
+def test_create_seat_with_user_does_not_invite_but_schedules(
+    mock_seat_cls, mock_invite, mock_tasks, mock_cohort
+):
     """When user is provided, do not send invites but still schedule stock build and persist log."""
     from breathecode.payments.actions import create_seat
 
@@ -107,7 +121,7 @@ def test_create_seat_with_user_does_not_invite_but_schedules(mock_seat_cls, mock
 
     user = MagicMock()
 
-    seat = create_seat("Member@Mail.com", user=user, billing_team=team, lang="en")
+    seat = create_seat("Member@Mail.com", user=user, billing_team=team, lang="en", cohort=mock_cohort)
 
     assert seat is seat_instance
     mock_invite.assert_not_called()
