@@ -75,10 +75,12 @@ def patch_strategies(monkeypatch):
     )
 
 
-def make_invite(email: str, user_id: int = 1, status: str = "ACCEPTED"):
+def make_invite(email: str, user_id: int = 1, status: str = "ACCEPTED", cohort=None):
     """Create a minimal invite-like object with the attributes the handler reads (email, user, user_id, status)."""
     user = SimpleNamespace(email=email)
-    invite = SimpleNamespace(email=email, user=user, user_id=user_id, status=status)
+    invite = SimpleNamespace(
+        email=email, user=user, user_id=user_id, status=status, cohort=cohort, cohort_id=getattr(cohort, "id", None),
+    )
     return invite
 
 
@@ -219,7 +221,8 @@ def test_updates_consumables_and_binds_when_per_seat(monkeypatch):
 
     monkeypatch.setattr(receivers.SubscriptionSeat, "objects", DummyManager([seat]), raising=False)
 
-    invite = make_invite("member@example.com", user_id=7, status="ACCEPTED")
+    cohort = SimpleNamespace(slug="test-cohort", id=1)
+    invite = make_invite("member@example.com", user_id=7, status="ACCEPTED", cohort=cohort)
 
     # Act
     uut(None, invite)
@@ -232,7 +235,7 @@ def test_updates_consumables_and_binds_when_per_seat(monkeypatch):
     mock_consumable_manager.filter.assert_called_once()
     mock_consumable_qs.update.assert_called_once_with(user=invite.user)
     # Assert student capabilities granted
-    grant_capabilities_called.assert_called_once_with(invite.user, plan)
+    grant_capabilities_called.assert_called_once_with(invite.user, plan, selected_cohort="test-cohort")
 
 
 def test_does_not_update_consumables_when_per_team_only(monkeypatch):

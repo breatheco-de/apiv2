@@ -1561,8 +1561,10 @@ def accept_invite_action(data=None, token=None, lang="en"):
             invite.subscription_seat.user = user
             invite.subscription_seat.save()
 
-        for plan in invite.subscription_seat.billing_team.plans.all():
-            payments_actions.grant_student_capabilities(user, plan)
+        subscription = invite.subscription_seat.billing_team.subscription
+        selected_cohort = invite.cohort.slug if invite.cohort_id else None
+        for plan in subscription.plans.all():
+            payments_actions.grant_student_capabilities(user, plan, selected_cohort=selected_cohort)
 
     # StudentPOSTSerializer creates one UserInvite per cohort (each with its own token). Accepting any
     # of those tokens must enroll the user in every cohort in that batch (same email + academy + role).
