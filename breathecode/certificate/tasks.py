@@ -1,7 +1,7 @@
 from task_manager.core.exceptions import AbortTask, RetryTask
 from task_manager.django.decorators import task
 
-from breathecode.admissions.models import CohortUser
+from breathecode.admissions.models import CERTIFICATE_RECIPIENT_ROLES, CohortUser
 from breathecode.certificate.models import UserSpecialty
 from breathecode.utils import getLogger
 from breathecode.utils.decorators import TaskPriority
@@ -50,7 +50,7 @@ def generate_cohort_certificates(self, cohort_id, **_):
     logger.debug("Starting generate_cohort_certificates")
     from .actions import generate_certificate
 
-    cohort_users = CohortUser.objects.filter(cohort__id=cohort_id, role="STUDENT")
+    cohort_users = CohortUser.objects.filter(cohort__id=cohort_id, role__in=CERTIFICATE_RECIPIENT_ROLES)
 
     logger.debug(f"Generating certificate for {str(cohort_users.count())} students that GRADUATED")
     for cu in cohort_users:
@@ -70,7 +70,9 @@ def async_generate_certificate(self, cohort_id, user_id, layout=None, **_):
     )
     from .actions import generate_certificate
 
-    cohort_user = CohortUser.objects.filter(cohort__id=cohort_id, user__id=user_id, role="STUDENT").first()
+    cohort_user = CohortUser.objects.filter(
+        cohort__id=cohort_id, user__id=user_id, role__in=CERTIFICATE_RECIPIENT_ROLES
+    ).first()
 
     if not cohort_user:
         logger.warning(

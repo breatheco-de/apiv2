@@ -2278,10 +2278,24 @@ class MeSubscriptionView(APIView):
 
         now = timezone.now()
 
-        subscriptions = Subscription.objects.filter(user=request.user)
+        subscriptions = Subscription.objects.filter(
+            Q(user=request.user)
+            | Q(
+                id__in=SubscriptionSeat.objects.filter(user=request.user, is_active=True).values_list(
+                    "billing_team__subscription_id", flat=True
+                )
+            )
+        )
 
         # NOTE: this is before feature/add-plan-duration branch, this will be outdated
-        plan_financings = PlanFinancing.objects.filter(user=request.user)
+        plan_financings = PlanFinancing.objects.filter(
+            Q(user=request.user)
+            | Q(
+                id__in=PlanFinancingSeat.objects.filter(user=request.user, is_active=True).values_list(
+                    "team__financing_id", flat=True
+                )
+            )
+        )
 
         if subscription := request.GET.get("subscription"):
             subscriptions = subscriptions.filter(id=int(subscription))

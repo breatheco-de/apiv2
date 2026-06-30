@@ -13,7 +13,7 @@ from django.contrib.auth.models import User
 from django.db.models import Q
 from django.utils import timezone
 
-from breathecode.admissions.models import FULLY_PAID, UP_TO_DATE, CohortUser, Syllabus, SyllabusVersion
+from breathecode.admissions.models import CERTIFICATE_RECIPIENT_ROLES, FULLY_PAID, UP_TO_DATE, CohortUser, Syllabus, SyllabusVersion
 
 if TYPE_CHECKING:
     from breathecode.admissions.models import Cohort
@@ -154,7 +154,11 @@ def generate_certificate(user, cohort=None, layout=None):
     if cohort:
         query["cohort__id"] = cohort.id
 
-    cohort_user = CohortUser.objects.filter(**query).exclude(cohort__stage="DELETED").first()
+    cohort_user = (
+        CohortUser.objects.filter(**query, role__in=CERTIFICATE_RECIPIENT_ROLES)
+        .exclude(cohort__stage="DELETED")
+        .first()
+    )
 
     if not cohort_user:
         logger.warning(
@@ -368,7 +372,11 @@ def generate_certificate_ignoring_tasks(user, cohort=None, layout=None):
     if cohort:
         query["cohort__id"] = cohort.id
 
-    cohort_user = CohortUser.objects.filter(**query).exclude(cohort__stage="DELETED").first()
+    cohort_user = (
+        CohortUser.objects.filter(**query, role__in=CERTIFICATE_RECIPIENT_ROLES)
+        .exclude(cohort__stage="DELETED")
+        .first()
+    )
 
     if not cohort_user:
         raise ValidationException(
