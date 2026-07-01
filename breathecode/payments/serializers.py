@@ -143,6 +143,7 @@ class GetServiceItemSerializer(serpy.Serializer):
     how_many = serpy.Field()
     sort_priority = serpy.Field()
     service = GetServiceSmallSerializer()
+    is_renewable = serpy.Field()
     is_team_allowed = serpy.Field()
     renew_at = serpy.Field()
     renew_at_unit = serpy.Field()
