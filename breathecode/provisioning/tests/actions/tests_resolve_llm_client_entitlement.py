@@ -47,6 +47,7 @@ class ResolveLLMClientEntitlementTestSuite(ProvisioningTestCase):
         model.provisioning_vendor.name = "litellm"
         model.provisioning_vendor.save()
         model.provisioning_academy.credentials_token = "token"
+        model.provisioning_academy.vendor_settings = {"team_id": "team-1"}
         model.provisioning_academy.save()
 
         Consumable.objects.create(
@@ -66,7 +67,8 @@ class ResolveLLMClientEntitlementTestSuite(ProvisioningTestCase):
         request.user = model.user
         request.headers = {"Academy": str(model.academy.id)}
 
-        client, external_user_id = resolve_llm_client_and_external_id(request, ensure_llm_user_record=True)
+        client, external_user_id, team_id = resolve_llm_client_and_external_id(request, ensure_llm_user_record=True)
 
         assert client is get_llm_client_mock.return_value
         assert external_user_id == f"{model.user.username}-{model.academy.slug}"
+        assert team_id == "team-1"

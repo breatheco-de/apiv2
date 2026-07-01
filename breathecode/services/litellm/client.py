@@ -74,6 +74,7 @@ class LiteLLMClient:
     def create_api_key(
         self,
         external_user_id: str,
+        team_id: str,
         name: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
         timeout: float = 10.0,
@@ -81,20 +82,27 @@ class LiteLLMClient:
         """
         Create a new API key for the given external_user_id in LiteLLM.
 
+        ``team_id`` is required so keys are scoped to the academy's LiteLLM team.
+
         Returns a normalized dict, e.g.:
         {
             "id": "<token_id>",        # stable id in LiteLLM
             "key": "<plaintext_key>",  # only shown once; do NOT log/persist in clear text
             "name": "<alias>",         # optional label
             "created_at": "...",       # ISO8601 if LiteLLM returns it
+            "expires": "...",          # ISO8601 if LiteLLM returns it
         }
         """
+        if not str(team_id or "").strip():
+            raise LiteLLMError("team_id is required to create a LiteLLM API key")
+
         url = f"{self.base_url.rstrip('/')}/key/generate"
 
         payload: Dict[str, Any] = {
             "user_id": external_user_id,
             "duration": "30d",
             "key_alias": name,
+            "team_id": str(team_id).strip(),
         }
         if isinstance(metadata, dict) and metadata:
             payload["metadata"] = metadata
@@ -114,7 +122,130 @@ class LiteLLMClient:
             "key": data.get("key"),
             "name": data.get("key_alias"),
             "created_at": data.get("created_at"),
+            "expires": data.get("expires"),
         }
+
+    def list_keys(
+        self,
+        return_full_object: bool = True,
+        page: int = 1,
+        size: int = 100,
+        team_id: Optional[str] = None,
+        timeout: float = 10.0,
+    ) -> Dict[str, Any]:
+        """
+        List LiteLLM API keys (paginated).
+
+        Requires ``return_full_object=true`` to receive key metadata (user_id, team_id, expires, etc.).
+        Normalizes LiteLLM's ``token`` field to ``token_id`` for consistency with other client methods.
+        """
+        url = f"{self.base_url.rstrip('/')}/key/list"
+        params: Dict[str, Any] = {
+            "return_full_object": str(return_full_object).lower(),
+            "page": page,
+            "size": size,
+        }
+        if team_id:
+            params["team_id"] = str(team_id).strip()
+
+        try:
+            resp = requests.get(url, headers=self.headers, params=params, timeout=timeout)
+        except requests.RequestException as exc:
+            raise LiteLLMError(f"Error calling LiteLLM to list API keys: {exc}") from exc
+
+        if resp.status_code >= 400:
+            message = self._extract_error_message(resp)
+            raise LiteLLMError(f"Failed to list LiteLLM API keys ({resp.status_code}): {message}")
+
+        data: Dict[str, Any] = resp.json()
+        keys = data.get("keys") or []
+        normalized_keys = []
+        for item in keys:
+            if not isinstance(item, dict):
+                continue
+            normalized = dict(item)
+            token = normalized.get("token")
+            if token and not normalized.get("token_id"):
+                normalized["token_id"] = token
+            normalized_keys.append(normalized)
+
+        return {
+            "keys": normalized_keys,
+            "page": data.get("page", page),
+            "total_pages": data.get("total_pages", 1),
+            "total_count": data.get("total_count"),
+        }
+
+    def list_users(
+        self,
+        page: int = 1,
+        page_size: int = 100,
+        timeout: float = 10.0,
+    ) -> Dict[str, Any]:
+        """
+        List LiteLLM users (paginated).
+
+        Endpoint: GET /user/list?page=1&page_size=100
+        """
+        url = f"{self.base_url.rstrip('/')}/user/list"
+        params: Dict[str, Any] = {
+            "page": page,
+            "page_size": page_size,
+        }
+
+        try:
+            resp = requests.get(url, headers=self.headers, params=params, timeout=timeout)
+        except requests.RequestException as exc:
+            raise LiteLLMError(f"Error calling LiteLLM to list users: {exc}") from exc
+
+        if resp.status_code >= 400:
+            message = self._extract_error_message(resp)
+            raise LiteLLMError(f"Failed to list LiteLLM users ({resp.status_code}): {message}")
+
+        data: Dict[str, Any] = resp.json()
+        return {
+            "users": data.get("users") or [],
+            "page": data.get("page", page),
+            "page_size": data.get("page_size", page_size),
+            "total_pages": data.get("total_pages", 1),
+            "total": data.get("total"),
+        }
+
+    def update_key(
+        self,
+        key: str,
+        duration: Optional[str] = None,
+        expires: Optional[str] = None,
+        timeout: float = 10.0,
+    ) -> Dict[str, Any]:
+        """
+        Update an existing LiteLLM API key.
+
+        ``key`` must be the token hash (``token`` / ``token_id`` from list_keys) or the sk- key value.
+        """
+        if not str(key or "").strip():
+            raise LiteLLMError("key is required to update a LiteLLM API key")
+
+        url = f"{self.base_url.rstrip('/')}/key/update"
+        payload: Dict[str, Any] = {"key": str(key).strip()}
+        if duration:
+            payload["duration"] = duration
+        if expires:
+            payload["expires"] = expires
+
+        try:
+            resp = requests.post(url, headers=self.headers, json=payload, timeout=timeout)
+        except requests.RequestException as exc:
+            raise LiteLLMError(f"Error calling LiteLLM to update API key: {exc}") from exc
+
+        if resp.status_code >= 400:
+            message = self._extract_error_message(resp)
+            raise LiteLLMError(f"Failed to update LiteLLM API key ({resp.status_code}): {message}")
+
+        try:
+            return resp.json()
+        except ValueError:
+            return {"key": payload["key"]}
 
     def delete_api_keys(
         self,
@@ -270,6 +401,37 @@ class LiteLLMClient:
         if resp.status_code >= 400:
             message = self._extract_error_message(resp)
             raise LiteLLMError(f"Failed to get LiteLLM budgets info ({resp.status_code}): {message}")
+
+        return resp.json()
+
+    def get_daily_activity_aggregated(
+        self,
+        start_date: str,
+        end_date: str,
+        user_id: Optional[str] = None,
+        timeout: float = 10.0,
+    ) -> Dict[str, Any]:
+        """
+        Get aggregated daily activity for a date range.
+
+        Endpoint: GET /user/daily/activity/aggregated
+        """
+        url = f"{self.base_url.rstrip('/')}/user/daily/activity/aggregated"
+        params: Dict[str, Any] = {
+            "start_date": start_date,
+            "end_date": end_date,
+        }
+        if user_id:
+            params["user_id"] = user_id
+
+        try:
+            resp = requests.get(url, headers=self.headers, params=params, timeout=timeout)
+        except requests.RequestException as exc:
+            raise LiteLLMError(f"Failed calling LiteLLM daily activity aggregated: {exc}") from exc
+
+        if resp.status_code >= 400:
+            message = self._extract_error_message(resp)
+            raise LiteLLMError(f"Failed to get LiteLLM daily activity aggregated ({resp.status_code}): {message}")
 
         return resp.json()
 

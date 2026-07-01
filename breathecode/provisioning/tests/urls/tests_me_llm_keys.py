@@ -49,6 +49,7 @@ class MeLLMKeysViewTestSuite(ProvisioningTestCase):
                     "metadata": {},
                     "spend": 1.2,
                     "created_at": "2026-01-01T00:00:00Z",
+                    "expires": "2026-01-31T00:00:00Z",
                     "team_id": None,
                 },
                 {
@@ -58,6 +59,7 @@ class MeLLMKeysViewTestSuite(ProvisioningTestCase):
                     "metadata": {},
                     "spend": 0.3,
                     "created_at": "2026-01-02T00:00:00Z",
+                    "expires": "2026-03-02T00:00:00Z",
                     "team_id": "team-1",
                 },
             ],
@@ -88,6 +90,8 @@ class MeLLMKeysViewTestSuite(ProvisioningTestCase):
         self.assertEqual(by_token["tok-b"]["host"], "https://litellm.example.com")
         self.assertEqual(by_token["tok-a"]["vendor_name"], "litellm")
         self.assertEqual(by_token["tok-b"]["vendor_name"], "litellm")
+        self.assertEqual(by_token["tok-a"]["expires"], "2026-01-31T00:00:00Z")
+        self.assertEqual(by_token["tok-b"]["expires"], "2026-03-02T00:00:00Z")
 
     @patch("breathecode.provisioning.actions.get_llm_client")
     @patch("breathecode.provisioning.views.get_llm_client")
@@ -117,7 +121,15 @@ class MeLLMKeysViewTestSuite(ProvisioningTestCase):
         llm_client_mock = MagicMock()
         llm_client_mock.get_user_info.return_value = {
             "user_info": {"models": [], "teams": ["team-1"]},
-            "keys": [{"token": "tok-team", "models": [], "team_id": "team-1", "metadata": {}}],
+            "keys": [
+                {
+                    "token": "tok-team",
+                    "models": [],
+                    "team_id": "team-1",
+                    "metadata": {},
+                    "expires": None,
+                }
+            ],
             "teams": [{"team_id": "team-1", "models": ["team/model-1"]}],
         }
         get_llm_client_views_mock.return_value = llm_client_mock
@@ -131,6 +143,7 @@ class MeLLMKeysViewTestSuite(ProvisioningTestCase):
         self.assertEqual(response.json()[0]["models"], ["team/model-1"])
         self.assertEqual(response.json()[0]["host"], "https://litellm.example.com")
         self.assertEqual(response.json()[0]["vendor_name"], "litellm")
+        self.assertIsNone(response.json()[0]["expires"])
 
     @patch("breathecode.provisioning.views.resolve_provisioning_academy_for_llm")
     @patch("breathecode.provisioning.views.resolve_llm_client_and_external_id")
@@ -149,13 +162,20 @@ class MeLLMKeysViewTestSuite(ProvisioningTestCase):
             "key": "sk-xxx",
             "name": "alias",
             "created_at": "2026-01-03T00:00:00Z",
+            "expires": "2026-02-02T00:00:00Z",
         }
         llm_client_mock.get_user_info.return_value = {
             "user_info": {"models": []},
-            "keys": [],
+            "keys": [
+                {
+                    "token": "tok-created",
+                    "models": [],
+                    "expires": "2026-02-02T00:00:00Z",
+                }
+            ],
             "teams": [],
         }
-        resolve_llm_client_mock.return_value = (llm_client_mock, "external-user")
+        resolve_llm_client_mock.return_value = (llm_client_mock, "external-user", "team-1")
 
         self.client.force_authenticate(model.user)
         self.headers(academy=1)
@@ -166,5 +186,12 @@ class MeLLMKeysViewTestSuite(ProvisioningTestCase):
         self.assertEqual(response.json()["models"], [])
         self.assertEqual(response.json()["host"], "https://litellm.example.com")
         self.assertEqual(response.json()["vendor_name"], "LiteLLM")
+        self.assertEqual(response.json()["expires"], "2026-02-02T00:00:00Z")
+        llm_client_mock.create_api_key.assert_called_once_with(
+            external_user_id="external-user",
+            team_id="team-1",
+            name="alias",
+            metadata=None,
+        )
         resolve_pa_for_llm_mock.assert_called_once()
         self.assertEqual(resolve_pa_for_llm_mock.call_args[0][0].pk, model.academy.pk)
