@@ -1036,39 +1036,39 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
     logger.info(f"Starting charge_plan_financing for id {plan_financing_id}")
 
     def alert_payment_issue(message: str, button: str) -> None:
-        plan = plan_financing.plans.first()
-        plan_title = plan.title or plan.slug if plan else "plan"
+        # plan = plan_financing.plans.first()
+        # plan_title = plan.title or plan.slug if plan else "plan"
 
-        subject = translation(
-            settings.lang,
-            en=f"Your {plan_title} payment could not be processed",
-            es=f"No pudimos procesar el pago de {plan_title}",
-        )
+        # subject = translation(
+        #     settings.lang,
+        #     en=f"Your {plan_title} payment could not be processed",
+        #     es=f"No pudimos procesar el pago de {plan_title}",
+        # )
 
-        params = {"plan": plan.slug if plan else "", "plan_financing_id": plan_financing.id}
+        # params = {"plan": plan.slug if plan else "", "plan_financing_id": plan_financing.id}
 
-        notify_actions.send_email_message(
-            "message",
-            plan_financing.user.email,
-            {
-                "SUBJECT": subject,
-                "MESSAGE": message,
-                "BUTTON": button,
-                "LINK": f"{get_app_url()}/renew?{urlencode(params)}",
-            },
-            academy=plan_financing.academy,
-        )
+        # notify_actions.send_email_message(
+        #     "message",
+        #     plan_financing.user.email,
+        #     {
+        #         "SUBJECT": subject,
+        #         "MESSAGE": message,
+        #         "BUTTON": button,
+        #         "LINK": f"{get_app_url()}/renew?{urlencode(params)}",
+        #     },
+        #     academy=plan_financing.academy,
+        # )
 
         if bag:
             bag.delete()
 
-        if plan_financing.status not in [
-            PlanFinancing.Status.CANCELLED,
-            PlanFinancing.Status.DEPRECATED,
-            PlanFinancing.Status.EXPIRED,
-        ]:
-            plan_financing.status = "PAYMENT_ISSUE"
-            plan_financing.save()
+        # if plan_financing.status not in [
+        #     PlanFinancing.Status.CANCELLED,
+        #     PlanFinancing.Status.DEPRECATED,
+        #     PlanFinancing.Status.EXPIRED,
+        # ]:
+        #     plan_financing.status = "PAYMENT_ISSUE"
+        #     plan_financing.save()
 
     bag = None
     client = None
@@ -1110,7 +1110,11 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                 )
 
             if plan_financing.status == PlanFinancing.Status.PAYMENT_ISSUE:
-                if (utc_now - plan_financing.next_payment_at).days >= 5:
+                if actions.plan_financing_was_staff_assigned(plan_financing):
+                    plan_financing.status = PlanFinancing.Status.ACTIVE
+                    plan_financing.status_message = None
+                    plan_financing.save(update_fields=["status", "status_message"])
+                elif (utc_now - plan_financing.next_payment_at).days >= 5:
                     plan_financing.status = PlanFinancing.Status.EXPIRED
                     plan_financing.status_message = "Payment failed for more than 5 days"
                     plan_financing.save()
@@ -1290,6 +1294,8 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
             # installments_paid is the authoritative counter of closed billing cycles.
             remaining_installments = installments - plan_financing.installments_paid
+            staff_assigned = actions.plan_financing_was_staff_assigned(plan_financing, first_invoice)
+            installment_closed = False
 
             if remaining_installments > 0:
                 # ── Credit-first: consume CreditLedgerEntry balance before hitting Stripe ────────
@@ -1312,6 +1318,7 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                     )
                     plan_financing.installments_paid += 1
                     credit_covered = True
+                    installment_closed = True
 
                 else:
                     if credit_balance > 1e-9 and amount_owed > 0:
@@ -1332,7 +1339,11 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                         bag = invoice.bag
 
                     else:
-                        if plan_financing.externally_managed:
+                        if staff_assigned:
+                            # Staff-managed financing: no Stripe charge, no PAYMENT_ISSUE.
+                            # Billing cycle advances below; admins register deposits manually.
+                            pass
+                        elif plan_financing.externally_managed:
                             message = translation(
                                 settings.lang,
                                 en="Please make your payment in your academy or use another payment method",
@@ -1399,74 +1410,93 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
                                 raise AbortTask(f"Payment to PlanFinancing {plan_financing_id} failed")
 
-                    # If partial credit was applied alongside a successful Stripe charge, record it.
-                    if _credit_to_consume > 1e-9:
-                        CreditLedgerEntry.objects.create(
-                            user=plan_financing.user,
-                            scope=CreditLedgerEntry.Scope.PLAN_FINANCING,
-                            plan_financing=plan_financing,
-                            amount=-_credit_to_consume,
-                            entry_type=CreditLedgerEntry.EntryType.CREDIT_CONSUMED,
-                            notes="Partial credit applied to reduce automatic charge",
+                    if invoice:
+                        # If partial credit was applied alongside a successful Stripe charge, record it.
+                        if _credit_to_consume > 1e-9:
+                            CreditLedgerEntry.objects.create(
+                                user=plan_financing.user,
+                                scope=CreditLedgerEntry.Scope.PLAN_FINANCING,
+                                plan_financing=plan_financing,
+                                amount=-_credit_to_consume,
+                                entry_type=CreditLedgerEntry.EntryType.CREDIT_CONSUMED,
+                                notes="Partial credit applied to reduce automatic charge",
+                            )
+
+                        plan_financing.invoices.add(invoice)
+                        plan_financing.installments_paid += 1
+
+                        if bag:
+                            bag.was_delivered = True
+                            bag.save()
+
+                        notify_actions.send_email_message(
+                            "message",
+                            invoice.user.email,
+                            {
+                                "SUBJECT": translation(
+                                    settings.lang,
+                                    en="Your installment at 4Geeks was successfully charged",
+                                    es="Tu cuota en 4Geeks fue cobrada exitosamente",
+                                ),
+                                "MESSAGE": translation(
+                                    settings.lang,
+                                    en=f"The amount was {invoice.currency.format_price(invoice.amount)}",
+                                    es=f"El monto fue {invoice.currency.format_price(invoice.amount)}",
+                                ),
+                                "BUTTON": translation(settings.lang, en="See the invoice", es="Ver la factura"),
+                                "LINK": f"{get_app_url()}/paymentmethod",
+                            },
+                            academy=plan_financing.academy,
                         )
 
-                    plan_financing.invoices.add(invoice)
-                    plan_financing.installments_paid += 1
-
-                    if bag:
-                        bag.was_delivered = True
-                        bag.save()
-
-                    notify_actions.send_email_message(
-                        "message",
-                        invoice.user.email,
-                        {
-                            "SUBJECT": translation(
-                                settings.lang,
-                                en="Your installment at 4Geeks was successfully charged",
-                                es="Tu cuota en 4Geeks fue cobrada exitosamente",
-                            ),
-                            "MESSAGE": translation(
-                                settings.lang,
-                                en=f"The amount was {invoice.currency.format_price(invoice.amount)}",
-                                es=f"El monto fue {invoice.currency.format_price(invoice.amount)}",
-                            ),
-                            "BUTTON": translation(settings.lang, en="See the invoice", es="Ver la factura"),
-                            "LINK": f"{get_app_url()}/paymentmethod",
-                        },
-                        academy=plan_financing.academy,
-                    )
+                        installment_closed = True
 
                 # Re-derive remaining after incrementing installments_paid.
                 remaining_installments = installments - plan_financing.installments_paid
 
-                if utc_now > plan_financing.valid_until:
+                if installment_closed and utc_now > plan_financing.valid_until:
                     plan_financing.valid_until = utc_now + relativedelta(months=remaining_installments)
 
-            delta = relativedelta(months=1)
+            unpaid_staff_cycle = staff_assigned and remaining_installments > 0 and not installment_closed
 
-            while utc_now >= plan_financing.next_payment_at + delta:
-                delta += relativedelta(months=1)
+            if installment_closed or unpaid_staff_cycle:
+                delta = relativedelta(months=1)
 
-            plan_financing.next_payment_at += delta
-            plan_financing.status = "ACTIVE" if remaining_installments > 0 else "FULLY_PAID"
-            plan_financing.status_message = None
-            plan_financing.save()
+                while utc_now >= plan_financing.next_payment_at + delta:
+                    delta += relativedelta(months=1)
 
-            renew_plan_financing_consumables.delay(plan_financing.id)
+                plan_financing.next_payment_at += delta
+                remaining_installments = installments - plan_financing.installments_paid
+                plan_financing.status = "ACTIVE" if remaining_installments > 0 else "FULLY_PAID"
+                plan_financing.status_message = None
+                plan_financing.save()
 
-            # Schedule next charge if plan is still active and has remaining installments
-            days_until_next_payment = (plan_financing.next_payment_at - utc_now).days
-            if days_until_next_payment > 0:  # Only schedule if there are days remaining
-                manager = schedule_task(charge_plan_financing, f"{days_until_next_payment}d")
-                if not manager.exists(plan_financing_id):
-                    manager.call(plan_financing_id)
+                if unpaid_staff_cycle:
+                    logger.info(
+                        "Staff-assigned plan financing %s: installment unpaid; "
+                        "advanced next_payment_at without PAYMENT_ISSUE",
+                        plan_financing_id,
+                    )
 
-            if early_renewal_window_days > 0 and days_until_next_payment > early_renewal_window_days:
-                notification_day = days_until_next_payment - early_renewal_window_days
-                manager = schedule_task(notify_plan_financing_renewal, f"{notification_day}d")
-                if not manager.exists(plan_financing_id):
-                    manager.call(plan_financing_id)
+                if installment_closed:
+                    renew_plan_financing_consumables.delay(plan_financing.id)
+
+                # Schedule next charge if plan is still active and has remaining installments
+                days_until_next_payment = (plan_financing.next_payment_at - utc_now).days
+                if days_until_next_payment > 0 and remaining_installments > 0:
+                    manager = schedule_task(charge_plan_financing, f"{days_until_next_payment}d")
+                    if not manager.exists(plan_financing_id):
+                        manager.call(plan_financing_id)
+
+                if (
+                    installment_closed
+                    and early_renewal_window_days > 0
+                    and days_until_next_payment > early_renewal_window_days
+                ):
+                    notification_day = days_until_next_payment - early_renewal_window_days
+                    manager = schedule_task(notify_plan_financing_renewal, f"{notification_day}d")
+                    if not manager.exists(plan_financing_id):
+                        manager.call(plan_financing_id)
 
     except LockError:
         raise RetryTask("Could not acquire lock for activity, operation timed out.")
