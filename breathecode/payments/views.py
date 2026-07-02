@@ -44,6 +44,7 @@ from breathecode.payments.actions import (
     get_available_coupons,
     get_balance_by_resource,
     get_discounted_price,
+    get_plan_financing_option,
     max_coupons_allowed,
     process_refund,
     process_refund_record_external,
@@ -5285,6 +5286,7 @@ class PayView(APIView):
 
                 how_many_installments = request.data.get("how_many_installments")
                 chosen_period = request.data.get("chosen_period", "").upper()
+                financing_option_id = request.data.get("financing_option_id")
                 has_plan_addons = bag.plan_addons.exists()
 
                 available_for_free_trial = False
@@ -5375,7 +5377,12 @@ class PayView(APIView):
                 if not available_for_free_trial and not available_free and bag.how_many_installments > 0:
                     try:
                         plan = bag.plans.filter().first()
-                        option = plan.financing_options.filter(how_many_months=bag.how_many_installments).first()
+                        option = get_plan_financing_option(
+                            plan,
+                            bag.how_many_installments,
+                            financing_option_id=financing_option_id,
+                            lang=lang,
+                        )
                         original_price = option.monthly_price
                         # Apply pricing ratio first
                         adjusted_price, _, c = apply_pricing_ratio(original_price, bag.country_code, option)
@@ -5573,6 +5580,7 @@ class PayView(APIView):
                             "original_price": str(original_price),
                             "chosen_period": chosen_period or bag.chosen_period or "",
                             "how_many_installments": str(bag.how_many_installments or 0),
+                            "financing_option_id": "" if financing_option_id is None else str(financing_option_id),
                             "selected_cohort": request.GET.get("selected_cohort") or "",
                             "user_email": request.user.email,
                             "fulfillment_snapshot": json.dumps(
@@ -5701,7 +5709,12 @@ class PayView(APIView):
                     )
 
                 invoice.amount_breakdown = actions.calculate_invoice_breakdown(
-                    bag, invoice, lang, chosen_period=chosen_period, how_many_installments=how_many_installments
+                    bag,
+                    invoice,
+                    lang,
+                    chosen_period=chosen_period,
+                    how_many_installments=how_many_installments,
+                    financing_option_id=financing_option_id,
                 )
                 invoice.save(update_fields=["amount_breakdown"])
 
