@@ -522,7 +522,14 @@ def _load_stripe_checkout_fulfillment_context(
                 how_many_installments = int(float(raw_installments))
             except (TypeError, ValueError):
                 pass
+        financing_option_id = None
+        if raw_financing_option_id := metadata.get("financing_option_id"):
+            try:
+                financing_option_id = int(float(raw_financing_option_id))
+            except (TypeError, ValueError):
+                pass
         ctx["how_many_installments"] = how_many_installments
+        ctx["financing_option_id"] = financing_option_id
         ctx["selected_cohort"] = metadata.get("selected_cohort") or None
 
     return ctx, None
@@ -584,6 +591,7 @@ def stripe_checkout_payment_fulfillment(sender: Type[StripeEvent], instance: Str
     original_price = ctx["original_price"]
     payment_method = ctx["payment_method"]
     how_many_installments = ctx["how_many_installments"]
+    financing_option_id = ctx["financing_option_id"]
     chosen_period = ctx["chosen_period"]
     selected_cohort = ctx["selected_cohort"]
     lang = ctx["lang"]
@@ -637,6 +645,7 @@ def stripe_checkout_payment_fulfillment(sender: Type[StripeEvent], instance: Str
                 lang,
                 chosen_period=chosen_period,
                 how_many_installments=how_many_installments,
+                financing_option_id=financing_option_id,
             )
             invoice.save(update_fields=["amount_breakdown"])
 
