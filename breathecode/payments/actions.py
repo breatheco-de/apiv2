@@ -5177,7 +5177,12 @@ def process_refund_record_external(
 
 
 def calculate_invoice_breakdown(
-    bag: Bag, invoice: Invoice, lang: str, chosen_period: str | None = None, how_many_installments: int | None = None
+    bag: Bag,
+    invoice: Invoice,
+    lang: str,
+    chosen_period: str | None = None,
+    how_many_installments: int | None = None,
+    financing_option_id: int | None = None,
 ) -> dict[str, Any]:
     """
     Calculate the breakdown of how the invoice amount is divided across plans, plan addons, and service items.
@@ -5188,6 +5193,7 @@ def calculate_invoice_breakdown(
         lang: Language code for error messages
         chosen_period: Optional chosen period (MONTH, QUARTER, HALF, YEAR). If not provided, uses bag.chosen_period
         how_many_installments: Optional number of installments. If not provided, uses bag.how_many_installments
+        financing_option_id: Optional financing option id when multiple options share the same installment count
 
     Returns a dictionary with the following structure:
     {
@@ -5239,7 +5245,17 @@ def calculate_invoice_breakdown(
         base_price = 0.0
 
         if effective_how_many_installments > 0:
-            option = plan.financing_options.filter(how_many_months=effective_how_many_installments).first()
+            option = None
+            try:
+                option = get_plan_financing_option(
+                    plan,
+                    effective_how_many_installments,
+                    financing_option_id=financing_option_id,
+                    lang=lang,
+                )
+            except ValidationException:
+                pass
+
             if not option:
                 continue
 

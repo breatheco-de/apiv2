@@ -1864,49 +1864,105 @@ def test_pay__stripe_checkout_klarna__plan_not_available(bc: Breathecode, client
     assert bc.database.list_of("payments.Invoice") == []
 
 
-def test_pay__stripe_checkout_klarna__plan_not_available(bc: Breathecode, client: APIClient, monkeypatch):
-    monkeypatch.setattr(
-        "stripe.checkout.Session.create",
-        MagicMock(return_value={"id": "cs_test", "url": "https://checkout.stripe.com/c/pay/cs_test"}),
-    )
-
+def test_pay__ambiguous_financing_options_without_id(bc: Breathecode, client: APIClient):
     bag = {
         "token": "xdxdxdxdxdxdxdxdxdxd",
         "expires_at": UTC_NOW,
         "status": "CHECKING",
         "type": "BAG",
-        **generate_amounts_by_time(over_50=True),
+        **generate_amounts_by_time(),
         "seat_service_item_id": None,
     }
     plan = {"is_renewable": False}
 
-    model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=2, service_item=1)
-    AcademyPaymentSettings.objects.create(academy=model.academy, stripe_api_key="sk_test_klarna")
-
-    payment_method = PaymentMethod.objects.create(
-        academy=model.academy,
-        title="Klarna",
-        description="Pay with Klarna",
-        lang="en-US",
-        provider_settings={"stripe_payment_method_types": ["klarna"]},
+    model = bc.database.create(
+        user=1,
+        bag=bag,
+        academy=1,
+        currency=1,
+        plan=plan,
+        service_item=1,
+        financing_option=(
+            2,
+            [
+                {"how_many_months": 1, "monthly_price": 75},
+                {"how_many_months": 1, "monthly_price": 200},
+            ],
+        ),
     )
-    payment_method.plans.add(model.plan[1])
+    fo_a, fo_b = FinancingOption.objects.order_by("id")
+    model.plan.financing_options.set([fo_a, fo_b])
 
     client.force_authenticate(user=model.user)
+    payment_method = create_credit_card_payment_method(model.academy)
 
     url = reverse_lazy("payments:pay")
     data = {
         "token": "xdxdxdxdxdxdxdxdxdxd",
-        "chosen_period": "YEAR",
         "payment_method_id": payment_method.id,
-        "return_url": "https://example.com/success",
-        "cancel_url": "https://example.com/cancel",
+        "how_many_installments": 1,
     }
     response = client.post(url, data, format="json")
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert response.json() == {
-        "detail": "payment-method-not-available-for-plan",
+        "detail": "ambiguous-financing-option",
         "status_code": 400,
     }
     assert bc.database.list_of("payments.Invoice") == []
+
+
+def test_pay__financing_option_id_selects_correct_price(bc: Breathecode, client: APIClient):
+    bag = {
+        "token": "xdxdxdxdxdxdxdxdxdxd",
+        "expires_at": UTC_NOW,
+        "status": "CHECKING",
+        "type": "BAG",
+        **generate_amounts_by_time(),
+        "seat_service_item_id": None,
+    }
+    plan = {"is_renewable": False}
+
+    model = bc.database.create(
+        user=1,
+        bag=bag,
+        academy=1,
+        currency=1,
+        plan=plan,
+        service_item=1,
+        financing_option=(
+            2,
+            [
+                {"how_many_months": 1, "monthly_price": 75},
+                {"how_many_months": 1, "monthly_price": 200},
+            ],
+        ),
+    )
+    fo_a, fo_b = FinancingOption.objects.order_by("id")
+    model.plan.financing_options.set([fo_a, fo_b])
+
+    client.force_authenticate(user=model.user)
+    payment_method = create_credit_card_payment_method(model.academy)
+
+    url = reverse_lazy("payments:pay")
+    data = {
+        "token": "xdxdxdxdxdxdxdxdxdxd",
+        "payment_method_id": payment_method.id,
+        "how_many_installments": 1,
+        "financing_option_id": fo_b.id,
+    }
+    response = client.post(url, data, format="json")
+
+    json = response.json()
+    expected = get_serializer(bc, model.currency, model.user, data={"amount": 200})
+
+    assert json == expected
+    assert response.status_code == status.HTTP_201_CREATED
+    assert bc.database.list_of("payments.Invoice") == [
+        format_invoice_item(
+            {
+                "amount": 200,
+                "stripe_id": "1",
+            }
+        ),
+    ]
