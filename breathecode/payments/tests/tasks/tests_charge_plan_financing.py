@@ -562,26 +562,12 @@ class PaymentsTestSuite(PaymentsTestCase):
             [
                 {
                     **self.bc.format.to_dict(model.plan_financing),
-                    "status": "PAYMENT_ISSUE",
+                    "status": "ACTIVE",
                 },
             ],
         )
-        from breathecode.admissions.models import Academy
 
-        assert notify_actions.send_email_message.call_args_list == [
-            call(
-                "message",
-                model.user.email,
-                {
-                    "SUBJECT": "Your 4Geeks subscription could not be renewed",
-                    "MESSAGE": "Your payment with credit card was declined, please update your card or use another payment method",
-                    "BUTTON": "Change payment method",
-                    "LINK": os.getenv("APP_URL")[:-1]
-                    + f"/renew?plan={model.plan.id}&plan_financing_id={model.plan_financing.id}",
-                },
-                academy=model.academy,
-            )
-        ]
+        assert notify_actions.send_email_message.call_args_list == []
         self.bc.check.calls(
             activity_tasks.add_activity.delay.call_args_list,
             [
@@ -1241,3 +1227,58 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(len(notify_actions.send_email_message.call_args_list), 2)
         discontinued_warning_payload = notify_actions.send_email_message.call_args_list[0].args[2]
         self.assertIn("discontinued", discontinued_warning_payload["SUBJECT"].lower())
+
+    @patch("logging.Logger.info", MagicMock())
+    @patch("logging.Logger.error", MagicMock())
+    @patch("breathecode.notify.actions.send_email_message", MagicMock())
+    @patch("breathecode.payments.tasks.renew_plan_financing_consumables.delay", MagicMock())
+    @patch("mixer.main.LOGGER.info", MagicMock())
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test_staff_assigned_plan_financing_unpaid_advances_billing_cycle(self):
+        plan_financing = {
+            "valid_until": UTC_NOW + relativedelta(months=6),
+            "next_payment_at": UTC_NOW - relativedelta(days=5),
+            "monthly_price": 100.0,
+            "how_many_installments": 3,
+            "installments_paid": 1,
+            "plan_expires_at": UTC_NOW + relativedelta(months=12),
+        }
+        plan = {"is_renewable": False}
+        bag = {"how_many_installments": 3, "was_delivered": True, "type": "BAG"}
+        invoice = {
+            "paid_at": UTC_NOW - relativedelta(months=2),
+            "amount": 100.0,
+            "status": "FULFILLED",
+            "proof_id": 1,
+        }
+        model = self.bc.database.create(
+            academy=1,
+            proof_of_payment=1,
+            plan_financing=plan_financing,
+            invoice=invoice,
+            plan=plan,
+            bag=bag,
+        )
+        model.plan_financing.invoices.add(model.invoice)
+
+        with patch("breathecode.payments.services.stripe.Stripe.pay", MagicMock()) as mock_stripe_pay:
+            logging.Logger.info.call_args_list = []
+            logging.Logger.error.call_args_list = []
+
+            charge_plan_financing.delay(1)
+
+        mock_stripe_pay.assert_not_called()
+        self.assertEqual(logging.Logger.error.call_args_list, [])
+
+        pf = self.bc.database.list_of("payments.PlanFinancing")[0]
+        self.assertEqual(pf["status"], "ACTIVE")
+        self.assertEqual(pf["installments_paid"], 1)
+        self.assertEqual(pf["next_payment_at"], model.plan_financing.next_payment_at + relativedelta(months=1))
+
+        self.assertEqual(notify_actions.send_email_message.call_args_list, [])
+        self.assertEqual(len(self.bc.database.list_of("payments.Invoice")), 1)
+
+        scheduled = self.bc.database.list_of("task_manager.ScheduledTask")
+        charge_tasks = [t for t in scheduled if t["task_name"] == "charge_plan_financing"]
+        self.assertEqual(len(charge_tasks), 1)
+        self.assertEqual(charge_tasks[0]["status"], "PENDING")

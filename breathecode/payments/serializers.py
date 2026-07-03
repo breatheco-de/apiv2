@@ -4,6 +4,7 @@ from typing import Any
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from django.core.exceptions import FieldDoesNotExist, ValidationError as DjangoValidationError
+from django.core.validators import URLValidator
 from django.db import transaction
 from django.db.models.query_utils import Q
 from rest_framework.exceptions import ValidationError
@@ -142,6 +143,7 @@ class GetServiceItemSerializer(serpy.Serializer):
     how_many = serpy.Field()
     sort_priority = serpy.Field()
     service = GetServiceSmallSerializer()
+    is_renewable = serpy.Field()
     is_team_allowed = serpy.Field()
     renew_at = serpy.Field()
     renew_at_unit = serpy.Field()
@@ -1338,18 +1340,22 @@ class GetAbstractIOweYouSerializer(serpy.Serializer):
 
     def get_has_billing_team(self, obj):
         """Check if this financing/subscription has a billing team."""
-        return hasattr(obj, "subscriptionbillingteam")
+        return hasattr(obj, "subscriptionbillingteam") or hasattr(obj, "team")
 
     def get_seats_count(self, obj):
         """Get number of active seats in the billing team."""
         if hasattr(obj, "subscriptionbillingteam"):
             return obj.subscriptionbillingteam.seats.filter(is_active=True).count()
+        if hasattr(obj, "team"):
+            return obj.team.seats.filter(is_active=True).count()
         return None
 
     def get_seats_limit(self, obj):
         """Get total seat limit for the billing team."""
         if hasattr(obj, "subscriptionbillingteam"):
             return obj.subscriptionbillingteam.seats_limit
+        if hasattr(obj, "team"):
+            return obj.team.seats_limit
         return None
 
 
@@ -1436,6 +1442,33 @@ class ServiceItemSerializer(serializers.ModelSerializer):
             sort_priority=validated_data.get("sort_priority", 1),
         )
         return service_item
+
+
+class ServiceItemUpdateSerializer(serializers.ModelSerializer):
+    """Update only mutable ServiceItem fields after creation."""
+
+    class Meta:
+        model = ServiceItem
+        fields = ["is_team_allowed", "sort_priority"]
+
+    def validate(self, attrs):
+        allowed_keys = {"is_team_allowed", "sort_priority"}
+        if not (allowed_keys & set(self.initial_data.keys())):
+            raise ValidationException(
+                translation(
+                    en="At least one updatable field is required: is_team_allowed, sort_priority",
+                    es="Se requiere al menos un campo actualizable: is_team_allowed, sort_priority",
+                    slug="no-updatable-fields",
+                ),
+                code=400,
+            )
+        return attrs
+
+    def update(self, instance, validated_data):
+        for field, value in validated_data.items():
+            setattr(instance, field, value)
+        instance.save()
+        return instance
 
 
 class PlanSerializer(serializers.ModelSerializer):
@@ -1615,13 +1648,17 @@ class GetPaymentMethod(serpy.Serializer):
     lang = serpy.Field()
     is_credit_card = serpy.Field()
     is_crypto = serpy.Field()
+    is_financing_managed_by_provider = serpy.Field()
     description = serpy.Field()
     third_party_link = serpy.Field()
+    logo_urls = serpy.Field()
+    provider_settings = serpy.Field()
     academy = GetAcademySmallSerializer(required=False, many=False)
     currency = GetCurrencySmallSerializer(required=False, many=False)
     included_country_codes = serpy.Field()
     visibility = serpy.Field()
     deprecated = serpy.Field()
+    plans = serpy.ManyToManyField(GetPlanSmallTinySerializer(attr="plans", many=True))
 
 
 class PaymentMethodSerializer(serializers.ModelSerializer):
@@ -1632,6 +1669,7 @@ class PaymentMethodSerializer(serializers.ModelSerializer):
         allow_null=True,
     )
     academy = serializers.PrimaryKeyRelatedField(read_only=True)
+    plans = serializers.PrimaryKeyRelatedField(queryset=Plan.objects.all(), many=True, required=False)
 
     class Meta:
         model = PaymentMethod
@@ -1640,15 +1678,86 @@ class PaymentMethodSerializer(serializers.ModelSerializer):
             "title",
             "description",
             "third_party_link",
+            "logo_urls",
+            "provider_settings",
+            "plans",
             "is_backed",
             "lang",
             "is_credit_card",
+            "is_crypto",
+            "is_financing_managed_by_provider",
             "currency",
             "academy",
             "included_country_codes",
             "visibility",
             "deprecated",
         )
+
+    def validate_logo_urls(self, value):
+        if value in (None, ""):
+            return []
+
+        if not isinstance(value, list):
+            raise serializers.ValidationError("logo_urls must be a list")
+
+        if len(value) > 10:
+            raise serializers.ValidationError("logo_urls cannot contain more than 10 items")
+
+        url_validator = URLValidator()
+        validated_urls = []
+
+        for item in value:
+            if not isinstance(item, str) or not item.strip():
+                raise serializers.ValidationError("Each logo URL must be a non-empty string")
+
+            url = item.strip()
+            try:
+                url_validator(url)
+            except DjangoValidationError:
+                raise serializers.ValidationError(f"Invalid logo URL: {url}")
+
+            validated_urls.append(url)
+
+        return validated_urls
+
+    def validate_provider_settings(self, value):
+        if value in (None, ""):
+            return {}
+
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("provider_settings must be a JSON object")
+
+        stripe_types = value.get("stripe_payment_method_types")
+        if stripe_types is None:
+            return value
+
+        if not isinstance(stripe_types, list):
+            raise serializers.ValidationError("stripe_payment_method_types must be a list")
+
+        allowed = ", ".join(sorted(PaymentMethod.StripeCheckoutPaymentMethodType.values))
+        for item in stripe_types:
+            if not isinstance(item, str) or item not in PaymentMethod.StripeCheckoutPaymentMethodType.values:
+                raise serializers.ValidationError(
+                    f"Unsupported stripe_payment_method_types value. Allowed values: {allowed}"
+                )
+
+        return value
+
+    def validate(self, attrs):
+        provider_settings = attrs.get("provider_settings", getattr(self.instance, "provider_settings", {}))
+        is_credit_card = attrs.get("is_credit_card", getattr(self.instance, "is_credit_card", False))
+        is_crypto = attrs.get("is_crypto", getattr(self.instance, "is_crypto", False))
+
+        if isinstance(provider_settings, dict):
+            stripe_types = provider_settings.get("stripe_payment_method_types", [])
+            if stripe_types and is_credit_card:
+                raise serializers.ValidationError(
+                    "Credit card payment methods cannot define stripe_payment_method_types."
+                )
+            if stripe_types and is_crypto:
+                raise serializers.ValidationError("Crypto payment methods cannot define stripe_payment_method_types.")
+
+        return attrs
 
 
 class GetConsumptionSessionSerializer(serpy.Serializer):

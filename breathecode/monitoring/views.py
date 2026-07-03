@@ -214,7 +214,7 @@ def get_stripe_webhook_secret(payload=None):
     import json
     import logging
 
-    from breathecode.payments.models import AcademyPaymentSettings, Invoice
+    from breathecode.payments.models import AcademyPaymentSettings, Bag, Invoice
 
     logger = logging.getLogger(__name__)
 
@@ -244,6 +244,25 @@ def get_stripe_webhook_secret(payload=None):
                     if academy_settings and academy_settings.stripe_webhook_secret:
                         logger.info(f"Using webhook secret for academy: {invoice.academy.slug}")
                         return academy_settings.stripe_webhook_secret
+
+            metadata = event_data.get("metadata") or {}
+            if bag_id := metadata.get("bag_id"):
+                try:
+                    bag = Bag.objects.filter(id=int(float(bag_id))).select_related("academy").first()
+                    if bag and bag.academy:
+                        academy_settings = (
+                            AcademyPaymentSettings.objects.filter(
+                                academy=bag.academy, stripe_webhook_secret__isnull=False
+                            )
+                            .exclude(stripe_webhook_secret="")
+                            .first()
+                        )
+                        if academy_settings and academy_settings.stripe_webhook_secret:
+                            logger.info(f"Using webhook secret for academy: {bag.academy.slug}")
+                            return academy_settings.stripe_webhook_secret
+                except (TypeError, ValueError):
+                    pass
+
         except Exception as e:
             logger.debug(f"Could not identify academy from payload: {e}")
             # Continue to fallback to global
@@ -455,13 +474,32 @@ def process_stripe_webhook(request):
     except stripe.error.SignatureVerificationError as e:
         logger.error(f"Webhook signature verification failed: {str(e)}")
         add_stripe_webhook_error(payload, sig_header, slug="not-allowed", message=str(e))
+
+        try:
+            from breathecode.payments import tasks as payment_tasks
+
+            payload_dict = json.loads(payload.decode("utf-8") if isinstance(payload, bytes) else payload)
+            session = payload_dict.get("data", {}).get("object", {})
+            metadata = session.get("metadata") or {}
+            bag_id = metadata.get("bag_id")
+            session_id = session.get("id")
+
+            if bag_id and session_id:
+                payment_tasks.send_checkout_fulfillment_error_email.delay(
+                    int(float(bag_id)),
+                    session_id,
+                    "Webhook signature verification failed",
+                )
+        except Exception as notify_error:
+            logger.debug(f"Could not notify user from unverified stripe webhook payload: {notify_error}")
+
         raise ValidationException("Not allowed", code=403, slug="not-allowed")
 
     if event := add_stripe_webhook(event):
         logger.info(f"Created StripeEvent with ID: {event.id}")
         logger.info("About to call send_robust...")
         try:
-            signals.stripe_webhook.send_robust(event_id=event.id, sender=event.__class__)
+            signals.stripe_webhook.send_robust(instance=event, sender=event.__class__)
             logger.info("Successfully sent stripe_webhook signal")
         except Exception as e:
             logger.error(f"Error in send_robust: {str(e)}")

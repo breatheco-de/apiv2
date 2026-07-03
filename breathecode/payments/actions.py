@@ -38,6 +38,7 @@ from breathecode.payments.signals import consume_service, deprovision_service
 from breathecode.utils import getLogger
 from breathecode.utils.decorators.service_deprovisioner import get_service_deprovisioner
 from breathecode.utils.validate_conversion_info import validate_conversion_info
+from breathecode.monitoring.models import StripeEvent
 from settings import GENERAL_PRICING_RATIOS
 
 from .models import (
@@ -47,6 +48,7 @@ from .models import (
     SERVICE_UNITS,
     WEEK,
     YEAR,
+    AbstractIOweYou,
     AcademyPaymentSettings,
     AcademyService,
     Bag,
@@ -3255,6 +3257,29 @@ def get_remaining_installments(plan_financing: PlanFinancing) -> int:
     return max(plan_financing.how_many_installments - int(plan_financing.installments_paid or 0), 0)
 
 
+def plan_financing_was_staff_assigned(
+    plan_financing: PlanFinancing,
+    first_invoice: Invoice | None = None,
+) -> bool:
+    """
+    True when the financing was created by staff (academy subscription or student invite),
+    not by self-checkout (PayView / Stripe / Coinbase webhooks).
+    """
+    if first_invoice is None:
+        first_invoice = (
+            plan_financing.invoices.select_related("bag", "proof").order_by("paid_at", "id").first()
+        )
+
+    if not first_invoice:
+        return False
+
+    if first_invoice.proof_id is not None:
+        return True
+
+    bag = first_invoice.bag
+    return bag is not None and bag.type == Bag.Type.INVITED
+
+
 def get_credit_balance(plan_financing: PlanFinancing) -> float:
     """Return the current credit balance for a PlanFinancing from the CreditLedgerEntry ledger.
 
@@ -3494,7 +3519,7 @@ def register_student_deposit(
             code=400,
         )
 
-    notes = data.get("notes") or data.get("deposit_notes")
+    notes = data.get("notes") or data.get("deposit_notes") or data.get("invoice_notes")
     if notes and len(notes) > 250:
         raise ValidationException(
             translation(
@@ -3620,6 +3645,14 @@ def register_student_deposit(
         amount_breakdown=amount_breakdown,
         invoice_kind=Invoice.InvoiceKind.MANUAL_DEPOSIT,
     )
+    staff_user_id = None
+    if isinstance(request, (WSGIRequest, AsyncRequest, HttpRequest, Request)) and getattr(request, "user", None):
+        if request.user.is_authenticated:
+            staff_user_id = request.user.id
+    invoice_notes = format_note_made_by_user(notes, staff_user_id)
+    if invoice_notes:
+        invoice.invoice_notes = invoice_notes
+        invoice.save(update_fields=["invoice_notes"])
     bag.was_delivered = True
     bag.save()
     # Every manual deposit invoice represents real cash received for this financing.
@@ -3704,11 +3737,16 @@ def register_student_deposit(
         # Recompute remaining after the new invoice is linked.
         remaining_installments = get_remaining_installments(plan_financing)
 
-        delta = relativedelta(months=1)
-        while utc_now >= plan_financing.next_payment_at + delta:
-            delta += relativedelta(months=1)
+        # Only roll next_payment_at when the due date has passed. If charge_plan_financing
+        # already advanced the calendar on an unpaid staff cycle, next_payment_at may be in
+        # the future — closing the installment must not push the due date forward again.
+        if utc_now >= plan_financing.next_payment_at:
+            delta = relativedelta(months=1)
+            while utc_now >= plan_financing.next_payment_at + delta:
+                delta += relativedelta(months=1)
 
-        plan_financing.next_payment_at += delta
+            plan_financing.next_payment_at += delta
+
         plan_financing.valid_until = plan_financing.next_payment_at + relativedelta(
             months=max(remaining_installments - 1, 0)
         )
@@ -3895,6 +3933,64 @@ def set_virtual_balance(balance: ConsumableBalance, user: User) -> None:
             how_many = virtual["service_item"]["how_many"]
             unit_type = virtual["service_item"]["unit_type"]
             append("cohort_sets", id, slug, how_many, unit_type)
+
+
+
+
+
+def is_stripe_checkout_already_fulfilled(
+    *,
+    session: dict,
+    exclude_stripe_event_id: int | None = None,
+) -> bool:
+    session_id = session.get("id")
+    if not session_id:
+        return False
+
+    done_events = StripeEvent.objects.filter(status="DONE", data__object__id=session_id)
+    if exclude_stripe_event_id:
+        done_events = done_events.exclude(id=exclude_stripe_event_id)
+    if done_events.exists():
+        return True
+
+    metadata = session.get("metadata") or {}
+    is_purchase = not metadata.get("subscription_id") and not metadata.get("plan_financing_id")
+
+    invoice = Invoice.objects.filter(stripe_id=session_id, status=Invoice.Status.FULFILLED).first()
+    if not invoice:
+        return False
+
+    if raw_sub_id := metadata.get("subscription_id"):
+        try:
+            sub_id = int(float(raw_sub_id))
+        except (TypeError, ValueError):
+            return False
+        return Subscription.objects.filter(id=sub_id, user=invoice.user, invoices=invoice).exists()
+
+    if raw_pf_id := metadata.get("plan_financing_id"):
+        try:
+            pf_id = int(float(raw_pf_id))
+        except (TypeError, ValueError):
+            return False
+        return PlanFinancing.objects.filter(id=pf_id, user=invoice.user, invoices=invoice).exists()
+
+    bag = invoice.bag
+    if not bag:
+        return False
+
+    if bag.was_delivered:
+        return True
+
+    if Subscription.objects.filter(invoices=invoice).exists():
+        return True
+    if PlanFinancing.objects.filter(invoices=invoice).exists():
+        return True
+
+    if is_purchase and bag.status == Bag.Status.PAID and not bag.was_delivered:
+        # Invoice for this session exists but build_* did not finish; pending-bag supervisor owns it.
+        return True
+
+    return False
 
 
 def retry_pending_bag(bag: Bag):
@@ -4362,7 +4458,7 @@ def calculate_invoice_breakdown(
     Note: Plan addons are included in the "plans" section with their plan slug.
     """
     breakdown: dict[str, Any] = {"plans": {}, "service-items": {}}
-
+    
     currency = invoice.currency if invoice else (bag.currency or bag.academy.main_currency)
     if not currency:
         raise ValidationException(
@@ -4848,29 +4944,72 @@ def _bag_plan_slugs(bag: Bag) -> set[str]:
     return slugs
 
 
-def _apply_refund_entitlements(invoice: Invoice, items_to_refund: dict[str, float]) -> None:
+PLAN_ENTITLEMENT_ACTION_CANCEL_IMMEDIATELY = "cancel_immediately"
+PLAN_ENTITLEMENT_ACTION_CANCEL_AT_PERIOD_END = "cancel_at_period_end"
+PLAN_ENTITLEMENT_ACTION_KEEP = "keep"
+
+VALID_PLAN_ENTITLEMENT_ACTIONS = frozenset(
+    {
+        PLAN_ENTITLEMENT_ACTION_CANCEL_IMMEDIATELY,
+        PLAN_ENTITLEMENT_ACTION_CANCEL_AT_PERIOD_END,
+        PLAN_ENTITLEMENT_ACTION_KEEP,
+    }
+)
+
+
+def _plan_slugs_in_refund_items(invoice: Invoice, items_to_refund: dict[str, float]) -> list[str]:
+    bag = invoice.bag
+    original_breakdown = invoice.amount_breakdown or {}
+    plan_slugs_in_invoice: set[str] = set()
+
+    if original_breakdown.get("plans"):
+        plan_slugs_in_invoice = set(original_breakdown["plans"].keys())
+    elif bag:
+        plan_slugs_in_invoice = _bag_plan_slugs(bag)
+
+    if not plan_slugs_in_invoice:
+        return []
+
+    return [
+        plan_slug
+        for plan_slug, refund_amount_for_plan in items_to_refund.items()
+        if plan_slug in plan_slugs_in_invoice and refund_amount_for_plan > 0
+    ]
+
+
+def _target_status_for_plan_entitlement_action(plan_entitlement_action: str) -> str | None:
+    if plan_entitlement_action == PLAN_ENTITLEMENT_ACTION_CANCEL_IMMEDIATELY:
+        return AbstractIOweYou.Status.EXPIRED
+    if plan_entitlement_action == PLAN_ENTITLEMENT_ACTION_CANCEL_AT_PERIOD_END:
+        return AbstractIOweYou.Status.CANCELLED
+    return None
+
+
+def _apply_plan_entitlement_action_to_iou(iou, target_status: str, invoice: Invoice) -> None:
+    entity = "Subscription" if isinstance(iou, Subscription) else "Plan financing"
+    iou.status = target_status
+    iou.status_message = f"{entity} {target_status.lower()} due to refund of invoice {invoice.id}"
+    iou.save()
+
+
+def _apply_refund_entitlements(
+    invoice: Invoice,
+    items_to_refund: dict[str, float],
+    plan_entitlement_action: str = PLAN_ENTITLEMENT_ACTION_CANCEL_IMMEDIATELY,
+) -> None:
     from breathecode.payments.models import PlanServiceItemHandler, SubscriptionServiceItem
 
     bag = invoice.bag
     user = invoice.user
 
-    plans_to_deprecate: list[str] = []
+    plans_to_update: list[str] = []
     service_items_to_remove: list[int] = []
 
     if items_to_refund:
+        if plan_entitlement_action != PLAN_ENTITLEMENT_ACTION_KEEP:
+            plans_to_update = _plan_slugs_in_refund_items(invoice, items_to_refund)
+
         original_breakdown = invoice.amount_breakdown or {}
-        plan_slugs_in_invoice: set[str] = set()
-
-        if original_breakdown.get("plans"):
-            plan_slugs_in_invoice = set(original_breakdown["plans"].keys())
-        elif bag:
-            plan_slugs_in_invoice = _bag_plan_slugs(bag)
-
-        if plan_slugs_in_invoice:
-            for plan_slug, refund_amount_for_plan in items_to_refund.items():
-                if plan_slug in plan_slugs_in_invoice and refund_amount_for_plan > 0:
-                    plans_to_deprecate.append(plan_slug)
-
         service_slugs_in_invoice: set[str] = set()
         if original_breakdown.get("service-items"):
             service_slugs_in_invoice = set(original_breakdown["service-items"].keys())
@@ -4886,20 +5025,23 @@ def _apply_refund_entitlements(invoice: Invoice, items_to_refund: dict[str, floa
                     for service_item in service_items:
                         service_items_to_remove.append(service_item.id)
 
-    if plans_to_deprecate:
-        plans = Plan.objects.filter(slug__in=plans_to_deprecate)
+    target_status = _target_status_for_plan_entitlement_action(plan_entitlement_action)
+    if plans_to_update and target_status:
+        plans = Plan.objects.filter(slug__in=plans_to_update)
         for plan in plans:
-            subscriptions = Subscription.objects.filter(user=user, plans__in=[plan])
-            for subscription in subscriptions:
-                subscription.status = Subscription.Status.EXPIRED
-                subscription.status_message = f"Subscription expired due to refund of invoice {invoice.id}"
-                subscription.save()
+            subscription = Subscription.objects.filter(invoices=invoice, plans=plan).first()
+            if subscription:
+                _apply_plan_entitlement_action_to_iou(subscription, target_status, invoice)
+            else:
+                for subscription in Subscription.objects.filter(user=user, plans__in=[plan]):
+                    _apply_plan_entitlement_action_to_iou(subscription, target_status, invoice)
 
-            plan_financings = PlanFinancing.objects.filter(user=user, plans__in=[plan])
-            for financing in plan_financings:
-                financing.status = PlanFinancing.Status.EXPIRED
-                financing.status_message = f"Plan financing expired due to refund of invoice {invoice.id}"
-                financing.save()
+            plan_financing = PlanFinancing.objects.filter(invoices=invoice, plans=plan).first()
+            if plan_financing:
+                _apply_plan_entitlement_action_to_iou(plan_financing, target_status, invoice)
+            else:
+                for plan_financing in PlanFinancing.objects.filter(user=user, plans__in=[plan]):
+                    _apply_plan_entitlement_action_to_iou(plan_financing, target_status, invoice)
 
     if service_items_to_remove:
         SubscriptionServiceItem.objects.filter(
@@ -4964,6 +5106,7 @@ def process_refund(
     country_code: str | None = None,
     legal_text: str | None = None,
     lang: str = "en",
+    plan_entitlement_action: str = PLAN_ENTITLEMENT_ACTION_CANCEL_IMMEDIATELY,
 ) -> "CreditNote":
     """
     Process a refund for an invoice.
@@ -4977,6 +5120,7 @@ def process_refund(
         country_code: Country code for legal compliance
         legal_text: Country-specific legal text
         lang: Language code
+        plan_entitlement_action: What to do with linked subscription/plan financing when refunding plans
 
     Returns:
         CreditNote object created for the refund
@@ -4985,6 +5129,9 @@ def process_refund(
     amount = _validate_refund_request(invoice, amount, lang)
     if breakdown is None:
         breakdown = invoice.amount_breakdown or {}
+
+    if _plan_slugs_in_refund_items(invoice, items_to_refund):
+        breakdown = {**breakdown, "plan_entitlement_action": plan_entitlement_action}
 
     refund_stripe_id = None
     if invoice.stripe_id:
@@ -5015,7 +5162,7 @@ def process_refund(
         refund_stripe_id=refund_stripe_id,
     )
 
-    _apply_refund_entitlements(invoice, items_to_refund)
+    _apply_refund_entitlements(invoice, items_to_refund, plan_entitlement_action=plan_entitlement_action)
     _reverse_credit_for_refunded_invoice(invoice)
     return credit_note
 
@@ -5031,6 +5178,7 @@ def process_refund_record_external(
     country_code: str | None = None,
     legal_text: str | None = None,
     lang: str = "en",
+    plan_entitlement_action: str = PLAN_ENTITLEMENT_ACTION_CANCEL_IMMEDIATELY,
 ) -> "CreditNote":
     """
     Record a refund that happened outside this API without calling Stripe.
@@ -5044,6 +5192,8 @@ def process_refund_record_external(
         "recorded_externally": True,
         "external_reference": external_reference,
     }
+    if _plan_slugs_in_refund_items(invoice, items_to_refund):
+        refund_breakdown["plan_entitlement_action"] = plan_entitlement_action
 
     credit_note = CreditNote.objects.create(
         invoice=invoice,
@@ -5057,7 +5207,7 @@ def process_refund_record_external(
         refund_stripe_id=stripe_refund_id,
     )
 
-    _apply_refund_entitlements(invoice, items_to_refund)
+    _apply_refund_entitlements(invoice, items_to_refund, plan_entitlement_action=plan_entitlement_action)
     _reverse_credit_for_refunded_invoice(invoice)
     return credit_note
 
@@ -5540,6 +5690,7 @@ class SeatDict(TypedDict, total=False):
     first_name: str | None
     last_name: str | None
     role: str | None
+    cohort: Cohort
 
 
 class AddSeat(TypedDict):
@@ -5548,6 +5699,7 @@ class AddSeat(TypedDict):
     first_name: str
     last_name: str
     role: str | None
+    cohort_id: int | None
 
 
 class ReplaceSeat(TypedDict):
@@ -5638,6 +5790,7 @@ def invite_user_to_subscription_team(
         - See Issue #9973 for the complete invitation flow
     """
     student_role = _get_student_role()
+    cohort = obj.get("cohort")
 
     invite, created = UserInvite.objects.get_or_create(
         email=obj.get("email", ""),
@@ -5652,8 +5805,12 @@ def invite_user_to_subscription_team(
             "sent_at": timezone.now(),
             "first_name": obj.get("first_name", ""),
             "last_name": obj.get("last_name", ""),
+            "cohort": cohort,
         },
     )
+    if not created and cohort and invite.cohort_id is None:
+        invite.cohort = cohort
+        invite.save(update_fields=["cohort"])
     if created or invite.status == "PENDING":
         billing_team_name = subscription_seat.billing_team.name if subscription_seat.billing_team else "team"
         callback_url = get_app_url(academy=subscription.academy)
@@ -5696,7 +5853,13 @@ def _validate_email(email: str, lang: str):
         )
 
 
-def create_seat(email: str, user: User | None, billing_team: SubscriptionBillingTeam, lang: str):
+def create_seat(
+    email: str,
+    user: User | None,
+    billing_team: SubscriptionBillingTeam,
+    lang: str,
+    cohort: Cohort,
+):
     _validate_email(email, lang)
 
     if SubscriptionSeat.objects.filter(billing_team=billing_team, email=email).exists():
@@ -5722,7 +5885,7 @@ def create_seat(email: str, user: User | None, billing_team: SubscriptionBilling
 
     if not user:
         invite_user_to_subscription_team(
-            {"email": email, "first_name": None, "last_name": None},
+            {"email": email, "first_name": None, "last_name": None, "cohort": cohort},
             seat.billing_team.subscription,
             seat,
             lang,
@@ -5735,7 +5898,7 @@ def create_seat(email: str, user: User | None, billing_team: SubscriptionBilling
             lang,
         )
         for plan in seat.billing_team.subscription.plans.all():
-            grant_student_capabilities(user, plan)
+            grant_student_capabilities(user, plan, selected_cohort=cohort.slug)
 
     # create consumables unless shared per team
     strategy = getattr(
@@ -5778,6 +5941,8 @@ def invite_user_to_plan_financing_team(
 ):
     financing = team.financing
     student_role = _get_student_role()
+    cohort = obj.get("cohort")
+
     invite, created = UserInvite.objects.get_or_create(
         email=obj.get("email", ""),
         academy=financing.academy,
@@ -5791,8 +5956,12 @@ def invite_user_to_plan_financing_team(
             "sent_at": timezone.now(),
             "first_name": obj.get("first_name", ""),
             "last_name": obj.get("last_name", ""),
+            "cohort": cohort,
         },
     )
+    if not created and cohort and invite.cohort_id is None:
+        invite.cohort = cohort
+        invite.save(update_fields=["cohort"])
 
     if created or invite.status == "PENDING":
         callback_url = get_app_url(academy=financing.academy)
@@ -6374,6 +6543,7 @@ def create_plan_financing_seat(
     user: User | None,
     team: PlanFinancingTeam,
     lang: str,
+    cohort: Cohort,
     first_name: str = "",
     last_name: str = "",
 ):
@@ -6402,11 +6572,11 @@ def create_plan_financing_seat(
 
     if user:
         for plan in team.financing.plans.all():
-            grant_student_capabilities(user, plan)
+            grant_student_capabilities(user, plan, selected_cohort=cohort.slug)
         notify_user_was_added_to_plan_financing_team(team, seat, lang)
     else:
         invite_user_to_plan_financing_team(
-            {"email": email, "first_name": first_name or "", "last_name": last_name or ""},
+            {"email": email, "first_name": first_name or "", "last_name": last_name or "", "cohort": cohort},
             team,
             seat,
             lang,
@@ -6588,12 +6758,16 @@ def _normalize_user_value(user_value: Any) -> int | None:
 def normalize_add_seats(add_seats: list[dict[str, Any]]) -> list[AddSeat]:
     l: list[AddSeat] = []
     for seat in add_seats:
+        cohort_id = seat.get("cohort_id") or seat.get("cohort")
+        if isinstance(cohort_id, dict):
+            cohort_id = cohort_id.get("id")
         serialized = {
             "email": normalize_email(seat["email"]),
             "user": _normalize_user_value(seat.get("user")),
             "first_name": seat.get("first_name", ""),
             "last_name": seat.get("last_name", ""),
             "role": _normalize_role(seat.get("role")),
+            "cohort_id": int(cohort_id) if cohort_id is not None else None,
         }
         l.append(serialized)
     return l
@@ -6653,6 +6827,80 @@ def validate_seats_limit(
             ),
             code=400,
         )
+
+
+def validate_seat_cohort_for_owner(
+    owner: User,
+    plan: Plan | None,
+    resource: Subscription | PlanFinancing,
+    cohort_id: int | None,
+    lang: str,
+) -> Cohort:
+    if not cohort_id:
+        raise ValidationException(
+            translation(
+                lang,
+                en="You must select a cohort for the invited member",
+                es="Debes seleccionar una cohorte para el miembro invitado",
+                slug="seat-cohort-required",
+            ),
+            code=400,
+        )
+
+    if plan is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Plan not found for this subscription",
+                es="No se encontró el plan para esta suscripción",
+                slug="plan-not-found",
+            ),
+            code=404,
+        )
+
+    bad_stages = ["DELETED", "ENDED"]
+    cohort = Cohort.objects.filter(id=cohort_id).exclude(stage__in=bad_stages).first()
+    if not cohort:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Cohort not found",
+                es="Cohorte no encontrada",
+                slug="cohort-not-found",
+            ),
+            code=404,
+        )
+
+    if not CohortUser.objects.filter(user=owner, cohort=cohort).exists():
+        raise ValidationException(
+            translation(
+                lang,
+                en="You can only invite members to cohorts you belong to",
+                es="Solo puedes invitar miembros a cohortes en las que estás inscrito",
+                slug="owner-not-in-cohort",
+            ),
+            code=400,
+        )
+
+    if plan.cohort_set_id:
+        in_scope = plan.cohort_set.cohorts.filter(id=cohort.id).exists()
+    elif resource.selected_cohort_set_id:
+        in_scope = resource.selected_cohort_set.cohorts.filter(id=cohort.id).exists()
+    else:
+        in_scope = False
+
+    if not in_scope:
+        raise ValidationException(
+            translation(
+                lang,
+                en="This cohort is not included in your plan",
+                es="Esta cohorte no está incluida en tu plan",
+                slug="cohort-not-in-plan",
+            ),
+            code=400,
+        )
+
+    return cohort
 
 
 def grant_student_capabilities(user: User, plan: Plan, selected_cohort: Optional[str] = None):
@@ -7193,6 +7441,89 @@ def calculate_single_coupon_stats(coupon: Coupon) -> dict:
     stats["payment_methods"] = payment_methods
 
     return stats
+
+
+def validate_payment_method_for_checkout(payment_method: PaymentMethod, bag: Bag, lang: str) -> None:
+    if payment_method.deprecated:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Payment method is deprecated",
+                es="El método de pago está deprecado",
+                slug="payment-method-deprecated",
+            ),
+            code=400,
+        )
+
+    if payment_method.visibility != PaymentMethod.Visibility.PUBLIC:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Payment method is not available for checkout",
+                es="El método de pago no está disponible para checkout",
+                slug="payment-method-not-public",
+            ),
+            code=400,
+        )
+
+    if payment_method.academy_id and payment_method.academy_id != bag.academy_id:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Payment method not found for this academy",
+                es="Método de pago no encontrado para esta academia",
+                slug="payment-method-not-found",
+            ),
+            code=404,
+        )
+
+    stripe_types = payment_method.get_stripe_payment_method_types()
+    if stripe_types:
+        allowed = ", ".join(sorted(PaymentMethod.StripeCheckoutPaymentMethodType.values))
+        for value in stripe_types:
+            if value not in PaymentMethod.StripeCheckoutPaymentMethodType.values:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Unsupported Stripe checkout payment method type: {value}. Allowed: {allowed}",
+                        es=f"Tipo de método de pago de Stripe Checkout no soportado: {value}. Permitidos: {allowed}",
+                        slug="unsupported-stripe-payment-method-type",
+                    ),
+                    code=400,
+                )
+
+        plan = bag.plans.first()
+        if not plan:
+            raise ValidationException(
+                translation(lang, en="Bag has no plan", es="La bolsa no tiene plan", slug="bag-has-no-plan"),
+                code=400,
+            )
+
+        if payment_method.plans.exists() and not payment_method.plans.filter(id=plan.id).exists():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Payment method is not available for this plan",
+                    es="El método de pago no está disponible para este plan",
+                    slug="payment-method-not-available-for-plan",
+                ),
+                code=400,
+            )
+
+        return
+
+    if payment_method.is_crypto or payment_method.is_credit_card:
+        return
+
+    raise ValidationException(
+        translation(
+            lang,
+            en="Payment method not supported for checkout",
+            es="Método de pago no soportado para checkout",
+            slug="payment-method-not-supported",
+        ),
+        code=400,
+    )
 
 
 def resolve_plan_for_academy(

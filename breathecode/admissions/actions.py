@@ -202,6 +202,21 @@ def _merge_dict_fields(base: dict, override: dict) -> dict:
     return merged
 
 
+def _is_same_asset(base_asset: dict, override_asset: dict) -> bool:
+    base_slug = base_asset.get("slug")
+    override_slug = override_asset.get("slug")
+    base_id = base_asset.get("id")
+    override_id = override_asset.get("id")
+
+    if base_slug and override_slug and base_slug != override_slug:
+        return False
+
+    if base_id and override_id and base_id != override_id:
+        return False
+
+    return True
+
+
 def merge_assets_by_position(base_assets: list, override_assets: list) -> list:
     merged = deepcopy(base_assets if isinstance(base_assets, list) else [])
 
@@ -220,7 +235,11 @@ def merge_assets_by_position(base_assets: list, override_assets: list) -> list:
         if idx < len(merged):
             base_asset = merged[idx]
             if isinstance(base_asset, dict) and isinstance(override_asset, dict):
-                merged[idx] = {**base_asset, **deepcopy(override_asset)}
+                merged[idx] = (
+                    {**base_asset, **deepcopy(override_asset)}
+                    if _is_same_asset(base_asset, override_asset)
+                    else deepcopy(override_asset)
+                )
             else:
                 merged[idx] = deepcopy(override_asset)
             continue

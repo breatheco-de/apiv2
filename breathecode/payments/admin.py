@@ -1166,11 +1166,20 @@ class CouponAdmin(admin.ModelAdmin):
 
 @admin.register(PaymentMethod)
 class PaymentMethodAdmin(admin.ModelAdmin):
-    list_display = ("title", "description", "academy", "third_party_link", "lang", "visibility", "deprecated")
-    list_filter = ["academy__name", "lang", "visibility", "deprecated"]
+    list_display = (
+        "title",
+        "description",
+        "academy",
+        "third_party_link",
+        "is_financing_managed_by_provider",
+        "lang",
+        "visibility",
+        "deprecated",
+    )
+    list_filter = ["academy__name", "lang", "visibility", "deprecated", "is_financing_managed_by_provider"]
     raw_id_fields = ["academy"]
+    filter_horizontal = ["plans"]
     search_fields = ["title", "academy__name"]
-
 
 @admin.register(ProofOfPayment)
 class ProofOfPaymentAdmin(admin.ModelAdmin):

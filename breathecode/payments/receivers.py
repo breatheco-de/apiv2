@@ -2,6 +2,7 @@ import logging
 from typing import Type
 
 from django.contrib.auth.models import Group, User
+from django.db import transaction
 from django.db.models import Q
 from django.db.models.signals import m2m_changed, post_save
 from django.dispatch import receiver
@@ -9,16 +10,23 @@ from django.utils import timezone
 from task_manager.django.actions import schedule_task
 
 import breathecode.authenticate.tasks as auth_tasks
-from breathecode.authenticate.actions import revoke_user_discord_permissions
+import breathecode.activity.tasks as tasks_activity
+from breathecode.authenticate.actions import get_user_settings, revoke_user_discord_permissions
 from breathecode.authenticate.models import Cohort, CredentialsDiscord, GoogleWebhook, UserInvite
 from breathecode.authenticate.signals import google_webhook_saved, invite_status_updated
+from breathecode.commission.tasks import register_referral_from_invoice
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.mentorship.signals import mentorship_session_status
+from breathecode.monitoring import signals as monitoring_signals
+from breathecode.monitoring.models import StripeEvent
 from breathecode.payments import actions, tasks
 
 from .actions import validate_auto_recharge_service_units
 from .models import (
+    Bag,
     Consumable,
+    Invoice,
+    PaymentMethod,
     Plan,
     PlanFinancing,
     PlanFinancingTeam,
@@ -236,7 +244,8 @@ def handle_seat_invite_accepted(sender: Type[UserInvite], instance: UserInvite, 
             Consumable.objects.filter(plan_financing_seat=seat, user__isnull=True).update(user=instance.user)
 
         for plan in financing.plans.all():
-            actions.grant_student_capabilities(instance.user, plan)
+            selected_cohort = instance.cohort.slug if instance.cohort_id else None
+            actions.grant_student_capabilities(instance.user, plan, selected_cohort=selected_cohort)
 
         tasks.build_service_stock_scheduler_from_plan_financing.delay(financing.id, seat_id=seat.id)
         return
@@ -271,8 +280,9 @@ def handle_seat_invite_accepted(sender: Type[UserInvite], instance: UserInvite, 
             Consumable.objects.filter(subscription_seat=seat, user__isnull=True).update(user=instance.user)
 
             # Grant student capabilities for each plan
+            selected_cohort = instance.cohort.slug if instance.cohort_id else None
             for p in subscription.plans.all():
-                actions.grant_student_capabilities(instance.user, p)
+                actions.grant_student_capabilities(instance.user, p, selected_cohort=selected_cohort)
 
 
 # to be able to use unittest instead of integration test
@@ -428,3 +438,432 @@ def check_consumable_balance_for_auto_recharge(sender: Type[Consumable], instanc
 
 
 post_save.connect(check_consumable_balance_for_auto_recharge, sender=Consumable)
+
+
+def _load_stripe_checkout_fulfillment_context(
+    session: dict, *, require_subscription: bool = False, require_plan_financing: bool = False
+) -> tuple[dict | None, str | None]:
+    """
+    Parse checkout session metadata and load related models in one pass.
+
+    Returns (context, error). context is None without error when required metadata is missing.
+    """
+
+    metadata = session.get("metadata") or {}
+    if not metadata.get("bag_id"):
+        return None, None
+    if require_subscription and not metadata.get("subscription_id"):
+        return None, None
+    if require_plan_financing and not metadata.get("plan_financing_id"):
+        return None, None
+
+    session_id = session.get("id")
+    if not session_id:
+        return None, "Missing checkout session id"
+
+    try:
+        bag_id = int(float(metadata["bag_id"]))
+        amount = float(metadata["amount"])
+        original_price = float(metadata["original_price"])
+        subscription_id = int(float(metadata["subscription_id"])) if require_subscription else None
+        plan_financing_id = int(float(metadata["plan_financing_id"])) if require_plan_financing else None
+    except KeyError as exc:
+        return None, f"Missing metadata field: {exc.args[0]}"
+    except (TypeError, ValueError):
+        if require_subscription or require_plan_financing:
+            return None, "Invalid bag_id, renewal id, amount, or original_price in metadata"
+        return None, "Invalid bag_id, amount, or original_price in metadata"
+
+    bag = Bag.objects.filter(id=bag_id).select_related("user", "academy", "currency").first()
+    if not bag:
+        return None, f"Bag {bag_id} not found"
+
+    subscription = None
+    plan_financing = None
+    if require_subscription:
+        subscription = Subscription.objects.filter(id=subscription_id, user=bag.user).first()
+        if not subscription:
+            return None, f"Subscription {subscription_id} not found"
+    if require_plan_financing:
+        plan_financing = PlanFinancing.objects.filter(id=plan_financing_id, user=bag.user).first()
+        if not plan_financing:
+            return None, f"PlanFinancing {plan_financing_id} not found"
+
+    payment_method = None
+    if payment_method_id := metadata.get("payment_method_id"):
+        try:
+            payment_method = PaymentMethod.objects.filter(id=int(float(payment_method_id))).first()
+        except (TypeError, ValueError):
+            pass
+
+    chosen_period = metadata.get("chosen_period") or None
+    if chosen_period and chosen_period not in {value for value, _ in Bag.ChosenPeriod.choices}:
+        chosen_period = None
+
+    user_settings = get_user_settings(bag.user.id)
+    lang = user_settings.lang if user_settings and user_settings.lang else "en"
+
+    ctx = {
+        "session_id": session_id,
+        "bag": bag,
+        "amount": amount,
+        "original_price": original_price,
+        "payment_method": payment_method,
+        "chosen_period": chosen_period,
+        "lang": lang,
+    }
+
+    if require_subscription:
+        ctx["subscription"] = subscription
+    elif require_plan_financing:
+        ctx["plan_financing"] = plan_financing
+    else:
+        how_many_installments = 0
+        if raw_installments := metadata.get("how_many_installments"):
+            try:
+                how_many_installments = int(float(raw_installments))
+            except (TypeError, ValueError):
+                pass
+        ctx["how_many_installments"] = how_many_installments
+        ctx["selected_cohort"] = metadata.get("selected_cohort") or None
+
+    return ctx, None
+
+
+@receiver(monitoring_signals.stripe_webhook, sender=StripeEvent)
+def stripe_checkout_payment_fulfillment(sender: Type[StripeEvent], instance: StripeEvent, **kwargs):
+    handler_key = "payments.stripe_checkout_payment_fulfillment"
+
+    if instance.type not in (
+        "checkout.session.completed",
+        "checkout.session.async_payment_succeeded",
+        "checkout.session.async_payment_failed",
+    ):
+        return
+
+    session = instance.data.get("object") or instance.data
+    metadata = session.get("metadata") or {}
+    if not metadata.get("bag_id"):
+        return
+
+    if metadata.get("subscription_id") or metadata.get("plan_financing_id"):
+        return
+
+    if instance.type == "checkout.session.async_payment_failed":
+        instance.status_texts[handler_key] = "async payment failed"
+        instance.status = "ERROR"
+        instance.save()
+        return
+
+    payment_status = session.get("payment_status")
+    if instance.type == "checkout.session.completed" and payment_status == "unpaid":
+        instance.status_texts.pop(handler_key, None)
+        instance.status = "DONE" if len(instance.status_texts) == 0 else "ERROR"
+        instance.save()
+        return
+
+    if payment_status != "paid":
+        return
+
+    ctx, error = _load_stripe_checkout_fulfillment_context(session)
+    if error:
+        instance.status_texts[handler_key] = error
+        instance.status = "ERROR"
+        instance.save()
+        if metadata.get("bag_id") and session.get("id"):
+            tasks.send_checkout_fulfillment_error_email.delay(
+                int(float(metadata["bag_id"])),
+                session["id"],
+                error[:200],
+            )
+        return
+    if not ctx:
+        return
+
+    session_id = ctx["session_id"]
+    bag = ctx["bag"]
+    amount = ctx["amount"]
+    original_price = ctx["original_price"]
+    payment_method = ctx["payment_method"]
+    how_many_installments = ctx["how_many_installments"]
+    chosen_period = ctx["chosen_period"]
+    selected_cohort = ctx["selected_cohort"]
+    lang = ctx["lang"]
+
+    if Invoice.objects.filter(stripe_id=session_id, status=Invoice.Status.FULFILLED).exists():
+        instance.status_texts.pop(handler_key, None)
+        instance.status = "DONE" if len(instance.status_texts) == 0 else "ERROR"
+        instance.save()
+        return
+
+    utc_now = timezone.now()
+
+    try:
+        with transaction.atomic():
+            sid = transaction.savepoint()
+
+            invoice, created = Invoice.objects.get_or_create(
+                stripe_id=session_id,
+                defaults={
+                    "bag": bag,
+                    "user": bag.user,
+                    "amount": amount,
+                    "currency": bag.currency,
+                    "status": Invoice.Status.FULFILLED,
+                    "externally_managed": True,
+                    "academy": bag.academy,
+                    "paid_at": utc_now,
+                    "payment_method": payment_method,
+                },
+            )
+
+            if not created and invoice.status == Invoice.Status.FULFILLED:
+                transaction.savepoint_rollback(sid)
+                instance.status_texts.pop(handler_key, None)
+                instance.status = "DONE" if len(instance.status_texts) == 0 else "ERROR"
+                instance.save()
+                return
+
+            invoice.refresh_from_db()
+
+            bag.status = "PAID"
+            bag.chosen_period = chosen_period or "NO_SET"
+            bag.how_many_installments = how_many_installments
+            bag.token = None
+            bag.expires_at = None
+            bag.save()
+
+            invoice.amount_breakdown = actions.calculate_invoice_breakdown(
+                bag,
+                invoice,
+                lang,
+                chosen_period=chosen_period,
+                how_many_installments=how_many_installments,
+            )
+            invoice.save(update_fields=["amount_breakdown"])
+
+            coupons = bag.coupons.all()
+            if coupons.exists() and original_price > 0:
+                try:
+                    actions.create_seller_reward_coupons(list(coupons), original_price, invoice.user)
+                except Exception:
+                    pass
+
+            transaction.savepoint_commit(sid)
+
+            has_plan_addons = bag.plan_addons.exists()
+
+            if original_price == 0:
+                tasks.build_free_subscription.delay(bag.id, invoice.id, conversion_info="")
+            elif bag.how_many_installments > 0:
+                tasks.build_plan_financing.delay(bag.id, invoice.id, conversion_info="", externally_managed=True)
+                if has_plan_addons:
+                    actions.build_plan_addons_financings(bag, invoice, lang, conversion_info="")
+            else:
+                tasks.build_subscription.delay(bag.id, invoice.id, conversion_info="", externally_managed=True)
+                if has_plan_addons:
+                    actions.build_plan_addons_financings(bag, invoice, lang, conversion_info="")
+
+            if plans := bag.plans.all():
+                for plan in plans:
+                    actions.grant_student_capabilities(
+                        invoice.user,
+                        plan,
+                        selected_cohort=selected_cohort,
+                    )
+
+            has_referral_coupons = (
+                invoice.status == Invoice.Status.FULFILLED
+                and invoice.amount > 0
+                and coupons.exclude(referral_type="NO_REFERRAL").exists()
+            )
+
+            if has_referral_coupons:
+                transaction.on_commit(lambda inv_id=invoice.id: register_referral_from_invoice.delay(inv_id))
+
+            tasks_activity.add_activity.delay(
+                invoice.user.id,
+                "checkout_completed",
+                related_type="payments.Invoice",
+                related_id=invoice.id,
+            )
+
+        instance.status_texts.pop(handler_key, None)
+        instance.status = "DONE" if len(instance.status_texts) == 0 else "ERROR"
+        instance.save()
+
+    except Exception as e:
+        logger.exception("Stripe checkout payment fulfillment failed for session %s", session_id)
+        instance.status_texts[handler_key] = str(e)[:255]
+        instance.status = "ERROR"
+        instance.save()
+        tasks.send_checkout_fulfillment_error_email.delay(bag.id, session_id, str(e)[:200])
+
+
+@receiver(monitoring_signals.stripe_webhook, sender=StripeEvent)
+def stripe_checkout_renewal_fulfillment(sender: Type[StripeEvent], instance: StripeEvent, **kwargs):
+    handler_key = "payments.stripe_checkout_renewal_fulfillment"
+
+    if instance.type not in (
+        "checkout.session.completed",
+        "checkout.session.async_payment_succeeded",
+        "checkout.session.async_payment_failed",
+    ):
+        return
+
+    session = instance.data.get("object") or instance.data
+    metadata = session.get("metadata") or {}
+    if not metadata.get("bag_id"):
+        return
+
+    has_subscription = bool(metadata.get("subscription_id"))
+    has_plan_financing = bool(metadata.get("plan_financing_id"))
+    if has_subscription and has_plan_financing:
+        return
+    if not has_subscription and not has_plan_financing:
+        return
+
+    if instance.type == "checkout.session.async_payment_failed":
+        instance.status_texts[handler_key] = "async payment failed"
+        instance.status = "ERROR"
+        instance.save()
+        return
+
+    payment_status = session.get("payment_status")
+    if instance.type == "checkout.session.completed" and payment_status == "unpaid":
+        instance.status_texts.pop(handler_key, None)
+        instance.status = "DONE" if len(instance.status_texts) == 0 else "ERROR"
+        instance.save()
+        return
+
+    if payment_status != "paid":
+        return
+
+    ctx, error = _load_stripe_checkout_fulfillment_context(
+        session,
+        require_subscription=has_subscription,
+        require_plan_financing=has_plan_financing,
+    )
+    if error:
+        instance.status_texts[handler_key] = error
+        instance.status = "ERROR"
+        instance.save()
+        if metadata.get("bag_id") and session.get("id"):
+            tasks.send_checkout_fulfillment_error_email.delay(
+                int(float(metadata["bag_id"])),
+                session["id"],
+                error[:200],
+            )
+        return
+    if not ctx:
+        return
+
+    session_id = ctx["session_id"]
+    bag = ctx["bag"]
+    subscription = ctx.get("subscription")
+    plan_financing = ctx.get("plan_financing")
+    amount = ctx["amount"]
+    original_price = ctx["original_price"]
+    payment_method = ctx["payment_method"]
+    chosen_period = ctx["chosen_period"]
+    lang = ctx["lang"]
+
+    if Invoice.objects.filter(stripe_id=session_id, status=Invoice.Status.FULFILLED).exists():
+        instance.status_texts.pop(handler_key, None)
+        instance.status = "DONE" if len(instance.status_texts) == 0 else "ERROR"
+        instance.save()
+        return
+
+    utc_now = timezone.now()
+
+    try:
+        with transaction.atomic():
+            sid = transaction.savepoint()
+
+            invoice, created = Invoice.objects.get_or_create(
+                stripe_id=session_id,
+                defaults={
+                    "bag": bag,
+                    "user": bag.user,
+                    "amount": amount,
+                    "currency": bag.currency,
+                    "status": Invoice.Status.FULFILLED,
+                    "externally_managed": True,
+                    "academy": bag.academy,
+                    "paid_at": utc_now,
+                    "payment_method": payment_method,
+                },
+            )
+
+            if not created and invoice.status == Invoice.Status.FULFILLED:
+                transaction.savepoint_rollback(sid)
+                instance.status_texts.pop(handler_key, None)
+                instance.status = "DONE" if len(instance.status_texts) == 0 else "ERROR"
+                instance.save()
+                return
+
+            invoice.refresh_from_db()
+
+            bag.status = "PAID"
+            if chosen_period:
+                bag.chosen_period = chosen_period
+            bag.save()
+
+            invoice.amount_breakdown = actions.calculate_invoice_breakdown(
+                bag,
+                invoice,
+                lang,
+                chosen_period=chosen_period or bag.chosen_period,
+                how_many_installments=0,
+            )
+            invoice.save(update_fields=["amount_breakdown"])
+
+            coupons = bag.coupons.all()
+            if coupons.exists() and original_price > 0:
+                try:
+                    actions.create_seller_reward_coupons(list(coupons), original_price, invoice.user)
+                except Exception:
+                    pass
+
+            transaction.savepoint_commit(sid)
+
+            if subscription:
+                should_charge_now = (
+                    utc_now >= subscription.next_payment_at
+                    and subscription.status == Subscription.Status.PAYMENT_ISSUE
+                )
+
+                transaction.on_commit(lambda: subscription.invoices.add(invoice))
+
+                if should_charge_now:
+                    transaction.on_commit(lambda sub_id=subscription.id: tasks.charge_subscription.delay(sub_id))
+            elif plan_financing:
+                should_charge_now = (
+                    utc_now >= plan_financing.next_payment_at
+                    and plan_financing.status == PlanFinancing.Status.PAYMENT_ISSUE
+                )
+
+                transaction.on_commit(lambda: plan_financing.invoices.add(invoice))
+
+                if should_charge_now:
+                    transaction.on_commit(
+                        lambda pf_id=plan_financing.id: tasks.charge_plan_financing.delay(pf_id)
+                    )
+
+            tasks_activity.add_activity.delay(
+                invoice.user.id,
+                "checkout_completed",
+                related_type="payments.Invoice",
+                related_id=invoice.id,
+            )
+
+        instance.status_texts.pop(handler_key, None)
+        instance.status = "DONE" if len(instance.status_texts) == 0 else "ERROR"
+        instance.save()
+
+    except Exception as e:
+        logger.exception("Stripe checkout renewal fulfillment failed for session %s", session_id)
+        instance.status_texts[handler_key] = str(e)[:255]
+        instance.status = "ERROR"
+        instance.save()
+        tasks.send_checkout_fulfillment_error_email.delay(bag.id, session_id, str(e)[:200])

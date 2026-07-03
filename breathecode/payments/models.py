@@ -212,6 +212,11 @@ PAY_EVERY_UNIT = [
     (YEAR, "Year"),
 ]
 
+STRIPE_CHECKOUT_FULFILLMENT_EVENT_TYPES = (
+    "checkout.session.completed",
+    "checkout.session.async_payment_succeeded",
+)
+
 
 class AbstractAsset(models.Model):
     """This model represents a product or a service that can be sold."""
@@ -1117,13 +1122,12 @@ class Plan(AbstractPriceByTime):
         help_text="Required when transitioning the plan status to DISCONTINUED",
     )
 
-    time_of_life = models.IntegerField(default=1, blank=True, null=True, help_text="Plan lifetime (e.g. 1, 2, 3, ...)")
+    time_of_life = models.IntegerField(blank=True, null=True, help_text="Plan lifetime (e.g. 1, 2, 3, ...)")
     time_of_life_unit = models.CharField(
         max_length=10,
         choices=PAY_EVERY_UNIT,
         blank=True,
         null=True,
-        default=MONTH,
         help_text="Lifetime unit (e.g. DAY, WEEK, MONTH or YEAR)",
     )
 
@@ -1223,28 +1227,17 @@ class Plan(AbstractPriceByTime):
         if self.seat_service_price and self.seat_service_price.service.type != Service.Type.SEAT:
             raise forms.ValidationError("Seat service price must be a seat service")
 
-        if not self.is_renewable and (not self.time_of_life or not self.time_of_life_unit):
-            raise forms.ValidationError("If the plan is not renewable, you must set time_of_life and time_of_life_unit")
-
         have_price = self.price_per_month or self.price_per_year or self.price_per_quarter or self.price_per_half
-
-        if self.is_renewable and have_price and (self.time_of_life or self.time_of_life_unit):
-            raise forms.ValidationError(
-                "If the plan is renewable and have price, you must not set time_of_life and " "time_of_life_unit"
-            )
-
         free_trial_available = self.trial_duration
 
-        if (
-            self.is_renewable
-            and not have_price
-            and free_trial_available
-            and (self.time_of_life or self.time_of_life_unit)
-        ):
-            raise forms.ValidationError(
-                "If the plan is renewable and a have free trial available, you must not set time_of_life "
-                "and time_of_life_unit"
-            )
+        # Renewable plans with price or free trial don't use a fixed lifetime. Clear stale defaults
+        # (e.g. time_of_life=1 / MONTH) so admin and partial API updates can save without errors.
+        if self.is_renewable and (have_price or (not have_price and free_trial_available)):
+            self.time_of_life = None
+            self.time_of_life_unit = None
+
+        if not self.is_renewable and (not self.time_of_life or not self.time_of_life_unit):
+            raise forms.ValidationError("If the plan is not renewable, you must set time_of_life and time_of_life_unit")
 
         if (
             self.is_renewable
@@ -1708,6 +1701,10 @@ class PaymentMethod(models.Model):
         INTERNAL = "INTERNAL", "Internal"
         HIDDEN = "HIDDEN", "Hidden"
 
+    class StripeCheckoutPaymentMethodType(models.TextChoices):
+        KLARNA = "klarna", "Klarna"
+        AFFIRM = "affirm", "Affirm"
+
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True, help_text="Academy owner")
     title = models.CharField(max_length=120, null=False, blank=False)
     is_backed = models.BooleanField(
@@ -1718,9 +1715,15 @@ class PaymentMethod(models.Model):
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency", null=True, blank=True)
     is_credit_card = models.BooleanField(default=False, null=False, blank=False)
     is_crypto = models.BooleanField(default=False, null=False, blank=False)
+
     description = models.CharField(max_length=480, help_text="Description of the payment method")
     third_party_link = models.URLField(
         blank=True, null=True, default=None, help_text="Link of a third party payment method"
+    )
+    logo_urls = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Public logo URLs to display in checkout for this payment method",
     )
     lang = models.CharField(
         max_length=5,
@@ -1741,11 +1744,70 @@ class PaymentMethod(models.Model):
         help_text="Visibility level of the payment method",
         db_index=True,
     )
+    plans = models.ManyToManyField(
+        Plan,
+        blank=True,
+        related_name="payment_methods",
+        help_text="Plans where this payment method is available. Empty means it works for all plans on this academy.",
+    )
+    provider_settings = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text=(
+            "Provider-specific settings for this payment method. For Stripe Checkout hosted payments, "
+            "set {'stripe_payment_method_types': ['klarna', 'affirm']}. Use is_financing_managed_by_provider "
+            "for BNPL that finances installments externally."
+        ),
+    )
+
+    is_financing_managed_by_provider = models.BooleanField(
+        default=False,
+        help_text=(
+            "When paying with plan financing (how_many_installments), charge the full financed total "
+            "instead of the first installment. Only applies when provider_settings is non-empty."
+        ),
+    )
     deprecated = models.BooleanField(
         default=False,
         help_text="If true, this payment method is deprecated and cannot be used for new purchases",
         db_index=True,
     )
+
+
+    def get_stripe_payment_method_types(self) -> list[str]:
+        settings = self.provider_settings if isinstance(self.provider_settings, dict) else {}
+        types = settings.get("stripe_payment_method_types", [])
+        if not isinstance(types, list):
+            return []
+
+        return [value for value in types if isinstance(value, str)]
+
+    def clean(self) -> None:
+        stripe_types = self.get_stripe_payment_method_types()
+
+        if stripe_types:
+            allowed = ", ".join(sorted(self.StripeCheckoutPaymentMethodType.values))
+            for value in stripe_types:
+                if value not in self.StripeCheckoutPaymentMethodType.values:
+                    raise forms.ValidationError(
+                        f"Unsupported stripe_payment_method_types value: {value}. Allowed values: {allowed}"
+                    )
+
+        if stripe_types and self.is_credit_card:
+            raise forms.ValidationError(
+                "A credit card payment method cannot define stripe_payment_method_types in provider_settings."
+            )
+
+        if stripe_types and self.is_crypto:
+            raise forms.ValidationError(
+                "A crypto payment method cannot define stripe_payment_method_types in provider_settings."
+            )
+
+        return super().clean()
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+        return super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         return f"{self.title} ({'Credit Card' if self.is_credit_card else 'No Credit Card'})"
@@ -1871,8 +1933,7 @@ class Invoice(models.Model):
         help_text="Payment method, null if it uses stripe",
     )
 
-    # it has 27 characters right now
-    stripe_id = models.CharField(max_length=32, null=True, default=None, blank=True, help_text="Stripe id")
+    stripe_id = models.CharField(max_length=255, null=True, default=None, blank=True, help_text="Stripe charge or checkout session id")
 
     # it has 27 characters right now
     refund_stripe_id = models.CharField(
@@ -1924,6 +1985,7 @@ class Invoice(models.Model):
             and self.proof is None
             and self.status == self.Status.FULFILLED
             and not self.payment_method.is_crypto
+            and not self.payment_method.get_stripe_payment_method_types()
         ):
             raise forms.ValidationError(
                 "Proof of payment must be provided when payment method is setted and status is FULFILLED"
@@ -3515,7 +3577,7 @@ class Consumable(AbstractServiceItem):
         resources = [self.event_type_set, self.mentorship_service_set, self.cohort_set]
         parent_entities = [self.subscription, self.plan_financing]
         # support user-owned and team-owned consumables
-        owners = [self.user, self.subscription_billing_team]
+        owners = [self.user, self.subscription_billing_team, self.plan_financing_team]
         # derive settings lang safely even if user is None (team-owned)
         if self.user_id:
             settings = get_user_settings(self.user.id)
@@ -3536,8 +3598,8 @@ class Consumable(AbstractServiceItem):
             raise forms.ValidationError(
                 translation(
                     settings.lang,
-                    en="A consumable must be associated with one owner (user or subscription billing team)",
-                    es="Un consumible debe estar asociado con un propietario (usuario o suscripción con equipo de facturación)",
+                    en="A consumable must be associated with one owner (user, subscription billing team or plan financing team)",
+                    es="Un consumible debe estar asociado con un propietario (usuario, equipo de facturación de suscripción o equipo de plan financiado)",
                 )
             )
 

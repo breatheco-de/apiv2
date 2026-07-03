@@ -104,3 +104,43 @@ def test_update_to_discontinued_requires_discontinued_reason(database):
         serializer.is_valid(raise_exception=True)
     assert exc.value.slug == "discontinued-reason-required"
 
+
+def test_update_renewable_plan_with_price_clears_stale_time_of_life(database):
+    model = database.create(
+        plan={
+            "is_renewable": True,
+            "price_per_month": 99.0,
+            "time_of_life": 1,
+            "time_of_life_unit": "MONTH",
+        },
+        academy=1,
+        currency=1,
+    )
+    plan = model.plan
+
+    updated_instance = PlanSerializer().update(plan, {"price_per_month": 120.0})
+
+    assert updated_instance.price_per_month == 120.0
+    assert updated_instance.time_of_life is None
+    assert updated_instance.time_of_life_unit is None
+
+
+def test_save_renewable_plan_with_price_clears_partial_time_of_life(database):
+    model = database.create(
+        plan={
+            "is_renewable": True,
+            "price_per_month": 99.0,
+            "time_of_life": None,
+            "time_of_life_unit": "MONTH",
+        },
+        academy=1,
+        currency=1,
+    )
+    plan = model.plan
+
+    plan.save()
+    plan.refresh_from_db()
+
+    assert plan.time_of_life is None
+    assert plan.time_of_life_unit is None
+
