@@ -1471,6 +1471,7 @@ class AcademyAssetActionView(APIView):
         try:
             if action_slug == "test":
                 await atest_asset(asset)
+                await asset.arefresh_from_db()
             elif action_slug == "clean":
                 async_regenerate_asset_readme.delay(asset.slug)
             elif action_slug == "pull":
@@ -1633,6 +1634,7 @@ class AcademyAssetActionView(APIView):
         try:
             if action_slug == "test":
                 await atest_asset(asset)
+                await asset.arefresh_from_db()
             elif action_slug == "clean":
                 await aclean_asset_readme(asset, silent=False)
             elif action_slug == "pull":

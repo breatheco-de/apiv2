@@ -670,3 +670,82 @@ def test_asset__put_many_with_test_status_Needs_Resync(bc: Breathecode, client: 
 
     assert json == expected
     assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+@patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+def test_asset__put_many_sets_test_status_in_same_request(bc: Breathecode, client: APIClient):
+    """Allow updating test_status via PUT and use it for publish validation in the same request."""
+
+    model = bc.database.create(
+        user=1,
+        profile_academy=True,
+        capability="crud_asset",
+        role="potato",
+        asset_category={"lang": "es"},
+        asset={
+            "category_id": 1,
+            "academy_id": 1,
+            "slug": "asset-1",
+            "visibility": "PRIVATE",
+            "test_status": None,
+            "lang": "es",
+        },
+    )
+    client.force_authenticate(user=model.user)
+
+    url = reverse_lazy("registry:academy_asset")
+    data = [
+        {
+            "category": 1,
+            "id": 1,
+            "visibility": "PUBLIC",
+            "test_status": "OK",
+        }
+    ]
+
+    response = client.put(url, data, format="json", HTTP_ACADEMY=1)
+    json = response.json()
+
+    expected = [
+        put_serializer(
+            model.academy,
+            model.asset_category,
+            model.asset,
+            data={
+                "id": 1,
+                "visibility": "PUBLIC",
+                "test_status": "OK",
+                "last_test_at": bc.datetime.to_iso_string(UTC_NOW),
+            },
+        )
+    ]
+
+    assert json == expected
+    assert response.status_code == status.HTTP_200_OK
+
+
+def test_asset__put_many_rejects_invalid_test_status(bc: Breathecode, client: APIClient):
+    model = bc.database.create(
+        user=1,
+        profile_academy=True,
+        capability="crud_asset",
+        role="potato",
+        asset_category={"lang": "es"},
+        asset={
+            "category_id": 1,
+            "academy_id": 1,
+            "slug": "asset-1",
+            "visibility": "PRIVATE",
+            "lang": "es",
+        },
+    )
+    client.force_authenticate(user=model.user)
+
+    url = reverse_lazy("registry:academy_asset")
+    data = [{"category": 1, "id": 1, "test_status": "BANANA"}]
+
+    response = client.put(url, data, format="json", HTTP_ACADEMY=1)
+    json = response.json()
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "Invalid test_status" in json["detail"]
