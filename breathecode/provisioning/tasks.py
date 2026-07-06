@@ -753,7 +753,7 @@ def deprovision_litellm_user_task(
     """
     Deprovision a user from Litellm by deleting the external user and its API keys.
 
-    This is triggered when the user loses `free_monthly_llm_budget`.
+    This is triggered when the user loses the ``llm-budget`` service entitlement.
     """
     user = User.objects.filter(id=user_id).first()
     if not user:
@@ -768,19 +768,19 @@ def deprovision_litellm_user_task(
     if academy_id:
         has_entitlement = payment_actions.user_has_service_entitlement_in_academy(
             user,
-            "free-monthly-llm-budget",
+            "llm-budget",
             academy_id,
         )
         if has_entitlement:
             logger.info(
-                "User %s still has free-monthly-llm-budget for academy %s, skipping deprovision",
+                "User %s still has llm-budget for academy %s, skipping deprovision",
                 user_id,
                 academy_id,
             )
             return
     else:
-        if Consumable.list(user=user, service="free-monthly-llm-budget").exists():
-            logger.info("User %s still has free-monthly-llm-budget, skipping deprovision", user_id)
+        if Consumable.list(user=user, service="llm-budget").exists():
+            logger.info("User %s still has llm-budget, skipping deprovision", user_id)
             return
 
     provisioning_llms_qs = ProvisioningLLM.objects.filter(user=user).select_related("academy", "vendor").all()

@@ -1980,7 +1980,7 @@ class MeLLMKeysView(APIView):
     def get(self, request):
         lang = get_user_language(request)
         user = request.user
-        if not Consumable.list(user=user, service="free-monthly-llm-budget").exists():
+        if not Consumable.list(user=user, service="llm-budget").exists():
             raise ValidationException(
                 translation(
                     lang,

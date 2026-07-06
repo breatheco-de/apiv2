@@ -22,9 +22,11 @@ LiteLLM support in the provisioning app is designed around three layers:
   - `external_user_id`
   - `status` (`PENDING`, `ACTIVE`, `DEPROVISIONED`, `ERROR`)
   - `error_message`
-  - `last_sync_at`, `deprovisioned_at`
+  - `last_known_spend` (USD cursor for LiteLLM spend sync)
+  - `litellm_team_id` (team used on last sync)
+  - `last_sync_at`, `last_sync_error`, `deprovisioned_at`
 
-This model is the source of truth for “does this user exist in LiteLLM for this academy/vendor context?”
+Service slug for entitlement: **`llm-budget`** (`Service.Consumer.LLM_BUDGET`).
 
 ---
 
@@ -292,8 +294,8 @@ Reference:
 @task(priority=TaskPriority.STUDENT.value)
 def deprovision_litellm_user_task(user_id: int, **_: Any):
     ...
-    if Consumable.list(user=user, service="free_monthly_llm_budget").exists():
-        logger.info(f"User {user_id} still has free_monthly_llm_budget, skipping deprovision")
+    if Consumable.list(user=user, service="llm-budget").exists():
+        logger.info(f"User {user_id} still has llm-budget, skipping deprovision")
         return
     ...
     client.delete_user(user_ids=user_id_list)
@@ -312,6 +314,8 @@ def deprovision_litellm_user_task(user_id: int, **_: Any):
 
 Main methods in `breathecode/services/litellm/client.py`:
 
+- `get_team_info(team_id)` — `GET /team/info?team_id=` (member `spend`, `max_budget_in_team`)
+- `update_team_member(team_id, user_id, max_budget_in_team)` — `POST /team/member_update` (budget cap only)
 - `create_api_key(external_user_id, name)`
 - `delete_api_keys(user_id, token_ids)`
 - `get_user_info(user_id)`

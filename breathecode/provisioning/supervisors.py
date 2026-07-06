@@ -5,7 +5,7 @@ from breathecode.provisioning.models import ProvisioningLLM
 from breathecode.provisioning.tasks import deprovision_litellm_user_task
 from breathecode.utils.decorators import issue, supervisor
 
-LLM_BUDGET_SERVICE = "free-monthly-llm-budget"
+LLM_BUDGET_SERVICE = "llm-budget"
 
 
 @supervisor(delta=timedelta(hours=6))

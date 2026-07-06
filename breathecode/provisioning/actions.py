@@ -294,7 +294,7 @@ def ensure_llm_user(user, provisioning_academy, client=None):
 
     if provisioning_llm.status == ProvisioningLLM.STATUS_DEPROVISIONED:
         academy_id = provisioning_academy.academy.id
-        if user_has_service_entitlement_in_academy(user, "free-monthly-llm-budget", academy_id):
+        if user_has_service_entitlement_in_academy(user, "llm-budget", academy_id):
             provisioning_llm.status = ProvisioningLLM.STATUS_ACTIVE
             provisioning_llm.deprovisioned_at = None
             provisioning_llm.error_message = ""
@@ -410,7 +410,7 @@ def resolve_llm_client_and_external_id(request, ensure_llm_user_record: bool = F
             code=400,
         )
 
-    if not user_has_service_entitlement_in_academy(user, "free-monthly-llm-budget", academy_id):
+    if not user_has_service_entitlement_in_academy(user, "llm-budget", academy_id):
         raise ValidationException(
             translation(
                 lang,
@@ -1771,10 +1771,10 @@ def apply_early_vps_billing_alignment(vps: ProvisioningVPS) -> None:
         reschedule_billing_tasks(plan_financing_id=pf_id)
 
 
-@service_deprovisioner("free-monthly-llm-budget")
-def deprovision_free_monthly_llm_budget(user_id: int, context: dict | None = None, **_: Any):
+@service_deprovisioner("llm-budget")
+def deprovision_llm_budget(user_id: int, context: dict | None = None, **_: Any):
     """
-    Deprovision the free monthly LLM budget for the given user and academy.
+    Deprovision LLM budget for the given user and academy.
     """
     # The signal receiver calls handlers synchronously; keep this handler lightweight.
     from breathecode.provisioning.tasks import deprovision_litellm_user_task
