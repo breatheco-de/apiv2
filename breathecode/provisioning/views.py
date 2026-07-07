@@ -1,4 +1,5 @@
 import hashlib
+import logging
 import math
 import os
 from datetime import date, datetime
@@ -10,6 +11,7 @@ from capyc.rest_framework.exceptions import ValidationException
 from circuitbreaker import CircuitBreakerError
 from dateutil.relativedelta import relativedelta
 from django.contrib.auth import get_user_model
+from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
@@ -24,6 +26,7 @@ from breathecode.admissions.models import Academy, Cohort, CohortUser
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.notify.actions import get_template_content
+from breathecode.payments import actions as payment_actions
 from breathecode.payments.models import Consumable
 from breathecode.provisioning import tasks
 from breathecode.provisioning.serializers import (
@@ -61,6 +64,7 @@ from .actions import (
     request_vps,
     request_vps_for_student,
     resolve_llm_client_and_external_id,
+    resolve_llm_provisioning_context,
     resolve_provisioning_academy_for_llm,
     restart_provisioning_vps,
 )
@@ -2096,11 +2100,33 @@ class MeLLMKeysView(APIView):
                 )
             plan_title = plan.title
         try:
-            client, external_user_id = resolve_llm_client_and_external_id(request, ensure_llm_user_record=True)
+            client, external_user_id, academy_id = resolve_llm_client_and_external_id(
+                request, ensure_llm_user_record=True
+            )
             metadata = {"plan_title": plan_title} if plan_title else None
             created = client.create_api_key(external_user_id=external_user_id, name=alias, metadata=metadata)
+
+            # One-time member budget bootstrap while last_budget_sync_at is null (retries on later keys).
+            llm_ctx = resolve_llm_provisioning_context(request.user, academy_id)
+            if llm_ctx and llm_ctx[0].last_budget_sync_at is None:
+                provisioning_llm, pa_llm, _ = llm_ctx
+                try:
+                    payment_actions.sync_llm_member_budget_to_llm_provider(
+                        provisioning_llm,
+                        pa_llm,
+                        client,
+                    )
+                except LLMClientError as exc:
+                    logging.getLogger(__name__).error(
+                        "LLM budget bootstrap failed for user=%s academy=%s: %s",
+                        request.user.id,
+                        academy_id,
+                        exc,
+                    )
+            
             created_token_id = created.get("id") or created.get("token_id") or created.get("token")
             effective_models = []
+
             if created_token_id and hasattr(client, "get_user_info"):
                 try:
                     user_info = client.get_user_info(user_id=external_user_id)
@@ -2123,32 +2149,28 @@ class MeLLMKeysView(APIView):
                         effective_models = _resolve_llm_key_effective_models(created_item, user_data, teams_map)
                 except LLMClientError:
                     effective_models = []
+
             created["models"] = effective_models
-            raw_academy_id = request.headers.get("Academy") or request.headers.get("academy")
-            try:
-                academy_id = int(str(raw_academy_id).strip())
-            except Exception:
-                academy_id = None
             created["host"] = None
             created["vendor_name"] = None
-            if academy_id:
-                academy_obj = Academy.objects.filter(id=academy_id).first()
-                if academy_obj:
-                    pa_llm = resolve_provisioning_academy_for_llm(academy_obj)
-                    if pa_llm and getattr(pa_llm, "vendor", None):
-                        v = pa_llm.vendor
-                        created["host"] = getattr(v, "api_url", "") or None
-                        created["vendor_name"] = str(getattr(v, "name", "") or "").strip() or None
-            if academy_id:
-                ProvisioningLLM.objects.filter(
-                    user=request.user,
-                    academy_id=academy_id,
-                    external_user_id=external_user_id,
-                ).exclude(status=ProvisioningLLM.STATUS_DEPROVISIONED).update(
-                    status=ProvisioningLLM.STATUS_ACTIVE,
-                    deprovisioned_at=None,
-                    error_message="",
-                )
+            academy_obj = Academy.objects.filter(id=academy_id).first()
+
+            if academy_obj:
+                pa_llm = resolve_provisioning_academy_for_llm(academy_obj)
+                if pa_llm and getattr(pa_llm, "vendor", None):
+                    v = pa_llm.vendor
+                    created["host"] = getattr(v, "api_url", "") or None
+                    created["vendor_name"] = str(getattr(v, "name", "") or "").strip() or None
+            ProvisioningLLM.objects.filter(
+                user=request.user,
+                academy_id=academy_id,
+                external_user_id=external_user_id,
+            ).exclude(status=ProvisioningLLM.STATUS_DEPROVISIONED).update(
+                status=ProvisioningLLM.STATUS_ACTIVE,
+                deprovisioned_at=None,
+                error_message="",
+            )
+
         except LLMClientError as exc:
             raise ValidationException(
                 translation(
@@ -2168,23 +2190,17 @@ class MeLLMKeyByIdView(APIView):
     def delete(self, request, key_id):
         lang = get_user_language(request)
         try:
-            client, external_user_id = resolve_llm_client_and_external_id(request)
+            client, external_user_id, academy_id = resolve_llm_client_and_external_id(request)
             client.delete_api_keys(user_id=external_user_id, token_ids=[key_id])
-            raw_academy_id = request.headers.get("Academy") or request.headers.get("academy")
-            try:
-                academy_id = int(str(raw_academy_id).strip())
-            except Exception:
-                academy_id = None
-            if academy_id:
-                ProvisioningLLM.objects.filter(
-                    user=request.user,
-                    academy_id=academy_id,
-                    external_user_id=external_user_id,
-                ).exclude(status=ProvisioningLLM.STATUS_DEPROVISIONED).update(
-                    status=ProvisioningLLM.STATUS_ACTIVE,
-                    deprovisioned_at=None,
-                    error_message="",
-                )
+            ProvisioningLLM.objects.filter(
+                user=request.user,
+                academy_id=academy_id,
+                external_user_id=external_user_id,
+            ).exclude(status=ProvisioningLLM.STATUS_DEPROVISIONED).update(
+                status=ProvisioningLLM.STATUS_ACTIVE,
+                deprovisioned_at=None,
+                error_message="",
+            )
         except LLMClientError as exc:
             raise ValidationException(
                 translation(

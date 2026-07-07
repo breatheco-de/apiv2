@@ -273,20 +273,25 @@ class LiteLLMClient:
         team_id: str,
         user_id: str,
         max_budget_in_team: Union[float, Decimal],
+        *,
+        budget_duration: None = None,
+        tpm_limit: int | None = None,
+        rpm_limit: int | None = None,
         timeout: float = 10.0,
     ) -> Dict[str, Any]:
         """
-        Update a team member's per-member budget cap in LiteLLM.
+        Update a team member's Team Member Budget in LiteLLM.
 
         Endpoint: POST /team/member_update
-        Only sends max_budget_in_team (no budget_duration, tpm, or rpm).
         """
         url = f"{self.base_url.rstrip('/')}/team/member_update"
-        budget_value = float(max_budget_in_team)
         payload: Dict[str, Any] = {
             "team_id": team_id,
             "user_id": user_id,
-            "max_budget_in_team": budget_value,
+            "max_budget_in_team": float(max_budget_in_team),
+            "budget_duration": budget_duration,
+            "tpm_limit": tpm_limit,
+            "rpm_limit": rpm_limit,
         }
 
         try:
@@ -301,7 +306,11 @@ class LiteLLMClient:
         try:
             return resp.json()
         except ValueError:
-            return {"team_id": team_id, "user_id": user_id, "max_budget_in_team": max_budget_in_team}
+            return {
+                "team_id": team_id,
+                "user_id": user_id,
+                "max_budget_in_team": float(max_budget_in_team),
+            }
 
     def list_teams(self, timeout: float = 10.0) -> Dict[str, Any]:
         url = f"{self.base_url.rstrip('/')}/v2/team/list"

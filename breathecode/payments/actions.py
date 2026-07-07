@@ -370,6 +370,270 @@ def align_consumer_vps_stock_with_active_machines(consumable: Consumable) -> Non
         consume_service.send_robust(sender=Consumable, instance=current_consumable, how_many=pre_consume_units)
 
 
+def sync_llm_member_budget_to_llm_provider(
+    provisioning_llm,
+    provisioning_academy,
+    client,
+    *,
+    team_data: dict | None = None,
+) -> None:
+    """
+    Push the user's LiteLLM team member budget to match consumables.
+
+    Sums active llm-budget consumables for the provisioning user and academy, then sets
+    ``max_budget_in_team`` to current LiteLLM spend plus that pool (USD). Also applies
+    tpm/rpm from the team template and records sync metadata on ``ProvisioningLLM``.
+
+    When ``team_data`` is provided (e.g. from ``align_llm_member_budget_with_consumables``),
+    skips ``GET /team/info``.
+
+    Consumables expiring within one hour are excluded from the sum (cycle rollover forfeit).
+    """
+
+    def _skip_budget_sync(message: str) -> None:
+        logger.warning(message)
+        provisioning_llm.last_budget_sync_error = message[:255]
+        provisioning_llm.save(update_fields=["last_budget_sync_error", "updated_at"])
+
+    vendor_settings = provisioning_academy.vendor_settings or {}
+    team_id = str(vendor_settings.get("team_id") or "").strip()
+    if not team_id:
+        _skip_budget_sync(f"LLM budget sync skipped: academy {provisioning_academy.id} has no LiteLLM team_id")
+        return
+
+    external_user_id = provisioning_llm.external_user_id
+    if not external_user_id:
+        _skip_budget_sync(
+            f"LLM budget sync skipped: ProvisioningLLM {provisioning_llm.id} has no external_user_id"
+        )
+        return
+
+    if provisioning_llm.litellm_team_id and provisioning_llm.litellm_team_id != team_id:
+        # Academy team_id changed since last sync: zero the spend cursor and store the new team.
+        logger.warning(
+            "LiteLLM team_id changed for ProvisioningLLM %s (%s -> %s); resetting last_known_spend",
+            provisioning_llm.id,
+            provisioning_llm.litellm_team_id,
+            team_id,
+        )
+        provisioning_llm.last_known_spend = Decimal("0")
+        provisioning_llm.litellm_team_id = team_id
+        provisioning_llm.save(update_fields=["last_known_spend", "litellm_team_id", "updated_at"])
+
+    if team_data is None:
+        team_data = client.get_team_info(team_id=team_id)
+
+    membership = None
+    for row in team_data["team_memberships"]:
+        if row["user_id"] == external_user_id:
+            membership = row
+            break
+    if membership is None:
+        _skip_budget_sync(
+            f"LLM budget sync skipped: member {external_user_id} not in team_memberships for team {team_id}"
+        )
+        return
+
+    member_spend = Decimal(str(membership["spend"]))
+
+    academy_id = provisioning_llm.academy_id
+    renew_cutoff = timezone.now() + timedelta(hours=1)
+    budget_total = (
+        Consumable.list(
+            user=provisioning_llm.user_id,
+            service="llm-budget",
+            include_zero_balance=False,
+        )
+        .filter(
+            Q(subscription__academy_id=academy_id)
+            | Q(plan_financing__academy_id=academy_id)
+            | Q(standalone_invoice__bag__academy_id=academy_id)
+            | Q(subscription_seat__billing_team__subscription__academy_id=academy_id)
+            | Q(plan_financing_seat__team__financing__academy_id=academy_id)
+        )
+        .filter(Q(valid_until__isnull=True) | Q(valid_until__gt=renew_cutoff))
+        .aggregate(total=Sum("how_many"))["total"]
+    )
+
+    budget_cents_to_grant = int(budget_total or 0)
+    if budget_cents_to_grant <= 0:
+        _skip_budget_sync(
+            f"LLM budget sync skipped: user {provisioning_llm.user_id} "
+            f"has no active llm-budget balance in academy {academy_id}"
+        )
+        return
+
+    team_info = team_data.get("team_info")
+    if team_info and team_info.get("team_member_budget_table"):
+        team_member_budget_table = team_info["team_member_budget_table"]
+        member_tpm = team_member_budget_table.get("tpm_limit")
+        member_rpm = team_member_budget_table.get("rpm_limit")
+    else:
+        member_budget = membership.get("litellm_budget_table") or {}
+        member_tpm = member_budget.get("tpm_limit")
+        member_rpm = member_budget.get("rpm_limit")
+
+    # LiteLLM spend is cumulative: this cap is the member's total allowed spend in USD
+    # (current spend plus the llm-budget pool we are granting from BreatheCode consumables).
+    member_max_budget_in_team = member_spend + (Decimal(budget_cents_to_grant) / 100)
+
+    try:
+        client.update_team_member(
+            team_id=team_id,
+            user_id=external_user_id,
+            max_budget_in_team=member_max_budget_in_team,
+            budget_duration=None,
+            tpm_limit=member_tpm,
+            rpm_limit=member_rpm,
+        )
+    except Exception as exc:
+        provisioning_llm.last_budget_sync_error = str(exc)[:255]
+        provisioning_llm.save(update_fields=["last_budget_sync_error", "updated_at"])
+        raise
+
+    utc_now = timezone.now()
+    provisioning_llm.last_known_spend = member_spend
+    provisioning_llm.litellm_team_id = team_id
+    provisioning_llm.last_budget_sync_at = utc_now
+    provisioning_llm.last_budget_sync_error = ""
+    provisioning_llm.save()
+
+    logger.info(
+        "Aligned LLM member budget with LLM provider:user=%s academy=%s team=%s spend=%s max=%s budget_cents_to_grant=%s",
+        provisioning_llm.user_id,
+        provisioning_llm.academy_id,
+        team_id,
+        member_spend,
+        member_max_budget_in_team,
+        budget_cents_to_grant,
+    )
+
+
+def align_llm_member_budget_with_consumables(consumable: Consumable) -> None:
+    """
+    Runs after a new llm-budget consumable is issued on renew.
+
+    Reads how much the user spent in LLM provider since the last sync and subtracts that
+    amount from their llm-budget consumables in the academy (oldest first). Then updates
+    LLM provider so their budget cap reflects current spend plus active consumables.
+    """
+    from breathecode.provisioning.actions import resolve_llm_provisioning_context
+
+    current_consumable = (
+        Consumable.objects.filter(pk=consumable.pk)
+        .select_related(
+            "service_item__service",
+            "user",
+            "subscription",
+            "plan_financing",
+            "subscription_seat__user",
+            "plan_financing_seat__user",
+        )
+        .first()
+    )
+    if not current_consumable or current_consumable.service_item.service.consumer != Service.Consumer.LLM_BUDGET:
+        return
+
+    user = current_consumable.user or (
+        current_consumable.subscription_seat.user
+        if current_consumable.subscription_seat_id and current_consumable.subscription_seat.user_id
+        else None
+    ) or (
+        current_consumable.plan_financing_seat.user
+        if current_consumable.plan_financing_seat_id and current_consumable.plan_financing_seat.user_id
+        else None
+    )
+    if not user:
+        return
+
+    academy_id = None
+    if current_consumable.subscription_id and current_consumable.subscription.academy_id:
+        academy_id = current_consumable.subscription.academy_id
+    elif current_consumable.plan_financing_id and current_consumable.plan_financing.academy_id:
+        academy_id = current_consumable.plan_financing.academy_id
+    if not academy_id:
+        return
+
+    ctx = resolve_llm_provisioning_context(user, academy_id)
+    if not ctx:
+        return
+
+    provisioning_llm, provisioning_academy, client = ctx
+    vendor_settings = provisioning_academy.vendor_settings or {}
+    team_id = str(vendor_settings.get("team_id") or "").strip()
+    external_user_id = provisioning_llm.external_user_id
+
+    if provisioning_llm.litellm_team_id and provisioning_llm.litellm_team_id != team_id:
+        # Academy team_id changed since last sync: zero the spend cursor and store the new team.
+        logger.warning(
+            "LiteLLM team_id changed for ProvisioningLLM %s (%s -> %s); resetting last_known_spend",
+            provisioning_llm.id,
+            provisioning_llm.litellm_team_id,
+            team_id,
+        )
+        provisioning_llm.last_known_spend = Decimal("0")
+        provisioning_llm.litellm_team_id = team_id
+        provisioning_llm.save(update_fields=["last_known_spend", "litellm_team_id", "updated_at"])
+
+    team_data = client.get_team_info(team_id=team_id)
+    membership = None
+    for row in team_data["team_memberships"]:
+        if row["user_id"] == external_user_id:
+            membership = row
+            break
+    if not membership:
+        return  # User not on the academy's configured LiteLLM team yet.
+
+    member_spend = Decimal(str(membership["spend"]))
+
+    # LiteLLM spend not yet reflected on consumables since last_known_spend.
+    unreconciled_spend_cents = int((member_spend - provisioning_llm.last_known_spend) * 100)
+
+    if unreconciled_spend_cents > 0:
+        for consumable in (
+            Consumable.list(
+                user=user.id,
+                service="llm-budget",
+                include_zero_balance=False,
+            )
+            .filter(
+                Q(subscription__academy_id=academy_id)
+                | Q(plan_financing__academy_id=academy_id)
+                | Q(standalone_invoice__bag__academy_id=academy_id)
+                | Q(subscription_seat__billing_team__subscription__academy_id=academy_id)
+                | Q(plan_financing_seat__team__financing__academy_id=academy_id)
+            )
+            .exclude(pk=current_consumable.pk)
+            .order_by("valid_until", "id")
+        ):
+            if unreconciled_spend_cents <= 0:
+                break
+
+            # LiteLLM may have used more than this row can cover, or more than one row is needed (FEFO).
+            # min: use the row's full balance when unreconciled usage is larger; otherwise only the leftover usage.
+            consumption_cents = min(consumable.how_many, unreconciled_spend_cents)
+            consume_service.send_robust(sender=Consumable, instance=consumable, how_many=consumption_cents)
+            unreconciled_spend_cents -= consumption_cents
+
+    provisioning_llm.last_known_spend = member_spend
+    provisioning_llm.save()
+
+    try:
+        sync_llm_member_budget_to_llm_provider(
+            provisioning_llm,
+            provisioning_academy,
+            client,
+            team_data=team_data,
+        )
+    except Exception as exc:
+        logger.error(
+            "LLM budget renew sync failed user=%s academy=%s: %s",
+            user.id,
+            academy_id,
+            exc,
+        )
+
+
 def reschedule_billing_tasks(
     *, subscription_id: int | None = None, plan_financing_id: int | None = None
 ) -> None:

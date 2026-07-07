@@ -260,6 +260,41 @@ def resolve_provisioning_academy_for_llm(academy):
     return None
 
 
+def resolve_llm_provisioning_context(user, academy_id: int):
+    """
+    Active ProvisioningLLM + ProvisioningAcademy + LiteLLM client for ``user`` in ``academy_id``.
+
+    Returns ``(provisioning_llm, provisioning_academy, client)`` or ``None`` when the user is not
+    provisioned, inactive, or LiteLLM is not configured (missing client, team_id, or external_user_id).
+    """
+    academy = Academy.objects.filter(id=academy_id).first()
+    if not academy:
+        return None
+
+    provisioning_academy = resolve_provisioning_academy_for_llm(academy)
+    if not provisioning_academy:
+        return None
+
+    client = get_llm_client(provisioning_academy)
+    if not client:
+        return None
+
+    provisioning_llm = ProvisioningLLM.objects.filter(
+        user_id=user.id,
+        academy_id=academy_id,
+        status=ProvisioningLLM.STATUS_ACTIVE,
+    ).first()
+    if not provisioning_llm:
+        return None
+
+    vendor_settings = provisioning_academy.vendor_settings or {}
+    team_id = str(vendor_settings.get("team_id") or "").strip()
+    if not team_id or not provisioning_llm.external_user_id:
+        return None
+
+    return provisioning_llm, provisioning_academy, client
+
+
 def ensure_llm_user(user, provisioning_academy, client=None):
     """
     Ensure a ProvisioningLLM record exists for ``user`` + ``provisioning_academy``.
@@ -380,7 +415,7 @@ def resolve_llm_client_and_external_id(request, ensure_llm_user_record: bool = F
     synchronously (used by POST endpoints).  When False (default) only an
     existing row is looked up (used by DELETE).
 
-    Returns: (client, external_user_id)
+    Returns: (client, external_user_id, academy_id)
     """
     user = request.user
     lang = get_user_language(request)
@@ -486,7 +521,7 @@ def resolve_llm_client_and_external_id(request, ensure_llm_user_record: bool = F
     if provisioning_llm and provisioning_llm.external_user_id:
         external_user_id = provisioning_llm.external_user_id
 
-    return client, external_user_id
+    return client, external_user_id, academy_id
 
 
 def _get_vps_consumables_for_academy(user, academy: Academy):

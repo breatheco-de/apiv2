@@ -416,16 +416,16 @@ class ProvisioningLLM(models.Model):
         default="",
         help_text="LiteLLM team_id used on last sync; mismatch with academy vendor_settings resets last_known_spend.",
     )
-    last_sync_at = models.DateTimeField(
+    last_budget_sync_at = models.DateTimeField(
         null=True,
         blank=True,
         default=None,
-        help_text="When max_budget_in_team was last pushed to LiteLLM for this user.",
+        help_text="When team member budget was last aligned with BreatheCode consumables (member_update).",
     )
-    last_sync_error = models.TextField(
+    last_budget_sync_error = models.TextField(
         blank=True,
         default="",
-        help_text="Last LiteLLM budget sync error message, if any.",
+        help_text="Last team member budget alignment error message, if any.",
     )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)

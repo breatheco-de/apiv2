@@ -155,7 +155,7 @@ class MeLLMKeysViewTestSuite(ProvisioningTestCase):
             "keys": [],
             "teams": [],
         }
-        resolve_llm_client_mock.return_value = (llm_client_mock, "external-user")
+        resolve_llm_client_mock.return_value = (llm_client_mock, "external-user", 1)
 
         self.client.force_authenticate(model.user)
         self.headers(academy=1)
