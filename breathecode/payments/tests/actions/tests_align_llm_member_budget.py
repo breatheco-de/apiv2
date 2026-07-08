@@ -2,6 +2,7 @@ from datetime import timedelta
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
+from django.db.models import Q
 from django.utils import timezone as django_timezone
 
 from breathecode.payments import actions
@@ -271,13 +272,21 @@ class TestSyncLlmMemberBudgetToLlmProvider:
             team_data=team_data,
         )
 
-        closing_cutoff = fixed_now + timedelta(hours=1)
+        sub_cutoff = fixed_now + timedelta(hours=1)
+        pf_cutoff = fixed_now + timedelta(hours=2)
         assert mock_qs.filter.call_count == 2
         renew_filter = mock_qs.filter.call_args_list[1][0][0]
-        assert renew_filter.children == [
-            ("valid_until__isnull", True),
-            ("valid_until__gt", closing_cutoff),
-        ]
+        assert renew_filter == (
+            Q(subscription__isnull=False)
+            & (Q(valid_until__isnull=True) | Q(valid_until__gt=sub_cutoff))
+            | Q(subscription_seat__isnull=False)
+            & (Q(valid_until__isnull=True) | Q(valid_until__gt=sub_cutoff))
+            | Q(plan_financing__isnull=False)
+            & (Q(valid_until__isnull=True) | Q(valid_until__gt=pf_cutoff))
+            | Q(plan_financing_seat__isnull=False)
+            & (Q(valid_until__isnull=True) | Q(valid_until__gt=pf_cutoff))
+            | Q(standalone_invoice__isnull=False)
+        )
         client.update_team_member.assert_called_once_with(
             team_id="team-1",
             user_id="user-academy",

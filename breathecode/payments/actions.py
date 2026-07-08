@@ -376,7 +376,6 @@ def sync_llm_member_budget_to_llm_provider(
     client,
     *,
     team_data: dict | None = None,
-    exclude_expiring_within_hours: int = 1,
 ) -> None:
     """
     Push the user's LiteLLM team member budget to match consumables.
@@ -387,10 +386,6 @@ def sync_llm_member_budget_to_llm_provider(
 
     When ``team_data`` is provided (e.g. from ``align_llm_member_budget_with_consumables``),
     skips ``GET /team/info``.
-
-    ``exclude_expiring_within_hours``: consumables with ``valid_until`` within this window
-    are excluded from the budget sum (cycle rollover). Subscription renew uses 1h; plan
-    financing uses 2h (see ``renew_consumables``).
     """
 
     def _skip_budget_sync(message: str) -> None:
@@ -440,7 +435,12 @@ def sync_llm_member_budget_to_llm_provider(
     member_spend = Decimal(str(membership["spend"]))
 
     academy_id = provisioning_llm.academy_id
-    renew_cutoff = timezone.now() + timedelta(hours=exclude_expiring_within_hours)
+    utc_now = timezone.now()
+    sub_cutoff = utc_now + timedelta(hours=1)
+    pf_cutoff = utc_now + timedelta(hours=2)
+
+    # Calculate the total budget to grant in the LLM provider.
+    # Exclude consumables in the renew rollover window (subscription 1h, PF 2h).
     budget_total = (
         Consumable.list(
             user=provisioning_llm.user_id,
@@ -454,7 +454,17 @@ def sync_llm_member_budget_to_llm_provider(
             | Q(subscription_seat__billing_team__subscription__academy_id=academy_id)
             | Q(plan_financing_seat__team__financing__academy_id=academy_id)
         )
-        .filter(Q(valid_until__isnull=True) | Q(valid_until__gt=renew_cutoff))
+        .filter(
+            Q(subscription__isnull=False)
+            & (Q(valid_until__isnull=True) | Q(valid_until__gt=sub_cutoff))
+            | Q(subscription_seat__isnull=False)
+            & (Q(valid_until__isnull=True) | Q(valid_until__gt=sub_cutoff))
+            | Q(plan_financing__isnull=False)
+            & (Q(valid_until__isnull=True) | Q(valid_until__gt=pf_cutoff))
+            | Q(plan_financing_seat__isnull=False)
+            & (Q(valid_until__isnull=True) | Q(valid_until__gt=pf_cutoff))
+            | Q(standalone_invoice__isnull=False)
+        )
         .aggregate(total=Sum("how_many"))["total"]
     )
 
@@ -494,7 +504,6 @@ def sync_llm_member_budget_to_llm_provider(
         provisioning_llm.save(update_fields=["last_budget_sync_error", "updated_at"])
         raise
 
-    utc_now = timezone.now()
     provisioning_llm.last_known_spend = member_spend
     provisioning_llm.litellm_team_id = team_id
     provisioning_llm.last_budget_sync_at = utc_now
@@ -622,17 +631,11 @@ def align_llm_member_budget_with_consumables(consumable: Consumable) -> None:
     provisioning_llm.save()
 
     try:
-        # Same lookahead as renew_consumables: subscription 1h, plan financing 2h.
-        if current_consumable.plan_financing_id or current_consumable.plan_financing_seat_id:
-            exclude_expiring_within_hours = 2
-        else:
-            exclude_expiring_within_hours = 1
         sync_llm_member_budget_to_llm_provider(
             provisioning_llm,
             provisioning_academy,
             client,
             team_data=team_data,
-            exclude_expiring_within_hours=exclude_expiring_within_hours,
         )
     except Exception as exc:
         logger.error(
