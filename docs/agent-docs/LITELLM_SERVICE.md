@@ -108,6 +108,7 @@ Returns keys visible for the authenticated user across academies that have LiteL
 - Queries candidate academies for the user.
 - Fetches user info from LiteLLM (`get_user_info`) per academy/vendor context.
 - Collects `keys` and deduplicates by `token_id`.
+- Attaches the same `member_budget` (`spend`, `max`, `remaining`, `currency`) to every key in the academy, read from LiteLLM `GET /team/info` (`team_memberships[]`).
 - Resolves `models` per key using priority: `key.models` -> `user_info.models` -> `team.models`.
 
 **Response (200)**
@@ -118,6 +119,12 @@ Returns keys visible for the authenticated user across academies that have LiteL
     "token_id": "tok_abc123",
     "key_alias": "My Laptop",
     "spend": 1.92,
+    "member_budget": {
+      "spend": 3.42,
+      "max": 10.0,
+      "remaining": 6.58,
+      "currency": "USD"
+    },
     "created_at": "2026-03-21T14:11:00Z",
     "academy_id": 1,
     "models": ["groq/llama-3.1-8b-instant"]

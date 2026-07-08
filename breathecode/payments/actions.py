@@ -376,6 +376,7 @@ def sync_llm_member_budget_to_llm_provider(
     client,
     *,
     team_data: dict | None = None,
+    exclude_expiring_within_hours: int = 1,
 ) -> None:
     """
     Push the user's LiteLLM team member budget to match consumables.
@@ -387,7 +388,9 @@ def sync_llm_member_budget_to_llm_provider(
     When ``team_data`` is provided (e.g. from ``align_llm_member_budget_with_consumables``),
     skips ``GET /team/info``.
 
-    Consumables expiring within one hour are excluded from the sum (cycle rollover forfeit).
+    ``exclude_expiring_within_hours``: consumables with ``valid_until`` within this window
+    are excluded from the budget sum (cycle rollover). Subscription renew uses 1h; plan
+    financing uses 2h (see ``renew_consumables``).
     """
 
     def _skip_budget_sync(message: str) -> None:
@@ -437,7 +440,7 @@ def sync_llm_member_budget_to_llm_provider(
     member_spend = Decimal(str(membership["spend"]))
 
     academy_id = provisioning_llm.academy_id
-    renew_cutoff = timezone.now() + timedelta(hours=1)
+    renew_cutoff = timezone.now() + timedelta(hours=exclude_expiring_within_hours)
     budget_total = (
         Consumable.list(
             user=provisioning_llm.user_id,
@@ -619,11 +622,17 @@ def align_llm_member_budget_with_consumables(consumable: Consumable) -> None:
     provisioning_llm.save()
 
     try:
+        # Same lookahead as renew_consumables: subscription 1h, plan financing 2h.
+        if current_consumable.plan_financing_id or current_consumable.plan_financing_seat_id:
+            exclude_expiring_within_hours = 2
+        else:
+            exclude_expiring_within_hours = 1
         sync_llm_member_budget_to_llm_provider(
             provisioning_llm,
             provisioning_academy,
             client,
             team_data=team_data,
+            exclude_expiring_within_hours=exclude_expiring_within_hours,
         )
     except Exception as exc:
         logger.error(

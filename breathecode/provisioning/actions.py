@@ -301,10 +301,13 @@ def ensure_llm_user(user, provisioning_academy, client=None):
 
     Creates the record (status ACTIVE) when missing, and re-activates a
     previously deprovisioned record when the user still holds entitlement.
-    Returns the ProvisioningLLM instance.
+
+    Returns:
+        (provisioning_llm, llm_external_user_created): the ProvisioningLLM row and
+        whether ``create_user`` ran because LiteLLM returned 404 for the external user.
     """
     if not provisioning_academy:
-        return None
+        return None, False
 
     vendor = provisioning_academy.vendor
 
@@ -349,6 +352,7 @@ def ensure_llm_user(user, provisioning_academy, client=None):
     if client is None:
         client = get_llm_client(provisioning_academy)
 
+    llm_external_user_created = False
     user_data: dict | None = None
     if client and hasattr(client, "get_user_info") and hasattr(client, "create_user"):
         try:
@@ -357,6 +361,7 @@ def ensure_llm_user(user, provisioning_academy, client=None):
             exc_str = str(exc).lower()
             # LiteLLM returns: User <id> not found (code 404 in our wrapper)
             if "404" in exc_str and "not found" in exc_str:
+                llm_external_user_created = True
                 user_email = getattr(user, "email", None) or ""
                 try:
                     user_metadata = {"email": user_email} if user_email else None
@@ -400,7 +405,7 @@ def ensure_llm_user(user, provisioning_academy, client=None):
                 team_id,
             )
 
-    return provisioning_llm
+    return provisioning_llm, llm_external_user_created
 
 
 def resolve_llm_client_and_external_id(request, ensure_llm_user_record: bool = False):
@@ -415,7 +420,7 @@ def resolve_llm_client_and_external_id(request, ensure_llm_user_record: bool = F
     synchronously (used by POST endpoints).  When False (default) only an
     existing row is looked up (used by DELETE).
 
-    Returns: (client, external_user_id, academy_id)
+    Returns: (client, external_user_id, academy_id, llm_external_user_created)
     """
     user = request.user
     lang = get_user_language(request)
@@ -508,20 +513,21 @@ def resolve_llm_client_and_external_id(request, ensure_llm_user_record: bool = F
         )
 
     if ensure_llm_user_record:
-        provisioning_llm = ensure_llm_user(user, provisioning_academy, client=client)
+        provisioning_llm, llm_external_user_created = ensure_llm_user(user, provisioning_academy, client=client)
     else:
         provisioning_llm = ProvisioningLLM.objects.filter(
             user=user,
             academy=academy,
             vendor=provisioning_academy.vendor,
         ).first()
+        llm_external_user_created = False
 
     academy_slug = getattr(academy, "slug", "") or str(academy_id)
     external_user_id = f"{user.username}-{academy_slug}"
     if provisioning_llm and provisioning_llm.external_user_id:
         external_user_id = provisioning_llm.external_user_id
 
-    return client, external_user_id, academy_id
+    return client, external_user_id, academy_id, llm_external_user_created
 
 
 def _get_vps_consumables_for_academy(user, academy: Academy):

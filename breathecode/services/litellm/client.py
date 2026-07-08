@@ -77,6 +77,7 @@ class LiteLLMClient:
         external_user_id: str,
         name: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
+        team_id: Optional[str] = None,
         timeout: float = 10.0,
     ) -> Dict[str, Any]:
         """
@@ -99,6 +100,8 @@ class LiteLLMClient:
         }
         if isinstance(metadata, dict) and metadata:
             payload["metadata"] = metadata
+        if team_id:
+            payload["team_id"] = team_id
         try:
             resp = requests.post(url, headers=self.headers, json=payload, timeout=timeout)
         except requests.RequestException as exc:

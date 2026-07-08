@@ -2029,6 +2029,36 @@ class MeLLMKeysView(APIView):
                 user_info = client.get_user_info(user_id=external_user_id)
             except LLMClientError:
                 continue
+
+            vendor_settings = provisioning_academy.vendor_settings or {}
+            academy_team_id = str(vendor_settings.get("team_id") or "").strip()
+
+            member_budget = None
+            if academy_team_id and hasattr(client, "get_team_info"):
+                try:
+                    team_data = client.get_team_info(team_id=academy_team_id)
+                except LLMClientError:
+                    team_data = None
+                if isinstance(team_data, dict):
+                    # Match this academy's LLM user in team_memberships.
+                    membership = None
+                    for row in team_data.get("team_memberships") or []:
+                        if isinstance(row, dict) and row.get("user_id") == external_user_id:
+                            membership = row
+                            break
+                    if membership:
+                        member_spend = float(membership.get("spend") or 0)
+                        budget_table = membership.get("litellm_budget_table") or {}
+                        max_budget = budget_table.get("max_budget")
+                        if max_budget is not None:
+                            max_budget = float(max_budget)
+                            member_budget = {
+                                "spend": member_spend,
+                                "max": max_budget,
+                                "remaining": max(0.0, max_budget - member_spend),
+                                "currency": "USD",
+                            }
+
             keys_data = user_info.get("keys") or []
             user_data = user_info.get("user_info") or {}
             teams_data = user_info.get("teams") or []
@@ -2056,6 +2086,7 @@ class MeLLMKeysView(APIView):
                         "token_id": token_id,
                         "key_alias": item.get("key_alias"),
                         "spend": item.get("spend"),
+                        "member_budget": member_budget,
                         "created_at": item.get("created_at"),
                         "academy_id": academy_id,
                         "host": getattr(provisioning_academy.vendor, "api_url", "") or None,
@@ -2100,15 +2131,26 @@ class MeLLMKeysView(APIView):
                 )
             plan_title = plan.title
         try:
-            client, external_user_id, academy_id = resolve_llm_client_and_external_id(
+            client, external_user_id, academy_id, llm_external_user_created = resolve_llm_client_and_external_id(
                 request, ensure_llm_user_record=True
             )
             metadata = {"plan_title": plan_title} if plan_title else None
-            created = client.create_api_key(external_user_id=external_user_id, name=alias, metadata=metadata)
+            academy_obj = Academy.objects.filter(id=academy_id).first()
+            pa_llm = resolve_provisioning_academy_for_llm(academy_obj) if academy_obj else None
+            team_id = None
+            if pa_llm:
+                vendor_settings = pa_llm.vendor_settings or {}
+                team_id = str(vendor_settings.get("team_id") or "").strip() or None
+            created = client.create_api_key(
+                external_user_id=external_user_id,
+                name=alias,
+                metadata=metadata,
+                team_id=team_id,
+            )
 
-            # One-time member budget bootstrap while last_budget_sync_at is null (retries on later keys).
+            # Bootstrap member budget on first sync or when LiteLLM external user was recreated.
             llm_ctx = resolve_llm_provisioning_context(request.user, academy_id)
-            if llm_ctx and llm_ctx[0].last_budget_sync_at is None:
+            if llm_ctx and (llm_ctx[0].last_budget_sync_at is None or llm_external_user_created):
                 provisioning_llm, pa_llm, _ = llm_ctx
                 try:
                     payment_actions.sync_llm_member_budget_to_llm_provider(
@@ -2123,7 +2165,6 @@ class MeLLMKeysView(APIView):
                         academy_id,
                         exc,
                     )
-            
             created_token_id = created.get("id") or created.get("token_id") or created.get("token")
             effective_models = []
 
@@ -2153,14 +2194,11 @@ class MeLLMKeysView(APIView):
             created["models"] = effective_models
             created["host"] = None
             created["vendor_name"] = None
-            academy_obj = Academy.objects.filter(id=academy_id).first()
 
-            if academy_obj:
-                pa_llm = resolve_provisioning_academy_for_llm(academy_obj)
-                if pa_llm and getattr(pa_llm, "vendor", None):
-                    v = pa_llm.vendor
-                    created["host"] = getattr(v, "api_url", "") or None
-                    created["vendor_name"] = str(getattr(v, "name", "") or "").strip() or None
+            if pa_llm and getattr(pa_llm, "vendor", None):
+                v = pa_llm.vendor
+                created["host"] = getattr(v, "api_url", "") or None
+                created["vendor_name"] = str(getattr(v, "name", "") or "").strip() or None
             ProvisioningLLM.objects.filter(
                 user=request.user,
                 academy_id=academy_id,
@@ -2190,7 +2228,7 @@ class MeLLMKeyByIdView(APIView):
     def delete(self, request, key_id):
         lang = get_user_language(request)
         try:
-            client, external_user_id, academy_id = resolve_llm_client_and_external_id(request)
+            client, external_user_id, academy_id, _ = resolve_llm_client_and_external_id(request)
             client.delete_api_keys(user_id=external_user_id, token_ids=[key_id])
             ProvisioningLLM.objects.filter(
                 user=request.user,
