@@ -277,6 +277,9 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
 
     scheduler.consumables.add(consumable)
 
+    if service_item.service.consumer == Service.Consumer.LLM_BUDGET:
+        actions.align_llm_member_budget_with_consumables(consumable)
+
     if service_item.service.consumer == Service.Consumer.VPS_SERVER and service_item.how_many > 0:
         actions.align_consumer_vps_stock_with_active_machines(consumable)
 

@@ -404,6 +404,30 @@ class ProvisioningLLM(models.Model):
         help_text="When the user was deprovisioned in the LLM provider (if applicable).",
     )
 
+    last_known_spend = models.DecimalField(
+        max_digits=12,
+        decimal_places=6,
+        default=Decimal("0"),
+        help_text="Last LiteLLM team-member spend synced into BreatheCode (USD) for delta FEFO.",
+    )
+    litellm_team_id = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        help_text="LiteLLM team_id used on last sync; mismatch with academy vendor_settings resets last_known_spend.",
+    )
+    last_budget_sync_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="When team member budget was last aligned with BreatheCode consumables (member_update).",
+    )
+    last_budget_sync_error = models.TextField(
+        blank=True,
+        default="",
+        help_text="Last team member budget alignment error message, if any.",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 

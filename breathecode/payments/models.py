@@ -276,7 +276,7 @@ class Service(AbstractAsset):
         READ_LESSON = ("READ_LESSON", "Read lesson")
         AI_INTERACTION = ("AI_INTERACTION", "AI Interaction")
         VPS_SERVER = ("VPS_SERVER", "VPS server")
-        MONTHLY_LLM_BUDGET = ("MONTHLY_LLM_BUDGET", "Monthly LLM budget")
+        LLM_BUDGET = ("LLM_BUDGET", "LLM budget")
         GITHUB_COPILOT = ("GITHUB_COPILOT", "GitHub Copilot")
         NO_SET = ("NO_SET", "No set")
 
