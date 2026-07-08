@@ -2089,6 +2089,7 @@ class MeLLMKeysView(APIView):
                         "member_budget": member_budget,
                         "created_at": item.get("created_at"),
                         "academy_id": academy_id,
+                        "academy_name": academy_obj.name,
                         "host": getattr(provisioning_academy.vendor, "api_url", "") or None,
                         "vendor_name": str(
                             getattr(getattr(provisioning_academy, "vendor", None), "name", "") or ""
