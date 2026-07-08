@@ -2159,6 +2159,8 @@ class MeLLMKeysView(APIView):
                         client,
                     )
                 except LLMClientError as exc:
+                    provisioning_llm.last_budget_sync_error = str(exc)[:255]
+                    provisioning_llm.save(update_fields=["last_budget_sync_error", "updated_at"])
                     logging.getLogger(__name__).error(
                         "LLM budget bootstrap failed for user=%s academy=%s: %s",
                         request.user.id,

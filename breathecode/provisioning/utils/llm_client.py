@@ -64,6 +64,14 @@ class LLMClient(Protocol):
 
     def delete_user(self, user_ids: list[str], timeout: float = 10.0) -> bool: ...
 
+    def add_user_to_team(
+        self,
+        team_id: str,
+        user_ids: list[str],
+        max_budget_in_team: Optional[float] = None,
+        timeout: float = 10.0,
+    ) -> bool: ...
+
 
 def register_llm_client(vendor_slug: str):
     """Decorator to register an LLM client class for a vendor slug."""

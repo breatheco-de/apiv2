@@ -2,10 +2,10 @@ import json
 import os
 import re
 import uuid
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from decimal import ROUND_FLOOR, Decimal
 from functools import lru_cache
-from dataclasses import dataclass, field
 from typing import Any, Literal, Optional, Tuple, Type, TypedDict, Union
 
 import redis
@@ -32,13 +32,13 @@ from breathecode.authenticate.actions import get_app_url, get_invite_url, get_us
 from breathecode.authenticate.models import Role, UserInvite, UserSetting
 from breathecode.marketing.actions import validate_email_local
 from breathecode.media.models import File
+from breathecode.monitoring.models import StripeEvent
 from breathecode.notify import actions as notify_actions
 from breathecode.payments import tasks
 from breathecode.payments.signals import consume_service, deprovision_service
 from breathecode.utils import getLogger
 from breathecode.utils.decorators.service_deprovisioner import get_service_deprovisioner
 from breathecode.utils.validate_conversion_info import validate_conversion_info
-from breathecode.monitoring.models import StripeEvent
 from settings import GENERAL_PRICING_RATIOS
 
 from .models import (
@@ -55,11 +55,11 @@ from .models import (
     CohortSet,
     Consumable,
     Coupon,
+    CreditLedgerEntry,
     CreditNote,
     Currency,
     EventTypeSet,
     FinancingOption,
-    CreditLedgerEntry,
     Invoice,
     MentorshipServiceSet,
     PaymentMethod,
@@ -422,15 +422,28 @@ def sync_llm_member_budget_to_llm_provider(
         team_data = client.get_team_info(team_id=team_id)
 
     membership = None
-    for row in team_data["team_memberships"]:
+    for row in team_data.get("team_memberships") or []:
         if row["user_id"] == external_user_id:
             membership = row
             break
     if membership is None:
-        _skip_budget_sync(
-            f"LLM budget sync skipped: member {external_user_id} not in team_memberships for team {team_id}"
-        )
-        return
+        is_team_member = False
+        for row in ((team_data.get("team_info") or {}).get("members_with_roles") or []):
+            if isinstance(row, dict) and row.get("user_id") == external_user_id:
+                is_team_member = True
+                break
+
+        if not is_team_member:
+            _skip_budget_sync(
+                f"LLM budget sync skipped: member {external_user_id} not in team_memberships for team {team_id}"
+            )
+            return
+
+        membership = {
+            "user_id": external_user_id,
+            "spend": 0,
+            "litellm_budget_table": {},
+        }
 
     member_spend = Decimal(str(membership["spend"]))
 

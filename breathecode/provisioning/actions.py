@@ -390,7 +390,8 @@ def ensure_llm_user(user, provisioning_academy, client=None):
 
         if user_data is None or team_id not in member_team_ids:
             try:
-                client.add_user_to_team(team_id=team_id, user_ids=[external_user_id])
+                # Guard newly added members with a small cap until the real budget sync runs.
+                client.add_user_to_team(team_id=team_id, user_ids=[external_user_id], max_budget_in_team=10)
             except LLMClientError as exc:
                 exc_msg = str(exc).lower()
                 if "409" not in exc_msg and "already" not in exc_msg and "exists" not in exc_msg:

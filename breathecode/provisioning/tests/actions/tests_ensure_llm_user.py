@@ -29,7 +29,11 @@ class EnsureLLMUserTestSuite(ProvisioningTestCase):
         self.assertTrue(llm_external_user_created)
         external_user_id = provisioning_llm.external_user_id
         client.create_user.assert_called_once()
-        client.add_user_to_team.assert_called_once_with(team_id="team-1", user_ids=[external_user_id])
+        client.add_user_to_team.assert_called_once_with(
+            team_id="team-1",
+            user_ids=[external_user_id],
+            max_budget_in_team=10,
+        )
 
     def test_ensure_llm_user_skips_add_when_user_info_teams_already_include_team(self):
         model = self.bc.database.create(user=1, academy=1, provisioning_vendor=1, provisioning_academy=1)
@@ -62,7 +66,11 @@ class EnsureLLMUserTestSuite(ProvisioningTestCase):
             model.user, model.provisioning_academy, client=client
         )
         self.assertFalse(llm_external_user_created)
-        client.add_user_to_team.assert_called_once_with(team_id="team-1", user_ids=[provisioning_llm.external_user_id])
+        client.add_user_to_team.assert_called_once_with(
+            team_id="team-1",
+            user_ids=[provisioning_llm.external_user_id],
+            max_budget_in_team=10,
+        )
 
     def test_ensure_llm_user_adds_when_teams_empty_missing_configured_team(self):
         model = self.bc.database.create(user=1, academy=1, provisioning_vendor=1, provisioning_academy=1)
@@ -80,7 +88,11 @@ class EnsureLLMUserTestSuite(ProvisioningTestCase):
             model.user, model.provisioning_academy, client=client
         )
         self.assertFalse(llm_external_user_created)
-        client.add_user_to_team.assert_called_once_with(team_id="team-1", user_ids=[provisioning_llm.external_user_id])
+        client.add_user_to_team.assert_called_once_with(
+            team_id="team-1",
+            user_ids=[provisioning_llm.external_user_id],
+            max_budget_in_team=10,
+        )
 
     def test_ensure_llm_user_skips_team_assignment_when_team_id_missing(self):
         model = self.bc.database.create(user=1, academy=1, provisioning_vendor=1, provisioning_academy=1)

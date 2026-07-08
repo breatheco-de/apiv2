@@ -353,6 +353,7 @@ class LiteLLMClient:
         self,
         team_id: str,
         user_ids: list[str],
+        max_budget_in_team: float | None = None,
         timeout: float = 10.0,
     ) -> bool:
         url = f"{self.base_url.rstrip('/')}/team/member_add"
@@ -361,6 +362,8 @@ class LiteLLMClient:
             "team_id": team_id,
             "member": members,
         }
+        if max_budget_in_team is not None:
+            payload["max_budget_in_team"] = float(max_budget_in_team)
 
         try:
             resp = requests.post(url, headers=self.headers, json=payload, timeout=timeout)
