@@ -10,7 +10,7 @@ import pandas as pd
 import pytz
 from dateutil.relativedelta import relativedelta
 from django.db import transaction
-from django.db.models import DecimalField, F, Sum
+from django.db.models import DecimalField, F, Q, Sum
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from task_manager.core.exceptions import AbortTask, RetryTask
@@ -753,7 +753,7 @@ def deprovision_litellm_user_task(
     """
     Deprovision a user from Litellm by deleting the external user and its API keys.
 
-    This is triggered when the user loses `free_monthly_llm_budget`.
+    This is triggered when the user loses the ``llm-budget`` service entitlement.
     """
     user = User.objects.filter(id=user_id).first()
     if not user:
@@ -766,21 +766,29 @@ def deprovision_litellm_user_task(
             academy_id = None
 
     if academy_id:
-        has_entitlement = payment_actions.user_has_service_entitlement_in_academy(
-            user,
-            "free-monthly-llm-budget",
-            academy_id,
-        )
-        if has_entitlement:
+        if (
+            Consumable.list(user=user, service="llm-budget", include_zero_balance=True)
+            .filter(
+                Q(subscription__academy_id=academy_id)
+                | Q(plan_financing__academy_id=academy_id)
+                | Q(standalone_invoice__bag__academy_id=academy_id)
+                | Q(subscription_seat__billing_team__subscription__academy_id=academy_id)
+                | Q(plan_financing_seat__team__financing__academy_id=academy_id)
+            )
+            .exists()
+        ):
             logger.info(
-                "User %s still has free-monthly-llm-budget for academy %s, skipping deprovision",
+                "User %s still has valid (non-expired) llm-budget consumable for academy %s, skipping deprovision",
                 user_id,
                 academy_id,
             )
             return
     else:
-        if Consumable.list(user=user, service="free-monthly-llm-budget").exists():
-            logger.info("User %s still has free-monthly-llm-budget, skipping deprovision", user_id)
+        if Consumable.list(user=user, service="llm-budget", include_zero_balance=True).exists():
+            logger.info(
+                "User %s still has valid (non-expired) llm-budget consumable, skipping deprovision",
+                user_id,
+            )
             return
 
     provisioning_llms_qs = ProvisioningLLM.objects.filter(user=user).select_related("academy", "vendor").all()

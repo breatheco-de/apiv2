@@ -2,10 +2,10 @@ import json
 import os
 import re
 import uuid
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from decimal import ROUND_FLOOR, Decimal
 from functools import lru_cache
-from dataclasses import dataclass, field
 from typing import Any, Literal, Optional, Tuple, Type, TypedDict, Union
 
 import redis
@@ -32,13 +32,13 @@ from breathecode.authenticate.actions import get_app_url, get_invite_url, get_us
 from breathecode.authenticate.models import Role, UserInvite, UserSetting
 from breathecode.marketing.actions import validate_email_local
 from breathecode.media.models import File
+from breathecode.monitoring.models import StripeEvent
 from breathecode.notify import actions as notify_actions
 from breathecode.payments import tasks
 from breathecode.payments.signals import consume_service, deprovision_service
 from breathecode.utils import getLogger
 from breathecode.utils.decorators.service_deprovisioner import get_service_deprovisioner
 from breathecode.utils.validate_conversion_info import validate_conversion_info
-from breathecode.monitoring.models import StripeEvent
 from settings import GENERAL_PRICING_RATIOS
 
 from .models import (
@@ -55,11 +55,11 @@ from .models import (
     CohortSet,
     Consumable,
     Coupon,
+    CreditLedgerEntry,
     CreditNote,
     Currency,
     EventTypeSet,
     FinancingOption,
-    CreditLedgerEntry,
     Invoice,
     MentorshipServiceSet,
     PaymentMethod,
@@ -368,6 +368,295 @@ def align_consumer_vps_stock_with_active_machines(consumable: Consumable) -> Non
     pre_consume_units = min(active_after, current_consumable.how_many)
     if pre_consume_units > 0:
         consume_service.send_robust(sender=Consumable, instance=current_consumable, how_many=pre_consume_units)
+
+
+def sync_llm_member_budget_to_llm_provider(
+    provisioning_llm,
+    provisioning_academy,
+    client,
+    *,
+    team_data: dict | None = None,
+) -> None:
+    """
+    Push the user's LiteLLM team member budget to match consumables.
+
+    Sums active llm-budget consumables for the provisioning user and academy, then sets
+    ``max_budget_in_team`` to current LiteLLM spend plus that pool (USD). Also applies
+    tpm/rpm from the team template and records sync metadata on ``ProvisioningLLM``.
+
+    When ``team_data`` is provided (e.g. from ``align_llm_member_budget_with_consumables``),
+    skips ``GET /team/info``.
+    """
+
+    def _skip_budget_sync(message: str) -> None:
+        logger.warning(message)
+        provisioning_llm.last_budget_sync_error = message[:255]
+        provisioning_llm.save(update_fields=["last_budget_sync_error", "updated_at"])
+
+    vendor_settings = provisioning_academy.vendor_settings or {}
+    team_id = str(vendor_settings.get("team_id") or "").strip()
+    if not team_id:
+        _skip_budget_sync(f"LLM budget sync skipped: academy {provisioning_academy.id} has no LiteLLM team_id")
+        return
+
+    external_user_id = provisioning_llm.external_user_id
+    if not external_user_id:
+        _skip_budget_sync(
+            f"LLM budget sync skipped: ProvisioningLLM {provisioning_llm.id} has no external_user_id"
+        )
+        return
+
+    if provisioning_llm.litellm_team_id and provisioning_llm.litellm_team_id != team_id:
+        # Academy team_id changed since last sync: zero the spend cursor and store the new team.
+        logger.warning(
+            "LiteLLM team_id changed for ProvisioningLLM %s (%s -> %s); resetting last_known_spend",
+            provisioning_llm.id,
+            provisioning_llm.litellm_team_id,
+            team_id,
+        )
+        provisioning_llm.last_known_spend = Decimal("0")
+        provisioning_llm.litellm_team_id = team_id
+        provisioning_llm.save(update_fields=["last_known_spend", "litellm_team_id", "updated_at"])
+
+    if team_data is None:
+        team_data = client.get_team_info(team_id=team_id)
+
+    membership = None
+    for row in team_data.get("team_memberships") or []:
+        if row["user_id"] == external_user_id:
+            membership = row
+            break
+    if membership is None:
+        is_team_member = False
+        for row in ((team_data.get("team_info") or {}).get("members_with_roles") or []):
+            if isinstance(row, dict) and row.get("user_id") == external_user_id:
+                is_team_member = True
+                break
+
+        if not is_team_member:
+            _skip_budget_sync(
+                f"LLM budget sync skipped: member {external_user_id} not in team_memberships for team {team_id}"
+            )
+            return
+
+        membership = {
+            "user_id": external_user_id,
+            "spend": 0,
+            "litellm_budget_table": {},
+        }
+
+    member_spend = Decimal(str(membership["spend"]))
+
+    academy_id = provisioning_llm.academy_id
+    utc_now = timezone.now()
+    sub_cutoff = utc_now + timedelta(hours=1)
+    pf_cutoff = utc_now + timedelta(hours=2)
+
+    # Calculate the total budget to grant in the LLM provider.
+    # Exclude consumables in the renew rollover window (subscription 1h, PF 2h).
+    budget_total = (
+        Consumable.list(
+            user=provisioning_llm.user_id,
+            service="llm-budget",
+            include_zero_balance=False,
+        )
+        .filter(
+            Q(subscription__academy_id=academy_id)
+            | Q(plan_financing__academy_id=academy_id)
+            | Q(standalone_invoice__bag__academy_id=academy_id)
+            | Q(subscription_seat__billing_team__subscription__academy_id=academy_id)
+            | Q(plan_financing_seat__team__financing__academy_id=academy_id)
+        )
+        .filter(
+            Q(subscription__isnull=False)
+            & (Q(valid_until__isnull=True) | Q(valid_until__gt=sub_cutoff))
+            | Q(subscription_seat__isnull=False)
+            & (Q(valid_until__isnull=True) | Q(valid_until__gt=sub_cutoff))
+            | Q(plan_financing__isnull=False)
+            & (Q(valid_until__isnull=True) | Q(valid_until__gt=pf_cutoff))
+            | Q(plan_financing_seat__isnull=False)
+            & (Q(valid_until__isnull=True) | Q(valid_until__gt=pf_cutoff))
+            | Q(standalone_invoice__isnull=False)
+        )
+        .aggregate(total=Sum("how_many"))["total"]
+    )
+
+    budget_cents_to_grant = int(budget_total or 0)
+    if budget_cents_to_grant <= 0:
+        _skip_budget_sync(
+            f"LLM budget sync skipped: user {provisioning_llm.user_id} "
+            f"has no active llm-budget balance in academy {academy_id}"
+        )
+        return
+
+    team_info = team_data.get("team_info")
+    if team_info and team_info.get("team_member_budget_table"):
+        team_member_budget_table = team_info["team_member_budget_table"]
+        member_tpm = team_member_budget_table.get("tpm_limit")
+        member_rpm = team_member_budget_table.get("rpm_limit")
+    else:
+        member_budget = membership.get("litellm_budget_table") or {}
+        member_tpm = member_budget.get("tpm_limit")
+        member_rpm = member_budget.get("rpm_limit")
+
+    # LiteLLM spend is cumulative: this cap is the member's total allowed spend in USD
+    # (current spend plus the llm-budget pool we are granting from BreatheCode consumables).
+    member_max_budget_in_team = member_spend + (Decimal(budget_cents_to_grant) / 100)
+
+    try:
+        client.update_team_member(
+            team_id=team_id,
+            user_id=external_user_id,
+            max_budget_in_team=member_max_budget_in_team,
+            budget_duration=None,
+            tpm_limit=member_tpm,
+            rpm_limit=member_rpm,
+        )
+    except Exception as exc:
+        provisioning_llm.last_budget_sync_error = str(exc)[:255]
+        provisioning_llm.save(update_fields=["last_budget_sync_error", "updated_at"])
+        raise
+
+    provisioning_llm.last_known_spend = member_spend
+    provisioning_llm.litellm_team_id = team_id
+    provisioning_llm.last_budget_sync_at = utc_now
+    provisioning_llm.last_budget_sync_error = ""
+    provisioning_llm.save()
+
+    logger.info(
+        "Aligned LLM member budget with LLM provider:user=%s academy=%s team=%s spend=%s max=%s budget_cents_to_grant=%s",
+        provisioning_llm.user_id,
+        provisioning_llm.academy_id,
+        team_id,
+        member_spend,
+        member_max_budget_in_team,
+        budget_cents_to_grant,
+    )
+
+
+def align_llm_member_budget_with_consumables(consumable: Consumable) -> None:
+    """
+    Runs after a new llm-budget consumable is issued on renew.
+
+    Reads how much the user spent in LLM provider since the last sync and subtracts that
+    amount from their llm-budget consumables in the academy (oldest first). Then updates
+    LLM provider so their budget cap reflects current spend plus active consumables.
+    """
+    from breathecode.provisioning.actions import resolve_llm_provisioning_context
+
+    current_consumable = (
+        Consumable.objects.filter(pk=consumable.pk)
+        .select_related(
+            "service_item__service",
+            "user",
+            "subscription",
+            "plan_financing",
+            "subscription_seat__user",
+            "plan_financing_seat__user",
+        )
+        .first()
+    )
+    if not current_consumable or current_consumable.service_item.service.consumer != Service.Consumer.LLM_BUDGET:
+        return
+
+    user = current_consumable.user or (
+        current_consumable.subscription_seat.user
+        if current_consumable.subscription_seat_id and current_consumable.subscription_seat.user_id
+        else None
+    ) or (
+        current_consumable.plan_financing_seat.user
+        if current_consumable.plan_financing_seat_id and current_consumable.plan_financing_seat.user_id
+        else None
+    )
+    if not user:
+        return
+
+    academy_id = None
+    if current_consumable.subscription_id and current_consumable.subscription.academy_id:
+        academy_id = current_consumable.subscription.academy_id
+    elif current_consumable.plan_financing_id and current_consumable.plan_financing.academy_id:
+        academy_id = current_consumable.plan_financing.academy_id
+    if not academy_id:
+        return
+
+    ctx = resolve_llm_provisioning_context(user, academy_id)
+    if not ctx:
+        return
+
+    provisioning_llm, provisioning_academy, client = ctx
+    vendor_settings = provisioning_academy.vendor_settings or {}
+    team_id = str(vendor_settings.get("team_id") or "").strip()
+    external_user_id = provisioning_llm.external_user_id
+
+    if provisioning_llm.litellm_team_id and provisioning_llm.litellm_team_id != team_id:
+        # Academy team_id changed since last sync: zero the spend cursor and store the new team.
+        logger.warning(
+            "LiteLLM team_id changed for ProvisioningLLM %s (%s -> %s); resetting last_known_spend",
+            provisioning_llm.id,
+            provisioning_llm.litellm_team_id,
+            team_id,
+        )
+        provisioning_llm.last_known_spend = Decimal("0")
+        provisioning_llm.litellm_team_id = team_id
+        provisioning_llm.save(update_fields=["last_known_spend", "litellm_team_id", "updated_at"])
+
+    team_data = client.get_team_info(team_id=team_id)
+    membership = None
+    for row in team_data["team_memberships"]:
+        if row["user_id"] == external_user_id:
+            membership = row
+            break
+    if not membership:
+        return  # User not on the academy's configured LiteLLM team yet.
+
+    member_spend = Decimal(str(membership["spend"]))
+
+    # LiteLLM spend not yet reflected on consumables since last_known_spend.
+    unreconciled_spend_cents = int((member_spend - provisioning_llm.last_known_spend) * 100)
+
+    if unreconciled_spend_cents > 0:
+        for consumable in (
+            Consumable.list(
+                user=user.id,
+                service="llm-budget",
+                include_zero_balance=False,
+            )
+            .filter(
+                Q(subscription__academy_id=academy_id)
+                | Q(plan_financing__academy_id=academy_id)
+                | Q(standalone_invoice__bag__academy_id=academy_id)
+                | Q(subscription_seat__billing_team__subscription__academy_id=academy_id)
+                | Q(plan_financing_seat__team__financing__academy_id=academy_id)
+            )
+            .exclude(pk=current_consumable.pk)
+            .order_by("valid_until", "id")
+        ):
+            if unreconciled_spend_cents <= 0:
+                break
+
+            # LiteLLM may have used more than this row can cover, or more than one row is needed (FEFO).
+            # min: use the row's full balance when unreconciled usage is larger; otherwise only the leftover usage.
+            consumption_cents = min(consumable.how_many, unreconciled_spend_cents)
+            consume_service.send_robust(sender=Consumable, instance=consumable, how_many=consumption_cents)
+            unreconciled_spend_cents -= consumption_cents
+
+    provisioning_llm.last_known_spend = member_spend
+    provisioning_llm.save()
+
+    try:
+        sync_llm_member_budget_to_llm_provider(
+            provisioning_llm,
+            provisioning_academy,
+            client,
+            team_data=team_data,
+        )
+    except Exception as exc:
+        logger.error(
+            "LLM budget renew sync failed user=%s academy=%s: %s",
+            user.id,
+            academy_id,
+            exc,
+        )
 
 
 def reschedule_billing_tasks(
@@ -4420,230 +4709,6 @@ def get_plan_addons_amounts_with_coupons(
 
     return total_before, total_after
 
-def calculate_invoice_breakdown(
-    bag: Bag,
-    invoice: Invoice | None = None,
-    lang: str = "en",
-    chosen_period: str | None = None,
-    how_many_installments: int | None = None,
-) -> dict[str, Any]:
-    """
-    Calculate the breakdown of how the invoice amount is divided across plans, plan addons, and service items.
-
-    Args:
-        bag: The bag containing plans, plan_addons, and service_items
-        invoice: Optional invoice to get currency from. If not provided, uses bag currency
-        lang: Language code for error messages
-        chosen_period: Optional chosen period (MONTH, QUARTER, HALF, YEAR). If not provided, uses bag.chosen_period
-        how_many_installments: Optional number of installments. If not provided, uses bag.how_many_installments
-
-    Returns a dictionary with the following structure:
-    {
-        "plans": {
-            "plan-slug": {
-                "amount": float,
-                "currency": str
-            }
-        },
-        "service-items": {
-            "service-slug": {
-                "amount": float,
-                "currency": str,
-                "how-many": int,
-                "unit-type": str
-            }
-        }
-    }
-
-    Note: Plan addons are included in the "plans" section with their plan slug.
-    """
-    breakdown: dict[str, Any] = {"plans": {}, "service-items": {}}
-    
-    currency = invoice.currency if invoice else (bag.currency or bag.academy.main_currency)
-    if not currency:
-        raise ValidationException(
-            translation(
-                lang,
-                en="Currency not found for invoice breakdown calculation",
-                es="Moneda no encontrada para el cálculo del desglose de la factura",
-                slug="currency-not-found-for-breakdown",
-            ),
-            code=500,
-        )
-
-    currency_code = currency.code.upper()
-    coupons = list(bag.coupons.all())
-
-    # Use provided values or fall back to bag values
-    effective_chosen_period = chosen_period if chosen_period is not None else bag.chosen_period
-    effective_how_many_installments = (
-        how_many_installments if how_many_installments is not None else bag.how_many_installments
-    )
-
-    # Ensure we have all plans loaded - use select_related/prefetch_related if needed
-    plans = list(bag.plans.all())
-    if not plans:
-        return breakdown
-
-    for plan in plans:
-        base_price = 0.0
-
-        if effective_how_many_installments > 0:
-            option = plan.financing_options.filter(how_many_months=effective_how_many_installments).first()
-            if not option:
-                continue
-
-            base_price = option.monthly_price or 0
-
-            if base_price > 0:
-                if bag.country_code:
-                    adjusted_price, _, c = apply_pricing_ratio(base_price, bag.country_code, option, lang=lang)
-                    if c:
-                        currency_code = c.code.upper()
-                    base_price = adjusted_price
-
-                if bag.seat_service_item and bag.seat_service_item.how_many > 0:
-                    academy_service = AcademyService.objects.filter(
-                        service=bag.seat_service_item.service, academy=bag.academy
-                    ).first()
-                    if academy_service:
-                        seat_cost = academy_service.price_per_unit * bag.seat_service_item.how_many
-                        base_price += seat_cost
-
-                add_ons_amount = 0
-                for add_on in plan.add_ons.filter(currency=currency):
-                    service_item = bag.service_items.filter(service=add_on.service).first()
-                    if service_item:
-                        add_on_price, _, _ = add_on.get_discounted_price(service_item.how_many, bag.country_code, lang)
-                        add_ons_amount += add_on_price
-
-                base_price += add_ons_amount
-
-                plan_coupons = get_coupons_for_plan(plan, coupons)
-                final_price = get_discounted_price(base_price, plan_coupons)
-
-                if final_price > 0:
-                    breakdown["plans"][plan.slug] = {
-                        "amount": round(final_price, 2),
-                        "currency": currency_code,
-                    }
-
-        elif effective_chosen_period and effective_chosen_period != "NO_SET":
-            if effective_chosen_period == "MONTH":
-                base_price = plan.price_per_month or 0
-                price_attr = "price_per_month"
-            elif effective_chosen_period == "QUARTER":
-                base_price = plan.price_per_quarter or 0
-                price_attr = "price_per_quarter"
-            elif effective_chosen_period == "HALF":
-                base_price = plan.price_per_half or 0
-                price_attr = "price_per_half"
-            elif effective_chosen_period == "YEAR":
-                base_price = plan.price_per_year or 0
-                price_attr = "price_per_year"
-            else:
-                base_price = 0
-                price_attr = None
-
-            if base_price > 0 and price_attr:
-                # Apply pricing ratio if country code is available
-                if bag.country_code:
-                    adjusted_price, _, c = apply_pricing_ratio(
-                        base_price, bag.country_code, plan, lang=lang, price_attr=price_attr
-                    )
-                    if c:
-                        currency_code = c.code.upper()
-                    base_price = adjusted_price
-
-                if bag.seat_service_item and bag.seat_service_item.how_many > 0:
-                    academy_service = AcademyService.objects.filter(
-                        service=bag.seat_service_item.service, academy=bag.academy
-                    ).first()
-                    if academy_service:
-                        if effective_chosen_period == "MONTH":
-                            seat_cost = academy_service.price_per_unit * bag.seat_service_item.how_many
-                        elif effective_chosen_period == "QUARTER":
-                            seat_cost = academy_service.price_per_unit * bag.seat_service_item.how_many * 3
-                        elif effective_chosen_period == "HALF":
-                            seat_cost = academy_service.price_per_unit * bag.seat_service_item.how_many * 6
-                        elif effective_chosen_period == "YEAR":
-                            seat_cost = academy_service.price_per_unit * bag.seat_service_item.how_many * 12
-                        else:
-                            seat_cost = 0
-                        base_price += seat_cost
-
-                # Apply coupons to get the final discounted price
-                plan_coupons = get_coupons_for_plan(plan, coupons)
-                final_price = get_discounted_price(base_price, plan_coupons)
-
-                if final_price > 0:
-                    breakdown["plans"][plan.slug] = {
-                        "amount": round(final_price, 2),
-                        "currency": currency_code,
-                    }
-
-    for plan_addon in bag.plan_addons.all():
-        option = plan_addon.financing_options.filter(how_many_months=1).first()
-        if not option:
-            continue
-
-        base_price = option.monthly_price or 0
-
-        if base_price > 0:
-            if bag.country_code:
-                adjusted_price, _, c = apply_pricing_ratio(base_price, bag.country_code, option, lang=lang)
-                if c:
-                    currency_code = c.code.upper()
-                base_price = adjusted_price
-
-            # Apply coupons
-            addon_coupons = get_coupons_for_plan(plan_addon, coupons)
-            final_price = get_discounted_price(base_price, addon_coupons)
-
-            if final_price > 0:
-                breakdown["plans"][plan_addon.slug] = {
-                    "amount": round(final_price, 2),
-                    "currency": currency_code,
-                }
-
-    # Track which services are already included as plan add-ons to avoid duplication
-    plans = bag.plans.all()
-    add_ons: dict[int, AcademyService] = {}
-    services_in_plan_addons: set[int] = set()
-
-    for plan in plans:
-        for add_on in plan.add_ons.filter(currency=currency):
-            if add_on.service.id not in add_ons:
-                add_ons[add_on.service.id] = add_on
-                services_in_plan_addons.add(add_on.service.id)
-
-    for service_item in bag.service_items.all():
-        if service_item.service.id in services_in_plan_addons:
-            continue
-
-        service_slug = service_item.service.slug
-
-        academy_service = AcademyService.objects.filter(
-            service=service_item.service, academy=bag.academy, currency=currency
-        ).first()
-
-        if not academy_service:
-            continue
-
-        amount, c, _ = academy_service.get_discounted_price(service_item.how_many, bag.country_code, lang)
-        if c:
-            currency_code = c.code.upper()
-
-        if amount > 0:
-            breakdown["service-items"][service_slug] = {
-                "amount": round(amount, 2),
-                "currency": currency_code,
-                "how-many": service_item.how_many,
-                "unit-type": service_item.unit_type,
-            }
-
-    return breakdown
-
 
 # Keep old function name for backward compatibility
 def calculate_invoice_amount_breakdown(
@@ -5213,7 +5278,12 @@ def process_refund_record_external(
 
 
 def calculate_invoice_breakdown(
-    bag: Bag, invoice: Invoice, lang: str, chosen_period: str | None = None, how_many_installments: int | None = None
+    bag: Bag,
+    invoice: Invoice,
+    lang: str,
+    chosen_period: str | None = None,
+    how_many_installments: int | None = None,
+    financing_option_id: int | None = None,
 ) -> dict[str, Any]:
     """
     Calculate the breakdown of how the invoice amount is divided across plans, plan addons, and service items.
@@ -5224,6 +5294,7 @@ def calculate_invoice_breakdown(
         lang: Language code for error messages
         chosen_period: Optional chosen period (MONTH, QUARTER, HALF, YEAR). If not provided, uses bag.chosen_period
         how_many_installments: Optional number of installments. If not provided, uses bag.how_many_installments
+        financing_option_id: Optional financing option id when multiple options share the same installment count
 
     Returns a dictionary with the following structure:
     {
@@ -5275,7 +5346,17 @@ def calculate_invoice_breakdown(
         base_price = 0.0
 
         if effective_how_many_installments > 0:
-            option = plan.financing_options.filter(how_many_months=effective_how_many_installments).first()
+            option = None
+            try:
+                option = get_plan_financing_option(
+                    plan,
+                    effective_how_many_installments,
+                    financing_option_id=financing_option_id,
+                    lang=lang,
+                )
+            except ValidationException:
+                pass
+
             if not option:
                 continue
 
