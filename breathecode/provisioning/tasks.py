@@ -857,3 +857,4 @@ def deprovision_litellm_user_task(
             updated_at=timezone.now(),
         )
         logger.info(f"Deprovisioned user {user_id} from Litellm for academy {academy_id} and vendor {vendor_id}")
+# test
