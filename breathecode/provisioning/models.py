@@ -324,7 +324,7 @@ class ProvisioningVPS(models.Model):
         null=True,
         blank=True,
         default=None,
-        help_text="Consumable used at request time; used to reimburse on provisioning failure.",
+        help_text="Current consumable for this VPS (set at request or last renewal); used to reimburse on failure or mid-cycle delete.",
     )
 
     status = models.CharField(max_length=20, choices=VPS_STATUS_CHOICES, default=VPS_STATUS_PENDING, db_index=True)
