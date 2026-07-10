@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("provisioning", "0008_provisioningllm"),
+        ("provisioning", "0009_provisioningllm_last_budget_sync_at_and_more"),
     ]
 
     operations = [
