@@ -1,5 +1,6 @@
 import logging
-from typing import Any, Dict, Optional
+from decimal import Decimal
+from typing import Any, Dict, Optional, Union
 
 import requests
 
@@ -76,6 +77,7 @@ class LiteLLMClient:
         external_user_id: str,
         name: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
+        team_id: Optional[str] = None,
         timeout: float = 10.0,
     ) -> Dict[str, Any]:
         """
@@ -98,6 +100,8 @@ class LiteLLMClient:
         }
         if isinstance(metadata, dict) and metadata:
             payload["metadata"] = metadata
+        if team_id:
+            payload["team_id"] = team_id
         try:
             resp = requests.post(url, headers=self.headers, json=payload, timeout=timeout)
         except requests.RequestException as exc:
@@ -239,6 +243,78 @@ class LiteLLMClient:
 
         return True
 
+    def get_team_info(
+        self,
+        team_id: str,
+        timeout: float = 10.0,
+    ) -> Dict[str, Any]:
+        """
+        Fetch LiteLLM team metadata, including per-member spend and max_budget_in_team.
+
+        Endpoint: GET /team/info?team_id=
+        """
+        url = f"{self.base_url.rstrip('/')}/team/info"
+
+        try:
+            resp = requests.get(
+                url,
+                headers=self.headers,
+                params={"team_id": team_id},
+                timeout=timeout,
+            )
+        except requests.RequestException as exc:
+            raise LiteLLMError(f"Error calling LiteLLM to get team info: {exc}") from exc
+
+        if resp.status_code >= 400:
+            message = self._extract_error_message(resp)
+            raise LiteLLMError(f"Failed to get LiteLLM team info ({resp.status_code}): {message}")
+
+        return resp.json()
+
+    def update_team_member(
+        self,
+        team_id: str,
+        user_id: str,
+        max_budget_in_team: Union[float, Decimal],
+        *,
+        budget_duration: None = None,
+        tpm_limit: int | None = None,
+        rpm_limit: int | None = None,
+        timeout: float = 10.0,
+    ) -> Dict[str, Any]:
+        """
+        Update a team member's Team Member Budget in LiteLLM.
+
+        Endpoint: POST /team/member_update
+        """
+        url = f"{self.base_url.rstrip('/')}/team/member_update"
+        payload: Dict[str, Any] = {
+            "team_id": team_id,
+            "user_id": user_id,
+            "max_budget_in_team": float(max_budget_in_team),
+            "budget_duration": budget_duration,
+            "tpm_limit": tpm_limit,
+            "rpm_limit": rpm_limit,
+        }
+
+        try:
+            resp = requests.post(url, headers=self.headers, json=payload, timeout=timeout)
+        except requests.RequestException as exc:
+            raise LiteLLMError(f"Error calling LiteLLM to update team member: {exc}") from exc
+
+        if resp.status_code >= 400:
+            message = self._extract_error_message(resp)
+            raise LiteLLMError(f"Failed to update LiteLLM team member ({resp.status_code}): {message}")
+
+        try:
+            return resp.json()
+        except ValueError:
+            return {
+                "team_id": team_id,
+                "user_id": user_id,
+                "max_budget_in_team": float(max_budget_in_team),
+            }
+
     def list_teams(self, timeout: float = 10.0) -> Dict[str, Any]:
         url = f"{self.base_url.rstrip('/')}/v2/team/list"
 
@@ -277,6 +353,7 @@ class LiteLLMClient:
         self,
         team_id: str,
         user_ids: list[str],
+        max_budget_in_team: float | None = None,
         timeout: float = 10.0,
     ) -> bool:
         url = f"{self.base_url.rstrip('/')}/team/member_add"
@@ -285,6 +362,8 @@ class LiteLLMClient:
             "team_id": team_id,
             "member": members,
         }
+        if max_budget_in_team is not None:
+            payload["max_budget_in_team"] = float(max_budget_in_team)
 
         try:
             resp = requests.post(url, headers=self.headers, json=payload, timeout=timeout)
