@@ -19,6 +19,7 @@ from .utils import (
     record_github_activity,
 )
 from .models import (
+    ASSET_SYNC_STATUS,
     Asset,
     AssetAlias,
     AssetCategory,
@@ -29,6 +30,43 @@ from .models import (
     ContentVariable,
     KeywordCluster,
 )
+
+VALID_TEST_STATUSES = {choice[0] for choice in ASSET_SYNC_STATUS}
+PUBLISHABLE_TEST_STATUSES = {"OK", "WARNING"}
+
+
+def effective_test_status(instance, data):
+    if "test_status" in data:
+        return data["test_status"]
+    return instance.test_status
+
+
+def validate_test_status_value(data):
+    if "test_status" not in data or data["test_status"] is None:
+        return
+
+    normalized = str(data["test_status"]).upper()
+    if normalized not in VALID_TEST_STATUSES:
+        raise ValidationException(
+            f"Invalid test_status '{data['test_status']}'. "
+            f"Allowed values: {', '.join(sorted(VALID_TEST_STATUSES))}",
+            status.HTTP_400_BAD_REQUEST,
+        )
+    data["test_status"] = normalized
+
+
+def validate_publish_requires_passing_tests(instance, data):
+    test_status = effective_test_status(instance, data)
+
+    if "status" in data and data["status"] == "PUBLISHED":
+        if test_status not in PUBLISHABLE_TEST_STATUSES:
+            raise ValidationException(
+                "This asset has to pass tests successfully before publishing", status.HTTP_400_BAD_REQUEST
+            )
+
+    if "visibility" in data and data["visibility"] in ["PUBLIC", "UNLISTED"]:
+        if test_status not in PUBLISHABLE_TEST_STATUSES:
+            raise ValidationException("This asset has to pass tests successfully before publishing", code=400)
 
 
 class ProfileSerializer(serpy.Serializer):
@@ -1127,6 +1165,7 @@ class AssetPUTSerializer(serializers.ModelSerializer):
     visibility = serializers.CharField(required=False)
     asset_type = serializers.CharField(required=False)
     feature = serializers.BooleanField(required=False)
+    test_status = serializers.CharField(required=False, allow_null=True)
 
     class Meta:
         model = Asset
@@ -1160,18 +1199,8 @@ class AssetPUTSerializer(serializers.ModelSerializer):
             elif self.instance.author.id != session_user.id:
                 raise ValidationException("You can only update card assigned to yourself", status.HTTP_400_BAD_REQUEST)
 
-        if "status" in data and data["status"] == "PUBLISHED":
-            if self.instance.test_status not in ["OK", "WARNING"]:
-                raise ValidationException(
-                    "This asset has to pass tests successfully before publishing", status.HTTP_400_BAD_REQUEST
-                )
-
-        if (
-            "visibility" in data
-            and data["visibility"] in ["PUBLIC", "UNLISTED"]
-            and self.instance.test_status not in ["OK", "WARNING"]
-        ):
-            raise ValidationException("This asset has to pass tests successfully before publishing", code=400)
+        validate_test_status_value(data)
+        validate_publish_requires_passing_tests(self.instance, data)
 
         if "slug" in data:
             data["slug"] = slugify(data["slug"]).lower()
@@ -1241,6 +1270,9 @@ class AssetPUTSerializer(serializers.ModelSerializer):
                 data["published_at"] = now
             elif validated_data["status"] != "PUBLISHED":
                 data["published_at"] = None
+
+        if "test_status" in validated_data:
+            data["last_test_at"] = timezone.now()
 
         if "readme_url" in validated_data:
 
@@ -1346,6 +1378,7 @@ class AssetPUTMeSerializer(serializers.ModelSerializer):
     visibility = serializers.CharField(required=False)
     asset_type = serializers.CharField(required=False)
     feature = serializers.BooleanField(required=False)
+    test_status = serializers.CharField(required=False, allow_null=True)
     # Claim a global asset for an academy (only while asset.academy is null). Owner must belong to that academy.
     academy_id = serializers.IntegerField(required=False, allow_null=True)
 
@@ -1392,18 +1425,8 @@ class AssetPUTMeSerializer(serializers.ModelSerializer):
         elif "academy_id" in data and payload_academy_id is None:
             data.pop("academy_id", None)
 
-        if "status" in data and data["status"] == "PUBLISHED":
-            if self.instance.test_status not in ["OK", "WARNING"]:
-                raise ValidationException(
-                    "This asset has to pass tests successfully before publishing", status.HTTP_400_BAD_REQUEST
-                )
-
-        if (
-            "visibility" in data
-            and data["visibility"] in ["PUBLIC", "UNLISTED"]
-            and self.instance.test_status not in ["OK", "WARNING"]
-        ):
-            raise ValidationException("This asset has to pass tests successfully before publishing", code=400)
+        validate_test_status_value(data)
+        validate_publish_requires_passing_tests(self.instance, data)
 
         if "slug" in data:
             data["slug"] = slugify(data["slug"]).lower()
@@ -1474,6 +1497,9 @@ class AssetPUTMeSerializer(serializers.ModelSerializer):
                 data["published_at"] = now
             elif validated_data["status"] != "PUBLISHED":
                 data["published_at"] = None
+
+        if "test_status" in validated_data:
+            data["last_test_at"] = timezone.now()
 
         if "readme_url" in validated_data:
 
