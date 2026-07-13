@@ -2,6 +2,7 @@ import json
 import os
 import re
 import uuid
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from decimal import ROUND_FLOOR, Decimal
@@ -15,6 +16,7 @@ from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from dateutil.relativedelta import relativedelta
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.core.handlers.wsgi import WSGIRequest
 from django.db import transaction
 from django.db.models import F, Q, QuerySet, Sum
@@ -53,6 +55,7 @@ from .models import (
     AcademyService,
     Bag,
     CohortSet,
+    CohortSetCohort,
     Consumable,
     Coupon,
     CreditLedgerEntry,
@@ -81,6 +84,42 @@ logger = getLogger(__name__)
 # Schedule charge tasks a few seconds after `next_payment_at` so execution time is strictly
 # past the deadline (avoids clock skew and ``next_payment_at > utc_now`` in charge tasks).
 SCHEDULE_CHARGE_LAG_AFTER_NEXT_PAYMENT = timedelta(seconds=3)
+
+
+def sync_micro_cohorts_into_cohort_sets(macro: Cohort, micro_pks: Iterable[int]) -> None:
+    """
+    Add newly linked micro cohorts to every CohortSet that already contains the macro.
+
+    Only adds; never removes micros from a set when they are unlinked from the macro.
+    Micros that fail CohortSetCohort validation (e.g. not available as SaaS) are skipped.
+    """
+    micro_pk_list = list(micro_pks)
+    if not micro_pk_list:
+        return
+
+    cohort_sets = CohortSet.objects.filter(cohorts=macro)
+    if not cohort_sets.exists():
+        return
+
+    micros = list(Cohort.objects.filter(pk__in=micro_pk_list))
+    if not micros:
+        return
+
+    for cohort_set in cohort_sets:
+        for micro in micros:
+            if CohortSetCohort.objects.filter(cohort_set=cohort_set, cohort=micro).exists():
+                continue
+            try:
+                CohortSetCohort(cohort_set=cohort_set, cohort=micro).save()
+            except ValidationError as e:
+                logger.warning(
+                    "Skipping micro cohort %s for cohort set %s after linking to macro %s: %s",
+                    micro.id,
+                    cohort_set.id,
+                    macro.id,
+                    e,
+                )
+
 
 def _cancel_pending_future_scheduled(task_callable: Any, entity_id: int, *, utc_now: datetime) -> None:
     from task_manager.core.actions import get_fn_desc, parse_payload
