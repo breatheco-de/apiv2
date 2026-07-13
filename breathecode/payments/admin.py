@@ -362,6 +362,8 @@ class ConsumableAdmin(admin.ModelAdmin):
     ]
     raw_id_fields = [
         "user",
+        "subscription",
+        "plan_financing",
         "service_item",
         "cohort_set",
         "event_type_set",
