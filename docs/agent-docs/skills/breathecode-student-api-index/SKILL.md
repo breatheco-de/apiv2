@@ -52,7 +52,7 @@ These areas are primarily documented for **academy staff** in the staff index. I
 | **mentorship** | My mentorship sessions and bills | `bc-mentorship-*` |
 | **notify** | My notification hooks / subscriptions where exposed under user-scoped routes | `bc-notify-*` |
 | **payments** | My plans, subscriptions, invoices, shop purchases | `bc-payments-*`, [`bc-payments-cancel-subscription-and-refund`](../bc-payments-cancel-subscription-and-refund/SKILL.md) |
-| **provisioning** | My VPS or containers | `bc-provisioning-*`, [`bc-provisioning-manage-vps-server`](../bc-provisioning-manage-vps-server/SKILL.md) |
+| **provisioning** | My VPS, containers, or LiteLLM API keys / budget entitlement | `bc-provisioning-*`, [`bc-provisioning-manage-vps-server`](../bc-provisioning-manage-vps-server/SKILL.md), [`bc-provisioning-manage-my-llm-keys`](../bc-provisioning-manage-my-llm-keys/SKILL.md) |
 | **registry** | Reading learning assets (lessons, exercises, projects) | `bc-registry-*` |
 
 ---
@@ -65,6 +65,7 @@ Some user requests touch multiple domains. Load ALL listed skills before proceed
 |---|---|
 | Log in or connect a third-party app using hosted student auth (redirect + callback token) | [`bc-authenticate-student-authentication`](../bc-authenticate-student-authentication/SKILL.md) |
 | List, request, or deprovision **my** VPS | [`bc-provisioning-manage-vps-server`](../bc-provisioning-manage-vps-server/SKILL.md) + `bc-authenticate-*` (token) |
+| List, create, or delete **my** LiteLLM API keys; check LLM budget entitlement or key spend | [`bc-provisioning-manage-my-llm-keys`](../bc-provisioning-manage-my-llm-keys/SKILL.md) + [`bc-authenticate-student-authentication`](../bc-authenticate-student-authentication/SKILL.md) |
 | View or cancel **my** subscription (and optional refund flow when applicable) | [`bc-payments-cancel-subscription-and-refund`](../bc-payments-cancel-subscription-and-refund/SKILL.md) + `bc-authenticate-*` |
 | See **my** events, join, check in, or live class | [`bc-events-create-and-edit-event`](../bc-events-create-and-edit-event/SKILL.md) + `bc-authenticate-*` (student-facing event paths) |
 | Send LearnPack / package telemetry as the current user | [`bc-assignment-diagnose-asset-telemetry`](../bc-assignment-diagnose-asset-telemetry/SKILL.md) + `bc-authenticate-*` |

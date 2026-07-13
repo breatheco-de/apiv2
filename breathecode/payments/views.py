@@ -2279,10 +2279,24 @@ class MeSubscriptionView(APIView):
 
         now = timezone.now()
 
-        subscriptions = Subscription.objects.filter(user=request.user)
+        subscriptions = Subscription.objects.filter(
+            Q(user=request.user)
+            | Q(
+                id__in=SubscriptionSeat.objects.filter(user=request.user, is_active=True).values_list(
+                    "billing_team__subscription_id", flat=True
+                )
+            )
+        )
 
         # NOTE: this is before feature/add-plan-duration branch, this will be outdated
-        plan_financings = PlanFinancing.objects.filter(user=request.user)
+        plan_financings = PlanFinancing.objects.filter(
+            Q(user=request.user)
+            | Q(
+                id__in=PlanFinancingSeat.objects.filter(user=request.user, is_active=True).values_list(
+                    "team__financing_id", flat=True
+                )
+            )
+        )
 
         if subscription := request.GET.get("subscription"):
             subscriptions = subscriptions.filter(id=int(subscription))
@@ -7702,6 +7716,7 @@ class SubscriptionBillingTeamView(APIView):
             "additional_seats": team.additional_seats,
             "seats_count": team.seats.filter(is_active=True).count(),
             "seats_log": team.seats_log,
+            "consumption_strategy": team.consumption_strategy,
             # Auto-recharge settings
             "auto_recharge_enabled": team.auto_recharge_enabled,
             "recharge_threshold_amount": str(team.recharge_threshold_amount),
@@ -7946,7 +7961,11 @@ class SubscriptionSeatView(APIView):
 
         for seat in add_seats:
             try:
-                result.append(actions.create_seat(seat["email"], seat["user"], team, lang))
+                plan = subscription.plans.first()
+                cohort = actions.validate_seat_cohort_for_owner(
+                    request.user, plan, subscription, seat.get("cohort_id"), lang
+                )
+                result.append(actions.create_seat(seat["email"], seat["user"], team, lang, cohort))
             except ValidationException as e:
                 errors.append(e)
 
@@ -8226,6 +8245,13 @@ class PlanFinancingSeatView(APIView):
                         new_user,
                         team,
                         lang,
+                        actions.validate_seat_cohort_for_owner(
+                            request.user,
+                            financing.plans.first(),
+                            financing,
+                            seat.get("cohort_id"),
+                            lang,
+                        ),
                         seat.get("first_name", ""),
                         seat.get("last_name", ""),
                     )

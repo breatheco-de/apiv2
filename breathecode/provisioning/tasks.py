@@ -548,7 +548,13 @@ def renew_or_deprovision_vps_task(provisioning_vps_id: int, **_: Any):
     if consumables.exists():
         consumable = consumables.first()
         consume_service.send(sender=Consumable, instance=consumable, how_many=1)
-        logger.info("Renewed VPS %s: consumed 1 vps_server", provisioning_vps_id)
+        vps.consumed_consumable = consumable
+        vps.save(update_fields=["consumed_consumable", "updated_at"])
+        logger.info(
+            "Renewed VPS %s: consumed 1 vps_server (consumable_id=%s)",
+            provisioning_vps_id,
+            consumable.id,
+        )
         return
     deprovision_vps_task(provisioning_vps_id)
 

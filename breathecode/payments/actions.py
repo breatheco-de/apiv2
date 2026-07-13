@@ -3546,6 +3546,29 @@ def get_remaining_installments(plan_financing: PlanFinancing) -> int:
     return max(plan_financing.how_many_installments - int(plan_financing.installments_paid or 0), 0)
 
 
+def plan_financing_was_staff_assigned(
+    plan_financing: PlanFinancing,
+    first_invoice: Invoice | None = None,
+) -> bool:
+    """
+    True when the financing was created by staff (academy subscription or student invite),
+    not by self-checkout (PayView / Stripe / Coinbase webhooks).
+    """
+    if first_invoice is None:
+        first_invoice = (
+            plan_financing.invoices.select_related("bag", "proof").order_by("paid_at", "id").first()
+        )
+
+    if not first_invoice:
+        return False
+
+    if first_invoice.proof_id is not None:
+        return True
+
+    bag = first_invoice.bag
+    return bag is not None and bag.type == Bag.Type.INVITED
+
+
 def get_credit_balance(plan_financing: PlanFinancing) -> float:
     """Return the current credit balance for a PlanFinancing from the CreditLedgerEntry ledger.
 
@@ -3785,7 +3808,7 @@ def register_student_deposit(
             code=400,
         )
 
-    notes = data.get("notes") or data.get("deposit_notes")
+    notes = data.get("notes") or data.get("deposit_notes") or data.get("invoice_notes")
     if notes and len(notes) > 250:
         raise ValidationException(
             translation(
@@ -3911,6 +3934,14 @@ def register_student_deposit(
         amount_breakdown=amount_breakdown,
         invoice_kind=Invoice.InvoiceKind.MANUAL_DEPOSIT,
     )
+    staff_user_id = None
+    if isinstance(request, (WSGIRequest, AsyncRequest, HttpRequest, Request)) and getattr(request, "user", None):
+        if request.user.is_authenticated:
+            staff_user_id = request.user.id
+    invoice_notes = format_note_made_by_user(notes, staff_user_id)
+    if invoice_notes:
+        invoice.invoice_notes = invoice_notes
+        invoice.save(update_fields=["invoice_notes"])
     bag.was_delivered = True
     bag.save()
     # Every manual deposit invoice represents real cash received for this financing.
@@ -3995,11 +4026,16 @@ def register_student_deposit(
         # Recompute remaining after the new invoice is linked.
         remaining_installments = get_remaining_installments(plan_financing)
 
-        delta = relativedelta(months=1)
-        while utc_now >= plan_financing.next_payment_at + delta:
-            delta += relativedelta(months=1)
+        # Only roll next_payment_at when the due date has passed. If charge_plan_financing
+        # already advanced the calendar on an unpaid staff cycle, next_payment_at may be in
+        # the future — closing the installment must not push the due date forward again.
+        if utc_now >= plan_financing.next_payment_at:
+            delta = relativedelta(months=1)
+            while utc_now >= plan_financing.next_payment_at + delta:
+                delta += relativedelta(months=1)
 
-        plan_financing.next_payment_at += delta
+            plan_financing.next_payment_at += delta
+
         plan_financing.valid_until = plan_financing.next_payment_at + relativedelta(
             months=max(remaining_installments - 1, 0)
         )
@@ -5735,6 +5771,7 @@ class SeatDict(TypedDict, total=False):
     first_name: str | None
     last_name: str | None
     role: str | None
+    cohort: Cohort
 
 
 class AddSeat(TypedDict):
@@ -5743,6 +5780,7 @@ class AddSeat(TypedDict):
     first_name: str
     last_name: str
     role: str | None
+    cohort_id: int | None
 
 
 class ReplaceSeat(TypedDict):
@@ -5833,6 +5871,7 @@ def invite_user_to_subscription_team(
         - See Issue #9973 for the complete invitation flow
     """
     student_role = _get_student_role()
+    cohort = obj.get("cohort")
 
     invite, created = UserInvite.objects.get_or_create(
         email=obj.get("email", ""),
@@ -5847,8 +5886,12 @@ def invite_user_to_subscription_team(
             "sent_at": timezone.now(),
             "first_name": obj.get("first_name", ""),
             "last_name": obj.get("last_name", ""),
+            "cohort": cohort,
         },
     )
+    if not created and cohort and invite.cohort_id is None:
+        invite.cohort = cohort
+        invite.save(update_fields=["cohort"])
     if created or invite.status == "PENDING":
         billing_team_name = subscription_seat.billing_team.name if subscription_seat.billing_team else "team"
         callback_url = get_app_url(academy=subscription.academy)
@@ -5891,7 +5934,13 @@ def _validate_email(email: str, lang: str):
         )
 
 
-def create_seat(email: str, user: User | None, billing_team: SubscriptionBillingTeam, lang: str):
+def create_seat(
+    email: str,
+    user: User | None,
+    billing_team: SubscriptionBillingTeam,
+    lang: str,
+    cohort: Cohort,
+):
     _validate_email(email, lang)
 
     if SubscriptionSeat.objects.filter(billing_team=billing_team, email=email).exists():
@@ -5917,7 +5966,7 @@ def create_seat(email: str, user: User | None, billing_team: SubscriptionBilling
 
     if not user:
         invite_user_to_subscription_team(
-            {"email": email, "first_name": None, "last_name": None},
+            {"email": email, "first_name": None, "last_name": None, "cohort": cohort},
             seat.billing_team.subscription,
             seat,
             lang,
@@ -5930,7 +5979,7 @@ def create_seat(email: str, user: User | None, billing_team: SubscriptionBilling
             lang,
         )
         for plan in seat.billing_team.subscription.plans.all():
-            grant_student_capabilities(user, plan)
+            grant_student_capabilities(user, plan, selected_cohort=cohort.slug)
 
     # create consumables unless shared per team
     strategy = getattr(
@@ -5973,6 +6022,8 @@ def invite_user_to_plan_financing_team(
 ):
     financing = team.financing
     student_role = _get_student_role()
+    cohort = obj.get("cohort")
+
     invite, created = UserInvite.objects.get_or_create(
         email=obj.get("email", ""),
         academy=financing.academy,
@@ -5986,8 +6037,12 @@ def invite_user_to_plan_financing_team(
             "sent_at": timezone.now(),
             "first_name": obj.get("first_name", ""),
             "last_name": obj.get("last_name", ""),
+            "cohort": cohort,
         },
     )
+    if not created and cohort and invite.cohort_id is None:
+        invite.cohort = cohort
+        invite.save(update_fields=["cohort"])
 
     if created or invite.status == "PENDING":
         callback_url = get_app_url(academy=financing.academy)
@@ -6569,6 +6624,7 @@ def create_plan_financing_seat(
     user: User | None,
     team: PlanFinancingTeam,
     lang: str,
+    cohort: Cohort,
     first_name: str = "",
     last_name: str = "",
 ):
@@ -6597,11 +6653,11 @@ def create_plan_financing_seat(
 
     if user:
         for plan in team.financing.plans.all():
-            grant_student_capabilities(user, plan)
+            grant_student_capabilities(user, plan, selected_cohort=cohort.slug)
         notify_user_was_added_to_plan_financing_team(team, seat, lang)
     else:
         invite_user_to_plan_financing_team(
-            {"email": email, "first_name": first_name or "", "last_name": last_name or ""},
+            {"email": email, "first_name": first_name or "", "last_name": last_name or "", "cohort": cohort},
             team,
             seat,
             lang,
@@ -6783,12 +6839,16 @@ def _normalize_user_value(user_value: Any) -> int | None:
 def normalize_add_seats(add_seats: list[dict[str, Any]]) -> list[AddSeat]:
     l: list[AddSeat] = []
     for seat in add_seats:
+        cohort_id = seat.get("cohort_id") or seat.get("cohort")
+        if isinstance(cohort_id, dict):
+            cohort_id = cohort_id.get("id")
         serialized = {
             "email": normalize_email(seat["email"]),
             "user": _normalize_user_value(seat.get("user")),
             "first_name": seat.get("first_name", ""),
             "last_name": seat.get("last_name", ""),
             "role": _normalize_role(seat.get("role")),
+            "cohort_id": int(cohort_id) if cohort_id is not None else None,
         }
         l.append(serialized)
     return l
@@ -6848,6 +6908,80 @@ def validate_seats_limit(
             ),
             code=400,
         )
+
+
+def validate_seat_cohort_for_owner(
+    owner: User,
+    plan: Plan | None,
+    resource: Subscription | PlanFinancing,
+    cohort_id: int | None,
+    lang: str,
+) -> Cohort:
+    if not cohort_id:
+        raise ValidationException(
+            translation(
+                lang,
+                en="You must select a cohort for the invited member",
+                es="Debes seleccionar una cohorte para el miembro invitado",
+                slug="seat-cohort-required",
+            ),
+            code=400,
+        )
+
+    if plan is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Plan not found for this subscription",
+                es="No se encontró el plan para esta suscripción",
+                slug="plan-not-found",
+            ),
+            code=404,
+        )
+
+    bad_stages = ["DELETED", "ENDED"]
+    cohort = Cohort.objects.filter(id=cohort_id).exclude(stage__in=bad_stages).first()
+    if not cohort:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Cohort not found",
+                es="Cohorte no encontrada",
+                slug="cohort-not-found",
+            ),
+            code=404,
+        )
+
+    if not CohortUser.objects.filter(user=owner, cohort=cohort).exists():
+        raise ValidationException(
+            translation(
+                lang,
+                en="You can only invite members to cohorts you belong to",
+                es="Solo puedes invitar miembros a cohortes en las que estás inscrito",
+                slug="owner-not-in-cohort",
+            ),
+            code=400,
+        )
+
+    if plan.cohort_set_id:
+        in_scope = plan.cohort_set.cohorts.filter(id=cohort.id).exists()
+    elif resource.selected_cohort_set_id:
+        in_scope = resource.selected_cohort_set.cohorts.filter(id=cohort.id).exists()
+    else:
+        in_scope = False
+
+    if not in_scope:
+        raise ValidationException(
+            translation(
+                lang,
+                en="This cohort is not included in your plan",
+                es="Esta cohorte no está incluida en tu plan",
+                slug="cohort-not-in-plan",
+            ),
+            code=400,
+        )
+
+    return cohort
 
 
 def grant_student_capabilities(user: User, plan: Plan, selected_cohort: Optional[str] = None):

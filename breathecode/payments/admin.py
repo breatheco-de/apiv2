@@ -351,7 +351,8 @@ class ConsumableAdmin(admin.ModelAdmin):
         "plan_financing",
         "valid_until",
     )
-    list_filter = ["unit_type", "service_item__service__slug"]
+    # Avoid JOIN over the whole Consumable table for distinct service slugs
+    list_filter = ["unit_type", "service_item__service"]
     search_fields = [
         "service_item__service__slug",
         "user__email",
@@ -362,6 +363,8 @@ class ConsumableAdmin(admin.ModelAdmin):
     ]
     raw_id_fields = [
         "user",
+        "subscription",
+        "plan_financing",
         "service_item",
         "cohort_set",
         "event_type_set",
@@ -370,14 +373,20 @@ class ConsumableAdmin(admin.ModelAdmin):
         "subscription_seat",
         "plan_financing_team",
         "plan_financing_seat",
+        "standalone_invoice",
     ]
+    # raw_id_fields only help the change form; changelist needs select_related
+    # to avoid N+1 when rendering FK __str__ (service_item.service, subscription.user, etc.)
+    list_select_related = (
+        "service_item__service",
+        "user",
+        "subscription__user",
+        "plan_financing__user",
+        "plan_financing_team",
+        "plan_financing_seat",
+    )
+    show_full_result_count = False
     actions = [grant_service_permissions]
-
-    def plan_financing_team(self, obj):
-        return getattr(obj, "plan_financing_team", None)
-
-    def plan_financing_seat(self, obj):
-        return getattr(obj, "plan_financing_seat", None)
 
 
 class CreditNoteInline(admin.TabularInline):

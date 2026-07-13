@@ -117,7 +117,13 @@ def test_put_plan_financing_add_seat(factory, plan_financing_setup):
     new_seat.is_active = True
     new_seat.seat_log = []
 
-    with patch("breathecode.payments.views.actions.create_plan_financing_seat", return_value=new_seat) as mock_create, patch(
+    mock_cohort = MagicMock()
+    with patch(
+        "breathecode.payments.views.actions.validate_seat_cohort_for_owner",
+        return_value=mock_cohort,
+    ), patch(
+        "breathecode.payments.views.actions.create_plan_financing_seat", return_value=new_seat
+    ) as mock_create, patch(
         "breathecode.payments.views.actions.validate_seats_limit"
     ) as mock_validate:
         request = factory.put(
@@ -131,7 +137,9 @@ def test_put_plan_financing_add_seat(factory, plan_financing_setup):
 
     assert response.status_code == status.HTTP_207_MULTI_STATUS
     mock_validate.assert_called_once()
-    mock_create.assert_called_once_with("new@example.com", None, plan_financing_setup["team"], ANY, "", "")
+    mock_create.assert_called_once_with(
+        "new@example.com", None, plan_financing_setup["team"], ANY, mock_cohort, "", ""
+    )
     assert response.data["data"][0]["email"] == "new@example.com"
 
 

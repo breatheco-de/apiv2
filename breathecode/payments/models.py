@@ -3577,7 +3577,7 @@ class Consumable(AbstractServiceItem):
         resources = [self.event_type_set, self.mentorship_service_set, self.cohort_set]
         parent_entities = [self.subscription, self.plan_financing]
         # support user-owned and team-owned consumables
-        owners = [self.user, self.subscription_billing_team]
+        owners = [self.user, self.subscription_billing_team, self.plan_financing_team]
         # derive settings lang safely even if user is None (team-owned)
         if self.user_id:
             settings = get_user_settings(self.user.id)
@@ -3598,8 +3598,8 @@ class Consumable(AbstractServiceItem):
             raise forms.ValidationError(
                 translation(
                     settings.lang,
-                    en="A consumable must be associated with one owner (user or subscription billing team)",
-                    es="Un consumible debe estar asociado con un propietario (usuario o suscripción con equipo de facturación)",
+                    en="A consumable must be associated with one owner (user, subscription billing team or plan financing team)",
+                    es="Un consumible debe estar asociado con un propietario (usuario, equipo de facturación de suscripción o equipo de plan financiado)",
                 )
             )
 
