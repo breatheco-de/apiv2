@@ -60,13 +60,20 @@ class ResolveLLMClientEntitlementTestSuite(ProvisioningTestCase):
 
         resolve_pa_mock.return_value = model.provisioning_academy
         get_llm_client_mock.return_value = MagicMock()
-        ensure_llm_user_mock.return_value = MagicMock(external_user_id=f"{model.user.username}-{model.academy.slug}")
+        ensure_llm_user_mock.return_value = (
+            MagicMock(external_user_id=f"{model.user.username}-{model.academy.slug}"),
+            False,
+        )
 
         request = MagicMock()
         request.user = model.user
         request.headers = {"Academy": str(model.academy.id)}
 
-        client, external_user_id = resolve_llm_client_and_external_id(request, ensure_llm_user_record=True)
+        client, external_user_id, academy_id, llm_external_user_created = resolve_llm_client_and_external_id(
+            request, ensure_llm_user_record=True
+        )
 
         assert client is get_llm_client_mock.return_value
         assert external_user_id == f"{model.user.username}-{model.academy.slug}"
+        assert academy_id == model.academy.id
+        assert llm_external_user_created is False

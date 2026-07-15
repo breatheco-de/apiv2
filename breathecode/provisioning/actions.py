@@ -260,16 +260,54 @@ def resolve_provisioning_academy_for_llm(academy):
     return None
 
 
+def resolve_llm_provisioning_context(user, academy_id: int):
+    """
+    Active ProvisioningLLM + ProvisioningAcademy + LiteLLM client for ``user`` in ``academy_id``.
+
+    Returns ``(provisioning_llm, provisioning_academy, client)`` or ``None`` when the user is not
+    provisioned, inactive, or LiteLLM is not configured (missing client, team_id, or external_user_id).
+    """
+    academy = Academy.objects.filter(id=academy_id).first()
+    if not academy:
+        return None
+
+    provisioning_academy = resolve_provisioning_academy_for_llm(academy)
+    if not provisioning_academy:
+        return None
+
+    client = get_llm_client(provisioning_academy)
+    if not client:
+        return None
+
+    provisioning_llm = ProvisioningLLM.objects.filter(
+        user_id=user.id,
+        academy_id=academy_id,
+        status=ProvisioningLLM.STATUS_ACTIVE,
+    ).first()
+    if not provisioning_llm:
+        return None
+
+    vendor_settings = provisioning_academy.vendor_settings or {}
+    team_id = str(vendor_settings.get("team_id") or "").strip()
+    if not team_id or not provisioning_llm.external_user_id:
+        return None
+
+    return provisioning_llm, provisioning_academy, client
+
+
 def ensure_llm_user(user, provisioning_academy, client=None):
     """
     Ensure a ProvisioningLLM record exists for ``user`` + ``provisioning_academy``.
 
     Creates the record (status ACTIVE) when missing, and re-activates a
     previously deprovisioned record when the user still holds entitlement.
-    Returns the ProvisioningLLM instance.
+
+    Returns:
+        (provisioning_llm, llm_external_user_created): the ProvisioningLLM row and
+        whether ``create_user`` ran because LiteLLM returned 404 for the external user.
     """
     if not provisioning_academy:
-        return None
+        return None, False
 
     vendor = provisioning_academy.vendor
 
@@ -294,7 +332,7 @@ def ensure_llm_user(user, provisioning_academy, client=None):
 
     if provisioning_llm.status == ProvisioningLLM.STATUS_DEPROVISIONED:
         academy_id = provisioning_academy.academy.id
-        if user_has_service_entitlement_in_academy(user, "free-monthly-llm-budget", academy_id):
+        if user_has_service_entitlement_in_academy(user, "llm-budget", academy_id):
             provisioning_llm.status = ProvisioningLLM.STATUS_ACTIVE
             provisioning_llm.deprovisioned_at = None
             provisioning_llm.error_message = ""
@@ -314,6 +352,7 @@ def ensure_llm_user(user, provisioning_academy, client=None):
     if client is None:
         client = get_llm_client(provisioning_academy)
 
+    llm_external_user_created = False
     user_data: dict | None = None
     if client and hasattr(client, "get_user_info") and hasattr(client, "create_user"):
         try:
@@ -322,6 +361,7 @@ def ensure_llm_user(user, provisioning_academy, client=None):
             exc_str = str(exc).lower()
             # LiteLLM returns: User <id> not found (code 404 in our wrapper)
             if "404" in exc_str and "not found" in exc_str:
+                llm_external_user_created = True
                 user_email = getattr(user, "email", None) or ""
                 try:
                     user_metadata = {"email": user_email} if user_email else None
@@ -350,7 +390,8 @@ def ensure_llm_user(user, provisioning_academy, client=None):
 
         if user_data is None or team_id not in member_team_ids:
             try:
-                client.add_user_to_team(team_id=team_id, user_ids=[external_user_id])
+                # Guard newly added members with a small cap until the real budget sync runs.
+                client.add_user_to_team(team_id=team_id, user_ids=[external_user_id], max_budget_in_team=10)
             except LLMClientError as exc:
                 exc_msg = str(exc).lower()
                 if "409" not in exc_msg and "already" not in exc_msg and "exists" not in exc_msg:
@@ -365,7 +406,7 @@ def ensure_llm_user(user, provisioning_academy, client=None):
                 team_id,
             )
 
-    return provisioning_llm
+    return provisioning_llm, llm_external_user_created
 
 
 def resolve_llm_client_and_external_id(request, ensure_llm_user_record: bool = False):
@@ -380,7 +421,7 @@ def resolve_llm_client_and_external_id(request, ensure_llm_user_record: bool = F
     synchronously (used by POST endpoints).  When False (default) only an
     existing row is looked up (used by DELETE).
 
-    Returns: (client, external_user_id)
+    Returns: (client, external_user_id, academy_id, llm_external_user_created)
     """
     user = request.user
     lang = get_user_language(request)
@@ -410,7 +451,7 @@ def resolve_llm_client_and_external_id(request, ensure_llm_user_record: bool = F
             code=400,
         )
 
-    if not user_has_service_entitlement_in_academy(user, "free-monthly-llm-budget", academy_id):
+    if not user_has_service_entitlement_in_academy(user, "llm-budget", academy_id):
         raise ValidationException(
             translation(
                 lang,
@@ -473,20 +514,21 @@ def resolve_llm_client_and_external_id(request, ensure_llm_user_record: bool = F
         )
 
     if ensure_llm_user_record:
-        provisioning_llm = ensure_llm_user(user, provisioning_academy, client=client)
+        provisioning_llm, llm_external_user_created = ensure_llm_user(user, provisioning_academy, client=client)
     else:
         provisioning_llm = ProvisioningLLM.objects.filter(
             user=user,
             academy=academy,
             vendor=provisioning_academy.vendor,
         ).first()
+        llm_external_user_created = False
 
     academy_slug = getattr(academy, "slug", "") or str(academy_id)
     external_user_id = f"{user.username}-{academy_slug}"
     if provisioning_llm and provisioning_llm.external_user_id:
         external_user_id = provisioning_llm.external_user_id
 
-    return client, external_user_id
+    return client, external_user_id, academy_id, llm_external_user_created
 
 
 def _get_vps_consumables_for_academy(user, academy: Academy):
@@ -1771,10 +1813,10 @@ def apply_early_vps_billing_alignment(vps: ProvisioningVPS) -> None:
         reschedule_billing_tasks(plan_financing_id=pf_id)
 
 
-@service_deprovisioner("free-monthly-llm-budget")
-def deprovision_free_monthly_llm_budget(user_id: int, context: dict | None = None, **_: Any):
+@service_deprovisioner("llm-budget")
+def deprovision_llm_budget(user_id: int, context: dict | None = None, **_: Any):
     """
-    Deprovision the free monthly LLM budget for the given user and academy.
+    Deprovision LLM budget for the given user and academy.
     """
     # The signal receiver calls handlers synchronously; keep this handler lightweight.
     from breathecode.provisioning.tasks import deprovision_litellm_user_task
