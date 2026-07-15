@@ -163,7 +163,8 @@ class PlanView(APIView):
             serializer = GetPlanSerializer(
                 item,
                 many=False,
-                context={"academy_id": request.GET.get("academy"), "country_code": country_code},
+                lang=lang,
+                context={"academy_id": request.GET.get("academy"), "country_code": country_code, "lang": lang},
                 select=request.GET.get("select"),
             )
             return handler.response(serializer.data)
@@ -193,7 +194,8 @@ class PlanView(APIView):
         serializer = GetPlanSerializer(
             items,
             many=True,
-            context={"academy_id": request.GET.get("academy"), "country_code": country_code},
+            lang=lang,
+            context={"academy_id": request.GET.get("academy"), "country_code": country_code, "lang": lang},
             select=request.GET.get("select"),
         )
 
@@ -231,7 +233,8 @@ class AcademyPlanView(APIView):
             serializer = GetPlanSerializer(
                 item,
                 many=False,
-                context={"academy_id": academy_id, "country_code": request.GET.get("country_code")},
+                lang=lang,
+                context={"academy_id": academy_id, "country_code": request.GET.get("country_code"), "lang": lang},
                 select=request.GET.get("select"),
             )
             return handler.response(serializer.data)
@@ -270,7 +273,8 @@ class AcademyPlanView(APIView):
         serializer = GetPlanSerializer(
             items,
             many=True,
-            context={"academy_id": academy_id, "country_code": request.GET.get("country_code")},
+            lang=lang,
+            context={"academy_id": academy_id, "country_code": request.GET.get("country_code"), "lang": lang},
             select=request.GET.get("select"),
         )
 

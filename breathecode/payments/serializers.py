@@ -23,6 +23,7 @@ from breathecode.payments.models import (
     MentorshipServiceSet,
     PaymentMethod,
     Plan,
+    PlanFeatures,
     PlanOffer,
     PlanOfferTranslation,
     PlanTranslation,
@@ -437,6 +438,7 @@ class GetPlanSerializer(GetPlanSmallSerializer):
     plan_addons = serpy.MethodField()
     seat_service_price = serpy.MethodField()
     consumption_strategy = serpy.Field()
+    features = serpy.MethodField()
 
     def get_seat_service_price(self, obj: Plan):
         if not obj.seat_service_price or obj.seat_service_price.service.type != "SEAT":
@@ -445,10 +447,41 @@ class GetPlanSerializer(GetPlanSmallSerializer):
         return GetAcademyServiceSmallSerializer(obj.seat_service_price, many=False).data
 
     def __init__(self, *args, **kwargs):
+        self.lang = kwargs.pop("lang", None) or (kwargs.get("context") or {}).get("lang") or "en"
+        self.cache = kwargs.pop("cache", {})
         super().__init__(*args, **kwargs)
-        self.context = kwargs.get("context", {})
-        self.lang = kwargs.get("lang", "en")
-        self.cache = kwargs.get("cache", {})
+        self.context = kwargs.get("context", {}) or getattr(self, "context", {}) or {}
+
+    def get_features(self, obj: Plan):
+        try:
+            plan_features = obj.features
+        except PlanFeatures.DoesNotExist:
+            return None
+
+        bullets = plan_features.bullets or {}
+        if not isinstance(bullets, dict):
+            return None
+
+        lang = self.lang or (self.context or {}).get("lang") or "en"
+        keys_to_try = [lang]
+        if len(lang) > 2:
+            keys_to_try.append(lang[:2].lower())
+        if "en" not in keys_to_try:
+            keys_to_try.append("en")
+
+        for key in keys_to_try:
+            value = bullets.get(key)
+            if isinstance(value, list) and value:
+                return [
+                    {
+                        "title": item.get("title"),
+                        "description": item.get("description"),
+                    }
+                    for item in value
+                    if isinstance(item, dict)
+                ] or None
+
+        return None
 
     def get_currency(self, obj: Plan):
         country_code = (self.context.get("country_code") or "").lower()

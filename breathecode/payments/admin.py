@@ -34,6 +34,7 @@ from breathecode.payments.models import (
     PlanFinancing,
     PlanFinancingSeat,
     PlanFinancingTeam,
+    PlanFeatures,
     PlanOffer,
     PlanOfferTranslation,
     PlanServiceItem,
@@ -112,6 +113,22 @@ class PlanServiceItemInline(admin.TabularInline):
 class PlanTranslationInline(admin.StackedInline):
     model = PlanTranslation
     extra = 0
+
+
+class PlanFeaturesForm(forms.ModelForm):
+    class Meta:
+        model = PlanFeatures
+        fields = "__all__"
+        widgets = {
+            "bullets": PrettyJSONWidget(),
+        }
+
+
+class PlanFeaturesInline(admin.StackedInline):
+    model = PlanFeatures
+    form = PlanFeaturesForm
+    extra = 0
+    max_num = 1
 
 
 class PlanOfferInline(admin.StackedInline):
@@ -322,7 +339,7 @@ class PlanAdmin(admin.ModelAdmin):
         ),
     )
 
-    inlines = [PlanServiceItemInline, PlanTranslationInline, PlanOfferInline]
+    inlines = [PlanServiceItemInline, PlanTranslationInline, PlanFeaturesInline, PlanOfferInline]
 
 
 @admin.register(PlanTranslation)
@@ -330,6 +347,14 @@ class PlanTranslationAdmin(admin.ModelAdmin):
     list_display = ("id", "lang", "title", "description", "plan")
     list_filter = ["plan__owner", "lang"]
     search_fields = ["title", "plan__slug"]
+
+
+@admin.register(PlanFeatures)
+class PlanFeaturesAdmin(admin.ModelAdmin):
+    form = PlanFeaturesForm
+    list_display = ("id", "plan")
+    search_fields = ["plan__slug", "plan__title"]
+    autocomplete_fields = ("plan",)
 
 
 def grant_service_permissions(modeladmin, request, queryset):
