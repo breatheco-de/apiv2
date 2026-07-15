@@ -1292,6 +1292,28 @@ class PlanTranslation(models.Model):
         return f"{self.lang} {self.title}: ({self.plan.slug})"
 
 
+class PlanFeatures(models.Model):
+    """Marketing checkout bullets for a plan, stored as a JSON map of language → list of {title, description}."""
+
+    if TYPE_CHECKING:
+        objects: TypedManager["PlanFeatures"]
+
+    plan = models.OneToOneField(
+        Plan,
+        on_delete=models.CASCADE,
+        related_name="features",
+        help_text="Plan these checkout bullets belong to",
+    )
+    bullets = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='Checkout bullets by language, e.g. {"en": [{"title": "...", "description": "..."}], "es": [...]}',
+    )
+
+    def __str__(self) -> str:
+        return f"PlanFeatures({self.plan.slug})"
+
+
 class PlanOffer(models.Model):
     if TYPE_CHECKING:
         objects: TypedManager["PlanOffer"]
@@ -1719,6 +1741,12 @@ class PaymentMethod(models.Model):
     description = models.CharField(max_length=480, help_text="Description of the payment method")
     third_party_link = models.URLField(
         blank=True, null=True, default=None, help_text="Link of a third party payment method"
+    )
+    qr_url = models.URLField(
+        blank=True,
+        null=True,
+        default=None,
+        help_text="Public HTTPS URL of a QR image to display at the bottom of this payment method in checkout",
     )
     logo_urls = models.JSONField(
         default=list,

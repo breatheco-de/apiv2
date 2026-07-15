@@ -27,6 +27,7 @@ from ..views import (
     AcademyPlanServiceStockSchedulersRegenerateView,
     AcademyPlanSpecificServiceItemView,
     AcademyPlanSubscriptionView,
+    AcademyPlanFeaturesView,
     AcademyPlanSyncFinancingExpirationView,
     AcademyPlanView,
     AcademyPlanOfferView,
@@ -101,6 +102,16 @@ urlpatterns = [
     path("academy/plan", AcademyPlanView.as_view(), name="academy_plan"),
     path("academy/plan/<int:plan_id>", AcademyPlanView.as_view(), name="academy_plan_id"),
     path("academy/plan/<slug:plan_slug>", AcademyPlanView.as_view(), name="academy_plan_slug"),
+    path(
+        "academy/plan/<int:plan_id>/features",
+        AcademyPlanFeaturesView.as_view(),
+        name="academy_plan_id_features",
+    ),
+    path(
+        "academy/plan/<slug:plan_slug>/features",
+        AcademyPlanFeaturesView.as_view(),
+        name="academy_plan_slug_features",
+    ),
     path(
         "academy/plan/<int:plan_id>/sync/financing/expiration",
         AcademyPlanSyncFinancingExpirationView.as_view(),

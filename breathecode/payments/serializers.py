@@ -23,6 +23,7 @@ from breathecode.payments.models import (
     MentorshipServiceSet,
     PaymentMethod,
     Plan,
+    PlanFeatures,
     PlanOffer,
     PlanOfferTranslation,
     PlanTranslation,
@@ -437,6 +438,7 @@ class GetPlanSerializer(GetPlanSmallSerializer):
     plan_addons = serpy.MethodField()
     seat_service_price = serpy.MethodField()
     consumption_strategy = serpy.Field()
+    features = serpy.MethodField()
 
     def get_seat_service_price(self, obj: Plan):
         if not obj.seat_service_price or obj.seat_service_price.service.type != "SEAT":
@@ -445,10 +447,41 @@ class GetPlanSerializer(GetPlanSmallSerializer):
         return GetAcademyServiceSmallSerializer(obj.seat_service_price, many=False).data
 
     def __init__(self, *args, **kwargs):
+        self.lang = kwargs.pop("lang", None) or (kwargs.get("context") or {}).get("lang") or "en"
+        self.cache = kwargs.pop("cache", {})
         super().__init__(*args, **kwargs)
-        self.context = kwargs.get("context", {})
-        self.lang = kwargs.get("lang", "en")
-        self.cache = kwargs.get("cache", {})
+        self.context = kwargs.get("context", {}) or getattr(self, "context", {}) or {}
+
+    def get_features(self, obj: Plan):
+        try:
+            plan_features = obj.features
+        except PlanFeatures.DoesNotExist:
+            return None
+
+        bullets = plan_features.bullets or {}
+        if not isinstance(bullets, dict):
+            return None
+
+        lang = self.lang or (self.context or {}).get("lang") or "en"
+        keys_to_try = [lang]
+        if len(lang) > 2:
+            keys_to_try.append(lang[:2].lower())
+        if "en" not in keys_to_try:
+            keys_to_try.append("en")
+
+        for key in keys_to_try:
+            value = bullets.get(key)
+            if isinstance(value, list) and value:
+                return [
+                    {
+                        "title": item.get("title"),
+                        "description": item.get("description"),
+                    }
+                    for item in value
+                    if isinstance(item, dict)
+                ] or None
+
+        return None
 
     def get_currency(self, obj: Plan):
         country_code = (self.context.get("country_code") or "").lower()
@@ -1570,6 +1603,101 @@ class PutPlanSerializer(PlanSerializer):
         fields = "__all__"
 
 
+class PutPlanFeaturesSerializer(serializers.Serializer):
+    """Upsert checkout marketing bullets for a plan."""
+
+    bullets = serializers.JSONField()
+
+    def __init__(self, *args, **kwargs):
+        self.lang = kwargs.pop("lang", "en")
+        super().__init__(*args, **kwargs)
+
+    def validate_bullets(self, value):
+        if not isinstance(value, dict):
+            raise ValidationException(
+                translation(
+                    self.lang,
+                    en="bullets must be an object keyed by language code",
+                    es="bullets debe ser un objeto con claves de idioma",
+                    slug="invalid-bullets-format",
+                ),
+                code=400,
+            )
+
+        cleaned: dict[str, list[dict[str, Any]]] = {}
+        for lang_key, items in value.items():
+            if not isinstance(lang_key, str) or not lang_key.strip():
+                raise ValidationException(
+                    translation(
+                        self.lang,
+                        en="Each bullets key must be a non-empty language code",
+                        es="Cada clave de bullets debe ser un código de idioma no vacío",
+                        slug="invalid-bullets-language",
+                    ),
+                    code=400,
+                )
+
+            if not isinstance(items, list):
+                raise ValidationException(
+                    translation(
+                        self.lang,
+                        en=f'bullets["{lang_key}"] must be a list',
+                        es=f'bullets["{lang_key}"] debe ser una lista',
+                        slug="invalid-bullets-list",
+                    ),
+                    code=400,
+                )
+
+            cleaned_items = []
+            for index, item in enumerate(items):
+                if not isinstance(item, dict):
+                    raise ValidationException(
+                        translation(
+                            self.lang,
+                            en=f'bullets["{lang_key}"][{index}] must be an object with title and description',
+                            es=f'bullets["{lang_key}"][{index}] debe ser un objeto con title y description',
+                            slug="invalid-bullet-item",
+                        ),
+                        code=400,
+                    )
+
+                title = item.get("title")
+                description = item.get("description")
+                if title is not None and not isinstance(title, str):
+                    raise ValidationException(
+                        translation(
+                            self.lang,
+                            en=f'bullets["{lang_key}"][{index}].title must be a string or null',
+                            es=f'bullets["{lang_key}"][{index}].title debe ser string o null',
+                            slug="invalid-bullet-title",
+                        ),
+                        code=400,
+                    )
+                if description is not None and not isinstance(description, str):
+                    raise ValidationException(
+                        translation(
+                            self.lang,
+                            en=f'bullets["{lang_key}"][{index}].description must be a string or null',
+                            es=f'bullets["{lang_key}"][{index}].description debe ser string o null',
+                            slug="invalid-bullet-description",
+                        ),
+                        code=400,
+                    )
+
+                cleaned_items.append({"title": title, "description": description})
+
+            cleaned[lang_key.strip()] = cleaned_items
+
+        return cleaned
+
+    def save(self, plan: Plan):
+        plan_features, _ = PlanFeatures.objects.update_or_create(
+            plan=plan,
+            defaults={"bullets": self.validated_data["bullets"]},
+        )
+        return plan_features
+
+
 class FinancingOptionSerializer(serializers.ModelSerializer):
     """Serializer for creating and updating FinancingOption"""
 
@@ -1651,6 +1779,7 @@ class GetPaymentMethod(serpy.Serializer):
     is_financing_managed_by_provider = serpy.Field()
     description = serpy.Field()
     third_party_link = serpy.Field()
+    qr_url = serpy.Field()
     logo_urls = serpy.Field()
     provider_settings = serpy.Field()
     academy = GetAcademySmallSerializer(required=False, many=False)
@@ -1678,6 +1807,7 @@ class PaymentMethodSerializer(serializers.ModelSerializer):
             "title",
             "description",
             "third_party_link",
+            "qr_url",
             "logo_urls",
             "provider_settings",
             "plans",
@@ -1692,6 +1822,19 @@ class PaymentMethodSerializer(serializers.ModelSerializer):
             "visibility",
             "deprecated",
         )
+
+    def validate_qr_url(self, value):
+        if value in (None, ""):
+            return None
+
+        url = value.strip() if isinstance(value, str) else value
+        url_validator = URLValidator(schemes=["https"])
+        try:
+            url_validator(url)
+        except DjangoValidationError:
+            raise serializers.ValidationError("qr_url must be a valid HTTPS URL")
+
+        return url
 
     def validate_logo_urls(self, value):
         if value in (None, ""):

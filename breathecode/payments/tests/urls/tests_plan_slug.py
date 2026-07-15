@@ -87,6 +87,7 @@ def get_serializer(event, currency, service=None, academy=None, service_items=[]
         "time_of_life_unit": event.time_of_life_unit,
         "trial_duration": event.trial_duration,
         "trial_duration_unit": event.trial_duration_unit,
+        "features": None,
     }
 
 
@@ -135,6 +136,47 @@ class SignalTestSuite(PaymentsTestCase):
                 self.bc.format.to_dict(model.plan),
             ],
         )
+
+    # Given: Plan with PlanFeatures bullets
+    # When: get with Accept-Language es
+    # Then: return features for es
+    def test__with_plan_features__language_es(self):
+        plan = {"time_of_life": None, "time_of_life_unit": None, "is_renewable": True}
+        bullets = {
+            "en": [{"title": "AI", "description": "English description"}],
+            "es": [{"title": "IA", "description": "Descripcion en espanol"}],
+        }
+        model = self.bc.database.create(plan=plan, plan_features={"bullets": bullets})
+
+        url = reverse_lazy("payments:plan_slug", kwargs={"plan_slug": model.plan.slug})
+        response = self.client.get(url, HTTP_ACCEPT_LANGUAGE="es")
+
+        json = response.json()
+        expected = get_serializer(model.plan, model.currency)
+        expected["features"] = [{"title": "IA", "description": "Descripcion en espanol"}]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    # Given: Plan with PlanFeatures only in en
+    # When: get with Accept-Language es
+    # Then: fallback to en
+    def test__with_plan_features__fallback_to_en(self):
+        plan = {"time_of_life": None, "time_of_life_unit": None, "is_renewable": True}
+        bullets = {
+            "en": [{"title": "AI", "description": "English description"}],
+        }
+        model = self.bc.database.create(plan=plan, plan_features={"bullets": bullets})
+
+        url = reverse_lazy("payments:plan_slug", kwargs={"plan_slug": model.plan.slug})
+        response = self.client.get(url, HTTP_ACCEPT_LANGUAGE="es")
+
+        json = response.json()
+        expected = get_serializer(model.plan, model.currency)
+        expected["features"] = [{"title": "AI", "description": "English description"}]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     # When: get is called
     # Then: it's setup properly
