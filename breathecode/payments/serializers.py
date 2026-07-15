@@ -1651,6 +1651,7 @@ class GetPaymentMethod(serpy.Serializer):
     is_financing_managed_by_provider = serpy.Field()
     description = serpy.Field()
     third_party_link = serpy.Field()
+    qr_url = serpy.Field()
     logo_urls = serpy.Field()
     provider_settings = serpy.Field()
     academy = GetAcademySmallSerializer(required=False, many=False)
@@ -1678,6 +1679,7 @@ class PaymentMethodSerializer(serializers.ModelSerializer):
             "title",
             "description",
             "third_party_link",
+            "qr_url",
             "logo_urls",
             "provider_settings",
             "plans",
@@ -1692,6 +1694,19 @@ class PaymentMethodSerializer(serializers.ModelSerializer):
             "visibility",
             "deprecated",
         )
+
+    def validate_qr_url(self, value):
+        if value in (None, ""):
+            return None
+
+        url = value.strip() if isinstance(value, str) else value
+        url_validator = URLValidator(schemes=["https"])
+        try:
+            url_validator(url)
+        except DjangoValidationError:
+            raise serializers.ValidationError("qr_url must be a valid HTTPS URL")
+
+        return url
 
     def validate_logo_urls(self, value):
         if value in (None, ""):
