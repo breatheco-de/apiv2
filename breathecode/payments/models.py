@@ -1720,6 +1720,12 @@ class PaymentMethod(models.Model):
     third_party_link = models.URLField(
         blank=True, null=True, default=None, help_text="Link of a third party payment method"
     )
+    qr_url = models.URLField(
+        blank=True,
+        null=True,
+        default=None,
+        help_text="Public HTTPS URL of a QR image to display at the bottom of this payment method in checkout",
+    )
     logo_urls = models.JSONField(
         default=list,
         blank=True,

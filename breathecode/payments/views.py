@@ -7322,6 +7322,23 @@ class PaymentMethodView(APIView):
                 .distinct()
             )
 
+            # Prefer plan-specific methods over generics with the same title for this academy.
+            rows = list(items.values("id", "title", "academy_id", "_plan_count"))
+            groups: dict[tuple[str, int | None], list[dict]] = {}
+            for row in rows:
+                key = (row["title"].lower(), row["academy_id"])
+                groups.setdefault(key, []).append(row)
+
+            keep_ids: set[int] = set()
+            for group_rows in groups.values():
+                has_specific = any(r["_plan_count"] > 0 for r in group_rows)
+                for r in group_rows:
+                    if has_specific and r["_plan_count"] == 0:
+                        continue
+                    keep_ids.add(r["id"])
+
+            items = items.filter(id__in=keep_ids)
+
         items = handler.queryset(items)
         serializer = GetPaymentMethod(items, many=True)
 

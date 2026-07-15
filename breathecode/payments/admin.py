@@ -1180,6 +1180,7 @@ class PaymentMethodAdmin(admin.ModelAdmin):
         "description",
         "academy",
         "third_party_link",
+        "qr_url",
         "is_financing_managed_by_provider",
         "lang",
         "visibility",
