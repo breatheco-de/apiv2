@@ -68,6 +68,7 @@ from breathecode.payments.models import (
     MentorshipServiceSet,
     PaymentMethod,
     Plan,
+    PlanFeatures,
     PlanFinancing,
     PlanFinancingSeat,
     PlanFinancingTeam,
@@ -117,6 +118,7 @@ from breathecode.payments.serializers import (
     PaymentMethodSerializer,
     PlanSerializer,
     PlanOfferSerializer,
+    PutPlanFeaturesSerializer,
     POSTAcademyServiceSerializer,
     PUTAcademyServiceSerializer,
     ServiceItemSerializer,
@@ -163,7 +165,8 @@ class PlanView(APIView):
             serializer = GetPlanSerializer(
                 item,
                 many=False,
-                context={"academy_id": request.GET.get("academy"), "country_code": country_code},
+                lang=lang,
+                context={"academy_id": request.GET.get("academy"), "country_code": country_code, "lang": lang},
                 select=request.GET.get("select"),
             )
             return handler.response(serializer.data)
@@ -193,7 +196,8 @@ class PlanView(APIView):
         serializer = GetPlanSerializer(
             items,
             many=True,
-            context={"academy_id": request.GET.get("academy"), "country_code": country_code},
+            lang=lang,
+            context={"academy_id": request.GET.get("academy"), "country_code": country_code, "lang": lang},
             select=request.GET.get("select"),
         )
 
@@ -231,7 +235,8 @@ class AcademyPlanView(APIView):
             serializer = GetPlanSerializer(
                 item,
                 many=False,
-                context={"academy_id": academy_id, "country_code": request.GET.get("country_code")},
+                lang=lang,
+                context={"academy_id": academy_id, "country_code": request.GET.get("country_code"), "lang": lang},
                 select=request.GET.get("select"),
             )
             return handler.response(serializer.data)
@@ -270,7 +275,8 @@ class AcademyPlanView(APIView):
         serializer = GetPlanSerializer(
             items,
             many=True,
-            context={"academy_id": academy_id, "country_code": request.GET.get("country_code")},
+            lang=lang,
+            context={"academy_id": academy_id, "country_code": request.GET.get("country_code"), "lang": lang},
             select=request.GET.get("select"),
         )
 
@@ -364,6 +370,76 @@ class AcademyPlanView(APIView):
         plan.save()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademyPlanFeaturesView(APIView):
+    """
+    PUT: Upsert PlanFeatures.bullets for a plan owned by the academy (or global owner=None).
+    GET: Return the stored bullets JSON (full multi-language object).
+
+    Body:
+      {
+        "bullets": {
+          "en": [{"title": "...", "description": "..."}],
+          "es": [{"title": "...", "description": "..."}]
+        }
+      }
+    """
+
+    def _get_plan(self, academy_id, plan_id=None, plan_slug=None, lang="en"):
+        plan = (
+            Plan.objects.filter(
+                Q(id=plan_id) | Q(slug=plan_slug, slug__isnull=False),
+                Q(owner__id=academy_id) | Q(owner=None),
+            )
+            .exclude(status="DELETED")
+            .first()
+        )
+        if not plan:
+            raise ValidationException(
+                translation(lang, en="Plan not found", es="Plan no existe", slug="not-found"),
+                code=404,
+            )
+        return plan
+
+    def _serialize(self, plan_features: PlanFeatures) -> dict[str, Any]:
+        return {
+            "id": plan_features.id,
+            "plan": plan_features.plan_id,
+            "plan_slug": plan_features.plan.slug,
+            "bullets": plan_features.bullets or {},
+        }
+
+    @capable_of("read_subscription")
+    def get(self, request, plan_id=None, plan_slug=None, academy_id=None):
+        lang = get_user_language(request)
+        plan = self._get_plan(academy_id, plan_id=plan_id, plan_slug=plan_slug, lang=lang)
+
+        try:
+            plan_features = plan.features
+        except PlanFeatures.DoesNotExist:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Plan features not found",
+                    es="Features del plan no existen",
+                    slug="plan-features-not-found",
+                ),
+                code=404,
+            )
+
+        return Response(self._serialize(plan_features), status=status.HTTP_200_OK)
+
+    @capable_of("crud_subscription")
+    def put(self, request, plan_id=None, plan_slug=None, academy_id=None):
+        lang = get_user_language(request)
+        plan = self._get_plan(academy_id, plan_id=plan_id, plan_slug=plan_slug, lang=lang)
+
+        serializer = PutPlanFeaturesSerializer(data=request.data, lang=lang)
+        serializer.is_valid(raise_exception=True)
+        plan_features = serializer.save(plan=plan)
+
+        return Response(self._serialize(plan_features), status=status.HTTP_200_OK)
 
 
 class AcademyPlanSyncFinancingExpirationView(APIView):
