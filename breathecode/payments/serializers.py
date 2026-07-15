@@ -1603,6 +1603,101 @@ class PutPlanSerializer(PlanSerializer):
         fields = "__all__"
 
 
+class PutPlanFeaturesSerializer(serializers.Serializer):
+    """Upsert checkout marketing bullets for a plan."""
+
+    bullets = serializers.JSONField()
+
+    def __init__(self, *args, **kwargs):
+        self.lang = kwargs.pop("lang", "en")
+        super().__init__(*args, **kwargs)
+
+    def validate_bullets(self, value):
+        if not isinstance(value, dict):
+            raise ValidationException(
+                translation(
+                    self.lang,
+                    en="bullets must be an object keyed by language code",
+                    es="bullets debe ser un objeto con claves de idioma",
+                    slug="invalid-bullets-format",
+                ),
+                code=400,
+            )
+
+        cleaned: dict[str, list[dict[str, Any]]] = {}
+        for lang_key, items in value.items():
+            if not isinstance(lang_key, str) or not lang_key.strip():
+                raise ValidationException(
+                    translation(
+                        self.lang,
+                        en="Each bullets key must be a non-empty language code",
+                        es="Cada clave de bullets debe ser un código de idioma no vacío",
+                        slug="invalid-bullets-language",
+                    ),
+                    code=400,
+                )
+
+            if not isinstance(items, list):
+                raise ValidationException(
+                    translation(
+                        self.lang,
+                        en=f'bullets["{lang_key}"] must be a list',
+                        es=f'bullets["{lang_key}"] debe ser una lista',
+                        slug="invalid-bullets-list",
+                    ),
+                    code=400,
+                )
+
+            cleaned_items = []
+            for index, item in enumerate(items):
+                if not isinstance(item, dict):
+                    raise ValidationException(
+                        translation(
+                            self.lang,
+                            en=f'bullets["{lang_key}"][{index}] must be an object with title and description',
+                            es=f'bullets["{lang_key}"][{index}] debe ser un objeto con title y description',
+                            slug="invalid-bullet-item",
+                        ),
+                        code=400,
+                    )
+
+                title = item.get("title")
+                description = item.get("description")
+                if title is not None and not isinstance(title, str):
+                    raise ValidationException(
+                        translation(
+                            self.lang,
+                            en=f'bullets["{lang_key}"][{index}].title must be a string or null',
+                            es=f'bullets["{lang_key}"][{index}].title debe ser string o null',
+                            slug="invalid-bullet-title",
+                        ),
+                        code=400,
+                    )
+                if description is not None and not isinstance(description, str):
+                    raise ValidationException(
+                        translation(
+                            self.lang,
+                            en=f'bullets["{lang_key}"][{index}].description must be a string or null',
+                            es=f'bullets["{lang_key}"][{index}].description debe ser string o null',
+                            slug="invalid-bullet-description",
+                        ),
+                        code=400,
+                    )
+
+                cleaned_items.append({"title": title, "description": description})
+
+            cleaned[lang_key.strip()] = cleaned_items
+
+        return cleaned
+
+    def save(self, plan: Plan):
+        plan_features, _ = PlanFeatures.objects.update_or_create(
+            plan=plan,
+            defaults={"bullets": self.validated_data["bullets"]},
+        )
+        return plan_features
+
+
 class FinancingOptionSerializer(serializers.ModelSerializer):
     """Serializer for creating and updating FinancingOption"""
 
