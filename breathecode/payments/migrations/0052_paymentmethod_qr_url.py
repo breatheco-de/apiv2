@@ -4,7 +4,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("payments", "0050_paymentmethod_is_financing_managed_by_provider_and_more"),
+        ("payments", "0051_alter_service_consumer"),
     ]
 
     operations = [
