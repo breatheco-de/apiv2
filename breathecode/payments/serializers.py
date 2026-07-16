@@ -453,9 +453,8 @@ class GetPlanSerializer(GetPlanSmallSerializer):
         self.context = kwargs.get("context", {}) or getattr(self, "context", {}) or {}
 
     def get_features(self, obj: Plan):
-        try:
-            plan_features = obj.features
-        except PlanFeatures.DoesNotExist:
+        plan_features = obj.features
+        if not plan_features:
             return None
 
         bullets = plan_features.bullets or {}
@@ -1604,9 +1603,12 @@ class PutPlanSerializer(PlanSerializer):
 
 
 class PutPlanFeaturesSerializer(serializers.Serializer):
-    """Upsert checkout marketing bullets for a plan."""
+    """Create, attach, update or fork shared PlanFeatures for a plan."""
 
-    bullets = serializers.JSONField()
+    bullets = serializers.JSONField(required=False)
+    plan_features_id = serializers.IntegerField(required=False)
+    fork = serializers.BooleanField(required=False, default=False)
+    mode = serializers.ChoiceField(choices=["create"], required=False)
 
     def __init__(self, *args, **kwargs):
         self.lang = kwargs.pop("lang", "en")
@@ -1690,11 +1692,103 @@ class PutPlanFeaturesSerializer(serializers.Serializer):
 
         return cleaned
 
+    def validate(self, attrs):
+        plan_features_id = attrs.get("plan_features_id")
+        bullets = attrs.get("bullets")
+        fork = attrs.get("fork", False)
+        mode = attrs.get("mode")
+
+        if plan_features_id is not None and bullets is not None:
+            raise ValidationException(
+                translation(
+                    self.lang,
+                    en="Send either plan_features_id to reuse, or bullets to create/update/fork",
+                    es="Envía plan_features_id para reutilizar, o bullets para crear/actualizar/fork",
+                    slug="plan-features-conflicting-payload",
+                ),
+                code=400,
+            )
+
+        if plan_features_id is None and bullets is None:
+            raise ValidationException(
+                translation(
+                    self.lang,
+                    en="Provide plan_features_id or bullets",
+                    es="Proporciona plan_features_id o bullets",
+                    slug="plan-features-missing-payload",
+                ),
+                code=400,
+            )
+
+        if fork and plan_features_id is not None:
+            raise ValidationException(
+                translation(
+                    self.lang,
+                    en="fork requires bullets, not plan_features_id",
+                    es="fork requiere bullets, no plan_features_id",
+                    slug="plan-features-invalid-fork",
+                ),
+                code=400,
+            )
+
+        if mode == "create" and bullets is None:
+            raise ValidationException(
+                translation(
+                    self.lang,
+                    en='mode "create" requires bullets',
+                    es='mode "create" requiere bullets',
+                    slug="plan-features-create-requires-bullets",
+                ),
+                code=400,
+            )
+
+        if plan_features_id is not None:
+            plan_features = PlanFeatures.objects.filter(id=plan_features_id).first()
+            if not plan_features:
+                raise ValidationException(
+                    translation(
+                        self.lang,
+                        en="Plan features not found",
+                        es="Features del plan no existen",
+                        slug="plan-features-not-found",
+                    ),
+                    code=404,
+                )
+            attrs["plan_features"] = plan_features
+
+        return attrs
+
     def save(self, plan: Plan):
-        plan_features, _ = PlanFeatures.objects.update_or_create(
-            plan=plan,
-            defaults={"bullets": self.validated_data["bullets"]},
-        )
+        plan_features_id = self.validated_data.get("plan_features_id")
+        bullets = self.validated_data.get("bullets")
+        fork = self.validated_data.get("fork", False)
+        mode = self.validated_data.get("mode")
+
+        # Reuse an existing PlanFeatures
+        if plan_features_id is not None:
+            plan_features = self.validated_data["plan_features"]
+            plan.features = plan_features
+            plan.save(update_fields=["features"])
+            return plan_features
+
+        # Fork: new PlanFeatures for this plan only
+        if fork:
+            plan_features = PlanFeatures.objects.create(bullets=bullets)
+            plan.features = plan_features
+            plan.save(update_fields=["features"])
+            return plan_features
+
+        # Force create a new shared record for this plan
+        if mode == "create" or not plan.features_id:
+            plan_features = PlanFeatures.objects.create(bullets=bullets)
+            plan.features = plan_features
+            plan.save(update_fields=["features"])
+            return plan_features
+
+        # Update bullets on the shared PlanFeatures (affects all linked plans)
+        plan_features = plan.features
+        plan_features.bullets = bullets
+        plan_features.save(update_fields=["bullets"])
         return plan_features
 
 

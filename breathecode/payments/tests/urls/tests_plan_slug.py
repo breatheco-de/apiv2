@@ -147,6 +147,8 @@ class SignalTestSuite(PaymentsTestCase):
             "es": [{"title": "IA", "description": "Descripcion en espanol"}],
         }
         model = self.bc.database.create(plan=plan, plan_features={"bullets": bullets})
+        model.plan.features = model.plan_features
+        model.plan.save(update_fields=["features"])
 
         url = reverse_lazy("payments:plan_slug", kwargs={"plan_slug": model.plan.slug})
         response = self.client.get(url, HTTP_ACCEPT_LANGUAGE="es")
@@ -167,6 +169,8 @@ class SignalTestSuite(PaymentsTestCase):
             "en": [{"title": "AI", "description": "English description"}],
         }
         model = self.bc.database.create(plan=plan, plan_features={"bullets": bullets})
+        model.plan.features = model.plan_features
+        model.plan.save(update_fields=["features"])
 
         url = reverse_lazy("payments:plan_slug", kwargs={"plan_slug": model.plan.slug})
         response = self.client.get(url, HTTP_ACCEPT_LANGUAGE="es")

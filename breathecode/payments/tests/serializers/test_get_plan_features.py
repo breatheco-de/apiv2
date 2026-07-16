@@ -20,6 +20,8 @@ def test_get_features_returns_language_list(database):
         "es": [{"title": "IA", "description": "Descripcion en espanol"}],
     }
     model = database.create(plan=1, plan_features={"bullets": bullets})
+    model.plan.features = model.plan_features
+    model.plan.save(update_fields=["features"])
 
     data_es = GetPlanSerializer(model.plan, many=False, lang="es").data
     data_en = GetPlanSerializer(model.plan, many=False, lang="en").data
@@ -33,6 +35,8 @@ def test_get_features_falls_back_to_en(database):
         "en": [{"title": "AI", "description": "English description"}],
     }
     model = database.create(plan=1, plan_features={"bullets": bullets})
+    model.plan.features = model.plan_features
+    model.plan.save(update_fields=["features"])
 
     data = GetPlanSerializer(model.plan, many=False, lang="es").data
 

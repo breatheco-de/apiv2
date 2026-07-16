@@ -1220,6 +1220,15 @@ class Plan(AbstractPriceByTime):
 
     invites = models.ManyToManyField(UserInvite, blank=True, help_text="Plan's invites", related_name="plans")
 
+    features = models.ForeignKey(
+        "PlanFeatures",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="plans",
+        help_text="Shared checkout marketing bullets; multiple plans may reuse the same PlanFeatures",
+    )
+
     def __str__(self) -> str:
         return self.slug
 
@@ -1293,17 +1302,11 @@ class PlanTranslation(models.Model):
 
 
 class PlanFeatures(models.Model):
-    """Marketing checkout bullets for a plan, stored as a JSON map of language → list of {title, description}."""
+    """Marketing checkout bullets shared by one or more plans (JSON map of language → list of {title, description})."""
 
     if TYPE_CHECKING:
         objects: TypedManager["PlanFeatures"]
 
-    plan = models.OneToOneField(
-        Plan,
-        on_delete=models.CASCADE,
-        related_name="features",
-        help_text="Plan these checkout bullets belong to",
-    )
     bullets = models.JSONField(
         default=dict,
         blank=True,
@@ -1311,7 +1314,14 @@ class PlanFeatures(models.Model):
     )
 
     def __str__(self) -> str:
-        return f"PlanFeatures({self.plan.slug})"
+        slugs = list(self.plans.values_list("slug", flat=True)[:3])
+        if slugs:
+            suffix = ", ".join(slugs)
+            extra = self.plans.count() - len(slugs)
+            if extra > 0:
+                suffix = f"{suffix}, +{extra}"
+            return f"PlanFeatures({self.id}: {suffix})"
+        return f"PlanFeatures({self.id})"
 
 
 class PlanOffer(models.Model):

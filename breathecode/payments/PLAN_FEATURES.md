@@ -1,18 +1,21 @@
-# PlanFeatures: cómo agregar bullets de checkout a un plan
+# PlanFeatures: brief para el admin (IA / frontend)
 
-Documento operativo para una IA (o un operador) que deba cargar o editar los **features/bullets** de un plan en el checkout de 4Geeks.
+Documento operativo para implementar el flujo de **plan features** en el admin de 4Geeks. Un mismo `PlanFeatures` puede compartirse entre muchos planes; cada plan tiene como máximo uno.
 
-## Qué es
+## Modelo mental
 
-`PlanFeatures` es un modelo OneToOne con `Plan`. Guarda un JSON multi-idioma con los bullets que se muestran en el accordion del checkout.
+- `PlanFeatures` guarda el JSON multi-idioma `bullets` (accordion del checkout).
+- `Plan.features` es un ForeignKey opcional a `PlanFeatures`.
+- Varios planes pueden apuntar al mismo registro → editar `bullets` afecta a **todos** esos planes.
+- Acceso: `plan.features` / `plan_features.plans`.
 
-- **Modelo:** `breathecode.payments.models.PlanFeatures`
-- **Admin Django:** `Payments → Plan features` (también inline dentro del plan)
-- **API escritura (recomendada para IA/ops):** `PUT /v1/payments/academy/plan/{id|slug}/features`
-- **API lectura pública en checkout:** `GET /v1/payments/plan/{slug}` → campo `features` (lista ya filtrada por idioma)
-- **Frontend:** prioriza `plan.features`. Si viene vacío/`null`, usa legacy (JSON en `/locales/{lang}/plans/{slug}.json` o `GET /serviceitem?plan=`).
+```text
+Plan A ──┐
+Plan B ──┼──► PlanFeatures #1 (bullets compartidos)
+Plan C ──────► PlanFeatures #2 (único)
+```
 
-## Formato obligatorio del JSON (`bullets`)
+## Formato de `bullets` (obligatorio)
 
 ```json
 {
@@ -29,101 +32,206 @@ Documento operativo para una IA (o un operador) que deba cargar o editar los **f
 
 Reglas:
 
-- Claves de idioma: al menos `en` y `es` cuando el plan se venda en ambos idiomas.
-- Cada bullet: solo `title` y `description` (strings o `null`).
+- Claves = códigos de idioma (`en`, `es`, …).
+- Cada item: solo `title` y `description` (string o `null`).
 - **No** uses la estructura legacy con `service` / `features[]`.
-- Un plan = un solo registro `PlanFeatures` (OneToOne). El PUT hace upsert.
 
-## Cómo hacerlo con la API (recomendado para IAs)
+## Flujo UX del admin (implementar esto)
 
-### PUT upsert
+### 1. Entrar a plan features de un plan
 
-```http
-PUT /v1/payments/academy/plan/{plan_id}/features
-# o
-PUT /v1/payments/academy/plan/{plan_slug}/features
-```
+Al abrir features de un plan:
 
-Headers:
+1. `GET /v1/payments/academy/plan/{id|slug}/features`
+2. Si `200` → el plan ya tiene features; mostrar editor con `bullets` y la lista `plans`.
+3. Si `404` (`plan-features-not-found`) → el plan no tiene features; ofrecer:
+   - **Crear nuevo**
+   - **Reutilizar uno existente**
 
-- `Authorization: Token <token>` o sesión autenticada
-- `Academy: <academy_id>`
-- `Content-Type: application/json`
-
-Permiso: `crud_subscription` en esa academy.
+### 2. Crear nuevo
 
 Body:
 
 ```json
+{ "bullets": { "en": [...], "es": [...] } }
+```
+
+o forzar creación aunque ya tenga uno:
+
+```json
+{ "bullets": { "en": [...], "es": [...] }, "mode": "create" }
+```
+
+`PUT /v1/payments/academy/plan/{id|slug}/features`
+
+### 3. Reutilizar existente
+
+1. Cargar catálogo: `GET /v1/payments/academy/planfeatures`
+2. El usuario elige un item de la lista.
+3. Adjuntar al plan actual:
+
+```json
+{ "plan_features_id": 5 }
+```
+
+`PUT /v1/payments/academy/plan/{id|slug}/features`
+
+Eso añade el plan actual a `plans` de ese `PlanFeatures` (no copia el JSON; lo comparte).
+
+### 4. Editar features compartidos (warning obligatorio)
+
+Antes de guardar cambios al JSON:
+
+1. Mira `plans` del GET (o del catálogo).
+2. Si hay **más de un plan** (o cualquier otro plan distinto al actual), muestra un **warning**:
+
+> Vas a modificar los features de los siguientes planes: `{lista de slugs}`. ¿Seguro?
+
+3. Si el usuario confirma → guardar sobre el registro compartido:
+
+```json
+{ "bullets": { "en": [...], "es": [...] } }
+```
+
+`PUT /v1/payments/academy/plan/{id|slug}/features`
+
+Esto actualiza el mismo `PlanFeatures` y afecta a todos los planes en `plans`.
+
+### 5. Opción en el warning: crear features únicos para este plan (fork)
+
+En el mismo warning, ofrecer:
+
+> Crear un plan features único solo para este plan (con los cambios actuales)
+
+Si el usuario elige esa opción:
+
+```json
 {
-  "bullets": {
-    "en": [
-      { "title": "Feature one", "description": "Short description in English." }
-    ],
-    "es": [
-      { "title": "Feature uno", "description": "Descripcion corta en espanol." }
-    ]
-  }
+  "bullets": { "en": [...], "es": [...] },
+  "fork": true
 }
+```
+
+`PUT /v1/payments/academy/plan/{id|slug}/features`
+
+Efecto:
+
+- Se crea un **nuevo** `PlanFeatures` con esos `bullets`.
+- Solo el plan actual apunta al nuevo registro.
+- Los demás planes siguen con el `PlanFeatures` anterior (sin los cambios).
+
+## API (resumen)
+
+Headers comunes:
+
+- `Authorization: Token <token>` (o sesión)
+- `Academy: <academy_id>`
+- `Content-Type: application/json`
+
+Permisos:
+
+- Lectura: `read_subscription`
+- Escritura: `crud_subscription`
+
+### Catálogo (reutilizar)
+
+```http
+GET /v1/payments/academy/planfeatures
 ```
 
 Respuesta `200`:
 
 ```json
+[
+  {
+    "id": 1,
+    "bullets": { "en": [...], "es": [...] },
+    "plans": [
+      { "id": 12, "slug": "full-stack-development" },
+      { "id": 15, "slug": "full-stack-development-2" }
+    ]
+  }
+]
+```
+
+### Features de un plan
+
+```http
+GET /v1/payments/academy/plan/{id|slug}/features
+PUT /v1/payments/academy/plan/{id|slug}/features
+```
+
+Respuesta `200` (GET y PUT):
+
+```json
 {
   "id": 1,
-  "plan": 12,
-  "plan_slug": "full-stack-development",
-  "bullets": { "en": [...], "es": [...] }
+  "bullets": { "en": [...], "es": [...] },
+  "plans": [
+    { "id": 12, "slug": "full-stack-development" }
+  ]
 }
 ```
 
-### GET bullets completos (admin)
+### Modos del PUT
+
+| Intención | Body | Efecto |
+|-----------|------|--------|
+| Crear (plan sin features) | `{ "bullets": {...} }` | Crea `PlanFeatures` y lo asigna |
+| Crear forzado | `{ "bullets": {...}, "mode": "create" }` | Siempre crea uno nuevo y reasigna este plan |
+| Reutilizar | `{ "plan_features_id": <id> }` | Asigna el existente a este plan |
+| Editar compartido | `{ "bullets": {...} }` (plan ya tiene features, sin fork) | Actualiza `bullets` de todos los planes enlazados |
+| Fork / único | `{ "bullets": {...}, "fork": true }` | Nuevo registro solo para este plan |
+
+No envíes `plan_features_id` y `bullets` a la vez.
+
+## Lectura pública (checkout)
 
 ```http
-GET /v1/payments/academy/plan/{plan_id}/features
+GET /v1/payments/plan/{slug}
+Accept-Language: es
 ```
 
-Permiso: `read_subscription`. Devuelve el JSON multi-idioma completo.  
-Si el plan no tiene `PlanFeatures` → `404` (`plan-features-not-found`).
+Campo `features`: lista ya filtrada por idioma, o `null` si el plan no tiene `PlanFeatures` / lista vacía.
 
-## Cómo hacerlo desde Django Admin
+Ejemplo:
 
-### Opción A — desde el plan
+```json
+{
+  "slug": "full-stack-development",
+  "features": [
+    { "title": "Feedback con IA", "description": "..." }
+  ]
+}
+```
 
-1. Abre Django Admin de 4Geeks (API / breathecode).
-2. Ve a **Payments → Plans**.
-3. Abre el plan por **slug**.
-4. Baja al inline **Plan features**.
-5. Pega el JSON en **Bullets** y guarda.
+El contrato público **no** incluye `plans`; eso es solo admin.
 
-### Opción B — desde Plan features
+## Checklist de implementación admin
 
-1. Ve a **Payments → Plan features**.
-2. Crea o edita el registro del plan.
-3. Pega el JSON en **Bullets** y guarda.
-
-## Verificación rápida
-
-1. `GET /v1/payments/plan/{slug}` con `Accept-Language: es` → `features` = array `es`.
-2. Mismo request con `Accept-Language: en` → `features` = array `en`.
-3. Si no hay `PlanFeatures` o la lista del idioma está vacía → `features` es `null` (checkout legacy).
-4. Abre el checkout del plan y confirma el accordion (title + description).
+1. Pantalla plan features: crear nuevo **o** reutilizar (catálogo).
+2. Al reutilizar: `PUT` con `plan_features_id`.
+3. Al editar: warning con slugs de `plans` si hay más de este plan.
+4. Confirmar warning → `PUT` con `bullets` (edición compartida).
+5. En el warning: acción secundaria “crear únicos para este plan” → `PUT` con `bullets` + `fork: true`.
+6. Verificar en checkout / `GET /v1/payments/plan/{slug}` que `features` refleja el idioma.
 
 ## Errores comunes
 
 | Error | Causa | Qué hacer |
 |--------|--------|-----------|
-| `401/403` en PUT | Sin auth o sin `crud_subscription` | Autenticar y enviar header `Academy` |
-| `404 not-found` | Plan no existe o no pertenece a la academy | Usar id/slug correcto |
-| `400 invalid-bullets-format` | `bullets` no es un objeto | Enviar `{ "en": [...], "es": [...] }` |
-| Checkout sigue con bullets viejos | `features` aún es null en el GET público | Confirmar que el PUT guardó y `GET plan/{slug}` ya trae `features` |
+| `401/403` | Sin auth o sin permiso / header `Academy` | Autenticar y enviar `Academy` |
+| `404 not-found` | Plan inexistente o fuera de la academy | Revisar id/slug |
+| `404 plan-features-not-found` | Plan sin features (GET) o `plan_features_id` inválido | Crear o elegir otro id |
+| `400 invalid-bullets-format` | `bullets` no es objeto | Enviar `{ "en": [...], "es": [...] }` |
+| `400 plan-features-conflicting-payload` | `plan_features_id` y `bullets` juntos | Enviar solo uno de los dos |
+| `400 plan-features-missing-payload` | Body vacío | Enviar `plan_features_id` o `bullets` |
 
-## Referencias de código
+## Referencias de código (backend)
 
-- Modelo: `apiv2/breathecode/payments/models.py` → `PlanFeatures`
-- Vista: `apiv2/breathecode/payments/views.py` → `AcademyPlanFeaturesView`
+- Modelo: `apiv2/breathecode/payments/models.py` → `Plan.features`, `PlanFeatures`
+- Vista plan: `AcademyPlanFeaturesView`
+- Catálogo: `AcademyPlanFeaturesListView`
 - Serializer write: `PutPlanFeaturesSerializer`
-- Serializer read (checkout): `GetPlanSerializer.get_features`
-- URLs: `academy/plan/<id|slug>/features`
-- Frontend: `app/src/hooks/useSignup.js` → `resolveCheckoutFeaturedInfo`
+- Serializer público: `GetPlanSerializer.get_features`
+- URLs: `academy/planfeatures`, `academy/plan/<id|slug>/features`

@@ -124,13 +124,6 @@ class PlanFeaturesForm(forms.ModelForm):
         }
 
 
-class PlanFeaturesInline(admin.StackedInline):
-    model = PlanFeatures
-    form = PlanFeaturesForm
-    extra = 0
-    max_num = 1
-
-
 class PlanOfferInline(admin.StackedInline):
     model = PlanOffer
     fk_name = "original_plan"
@@ -187,6 +180,7 @@ def duplicate_plans(modeladmin, request, queryset):
                 mentorship_service_set=original_plan.mentorship_service_set,
                 event_type_set=original_plan.event_type_set,
                 pricing_ratio_exceptions=original_plan.pricing_ratio_exceptions,
+                features=original_plan.features,
             )
             new_plan.save()
 
@@ -260,6 +254,7 @@ class PlanAdmin(admin.ModelAdmin):
         "cohort_set",
         "mentorship_service_set",
         "event_type_set",
+        "features",
     ]
     filter_horizontal = ("financing_options", "add_ons", "plan_addons")
     list_select_related = ("owner",)
@@ -323,6 +318,7 @@ class PlanAdmin(admin.ModelAdmin):
             "Relations",
             {
                 "fields": (
+                    "features",
                     "financing_options",
                     "add_ons",
                     "plan_addons",
@@ -339,7 +335,7 @@ class PlanAdmin(admin.ModelAdmin):
         ),
     )
 
-    inlines = [PlanServiceItemInline, PlanTranslationInline, PlanFeaturesInline, PlanOfferInline]
+    inlines = [PlanServiceItemInline, PlanTranslationInline, PlanOfferInline]
 
 
 @admin.register(PlanTranslation)
@@ -352,9 +348,25 @@ class PlanTranslationAdmin(admin.ModelAdmin):
 @admin.register(PlanFeatures)
 class PlanFeaturesAdmin(admin.ModelAdmin):
     form = PlanFeaturesForm
-    list_display = ("id", "plan")
-    search_fields = ["plan__slug", "plan__title"]
-    autocomplete_fields = ("plan",)
+    list_display = ("id", "plans_count", "plans_slugs")
+    search_fields = ["plans__slug", "plans__title"]
+
+    def plans_count(self, obj):
+        return obj.plans.count()
+
+    plans_count.short_description = "Plans"
+
+    def plans_slugs(self, obj):
+        slugs = list(obj.plans.values_list("slug", flat=True)[:5])
+        if not slugs:
+            return "—"
+        extra = obj.plans.count() - len(slugs)
+        label = ", ".join(slugs)
+        if extra > 0:
+            label = f"{label}, +{extra}"
+        return label
+
+    plans_slugs.short_description = "Plan slugs"
 
 
 def grant_service_permissions(modeladmin, request, queryset):
