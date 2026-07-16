@@ -72,8 +72,14 @@ class Command(BaseCommand):
                     completed_tasks += 1
                     updated_tasks += 1
             else:
-                # Mark as pending
                 for task in asset_tasks:
+                    if task.task_status == Task.TaskStatus.DONE:
+                        self.stdout.write(
+                            f"Skipping task {task.id} ({task.title}) already DONE - "
+                            f"completion rate: {telemetry.completion_rate}%"
+                        )
+                        continue
+
                     if dry_run:
                         self.stdout.write(
                             f"Would mark task {task.id} ({task.title}) as PENDING - "
