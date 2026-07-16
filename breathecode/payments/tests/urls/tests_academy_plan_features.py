@@ -38,7 +38,10 @@ class AcademyPlanFeaturesTestSuite(PaymentsTestCase):
         json = response.json()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(json["bullets"], bullets)
-        self.assertEqual(json["plans"], [{"id": model.plan.id, "slug": model.plan.slug}])
+        self.assertEqual(
+            json["plans"],
+            [{"id": model.plan.id, "slug": model.plan.slug, "owner_id": model.plan.owner_id}],
+        )
         self.assertEqual(
             self.bc.database.list_of("payments.PlanFeatures"),
             [
@@ -112,8 +115,11 @@ class AcademyPlanFeaturesTestSuite(PaymentsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(json["id"], model.plan_features.id)
         self.assertEqual(
-            {(p["id"], p["slug"]) for p in json["plans"]},
-            {(plan_a.id, plan_a.slug), (plan_b.id, plan_b.slug)},
+            {(p["id"], p["slug"], p["owner_id"]) for p in json["plans"]},
+            {
+                (plan_a.id, plan_a.slug, plan_a.owner_id),
+                (plan_b.id, plan_b.slug, plan_b.owner_id),
+            },
         )
         plan_b.refresh_from_db()
         self.assertEqual(plan_b.features_id, model.plan_features.id)
@@ -152,7 +158,10 @@ class AcademyPlanFeaturesTestSuite(PaymentsTestCase):
         json = response.json()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(json["bullets"], bullets_forked)
-        self.assertEqual(json["plans"], [{"id": plan_b.id, "slug": plan_b.slug}])
+        self.assertEqual(
+            json["plans"],
+            [{"id": plan_b.id, "slug": plan_b.slug, "owner_id": plan_b.owner_id}],
+        )
         self.assertNotEqual(json["id"], model.plan_features.id)
         self.assertEqual(PlanFeatures.objects.count(), 2)
 
@@ -237,7 +246,80 @@ class AcademyPlanFeaturesTestSuite(PaymentsTestCase):
         json = response.json()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(json["bullets"], bullets)
-        self.assertEqual(json["plans"], [{"id": model.plan.id, "slug": model.plan.slug}])
+        self.assertEqual(
+            json["plans"],
+            [{"id": model.plan.id, "slug": model.plan.slug, "owner_id": model.plan.owner_id}],
+        )
+
+    def test__get__allows_plan_from_another_academy(self):
+        bullets = {"en": [{"title": "AI", "description": "English description"}]}
+        model = self.bc.database.create(
+            academy=2,
+            plan={
+                "time_of_life": None,
+                "time_of_life_unit": None,
+                "is_renewable": True,
+                "owner_id": 2,
+            },
+            plan_features={"bullets": bullets},
+            user=1,
+            capability="read_subscription",
+            role=1,
+            profile_academy={"academy_id": 1},
+            skip_cohort=True,
+        )
+        model.plan.features = model.plan_features
+        model.plan.save(update_fields=["features"])
+
+        self.client.force_authenticate(model.user)
+        self.bc.request.set_headers(academy=1)
+
+        url = reverse_lazy("payments:academy_plan_slug_features", kwargs={"plan_slug": model.plan.slug})
+        response = self.client.get(url)
+
+        json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(json["id"], model.plan_features.id)
+        self.assertEqual(json["bullets"], bullets)
+        self.assertEqual(
+            json["plans"],
+            [{"id": model.plan.id, "slug": model.plan.slug, "owner_id": 2}],
+        )
+
+    def test__put__attach_plan_features_to_plan_from_another_academy(self):
+        bullets = {"en": [{"title": "Shared", "description": "Shared desc"}]}
+        model = self.bc.database.create(
+            academy=2,
+            plan={
+                "time_of_life": None,
+                "time_of_life_unit": None,
+                "is_renewable": True,
+                "owner_id": 2,
+            },
+            plan_features={"bullets": bullets},
+            user=1,
+            capability="crud_subscription",
+            role=1,
+            profile_academy={"academy_id": 1},
+            skip_cohort=True,
+        )
+
+        self.client.force_authenticate(model.user)
+        self.bc.request.set_headers(academy=1)
+
+        url = reverse_lazy("payments:academy_plan_id_features", kwargs={"plan_id": model.plan.id})
+        response = self.client.put(
+            url,
+            data={"plan_features_id": model.plan_features.id},
+            format="json",
+        )
+
+        json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(json["id"], model.plan_features.id)
+        model.plan.refresh_from_db()
+        self.assertEqual(model.plan.features_id, model.plan_features.id)
+        self.assertEqual(model.plan.owner_id, 2)
 
     def test__get__not_found_without_plan_features(self):
         model = self.bc.database.create(
@@ -283,4 +365,7 @@ class AcademyPlanFeaturesTestSuite(PaymentsTestCase):
         self.assertEqual(len(json), 1)
         self.assertEqual(json[0]["id"], model.plan_features.id)
         self.assertEqual(json[0]["bullets"], bullets)
-        self.assertEqual(json[0]["plans"], [{"id": model.plan.id, "slug": model.plan.slug}])
+        self.assertEqual(
+            json[0]["plans"],
+            [{"id": model.plan.id, "slug": model.plan.slug, "owner_id": model.plan.owner_id}],
+        )

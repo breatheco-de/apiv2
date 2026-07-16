@@ -147,8 +147,8 @@ Respuesta `200`:
     "id": 1,
     "bullets": { "en": [...], "es": [...] },
     "plans": [
-      { "id": 12, "slug": "full-stack-development" },
-      { "id": 15, "slug": "full-stack-development-2" }
+      { "id": 12, "slug": "full-stack-development", "owner_id": 4 },
+      { "id": 15, "slug": "full-stack-development-2", "owner_id": 9 }
     ]
   }
 ]
@@ -168,9 +168,11 @@ Respuesta `200` (GET y PUT):
   "id": 1,
   "bullets": { "en": [...], "es": [...] },
   "plans": [
-    { "id": 12, "slug": "full-stack-development" }
+    { "id": 12, "slug": "full-stack-development", "owner_id": 4 }
   ]
 }
+
+`owner_id` identifies the academy that owns each linked plan (`null` = global plan). Features can be attached to plans from any academy.
 ```
 
 ### Modos del PUT
@@ -221,7 +223,7 @@ El contrato público **no** incluye `plans`; eso es solo admin.
 | Error | Causa | Qué hacer |
 |--------|--------|-----------|
 | `401/403` | Sin auth o sin permiso / header `Academy` | Autenticar y enviar `Academy` |
-| `404 not-found` | Plan inexistente o fuera de la academy | Revisar id/slug |
+| `404 not-found` | Plan inexistente o `DELETED` | Revisar id/slug (features aceptan planes de cualquier academia) |
 | `404 plan-features-not-found` | Plan sin features (GET) o `plan_features_id` inválido | Crear o elegir otro id |
 | `400 invalid-bullets-format` | `bullets` no es objeto | Enviar `{ "en": [...], "es": [...] }` |
 | `400 plan-features-conflicting-payload` | `plan_features_id` y `bullets` juntos | Enviar solo uno de los dos |

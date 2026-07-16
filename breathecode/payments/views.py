@@ -375,7 +375,10 @@ class AcademyPlanView(APIView):
 class AcademyPlanFeaturesView(APIView):
     """
     GET: Return PlanFeatures for a plan (full multi-language bullets + plans sharing it).
-    PUT: Create, attach, update or fork PlanFeatures for a plan owned by the academy (or owner=None).
+    PUT: Create, attach, update or fork PlanFeatures for any plan (any academy).
+
+    PlanFeatures are global marketing bullets: they can be linked to plans across academies.
+    The Academy header is only required for staff capability checks, not for plan ownership.
 
     PUT body modes:
       - {"bullets": {...}}                         → create if plan has none, else update shared
@@ -386,10 +389,7 @@ class AcademyPlanFeaturesView(APIView):
 
     def _get_plan(self, academy_id, plan_id=None, plan_slug=None, lang="en"):
         plan = (
-            Plan.objects.filter(
-                Q(id=plan_id) | Q(slug=plan_slug, slug__isnull=False),
-                Q(owner__id=academy_id) | Q(owner=None),
-            )
+            Plan.objects.filter(Q(id=plan_id) | Q(slug=plan_slug, slug__isnull=False))
             .exclude(status="DELETED")
             .first()
         )
@@ -401,7 +401,7 @@ class AcademyPlanFeaturesView(APIView):
         return plan
 
     def _serialize(self, plan_features: PlanFeatures) -> dict[str, Any]:
-        plans = list(plan_features.plans.order_by("id").values("id", "slug"))
+        plans = list(plan_features.plans.order_by("id").values("id", "slug", "owner_id"))
         return {
             "id": plan_features.id,
             "bullets": plan_features.bullets or {},
@@ -440,7 +440,7 @@ class AcademyPlanFeaturesView(APIView):
 
 
 class AcademyPlanFeaturesListView(APIView):
-    """GET: Catalog of PlanFeatures available to reuse (id, bullets, plans)."""
+    """GET: Global catalog of PlanFeatures available to reuse (id, bullets, plans)."""
 
     @capable_of("read_subscription")
     def get(self, request, academy_id=None):
@@ -449,7 +449,7 @@ class AcademyPlanFeaturesListView(APIView):
             {
                 "id": item.id,
                 "bullets": item.bullets or {},
-                "plans": list(item.plans.order_by("id").values("id", "slug")),
+                "plans": list(item.plans.order_by("id").values("id", "slug", "owner_id")),
             }
             for item in items
         ]
