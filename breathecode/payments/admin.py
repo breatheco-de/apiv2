@@ -116,12 +116,24 @@ class PlanTranslationInline(admin.StackedInline):
 
 
 class PlanFeaturesForm(forms.ModelForm):
+    linked_plans = forms.ModelMultipleChoiceField(
+        queryset=Plan.objects.exclude(status="DELETED").order_by("slug"),
+        required=False,
+        widget=admin.widgets.FilteredSelectMultiple("plans", is_stacked=False),
+        help_text="Planes que comparten estos bullets. Puedes asignar varios al mismo PlanFeatures.",
+    )
+
     class Meta:
         model = PlanFeatures
-        fields = "__all__"
+        fields = ("bullets",)
         widgets = {
             "bullets": PrettyJSONWidget(),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            self.fields["linked_plans"].initial = self.instance.plans.all()
 
 
 class PlanOfferInline(admin.StackedInline):
@@ -350,6 +362,11 @@ class PlanFeaturesAdmin(admin.ModelAdmin):
     form = PlanFeaturesForm
     list_display = ("id", "plans_count", "plans_slugs")
     search_fields = ["plans__slug", "plans__title"]
+    fields = ("bullets", "linked_plans")
+
+    class Media:
+        css = {"all": ("admin/css/widgets.css",)}
+        js = ("admin/js/core.js", "admin/js/SelectBox.js", "admin/js/SelectFilter2.js")
 
     def plans_count(self, obj):
         return obj.plans.count()
@@ -367,6 +384,19 @@ class PlanFeaturesAdmin(admin.ModelAdmin):
         return label
 
     plans_slugs.short_description = "Plan slugs"
+
+    def save_related(self, request, form, formsets, change):
+        super().save_related(request, form, formsets, change)
+        plan_features = form.instance
+        selected = form.cleaned_data.get("linked_plans")
+        if selected is None:
+            return
+
+        selected_ids = {plan.id for plan in selected}
+        # Unlink plans removed from the dual selector
+        plan_features.plans.exclude(id__in=selected_ids).update(features=None)
+        # Link (or move) selected plans onto this PlanFeatures
+        Plan.objects.filter(id__in=selected_ids).update(features=plan_features)
 
 
 def grant_service_permissions(modeladmin, request, queryset):
