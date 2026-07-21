@@ -99,7 +99,10 @@ def send_email_message(template_slug, to, data=None, force=False, inline_css=Fal
     if academy and hasattr(academy, 'notify_settings'):
         try:
             settings = academy.notify_settings
-            overrides = settings.get_all_overrides_for_template(template_slug)
+            lang = None
+            if isinstance(data, dict):
+                lang = data.get("LANG") or data.get("lang")
+            overrides = settings.get_all_overrides_for_template(template_slug, lang=lang)
             # Academy overrides take priority over code defaults
             data.update(overrides)
         except Exception as e:
