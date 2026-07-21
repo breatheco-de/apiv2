@@ -30,6 +30,49 @@ except ImportError:
     EmailManager = None
     logger.warning("EmailManager not available, template validation disabled")
 
+VERIFY_EMAIL_VARIANT_KEYS = {
+    "event": ("SUBJECT_EVENT", "MESSAGE_EVENT"),
+    "asset": ("SUBJECT_ASSET", "MESSAGE_ASSET"),
+    "course": ("SUBJECT_COURSE", "MESSAGE_COURSE"),
+    "cohort": ("SUBJECT_COHORT", "MESSAGE_COHORT"),
+    "generic": ("SUBJECT", "MESSAGE"),
+}
+
+
+def apply_verify_email_variant(data: dict) -> dict:
+    """
+    After academy overrides, pick SUBJECT/MESSAGE for the active verify_email
+    CONTEXT_TYPE and interpolate {CONTEXT_NAME}.
+    """
+    if not data:
+        return data
+
+    context_type = data.get("CONTEXT_TYPE")
+    if not context_type:
+        return data
+
+    subject_key, message_key = VERIFY_EMAIL_VARIANT_KEYS.get(context_type, ("SUBJECT", "MESSAGE"))
+    context_name = data.get("CONTEXT_NAME") or ""
+
+    if context_type == "generic":
+        # Academy overrides use lowercase "subject" (registry convention)
+        subject = data.get("subject") or data.get("SUBJECT")
+        message = data.get("MESSAGE")
+    else:
+        subject = data.get(subject_key) or data.get("SUBJECT") or data.get("subject")
+        message = data.get(message_key) or data.get("MESSAGE")
+
+    if subject:
+        subject = str(subject).replace("{CONTEXT_NAME}", str(context_name))
+        data["SUBJECT"] = subject
+        data["subject"] = subject
+
+    if message:
+        message = str(message).replace("{CONTEXT_NAME}", str(context_name))
+        data["MESSAGE"] = message
+
+    return data
+
 
 def send_email_message(template_slug, to, data=None, force=False, inline_css=False, academy=None):
 
@@ -61,6 +104,10 @@ def send_email_message(template_slug, to, data=None, force=False, inline_css=Fal
             data.update(overrides)
         except Exception as e:
             logger.warning(f"Failed to apply academy overrides for {template_slug}: {e}")
+
+    # Resolve contextual verify_email SUBJECT/MESSAGE after overrides
+    if template_slug == "verify_email":
+        apply_verify_email_variant(data)
 
     # Optional: Log if template is not in registry (helps with future migration)
     if EmailManager is not None:
