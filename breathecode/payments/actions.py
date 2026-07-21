@@ -1727,6 +1727,38 @@ def get_bag_from_subscription(
     return bag
 
 
+def preview_subscription_renewal_amount(
+    subscription: Subscription, settings: Optional[UserSetting] = None, lang: Optional[str] = None
+) -> Optional[float]:
+    """
+    Compute the amount that would be charged on the next subscription renewal
+    without persisting any Bag or related side effects.
+
+    Uses the same pricing path as charge_subscription / renew, but rolls back
+    the transaction so GET me/subscription does not create orphan RENEWAL bags.
+    """
+    try:
+        with transaction.atomic():
+            if not lang and not settings:
+                settings = get_user_settings(subscription.user.id)
+                lang = settings.lang
+            elif settings and not lang:
+                lang = settings.lang
+            elif not lang:
+                lang = "en"
+
+            bag = get_bag_from_subscription(subscription, settings=settings, lang=lang)
+            amount = get_amount_by_chosen_period(bag, bag.chosen_period, lang)
+            coupons = list(bag.coupons.all())
+            if coupons:
+                amount = get_discounted_price(amount, coupons)
+
+            transaction.set_rollback(True)
+            return float(amount)
+    except Exception:
+        return None
+
+
 def get_bag_from_plan_financing(plan_financing: PlanFinancing, settings: Optional[UserSetting] = None) -> Bag:
     bag = Bag()
 

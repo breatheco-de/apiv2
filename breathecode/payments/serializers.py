@@ -1434,7 +1434,24 @@ class GetSubscriptionSerializer(GetAbstractIOweYouSerializer):
     pay_every = serpy.Field()
     pay_every_unit = serpy.Field()
 
+    currency = serpy.MethodField()
+    next_renewal_amount = serpy.MethodField()
     service_items = serpy.MethodField()
+
+    def get_currency(self, obj):
+        currency = obj.currency
+        if currency is None:
+            last_invoice = obj.invoices.order_by("-paid_at").first()
+            if last_invoice:
+                currency = last_invoice.currency
+        if currency is None:
+            return None
+        return GetCurrencySmallSerializer(currency, many=False).data
+
+    def get_next_renewal_amount(self, obj):
+        from breathecode.payments.actions import preview_subscription_renewal_amount
+
+        return preview_subscription_renewal_amount(obj)
 
     def get_service_items(self, obj):
         return GetServiceItemSerializer(obj.service_items.filter(), many=True).data
