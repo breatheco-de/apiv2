@@ -1639,8 +1639,18 @@ def get_amount_by_chosen_period(bag: Bag, chosen_period: str, lang: str) -> floa
 
 
 def get_bag_from_subscription(
-    subscription: Subscription, settings: Optional[UserSetting] = None, lang: Optional[str] = None
+    subscription: Subscription,
+    settings: Optional[UserSetting] = None,
+    lang: Optional[str] = None,
+    coupons_as_of: Optional[datetime] = None,
 ) -> Bag:
+    """
+    Build a RENEWAL bag from an existing subscription.
+
+    coupons_as_of: optional moment used to decide if subscription coupons are still
+    valid for this charge. Defaults to now (actual renew / charge_subscription).
+    Pass subscription.next_payment_at when previewing the upcoming scheduled charge.
+    """
     bag = Bag()
 
     if not lang and not settings:
@@ -1682,13 +1692,11 @@ def get_bag_from_subscription(
         service_item = handler.service_item
         bag.service_items.add(service_item)
 
-    # Add coupons from the subscription that will still be valid on the next charge.
-    # Coupons already on the subscription persist for renewals (see COUPONS.md): do not
-    # re-check how_many_offers — that limit applies to acquiring new purchases, not renewals.
-    # Expiration is evaluated against next_payment_at so a coupon that expires before the
-    # next charge is excluded from that renewal amount.
+    # Coupons already on the subscription persist for renewals (see COUPONS.md):
+    # do not re-check how_many_offers — that limit applies to acquiring new purchases.
+    # Expiration is evaluated at coupons_as_of (now for real charges, next_payment_at for previews).
     utc_now = timezone.now()
-    as_of = subscription.next_payment_at or utc_now
+    as_of = coupons_as_of or utc_now
 
     subscription_coupons = list(
         subscription.coupons.filter(Q(expires_at__isnull=True) | Q(expires_at__gte=as_of))
@@ -1756,7 +1764,13 @@ def preview_subscription_renewal_amount(
             elif not lang:
                 lang = "en"
 
-            bag = get_bag_from_subscription(subscription, settings=settings, lang=lang)
+            bag = get_bag_from_subscription(
+                subscription,
+                settings=settings,
+                lang=lang,
+                # Preview the scheduled charge: coupon must still be valid on that date.
+                coupons_as_of=subscription.next_payment_at,
+            )
             amount = get_amount_by_chosen_period(bag, bag.chosen_period, lang)
             coupons = list(bag.coupons.all())
             if coupons:
