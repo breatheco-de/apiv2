@@ -774,8 +774,8 @@ def get_verify_email_copy(invite: UserInvite, lang: str = "en") -> dict[str, Any
     )
     message_asset = translation(
         lang,
-        en='To open "{CONTEXT_NAME}", set a password and validate your 4Geeks account.',
-        es='Para aprender "{CONTEXT_NAME}", crea una contraseña y valida tu cuenta de 4Geeks.',
+        en='To access more content like "{CONTEXT_NAME}", set a password and validate your 4Geeks account.',
+        es='Para acceder a mas contenido como "{CONTEXT_NAME}", crea una contraseña y valida tu cuenta de 4Geeks.',
     )
     subject_course = translation(
         lang,
