@@ -338,7 +338,7 @@ def render_preview_html(request, asset_slug):
     )
 
     # Set Content-Security-Policy header
-    response["Content-Security-Policy"] = "frame-ancestors 'self' https://4geeks.com"
+    response["Content-Security-Policy"] = "frame-ancestors 'self' https://learn.4geeks.com"
 
     return response
 

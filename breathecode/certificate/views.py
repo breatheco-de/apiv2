@@ -57,14 +57,10 @@ class AcademySpecialtiesView(APIView, GenerateLookupsMixin):
     def get(self, request, academy_id=None):
         handler = self.extensions(request)
 
-        # Include specialties linked via syllabi owned by academy OR owned by the academy,
-        # but never specialties whose academy FK is another academy.
-        # Exclude deleted specialties
+        # Global specialties (no academy) apply to every academy; also include
+        # specialties owned by this academy. Never another academy's.
         items = (
-            Specialty.objects.filter(
-                (Q(syllabuses__academy_owner=academy_id) | Q(academy_id=academy_id))
-                & _specialty_visible_to_academy_q(academy_id)
-            )
+            Specialty.objects.filter(_specialty_visible_to_academy_q(academy_id))
             .exclude(status=Specialty.DELETED)
             .distinct()
         )
@@ -150,11 +146,7 @@ class AcademySpecialtyByIdView(APIView):
     @capable_of("read_certificate")
     def get(self, request, specialty_id, academy_id=None):
         specialty = (
-            Specialty.objects.filter(
-                Q(id=specialty_id),
-                (Q(academy_id=academy_id) | Q(syllabuses__academy_owner=academy_id))
-                & _specialty_visible_to_academy_q(academy_id),
-            )
+            Specialty.objects.filter(Q(id=specialty_id) & _specialty_visible_to_academy_q(academy_id))
             .exclude(status=Specialty.DELETED)
             .distinct()
             .first()
@@ -213,11 +205,7 @@ class AcademySpecialtySyllabusView(APIView):
     @capable_of("crud_syllabus")
     def post(self, request, specialty_id, academy_id=None):
         specialty = (
-            Specialty.objects.filter(
-                Q(id=specialty_id),
-                (Q(academy_id=academy_id) | Q(syllabuses__academy_owner=academy_id))
-                & _specialty_visible_to_academy_q(academy_id),
-            )
+            Specialty.objects.filter(Q(id=specialty_id) & _specialty_visible_to_academy_q(academy_id))
             .exclude(status=Specialty.DELETED)
             .distinct()
             .first()

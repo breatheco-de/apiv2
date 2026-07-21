@@ -116,19 +116,24 @@ class PlanTranslationInline(admin.StackedInline):
 
 
 class PlanFeaturesForm(forms.ModelForm):
+    linked_plans = forms.ModelMultipleChoiceField(
+        queryset=Plan.objects.exclude(status="DELETED").order_by("slug"),
+        required=False,
+        widget=admin.widgets.FilteredSelectMultiple("plans", is_stacked=False),
+        help_text="Planes que comparten estos bullets. Puedes asignar varios al mismo PlanFeatures.",
+    )
+
     class Meta:
         model = PlanFeatures
-        fields = "__all__"
+        fields = ("bullets",)
         widgets = {
             "bullets": PrettyJSONWidget(),
         }
 
-
-class PlanFeaturesInline(admin.StackedInline):
-    model = PlanFeatures
-    form = PlanFeaturesForm
-    extra = 0
-    max_num = 1
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            self.fields["linked_plans"].initial = self.instance.plans.all()
 
 
 class PlanOfferInline(admin.StackedInline):
@@ -187,6 +192,7 @@ def duplicate_plans(modeladmin, request, queryset):
                 mentorship_service_set=original_plan.mentorship_service_set,
                 event_type_set=original_plan.event_type_set,
                 pricing_ratio_exceptions=original_plan.pricing_ratio_exceptions,
+                features=original_plan.features,
             )
             new_plan.save()
 
@@ -260,6 +266,7 @@ class PlanAdmin(admin.ModelAdmin):
         "cohort_set",
         "mentorship_service_set",
         "event_type_set",
+        "features",
     ]
     filter_horizontal = ("financing_options", "add_ons", "plan_addons")
     list_select_related = ("owner",)
@@ -323,6 +330,7 @@ class PlanAdmin(admin.ModelAdmin):
             "Relations",
             {
                 "fields": (
+                    "features",
                     "financing_options",
                     "add_ons",
                     "plan_addons",
@@ -339,7 +347,7 @@ class PlanAdmin(admin.ModelAdmin):
         ),
     )
 
-    inlines = [PlanServiceItemInline, PlanTranslationInline, PlanFeaturesInline, PlanOfferInline]
+    inlines = [PlanServiceItemInline, PlanTranslationInline, PlanOfferInline]
 
 
 @admin.register(PlanTranslation)
@@ -352,9 +360,43 @@ class PlanTranslationAdmin(admin.ModelAdmin):
 @admin.register(PlanFeatures)
 class PlanFeaturesAdmin(admin.ModelAdmin):
     form = PlanFeaturesForm
-    list_display = ("id", "plan")
-    search_fields = ["plan__slug", "plan__title"]
-    autocomplete_fields = ("plan",)
+    list_display = ("id", "plans_count", "plans_slugs")
+    search_fields = ["plans__slug", "plans__title"]
+    fields = ("bullets", "linked_plans")
+
+    class Media:
+        css = {"all": ("admin/css/widgets.css",)}
+        js = ("admin/js/core.js", "admin/js/SelectBox.js", "admin/js/SelectFilter2.js")
+
+    def plans_count(self, obj):
+        return obj.plans.count()
+
+    plans_count.short_description = "Plans"
+
+    def plans_slugs(self, obj):
+        slugs = list(obj.plans.values_list("slug", flat=True)[:5])
+        if not slugs:
+            return "—"
+        extra = obj.plans.count() - len(slugs)
+        label = ", ".join(slugs)
+        if extra > 0:
+            label = f"{label}, +{extra}"
+        return label
+
+    plans_slugs.short_description = "Plan slugs"
+
+    def save_related(self, request, form, formsets, change):
+        super().save_related(request, form, formsets, change)
+        plan_features = form.instance
+        selected = form.cleaned_data.get("linked_plans")
+        if selected is None:
+            return
+
+        selected_ids = {plan.id for plan in selected}
+        # Unlink plans removed from the dual selector
+        plan_features.plans.exclude(id__in=selected_ids).update(features=None)
+        # Link (or move) selected plans onto this PlanFeatures
+        Plan.objects.filter(id__in=selected_ids).update(features=plan_features)
 
 
 def grant_service_permissions(modeladmin, request, queryset):

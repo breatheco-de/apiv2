@@ -1647,9 +1647,18 @@ function TemplateManager({ academyId }) {
 - Check for circular references (max depth is 5)
 - Verify referenced variables exist in template_variables
 
+### verify_email contextual variants
+
+The `verify_email` template supports **per-signup-reason** copy based on `UserInvite` (`event_slug`, `asset_slug`, `course`, `cohort`, or generic).
+
+Academies should override **variant-specific** keys (for example `template.verify_email.SUBJECT_EVENT`), not only a single `subject`, so one override does not flatten all contexts.
+
+Full details, pipeline, and examples: [VERIFY_EMAIL_OVERRIDES.md](./VERIFY_EMAIL_OVERRIDES.md).
+
 ## Related Documentation
 
 - [Email Notifications](./notifications.md) - How to send notifications
 - [Template Development](./template_development.md) - Creating notification templates
 - [Webhook System](./webhooks.md) - Notification delivery webhooks
+- [verify_email overrides](./VERIFY_EMAIL_OVERRIDES.md) - Contextual verify_email copy and academy overrides
 

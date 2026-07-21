@@ -76,6 +76,7 @@ from .actions import (
     get_app_url,
     get_github_scopes,
     get_user_language,
+    get_verify_email_copy,
     resend_invite,
     reset_password,
     set_gitpod_user_expiration,
@@ -948,13 +949,15 @@ class ResendInviteView(APIView):
             raise ValidationException(errors, code=400)
 
         if not invite.is_email_validated and invite_answered:
+            lang = "en"
+            if invite.user_id:
+                lang = get_user_settings(invite.user_id).lang
+            email_data = get_verify_email_copy(invite, lang)
+            email_data["LINK"] = os.getenv("API_URL", "") + f"/v1/auth/confirmation/{invite.token}"
             notify_actions.send_email_message(
                 "verify_email",
                 invite.email,
-                {
-                    "SUBJECT": "Verify your 4Geeks account",
-                    "LINK": os.getenv("API_URL", "") + f"/v1/auth/confirmation/{invite.token}",
-                },
+                email_data,
                 academy=invite.academy,
             )
 
@@ -3128,7 +3131,7 @@ def pick_password(request, token):
                         obj["heading"] = invite.academy.name
 
                 # Determine app_url from invite's conversion_info if available
-                app_url = os.getenv("APP_URL", "https://4geeks.com")
+                app_url = os.getenv("APP_URL", "https://learn.4geeks.com")
                 if invite and invite.conversion_info and isinstance(invite.conversion_info, dict):
                     landing_url = invite.conversion_info.get("landing_url")
                     if landing_url:

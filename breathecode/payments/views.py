@@ -374,24 +374,22 @@ class AcademyPlanView(APIView):
 
 class AcademyPlanFeaturesView(APIView):
     """
-    PUT: Upsert PlanFeatures.bullets for a plan owned by the academy (or global owner=None).
-    GET: Return the stored bullets JSON (full multi-language object).
+    GET: Return PlanFeatures for a plan (full multi-language bullets + plans sharing it).
+    PUT: Create, attach, update or fork PlanFeatures for any plan (any academy).
 
-    Body:
-      {
-        "bullets": {
-          "en": [{"title": "...", "description": "..."}],
-          "es": [{"title": "...", "description": "..."}]
-        }
-      }
+    PlanFeatures are global marketing bullets: they can be linked to plans across academies.
+    The Academy header is only required for staff capability checks, not for plan ownership.
+
+    PUT body modes:
+      - {"bullets": {...}}                         → create if plan has none, else update shared
+      - {"bullets": {...}, "mode": "create"}       → always create a new PlanFeatures and assign
+      - {"plan_features_id": <id>}                 → reuse/attach existing PlanFeatures
+      - {"bullets": {...}, "fork": true}           → create unique PlanFeatures for this plan only
     """
 
     def _get_plan(self, academy_id, plan_id=None, plan_slug=None, lang="en"):
         plan = (
-            Plan.objects.filter(
-                Q(id=plan_id) | Q(slug=plan_slug, slug__isnull=False),
-                Q(owner__id=academy_id) | Q(owner=None),
-            )
+            Plan.objects.filter(Q(id=plan_id) | Q(slug=plan_slug, slug__isnull=False))
             .exclude(status="DELETED")
             .first()
         )
@@ -403,11 +401,11 @@ class AcademyPlanFeaturesView(APIView):
         return plan
 
     def _serialize(self, plan_features: PlanFeatures) -> dict[str, Any]:
+        plans = list(plan_features.plans.order_by("id").values("id", "slug", "owner_id"))
         return {
             "id": plan_features.id,
-            "plan": plan_features.plan_id,
-            "plan_slug": plan_features.plan.slug,
             "bullets": plan_features.bullets or {},
+            "plans": plans,
         }
 
     @capable_of("read_subscription")
@@ -415,9 +413,8 @@ class AcademyPlanFeaturesView(APIView):
         lang = get_user_language(request)
         plan = self._get_plan(academy_id, plan_id=plan_id, plan_slug=plan_slug, lang=lang)
 
-        try:
-            plan_features = plan.features
-        except PlanFeatures.DoesNotExist:
+        plan_features = plan.features
+        if not plan_features:
             raise ValidationException(
                 translation(
                     lang,
@@ -440,6 +437,23 @@ class AcademyPlanFeaturesView(APIView):
         plan_features = serializer.save(plan=plan)
 
         return Response(self._serialize(plan_features), status=status.HTTP_200_OK)
+
+
+class AcademyPlanFeaturesListView(APIView):
+    """GET: Global catalog of PlanFeatures available to reuse (id, bullets, plans)."""
+
+    @capable_of("read_subscription")
+    def get(self, request, academy_id=None):
+        items = PlanFeatures.objects.prefetch_related("plans").order_by("id")
+        data = [
+            {
+                "id": item.id,
+                "bullets": item.bullets or {},
+                "plans": list(item.plans.order_by("id").values("id", "slug", "owner_id")),
+            }
+            for item in items
+        ]
+        return Response(data, status=status.HTTP_200_OK)
 
 
 class AcademyPlanSyncFinancingExpirationView(APIView):
