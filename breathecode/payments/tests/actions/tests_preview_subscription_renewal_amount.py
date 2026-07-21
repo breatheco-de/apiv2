@@ -10,7 +10,7 @@ from breathecode.payments.actions import (
     get_discounted_price,
     preview_subscription_renewal_amount,
 )
-from breathecode.payments.models import Bag
+from breathecode.payments.models import Bag, Coupon
 from breathecode.payments.serializers import GetSubscriptionSerializer
 
 from ..mixins import PaymentsTestCase
@@ -141,3 +141,82 @@ class PreviewSubscriptionRenewalAmountTestSuite(PaymentsTestCase):
 
         data = GetSubscriptionSerializer(model.subscription).data
         self.assertIsNone(data["next_renewal_amount"])
+
+    def _create_subscription_with_coupon(self, *, expires_at, how_many_offers=1, next_payment_days=365):
+        plan = {
+            "is_renewable": True,
+            "time_of_life": 0,
+            "time_of_life_unit": None,
+            "price_per_month": 25.0,
+            "price_per_quarter": 75.0,
+            "price_per_half": 150.0,
+            "price_per_year": 300.0,
+            "trial_duration": 0,
+        }
+        bag = {
+            "chosen_period": "YEAR",
+            "amount_per_month": 25.0,
+            "amount_per_quarter": 75.0,
+            "amount_per_half": 150.0,
+            "amount_per_year": 300.0,
+        }
+        next_payment_at = timezone.now() + timedelta(days=next_payment_days)
+        model = self.bc.database.create(
+            subscription={
+                "pay_every": 1,
+                "pay_every_unit": "YEAR",
+                "next_payment_at": next_payment_at,
+            },
+            invoice={"amount": 150.0, "status": "FULFILLED", "paid_at": timezone.now()},
+            plan=plan,
+            bag=bag,
+            coupon={
+                "discount_type": Coupon.Discount.PERCENT_OFF,
+                "discount_value": 0.5,
+                "referral_type": Coupon.Referral.NO_REFERRAL,
+                "auto": False,
+                "offered_at": timezone.now() - timedelta(days=1),
+                "expires_at": expires_at,
+                "how_many_offers": how_many_offers,
+            },
+        )
+        model.subscription.plans.add(model.plan)
+        model.subscription.invoices.add(model.invoice)
+        model.invoice.bag = model.bag
+        model.invoice.save()
+        model.bag.coupons.add(model.coupon)
+        model.subscription.coupons.add(model.coupon)
+        model.coupon.plans.add(model.plan)
+        return model
+
+    def test_applies_non_expiring_coupon_even_when_how_many_offers_already_spent(self):
+        """Coupons on the subscription keep applying on renewals until they expire."""
+        model = self._create_subscription_with_coupon(expires_at=None, how_many_offers=1)
+
+        preview = preview_subscription_renewal_amount(model.subscription)
+
+        self.assertEqual(preview, 150.0)
+
+    def test_applies_coupon_valid_through_next_payment_date(self):
+        next_payment_days = 365
+        model = self._create_subscription_with_coupon(
+            expires_at=timezone.now() + timedelta(days=next_payment_days + 30),
+            how_many_offers=1,
+            next_payment_days=next_payment_days,
+        )
+
+        preview = preview_subscription_renewal_amount(model.subscription)
+
+        self.assertEqual(preview, 150.0)
+
+    def test_excludes_coupon_that_expires_before_next_payment(self):
+        next_payment_days = 365
+        model = self._create_subscription_with_coupon(
+            expires_at=timezone.now() + timedelta(days=30),
+            how_many_offers=-1,
+            next_payment_days=next_payment_days,
+        )
+
+        preview = preview_subscription_renewal_amount(model.subscription)
+
+        self.assertEqual(preview, 300.0)

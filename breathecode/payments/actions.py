@@ -1682,37 +1682,46 @@ def get_bag_from_subscription(
         service_item = handler.service_item
         bag.service_items.add(service_item)
 
-    # Add only valid (non-expired) coupons from the subscription to the bag
-    # Also exclude coupons where the user is the seller
+    # Add coupons from the subscription that will still be valid on the next charge.
+    # Coupons already on the subscription persist for renewals (see COUPONS.md): do not
+    # re-check how_many_offers — that limit applies to acquiring new purchases, not renewals.
+    # Expiration is evaluated against next_payment_at so a coupon that expires before the
+    # next charge is excluded from that renewal amount.
     utc_now = timezone.now()
+    as_of = subscription.next_payment_at or utc_now
 
-    # Add valid (non-expired and with remaining uses) coupons from the subscription and from auto applied user restricted coupons
-    subscription_coupons = (
-        subscription.coupons.filter(Q(expires_at__isnull=True) | Q(expires_at__gt=utc_now))
+    subscription_coupons = list(
+        subscription.coupons.filter(Q(expires_at__isnull=True) | Q(expires_at__gte=as_of))
         .exclude(seller__user=subscription.user)
         .exclude(~Q(referral_type=Coupon.Referral.NO_REFERRAL))
     )
-    user_coupons = Coupon.objects.filter(
-        Q(offered_at=None) | Q(offered_at__lte=utc_now),
-        Q(expires_at=None) | Q(expires_at__gte=utc_now),
-        allowed_user=subscription.user,
-        auto=True,
-    ).exclude(how_many_offers=0)
-    coupon_slugs = list(
-        set(
-            list(subscription_coupons.values_list("slug", flat=True))
-            + list(user_coupons.values_list("slug", flat=True))
+
+    # Auto-applied user-restricted coupons still go through availability (usage limits matter).
+    user_coupon_slugs = list(
+        Coupon.objects.filter(
+            Q(offered_at=None) | Q(offered_at__lte=utc_now),
+            Q(expires_at=None) | Q(expires_at__gte=as_of),
+            allowed_user=subscription.user,
+            auto=True,
         )
+        .exclude(how_many_offers=0)
+        .values_list("slug", flat=True)
     )
 
-    if subscription_coupons.exists() or user_coupons.exists():
-        valid_coupons = get_available_coupons(
+    valid_user_coupons = []
+    if user_coupon_slugs:
+        valid_user_coupons = get_available_coupons(
             subscription.plans.first(),
-            coupon_slugs,
+            user_coupon_slugs,
             subscription.user,
             only_sent_coupons=True,
+            as_of=as_of,
         )
-        bag.coupons.set(valid_coupons)
+
+    if subscription_coupons or valid_user_coupons:
+        # Deduplicate by id in case a coupon appears in both sets
+        by_id = {c.id: c for c in [*subscription_coupons, *valid_user_coupons]}
+        bag.coupons.set(by_id.values())
 
     early_renewal_subscription = (
         subscription if (subscription.next_payment_at and subscription.next_payment_at > utc_now) else None
@@ -2630,6 +2639,7 @@ def get_available_coupons(
     coupons: Optional[list[str]] = None,
     user: Optional[User] = None,
     only_sent_coupons: bool = False,
+    as_of: Optional[datetime] = None,
 ) -> list[Coupon]:
 
     def get_total_spent_coupons(coupon: Coupon) -> int:
@@ -2682,11 +2692,12 @@ def get_available_coupons(
 
     founded_coupons = []
     founded_coupon_slugs = []
+    validity_moment = as_of or timezone.now()
 
     cou_args = (
         Q(plans=plan) | Q(plans=None),
         Q(offered_at=None) | Q(offered_at__lte=timezone.now()),
-        Q(expires_at=None) | Q(expires_at__gte=timezone.now()),
+        Q(expires_at=None) | Q(expires_at__gte=validity_moment),
     )
 
     cou_fields = ("id", "slug", "how_many_offers", "offered_at", "expires_at", "seller", "allowed_user")
