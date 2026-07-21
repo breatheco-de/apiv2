@@ -400,6 +400,7 @@ class AcademyNotifySettings(models.Model):
             "Variable overrides for notification templates.\n"
             "Format:\n"
             "  - Template-specific: 'template.SLUG.VARIABLE': 'value'\n"
+            "  - Per-language: 'template.SLUG.VARIABLE.en' / 'template.SLUG.VARIABLE.es': 'value'\n"
             "  - Global (all templates): 'global.VARIABLE': 'value'\n"
             "Supports interpolation: {{global.VARIABLE}} or {{template.slug.VARIABLE}}"
         ),
@@ -433,12 +434,33 @@ class AcademyNotifySettings(models.Model):
         """
         return template_slug not in self.disabled_templates
 
-    def get_variable_override(self, template_slug: str, variable_name: str):
+    @staticmethod
+    def normalize_lang(lang: Optional[str]) -> Optional[str]:
+        """Normalize lang to a 2-letter lowercase code (en-US -> en)."""
+        if not lang or not isinstance(lang, str):
+            return None
+        code = lang.strip().split("-")[0].split("_")[0].lower()
+        if len(code) == 2 and code.isalpha():
+            return code
+        return None
+
+    @staticmethod
+    def _is_lang_code(part: str) -> bool:
+        return isinstance(part, str) and len(part) == 2 and part.isalpha()
+
+    def get_variable_override(self, template_slug: str, variable_name: str, lang: Optional[str] = None):
         """
         Get override value for a variable.
-        Priority: template-specific > global > None
+        Priority: template-specific (lang) > template-specific (legacy) > global > None
         """
-        # Template-specific override
+        lang = self.normalize_lang(lang)
+
+        if lang:
+            lang_key = f"template.{template_slug}.{variable_name}.{lang}"
+            if lang_key in self.template_variables:
+                return self.template_variables[lang_key]
+
+        # Template-specific override (all languages)
         template_key = f"template.{template_slug}.{variable_name}"
         if template_key in self.template_variables:
             return self.template_variables[template_key]
@@ -450,27 +472,47 @@ class AcademyNotifySettings(models.Model):
 
         return None
 
-    def get_all_overrides_for_template(self, template_slug: str) -> dict:
+    def get_all_overrides_for_template(self, template_slug: str, lang: Optional[str] = None) -> dict:
         """
         Get all variable overrides for a template with interpolation support.
+
+        Lang-specific keys (template.SLUG.VAR.en) win over legacy keys without lang.
+        Overrides for a different language are never applied (missing lang uses code defaults).
+
         Variables can reference other variables using {{global.VAR}} or {{template.slug.VAR}} syntax.
         Also supports {VARIABLE} for academy model fields (COMPANY_NAME, DOMAIN_NAME, etc).
         """
+        lang = self.normalize_lang(lang)
         overrides = {}
+        legacy: Dict[str, str] = {}
+        lang_specific: Dict[str, str] = {}
 
-        # Collect all overrides (globals + template-specific)
+        # Collect globals
         for key, value in self.template_variables.items():
             if key.startswith("global."):
-                var_name = key.replace("global.", "")
+                var_name = key.replace("global.", "", 1)
                 overrides[var_name] = value
 
         template_prefix = f"template.{template_slug}."
         for key, value in self.template_variables.items():
-            if key.startswith(template_prefix):
-                var_name = key.replace(template_prefix, "")
-                overrides[var_name] = value
+            if not key.startswith(template_prefix):
+                continue
 
-        # Resolve variable references within values (uses self.academy for {VARIABLE})
+            remainder = key[len(template_prefix) :]
+            parts = remainder.split(".")
+
+            if len(parts) == 1 and parts[0]:
+                legacy[parts[0]] = value
+            elif len(parts) == 2 and parts[0] and self._is_lang_code(parts[1]):
+                var_name, key_lang = parts[0], parts[1].lower()
+                if lang and key_lang == lang:
+                    lang_specific[var_name] = value
+            # else: invalid shape; rejected on clean()
+
+        # Legacy first, then lang-specific overwrites (never cross-language)
+        overrides.update(legacy)
+        overrides.update(lang_specific)
+
         overrides = self._resolve_variable_references(overrides, template_slug)
 
         return overrides
@@ -623,12 +665,24 @@ class AcademyNotifySettings(models.Model):
 
             # Validate template-specific overrides
             if key.startswith("template."):
-                if len(parts) != 3:
-                    errors.append(f"Invalid key format: '{key}'. Expected 'template.SLUG.VARIABLE'")
+                # template.SLUG.VARIABLE or template.SLUG.VARIABLE.lang
+                if len(parts) not in (3, 4):
+                    errors.append(
+                        f"Invalid key format: '{key}'. Expected 'template.SLUG.VARIABLE' "
+                        f"or 'template.SLUG.VARIABLE.lang'"
+                    )
                     continue
 
                 template_slug = parts[1]
                 variable_name = parts[2]
+
+                if len(parts) == 4:
+                    lang_part = parts[3]
+                    if not self._is_lang_code(lang_part):
+                        errors.append(
+                            f"Invalid language code in '{key}'. Expected 2-letter code like 'en' or 'es'"
+                        )
+                        continue
 
                 # Check if template exists in registry
                 notification = EmailManager.get_notification(template_slug)
