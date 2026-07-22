@@ -198,6 +198,8 @@ class BulkEventCheckinManager:
                 email=email,
                 attended=attended,
                 attended_at=attended_at,
+                first_name=row_data.get("first_name"),
+                last_name=row_data.get("last_name"),
                 utm_source=row_data.get("utm_source"),
                 utm_medium=row_data.get("utm_medium"),
                 utm_campaign=row_data.get("utm_campaign"),

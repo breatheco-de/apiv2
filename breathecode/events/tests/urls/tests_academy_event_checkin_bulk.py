@@ -175,6 +175,33 @@ class BulkEventCheckinUploadViewTestSuite(EventTestCase):
         self.assertEqual(checkin["email"], "bulk@example.com")
         self.assertEqual(checkin["status"], "DONE")
 
+    def test_process_bulk_event_checkin_row_persists_names_without_user(self):
+        model = self.generate_models(
+            authenticate=True,
+            profile_academy=True,
+            capability="crud_eventcheckin",
+            role="potato",
+            event=True,
+        )
+        result = process_bulk_event_checkin_row(
+            event_id=model.event.id,
+            academy_id=model.academy.id,
+            row_data={
+                "email": "guest@example.com",
+                "first_name": "Guest",
+                "last_name": "Visitor",
+                "attended": False,
+            },
+            run_marketing=False,
+        )
+        self.assertEqual(result["status"], "created")
+        checkins = self.all_event_checkin_dict()
+        self.assertEqual(len(checkins), 1)
+        self.assertEqual(checkins[0]["email"], "guest@example.com")
+        self.assertEqual(checkins[0]["first_name"], "Guest")
+        self.assertEqual(checkins[0]["last_name"], "Visitor")
+        self.assertIsNone(checkins[0]["attendee_id"])
+
     def test_bulk_get_job_wrong_event_id(self):
         model = self.generate_models(
             authenticate=True,
