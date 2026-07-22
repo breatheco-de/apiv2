@@ -2010,9 +2010,11 @@ class AcademyEventCheckinView(APIView):
         if "like" in self.request.GET:
             items = items.filter(
                 Q(attendee__first_name__icontains=like)
-                | Q(attendee__last_name_icontains=like)
-                | Q(attendee__email_icontains=like)
-                | Q(email_icontains=like)
+                | Q(attendee__last_name__icontains=like)
+                | Q(attendee__email__icontains=like)
+                | Q(email__icontains=like)
+                | Q(first_name__icontains=like)
+                | Q(last_name__icontains=like)
             )
 
         start = request.GET.get("start", None)

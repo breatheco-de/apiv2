@@ -94,6 +94,9 @@ class AcademyEventTestSuite(EventTestCase):
                     "last_name": model["event_checkin"].attendee.last_name,
                 },
                 "email": model["event_checkin"].email,
+                "first_name": model["event_checkin"].attendee.first_name,
+                "last_name": model["event_checkin"].attendee.last_name,
+                "phone": model["event_checkin"].phone,
                 "event": {
                     "ending_at": self.datetime_to_iso(model["event_checkin"].event.ending_at),
                     "event_type": model["event_checkin"].event.event_type,
@@ -155,6 +158,9 @@ class AcademyEventTestSuite(EventTestCase):
                     "last_name": model["event_checkin"].attendee.last_name,
                 },
                 "email": model["event_checkin"].email,
+                "first_name": model["event_checkin"].attendee.first_name,
+                "last_name": model["event_checkin"].attendee.last_name,
+                "phone": model["event_checkin"].phone,
                 "event": {
                     "ending_at": self.datetime_to_iso(model["event_checkin"].event.ending_at),
                     "event_type": model["event_checkin"].event.event_type,
@@ -216,6 +222,9 @@ class AcademyEventTestSuite(EventTestCase):
                     "last_name": model["event_checkin"].attendee.last_name,
                 },
                 "email": model["event_checkin"].email,
+                "first_name": model["event_checkin"].attendee.first_name,
+                "last_name": model["event_checkin"].attendee.last_name,
+                "phone": model["event_checkin"].phone,
                 "event": {
                     "ending_at": self.datetime_to_iso(model["event_checkin"].event.ending_at),
                     "event_type": model["event_checkin"].event.event_type,
@@ -278,6 +287,9 @@ class AcademyEventTestSuite(EventTestCase):
                     "last_name": model["event_checkin"].attendee.last_name,
                 },
                 "email": model["event_checkin"].email,
+                "first_name": model["event_checkin"].attendee.first_name,
+                "last_name": model["event_checkin"].attendee.last_name,
+                "phone": model["event_checkin"].phone,
                 "event": {
                     "ending_at": self.datetime_to_iso(model["event_checkin"].event.ending_at),
                     "event_type": model["event_checkin"].event.event_type,
@@ -340,6 +352,9 @@ class AcademyEventTestSuite(EventTestCase):
                     "last_name": model["event_checkin"].attendee.last_name,
                 },
                 "email": model["event_checkin"].email,
+                "first_name": model["event_checkin"].attendee.first_name,
+                "last_name": model["event_checkin"].attendee.last_name,
+                "phone": model["event_checkin"].phone,
                 "event": {
                     "ending_at": self.datetime_to_iso(model["event_checkin"].event.ending_at),
                     "event_type": model["event_checkin"].event.event_type,
@@ -357,6 +372,38 @@ class AcademyEventTestSuite(EventTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(self.all_event_checkin_dict(), [{**self.model_to_dict(model, "event_checkin")}])
+
+    def test_academy_checkin_without_attendee_shows_checkin_names(self):
+        self.headers(academy=1)
+        base = self.generate_models(
+            authenticate=True, profile_academy=True, capability="read_eventcheckin", role="potato"
+        )
+
+        event_kwargs = {"academy": base["academy"]}
+        event_checkin_kwargs = {
+            "attendee": None,
+            "email": "external@example.com",
+            "first_name": "External",
+            "last_name": "Guest",
+            "attended_at": self.datetime_now(),
+        }
+        model = self.generate_models(
+            event=True,
+            event_checkin=True,
+            event_kwargs=event_kwargs,
+            models=base,
+            event_checkin_kwargs=event_checkin_kwargs,
+        )
+        url = reverse_lazy("events:academy_checkin") + f"?event={model.event.id}"
+        response = self.client.get(url)
+        json = response.json()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(json), 1)
+        self.assertIsNone(json[0]["attendee"])
+        self.assertEqual(json[0]["first_name"], "External")
+        self.assertEqual(json[0]["last_name"], "Guest")
+        self.assertEqual(json[0]["email"], "external@example.com")
 
     """
     🔽🔽🔽 Spy the extensions
