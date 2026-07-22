@@ -403,6 +403,8 @@ class EventCheckin(models.Model):
         self.__old_status = self.status
 
     email = models.EmailField(max_length=150)
+    first_name = models.CharField(max_length=100, blank=True, null=True, default=None)
+    last_name = models.CharField(max_length=100, blank=True, null=True, default=None)
 
     attendee = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True, default=None)
     phone = models.CharField(max_length=17, blank=True, null=True, default=None)
@@ -436,6 +438,8 @@ class EventCheckin(models.Model):
         return [
             ("ID", "id"),
             ("Email", "email"),
+            ("First Name", "first_name"),
+            ("Last Name", "last_name"),
             ("Attendee First Name", "attendee.first_name"),
             ("Attendee Last Name", "attendee.last_name"),
             ("Attendee Full Name", "attendee_name"),  # Calculated property
@@ -455,11 +459,11 @@ class EventCheckin(models.Model):
     def attendee_name(self):
         """
         Calculate full name of attendee.
-        Example of a calculated field for CSV export.
+        Prefer linked User names; fall back to checkin snapshot fields.
         """
         if self.attendee:
             return f"{self.attendee.first_name} {self.attendee.last_name}".strip()
-        return ""
+        return f"{self.first_name or ''} {self.last_name or ''}".strip()
 
     def save(self, *args, **kwargs):
 

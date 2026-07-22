@@ -1639,8 +1639,18 @@ def get_amount_by_chosen_period(bag: Bag, chosen_period: str, lang: str) -> floa
 
 
 def get_bag_from_subscription(
-    subscription: Subscription, settings: Optional[UserSetting] = None, lang: Optional[str] = None
+    subscription: Subscription,
+    settings: Optional[UserSetting] = None,
+    lang: Optional[str] = None,
+    coupons_as_of: Optional[datetime] = None,
 ) -> Bag:
+    """
+    Build a RENEWAL bag from an existing subscription.
+
+    coupons_as_of: optional moment used to decide if subscription coupons are still
+    valid for this charge. Defaults to now (actual renew / charge_subscription).
+    Pass subscription.next_payment_at when previewing the upcoming scheduled charge.
+    """
     bag = Bag()
 
     if not lang and not settings:
@@ -1682,37 +1692,44 @@ def get_bag_from_subscription(
         service_item = handler.service_item
         bag.service_items.add(service_item)
 
-    # Add only valid (non-expired) coupons from the subscription to the bag
-    # Also exclude coupons where the user is the seller
+    # Coupons already on the subscription persist for renewals (see COUPONS.md):
+    # do not re-check how_many_offers — that limit applies to acquiring new purchases.
+    # Expiration is evaluated at coupons_as_of (now for real charges, next_payment_at for previews).
     utc_now = timezone.now()
+    as_of = coupons_as_of or utc_now
 
-    # Add valid (non-expired and with remaining uses) coupons from the subscription and from auto applied user restricted coupons
-    subscription_coupons = (
-        subscription.coupons.filter(Q(expires_at__isnull=True) | Q(expires_at__gt=utc_now))
+    subscription_coupons = list(
+        subscription.coupons.filter(Q(expires_at__isnull=True) | Q(expires_at__gte=as_of))
         .exclude(seller__user=subscription.user)
         .exclude(~Q(referral_type=Coupon.Referral.NO_REFERRAL))
     )
-    user_coupons = Coupon.objects.filter(
-        Q(offered_at=None) | Q(offered_at__lte=utc_now),
-        Q(expires_at=None) | Q(expires_at__gte=utc_now),
-        allowed_user=subscription.user,
-        auto=True,
-    ).exclude(how_many_offers=0)
-    coupon_slugs = list(
-        set(
-            list(subscription_coupons.values_list("slug", flat=True))
-            + list(user_coupons.values_list("slug", flat=True))
+
+    # Auto-applied user-restricted coupons still go through availability (usage limits matter).
+    user_coupon_slugs = list(
+        Coupon.objects.filter(
+            Q(offered_at=None) | Q(offered_at__lte=utc_now),
+            Q(expires_at=None) | Q(expires_at__gte=as_of),
+            allowed_user=subscription.user,
+            auto=True,
         )
+        .exclude(how_many_offers=0)
+        .values_list("slug", flat=True)
     )
 
-    if subscription_coupons.exists() or user_coupons.exists():
-        valid_coupons = get_available_coupons(
+    valid_user_coupons = []
+    if user_coupon_slugs:
+        valid_user_coupons = get_available_coupons(
             subscription.plans.first(),
-            coupon_slugs,
+            user_coupon_slugs,
             subscription.user,
             only_sent_coupons=True,
+            as_of=as_of,
         )
-        bag.coupons.set(valid_coupons)
+
+    if subscription_coupons or valid_user_coupons:
+        # Deduplicate by id in case a coupon appears in both sets
+        by_id = {c.id: c for c in [*subscription_coupons, *valid_user_coupons]}
+        bag.coupons.set(by_id.values())
 
     early_renewal_subscription = (
         subscription if (subscription.next_payment_at and subscription.next_payment_at > utc_now) else None
@@ -1725,6 +1742,44 @@ def get_bag_from_subscription(
     bag.save()
 
     return bag
+
+
+def preview_subscription_renewal_amount(
+    subscription: Subscription, settings: Optional[UserSetting] = None, lang: Optional[str] = None
+) -> Optional[float]:
+    """
+    Compute the amount that would be charged on the next subscription renewal
+    without persisting any Bag or related side effects.
+
+    Uses the same pricing path as charge_subscription / renew, but rolls back
+    the transaction so GET me/subscription does not create orphan RENEWAL bags.
+    """
+    try:
+        with transaction.atomic():
+            if not lang and not settings:
+                settings = get_user_settings(subscription.user.id)
+                lang = settings.lang
+            elif settings and not lang:
+                lang = settings.lang
+            elif not lang:
+                lang = "en"
+
+            bag = get_bag_from_subscription(
+                subscription,
+                settings=settings,
+                lang=lang,
+                # Preview the scheduled charge: coupon must still be valid on that date.
+                coupons_as_of=subscription.next_payment_at,
+            )
+            amount = get_amount_by_chosen_period(bag, bag.chosen_period, lang)
+            coupons = list(bag.coupons.all())
+            if coupons:
+                amount = get_discounted_price(amount, coupons)
+
+            transaction.set_rollback(True)
+            return float(amount)
+    except Exception:
+        return None
 
 
 def get_bag_from_plan_financing(plan_financing: PlanFinancing, settings: Optional[UserSetting] = None) -> Bag:
@@ -2598,6 +2653,7 @@ def get_available_coupons(
     coupons: Optional[list[str]] = None,
     user: Optional[User] = None,
     only_sent_coupons: bool = False,
+    as_of: Optional[datetime] = None,
 ) -> list[Coupon]:
 
     def get_total_spent_coupons(coupon: Coupon) -> int:
@@ -2650,11 +2706,12 @@ def get_available_coupons(
 
     founded_coupons = []
     founded_coupon_slugs = []
+    validity_moment = as_of or timezone.now()
 
     cou_args = (
         Q(plans=plan) | Q(plans=None),
         Q(offered_at=None) | Q(offered_at__lte=timezone.now()),
-        Q(expires_at=None) | Q(expires_at__gte=timezone.now()),
+        Q(expires_at=None) | Q(expires_at__gte=validity_moment),
     )
 
     cou_fields = ("id", "slug", "how_many_offers", "offered_at", "expires_at", "seller", "allowed_user")
