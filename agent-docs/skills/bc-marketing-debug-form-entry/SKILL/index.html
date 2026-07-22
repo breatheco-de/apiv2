@@ -1,0 +1,4436 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Use when diagnosing FormEntry CRM sync failures, stuck storage_status, or ActiveCampaign double-sync issues; do NOT use for creating leads or routine list/update/delete operations.">
+      
+      
+      
+        <link rel="canonical" href="https://breathecode.herokuapp.com/agent-docs/skills/bc-marketing-debug-form-entry/SKILL/">
+      
+      
+      
+      
+      <link rel="icon" href="../../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.12">
+    
+    
+      
+        <title>Skill: Debug FormEntry CRM Sync - 4geeks</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.2afb09e1.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../../../css/custom.css">
+    
+    <script>__md_scope=new URL("../../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#skill-debug-formentry-crm-sync" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../../.." title="4geeks" class="md-header__button md-logo" aria-label="4geeks" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            4geeks
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Skill: Debug FormEntry CRM Sync
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7M9 21a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-1H9z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7M9 21v-1h6v1a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1m3-17a5 5 0 0 0-5 5c0 2.05 1.23 3.81 3 4.58V16h4v-2.42c1.77-.77 3-2.53 3-4.58a5 5 0 0 0-5-5"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/breatheco-de/apiv2" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    breatheco-de/apiv2
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../../.." title="4geeks" class="md-nav__button md-logo" aria-label="4geeks" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    4geeks
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/breatheco-de/apiv2" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    breatheco-de/apiv2
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Welcome
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../4geeks-libraries/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    4Geeks libraries
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Getting started
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Getting started
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_1" id="__nav_3_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Set up
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_1">
+            <span class="md-nav__icon md-icon"></span>
+            Set up
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_1_1" id="__nav_3_1_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Works locally
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_1_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_1_1">
+            <span class="md-nav__icon md-icon"></span>
+            Works locally
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../getting-started/setup/works-locally/introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Introduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../getting-started/setup/works-locally/devcontainer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Devcontainer
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../getting-started/setup/works-locally/on-host-os/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Works on host Operative System
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_1_2" id="__nav_3_1_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Works on the cloud
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_1_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_1_2">
+            <span class="md-nav__icon md-icon"></span>
+            Works on the cloud
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../getting-started/setup/works-on-the-cloud/introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Introduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../getting-started/setup/works-on-the-cloud/gitpod/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Works on Gitpod
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../getting-started/setup/works-on-the-cloud/codespaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Works on Codespaces
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../getting-started/available-commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Available Commands
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Essential
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Essential
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_1" id="__nav_4_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Django
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_1">
+            <span class="md-nav__icon md-icon"></span>
+            Django
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../essential/django/introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Introduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../essential/django/urls/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    URLs
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../essential/django/views/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Views
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../essential/django/models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Models
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../essential/django/admin/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Admin
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../essential/django/commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Django commands
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../essential/django/signals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Signals and receivers
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../essential/django/templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Templates
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Django Rest Framework
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            Django Rest Framework
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../essential/django-rest-framework/introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Introduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../essential/django-rest-framework/views/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Views
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../essential/django-rest-framework/serializers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Serializers
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../essential/django-rest-framework/validators/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Validators
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../essential/serpy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Serpy
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Celery
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_4">
+            <span class="md-nav__icon md-icon"></span>
+            Celery
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../essential/celery/introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Introduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../essential/celery/tasks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Tasks
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../essential/celery/calling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Calling
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_5" id="__nav_4_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    4geeks
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_5">
+            <span class="md-nav__icon md-icon"></span>
+            4geeks
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../essential/4geeks/actions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Actions
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_5_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_5_2" id="__nav_4_5_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Services
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_5_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_5_2">
+            <span class="md-nav__icon md-icon"></span>
+            Services
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../essential/4geeks/services/introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Introduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_5_2_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_5_2_2" id="__nav_4_5_2_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    First-party
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="4" aria-labelledby="__nav_4_5_2_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_5_2_2">
+            <span class="md-nav__icon md-icon"></span>
+            First-party
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../essential/4geeks/services/first-party/using-services/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Using services
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../essential/4geeks/services/first-party/writing-services/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Writing services
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../essential/4geeks/services/first-party/token/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Token
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Advanced
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Advanced
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../advanced/supervisor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Supervisor
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Celery
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_2">
+            <span class="md-nav__icon md-icon"></span>
+            Celery
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../advanced/celery/application/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Application
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../advanced/celery/canvas/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Canvas
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../advanced/celery/periodic-tasks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Periodic tasks
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../advanced/celery/routing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Routing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../advanced/celery/settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Settings
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Program Manager
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            Program Manager
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../program-manager/blocking-users/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Blocking Users
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Payments
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            Payments
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../payments/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Payments Module
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_2" id="__nav_7_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Subscription Seats
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_2">
+            <span class="md-nav__icon md-icon"></span>
+            Subscription Seats
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../payments/subscription-seats-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Subscription Seats - Quick Start Guide
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../payments/subscription-seats-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    API Documentation &amp; Postman Collection
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_3" id="__nav_7_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Auto-Recharge
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_3">
+            <span class="md-nav__icon md-icon"></span>
+            Auto-Recharge
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../payments/auto-recharge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Auto-Recharge System
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../payments/auto-recharge-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Auto-Recharge Architecture
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Testing
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            Testing
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../testing/running-tests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Running tests
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../testing/parametrize/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Multiple parameters
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_8_3" id="__nav_8_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Mixins
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_8_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8_3">
+            <span class="md-nav__icon md-icon"></span>
+            Mixins
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../testing/mixins/bc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    bc
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../testing/mixins/bc-fake/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    bc.fake
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../testing/mixins/bc-request/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    bc.request
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../testing/mixins/bc-database/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    bc.database
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../testing/mixins/bc-datetime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    bc.datetime
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../testing/mixins/bc-format/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    bc.format
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../testing/mixins/bc-check/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    bc.check
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../testing/mixins/bc-cache/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    bc.cache
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../testing/mixins/bc-random/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    bc.random
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_8_4" id="__nav_8_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Mocks
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_8_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8_4">
+            <span class="md-nav__icon md-icon"></span>
+            Mocks
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../testing/mocks/using-mocks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Using mocks
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../testing/mocks/mock-requests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Mock requests
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Troubleshooting
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            Troubleshooting
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../troubleshooting/check_task_status/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Task Status Diagnostic Tool
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Workflows
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            Workflows
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../workflows/file-uploading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    File uploading
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Infrastructure
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            Infrastructure
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../infrastructure/journal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Journal
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../infrastructure/web/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Web
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../infrastructure/infra-env/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Environment variables
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_11_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_11_4" id="__nav_11_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Studies
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_11_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11_4">
+            <span class="md-nav__icon md-icon"></span>
+            Studies
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../infrastructure/studies/http-clients/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Better HTTP client
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../infrastructure/studies/django-workers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Better Django worker
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12" >
+        
+          
+          <label class="md-nav__link" for="__nav_12" id="__nav_12_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Not placed yet
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12">
+            <span class="md-nav__icon md-icon"></span>
+            Not placed yet
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../infrastructure/environment-variables/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Environment variables
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../installation/fixtures/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Fixtures
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_12_3" id="__nav_12_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Deployments
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_12_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12_3">
+            <span class="md-nav__icon md-icon"></span>
+            Deployments
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../deployment/environment-variables/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Environment variables
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../deployment/configuring-the-github-secrets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Configuring the Github secrets
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_12_4" id="__nav_12_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Apps
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_12_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12_4">
+            <span class="md-nav__icon md-icon"></span>
+            Apps
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12_4_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_12_4_1" id="__nav_12_4_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Monitoring
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_12_4_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12_4_1">
+            <span class="md-nav__icon md-icon"></span>
+            Monitoring
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../apps/monitoring/introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Intro to monitoring
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../apps/monitoring/scripts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Monitoring Scripts
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../apps/activities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Activities
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../apps/admissions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    4Geeks.Admissions
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_12_5" id="__nav_12_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Security
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_12_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12_5">
+            <span class="md-nav__icon md-icon"></span>
+            Security
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../security/introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Introduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../security/authentication-class/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Authentication classes
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../security/capabilities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Capabilities
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../security/schema-link/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Schema link
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_12_6" id="__nav_12_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Services
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_12_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12_6">
+            <span class="md-nav__icon md-icon"></span>
+            Services
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12_6_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_12_6_1" id="__nav_12_6_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Google Cloud
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_12_6_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12_6_1">
+            <span class="md-nav__icon md-icon"></span>
+            Google Cloud
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../services/google_cloud/google-cloud-functions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Google Cloud Functions
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../services/google_cloud/storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Storage
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12_6_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_12_6_2" id="__nav_12_6_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Slack
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_12_6_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12_6_2">
+            <span class="md-nav__icon md-icon"></span>
+            Slack
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../services/slack%20integration/icons/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Icons
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_12_7" id="__nav_12_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Signals
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_12_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12_7">
+            <span class="md-nav__icon md-icon"></span>
+            Signals
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../signals/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Quickstart
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#when-to-use" class="md-nav__link">
+    <span class="md-ellipsis">
+      When to Use
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#concepts" class="md-nav__link">
+    <span class="md-ellipsis">
+      Concepts
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Concepts">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#outbound-vs-reverse-sync" class="md-nav__link">
+    <span class="md-ellipsis">
+      Outbound vs reverse sync
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#activecampaign-double-sync" class="md-nav__link">
+    <span class="md-ellipsis">
+      ActiveCampaign double sync
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#storage_status-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      storage_status reference
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#platform-webhooks-vs-crm" class="md-nav__link">
+    <span class="md-ellipsis">
+      Platform webhooks vs CRM
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Workflow
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      Endpoints
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Endpoints">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example-read-failing-lead" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example — read failing lead
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-crm-config-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example — CRM config check
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-retry-after-fix" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example — retry after fix
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#storage_status_text-lookup-table-outbound-crm" class="md-nav__link">
+    <span class="md-ellipsis">
+      storage_status_text lookup table (outbound CRM)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="storage_status_text lookup table (outbound CRM)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#stuck-transient-outbound" class="md-nav__link">
+    <span class="md-ellipsis">
+      Stuck / transient outbound
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reverse-sync-troubleshooting-activecampaign" class="md-nav__link">
+    <span class="md-ellipsis">
+      Reverse sync troubleshooting (ActiveCampaign)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#side-effects-that-do-not-change-storage_status" class="md-nav__link">
+    <span class="md-ellipsis">
+      Side effects that do not change storage_status
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bulk-csv-debug-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      Bulk CSV debug path
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#integration-confusion-webhooks-crm" class="md-nav__link">
+    <span class="md-ellipsis">
+      Integration confusion (webhooks ≠ CRM)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#api-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      API limitations
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cross-references-do-not-deep-dive-here" class="md-nav__link">
+    <span class="md-ellipsis">
+      Cross-references (do not deep-dive here)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#edge-cases" class="md-nav__link">
+    <span class="md-ellipsis">
+      Edge Cases
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#checklist" class="md-nav__link">
+    <span class="md-ellipsis">
+      Checklist
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="skill-debug-formentry-crm-sync">Skill: Debug FormEntry CRM Sync</h1>
+<h2 id="when-to-use">When to Use</h2>
+<ul>
+<li><code>storage_status</code> is <code>ERROR</code>, stuck <code>PENDING</code>, or unexpected <code>DUPLICATED</code> / <code>REJECTED</code>.</li>
+<li>Lead never appeared in CRM after create.</li>
+<li>Salesperson updated deal in ActiveCampaign but <code>FormEntry</code> fields (<code>deal_status</code>, <code>ac_deal_*</code>) did not update.</li>
+<li><code>form_entry.added</code> platform webhook fired but CRM sync failed.</li>
+<li>Bulk CSV upload rows are missing or failed silently.</li>
+</ul>
+<p>Do NOT use for: creating leads (create skill), routine list/update without a failure (manage skill), acquisition analytics (monitoring/inbound skills), Facebook intake failures (inbound skill), or referral commission payouts (inbound + commission).</p>
+<h2 id="concepts">Concepts</h2>
+<h3 id="outbound-vs-reverse-sync">Outbound vs reverse sync</h3>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Likely layer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>storage_status=ERROR</code></td>
+<td><strong>Outbound</strong> — BreatheCode → CRM (<code>persist_single_lead</code>)</td>
+</tr>
+<tr>
+<td><code>storage_status=PERSISTED</code> but <code>deal_status</code> / <code>ac_deal_*</code> stale</td>
+<td><strong>Reverse</strong> — ActiveCampaign → BreatheCode (webhooks <code>deal_add</code> / <code>deal_update</code>)</td>
+</tr>
+<tr>
+<td><code>form_entry.added</code> received but CRM empty</td>
+<td>Outbound failed <strong>independently</strong> of platform webhook</td>
+</tr>
+</tbody>
+</table>
+<h3 id="activecampaign-double-sync">ActiveCampaign double sync</h3>
+<ul>
+<li><strong>Outbound:</strong> create or <code>process</code> pushes contact + automation/tags to ActiveCampaign. Failures appear in <code>storage_status_text</code>.</li>
+<li><strong>Reverse (optional):</strong> ActiveCampaign webhooks POST to <code>/v1/marketing/activecampaign/webhook/&lt;academy_slug&gt;</code> or <code>/v1/marketing/activecampaign/webhook/&lt;ac_academy_id&gt;</code> and update <code>deal_status</code>, <code>ac_deal_id</code>, <code>ac_deal_*</code>, <code>won_at</code>, etc.</li>
+<li><strong>Brevo:</strong> no reverse deal webhooks in the current API.</li>
+<li>UTMs are <strong>never overwritten</strong> on reverse sync.</li>
+</ul>
+<h3 id="storage_status-reference"><code>storage_status</code> reference</h3>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Meaning</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PENDING</code></td>
+<td>Queued, in flight, or Celery retry</td>
+<td>Wait briefly; then <code>process</code> via manage skill</td>
+</tr>
+<tr>
+<td><code>PERSISTED</code></td>
+<td>Outbound CRM OK</td>
+<td>Outbound done; check reverse sync separately if deal fields stale</td>
+</tr>
+<tr>
+<td><code>ERROR</code></td>
+<td>Outbound failed</td>
+<td>Read <code>storage_status_text</code>, fix lead, <code>process</code></td>
+</tr>
+<tr>
+<td><code>DUPLICATED</code></td>
+<td>Intentional dedup (~30 min window)</td>
+<td><strong>Do not</strong> <code>process</code></td>
+</tr>
+<tr>
+<td><code>REJECTED</code></td>
+<td>Business rejection (manual/admin)</td>
+<td>Read <code>storage_status_text</code>; not auto-set by CRM pipeline</td>
+</tr>
+<tr>
+<td><code>MANUALLY_PERSISTED</code></td>
+<td>Legacy/manual CRM paste marker</td>
+<td>Used in reverse-sync email matching; not a normal automated outcome</td>
+</tr>
+</tbody>
+</table>
+<h3 id="platform-webhooks-vs-crm">Platform webhooks vs CRM</h3>
+<ul>
+<li><code>form_entry.added</code> fires on <strong>database save</strong> (<code>post_save</code>), before async CRM completes.</li>
+<li><code>form_entry.changed</code> fires on staff <code>PUT</code>; does <strong>not</strong> re-push to CRM.</li>
+<li>CRM retry requires <code>PUT /v1/marketing/academy/lead/process?id=</code>.</li>
+</ul>
+<h2 id="workflow">Workflow</h2>
+<ol>
+<li>
+<p><strong>Identify the lead.</strong> <code>GET /v1/marketing/academy/lead/&lt;id&gt;</code> or list with <code>?storage_status=ERROR</code> / <code>?storage_status=PENDING</code> (manage skill). Save <code>id</code>, <code>storage_status</code>, <code>storage_status_text</code>, <code>ac_contact_id</code>, <code>ac_deal_id</code>, <code>deal_status</code>.</p>
+</li>
+<li>
+<p><strong>Classify the problem.</strong> Use the tables below:</p>
+</li>
+<li><code>ERROR</code> or stuck <code>PENDING</code> → outbound CRM (Steps 3–8).</li>
+<li><code>PERSISTED</code> but deal fields stale → reverse sync (Step 9).</li>
+<li>Bulk upload missing rows → Step 10.</li>
+<li>
+<p>Webhook received but CRM failed → outbound (Steps 3–8); explain webhook ≠ CRM to the user.</p>
+</li>
+<li>
+<p><strong>Check CRM config.</strong> <code>GET /v1/marketing/crmacademy</code> — verify <code>crm_vendor</code> (<code>ACTIVE_CAMPAIGN</code> or <code>BREVO</code>), credentials, <code>sync_status</code>, <code>sync_message</code>.</p>
+</li>
+<li>
+<p><strong>Validate lead payload</strong> against create-skill requirements: <code>location</code>, <code>first_name</code>, <code>last_name</code>, <code>phone</code>, <code>course</code>, <code>tags</code> (AC) or <code>automations</code> (both vendors; Brevo: one only).</p>
+</li>
+<li>
+<p><strong>Verify tag/automation slugs.</strong> <code>GET /v1/marketing/academy/tag</code>, <code>GET /v1/marketing/academy/automation</code>. Refresh from CRM if stale: <code>GET /v1/marketing/academy/&lt;academy_id&gt;/tag/sync</code>, <code>GET /v1/marketing/academy/&lt;academy_id&gt;/automation/sync</code>.</p>
+</li>
+<li>
+<p><strong>Fix lead data.</strong> <code>PUT /v1/marketing/academy/lead/&lt;id&gt;</code> (manage skill).</p>
+</li>
+<li>
+<p><strong>Retry outbound.</strong> <code>PUT /v1/marketing/academy/lead/process?id=&lt;id&gt;</code> — add <code>sync=true</code> when you need the final <code>storage_status</code> in the same response. <strong>Skip if <code>DUPLICATED</code></strong>.</p>
+</li>
+<li>
+<p><strong>Poll outcome.</strong> Re-read lead until <code>PERSISTED</code>, <code>DUPLICATED</code>, or stable <code>ERROR</code>. Match <code>storage_status_text</code> to lookup table below if still failing.</p>
+</li>
+<li>
+<p><strong>Reverse sync (ActiveCampaign only).</strong> If outbound is <code>PERSISTED</code> but <code>deal_status</code> / <code>ac_deal_*</code> never update after salesperson CRM action:</p>
+</li>
+<li>Confirm AC webhooks target <code>/v1/marketing/activecampaign/webhook/...</code>.</li>
+<li>Confirm <code>ac_contact_id</code> is set on the lead (outbound must have succeeded).</li>
+<li>Webhook matching uses <code>ac_deal_id</code>, then <code>ac_contact_id</code>, then email.</li>
+<li>Staff <code>PUT</code> on <code>deal_status</code> may be overwritten by the next AC webhook when double sync is on.</li>
+<li>
+<p><strong>API gap:</strong> no staff GET endpoint for <code>ActiveCampaignWebhook</code> logs (<code>status</code>, <code>status_text</code>).</p>
+</li>
+<li>
+<p><strong>Bulk CSV debug.</strong> Upload returns <code>PENDING</code> immediately. If rows are missing, search <code>GET /v1/marketing/academy/lead?like=&lt;name&gt;</code> or filter by email + <code>created_at</code>. <strong>API gap:</strong> no staff GET for <code>CSVUpload</code> job log.</p>
+</li>
+</ol>
+<h2 id="endpoints">Endpoints</h2>
+<p>All staff endpoints require <code>Authorization</code>, <code>Academy</code>, optional <code>Accept-Language</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Purpose</th>
+<th>Method</th>
+<th>Path</th>
+<th>Capability</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Read lead diagnostics</td>
+<td>GET</td>
+<td><code>/v1/marketing/academy/lead/&lt;id&gt;</code></td>
+<td><code>read_lead</code></td>
+</tr>
+<tr>
+<td>List failed leads</td>
+<td>GET</td>
+<td><code>/v1/marketing/academy/lead?storage_status=ERROR</code></td>
+<td><code>read_lead</code></td>
+</tr>
+<tr>
+<td>List stuck leads</td>
+<td>GET</td>
+<td><code>/v1/marketing/academy/lead?storage_status=PENDING</code></td>
+<td><code>read_lead</code></td>
+</tr>
+<tr>
+<td>CRM config health</td>
+<td>GET</td>
+<td><code>/v1/marketing/crmacademy</code></td>
+<td><code>read_lead</code></td>
+</tr>
+<tr>
+<td>Tag catalog</td>
+<td>GET</td>
+<td><code>/v1/marketing/academy/tag</code></td>
+<td><code>read_lead</code></td>
+</tr>
+<tr>
+<td>Automation catalog</td>
+<td>GET</td>
+<td><code>/v1/marketing/academy/automation</code></td>
+<td><code>read_lead</code></td>
+</tr>
+<tr>
+<td>Sync tags from AC</td>
+<td>GET</td>
+<td><code>/v1/marketing/academy/&lt;academy_id&gt;/tag/sync</code></td>
+<td><code>crud_lead</code></td>
+</tr>
+<tr>
+<td>Sync automations from AC</td>
+<td>GET</td>
+<td><code>/v1/marketing/academy/&lt;academy_id&gt;/automation/sync</code></td>
+<td><code>crud_lead</code></td>
+</tr>
+<tr>
+<td>Fix lead fields</td>
+<td>PUT</td>
+<td><code>/v1/marketing/academy/lead/&lt;id&gt;</code></td>
+<td><code>crud_lead</code></td>
+</tr>
+<tr>
+<td>Retry CRM outbound</td>
+<td>PUT</td>
+<td><code>/v1/marketing/academy/lead/process?id=&lt;id&gt;</code></td>
+<td><code>crud_lead</code></td>
+</tr>
+</tbody>
+</table>
+<h4 id="example-read-failing-lead">Example — read failing lead</h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="err">GET /v1/marketing/academy/lead/219384</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="err">Authorization: Token &lt;token&gt;</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="err">Academy: 4</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">{</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">219384</span><span class="p">,</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">&quot;email&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;lucia@example.com&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="nt">&quot;location&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;barcelona-spain&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span><span class="nt">&quot;tags&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span><span class="nt">&quot;storage_status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ERROR&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span><span class="nt">&quot;storage_status_text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;You need to specify tags for this entry&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">  </span><span class="nt">&quot;ac_contact_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">  </span><span class="nt">&quot;deal_status&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="p">}</span>
+</code></pre></div>
+<h4 id="example-crm-config-check">Example — CRM config check</h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="err">GET /v1/marketing/crmacademy</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="err">Authorization: Token &lt;token&gt;</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="err">Academy: 4</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">[</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="p">{</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">12</span><span class="p">,</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="nt">&quot;crm_vendor&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ACTIVE_CAMPAIGN&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="nt">&quot;sync_status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;OK&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="nt">&quot;sync_message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">    </span><span class="nt">&quot;academy&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">      </span><span class="nt">&quot;slug&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;barcelona&quot;</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="p">]</span>
+</code></pre></div>
+<h4 id="example-retry-after-fix">Example — retry after fix</h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="err">PUT /v1/marketing/academy/lead/process?id=219384</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="err">Authorization: Token &lt;token&gt;</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="err">Academy: 4</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p">{</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">&quot;details&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1 leads added to the processing queue&quot;</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="p">}</span>
+</code></pre></div>
+<h2 id="storage_status_text-lookup-table-outbound-crm"><code>storage_status_text</code> lookup table (outbound CRM)</h2>
+<table>
+<thead>
+<tr>
+<th><code>storage_status_text</code></th>
+<th>Root cause</th>
+<th>Fix</th>
+<th>Retry <code>process</code>?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Missing location information</code></td>
+<td>No/invalid <code>location</code>; <code>academy=null</code> on public create</td>
+<td>Set valid <code>location</code> or use staff create (overrides location)</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><code>No CRM vendor information for academy with slug …</code></td>
+<td>No CRM config for location slug</td>
+<td>Configure CRM via <code>crmacademy</code>; verify <code>active_campaign_slug</code></td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><code>You need to specify tags for this entry</code></td>
+<td>ActiveCampaign; missing <code>tags</code></td>
+<td>Add valid tag slugs</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><code>The contact tags are empty</code></td>
+<td><code>tags</code> field blank after parse</td>
+<td>Set non-empty comma-separated slugs</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><code>Some tag applied to the contact not found or have tag_type different than…</code></td>
+<td>Invalid tag slug or wrong type</td>
+<td>Fix slug; sync tag catalog from AC</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><code>The specified automation … was not found for this AC Academy …</code></td>
+<td>Invalid automation slug</td>
+<td>Fix slug; sync automation catalog</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><code>No automation was specified and the specified tag (if any) has no automation either</code></td>
+<td>No automations and first tag has no linked automation</td>
+<td>Add <code>automations</code> or tag with automation</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><code>Brevo CRM does not support tags, please remove them from the contact payload</code></td>
+<td>Tags on Brevo academy</td>
+<td>Remove <code>tags</code> from lead</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><code>Only one automation at a time is allowed for Brevo</code></td>
+<td>Multiple automation slugs on Brevo</td>
+<td>Keep one automation</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><code>The email doesn't exist</code></td>
+<td>Missing email in processed payload</td>
+<td>Set <code>email</code></td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><code>The first name doesn't exist</code></td>
+<td>Missing <code>first_name</code></td>
+<td>Set <code>first_name</code></td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><code>The last name doesn't exist</code></td>
+<td>Missing <code>last_name</code></td>
+<td>Set <code>last_name</code></td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><code>The phone doesn't exist</code></td>
+<td>Missing <code>phone</code></td>
+<td>Set <code>phone</code></td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><code>The course doesn't exist</code></td>
+<td>Missing <code>course</code></td>
+<td>Set <code>course</code></td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><code>The id doesn't exist</code></td>
+<td>Internal task payload missing id</td>
+<td>Re-queue <code>process</code></td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><code>FormEntry not found (id: …)</code></td>
+<td>Race or bad id</td>
+<td>Wait and re-queue <code>process</code></td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><code>Could not save contact in CRM</code> / <code>Subscriber_id not found</code></td>
+<td>AC contact API failure</td>
+<td>Check credentials, AC outage, payload</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><code>Could not add contact to Automation</code></td>
+<td>AC automation enrollment failed</td>
+<td>Verify automation <code>acp_id</code>; sync catalog</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><em>(empty text)</em> + <code>DUPLICATED</code></td>
+<td>Same email+course within dedup window (default 30 min)</td>
+<td>Expected — not a bug</td>
+<td><strong>No</strong></td>
+</tr>
+<tr>
+<td><code>Saved but not send to CRM because SAVE_LEADS is FALSE</code></td>
+<td>Env disables CRM (<code>PERSISTED</code>)</td>
+<td>Ops environment note</td>
+<td>No</td>
+</tr>
+</tbody>
+</table>
+<h3 id="stuck-transient-outbound">Stuck / transient outbound</h3>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Root cause</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PENDING</code> + timeout text</td>
+<td>Celery timeout during CRM call</td>
+<td>Wait; <code>process</code> retry</td>
+</tr>
+<tr>
+<td><code>PENDING</code> indefinitely</td>
+<td>Staff create without <code>process</code></td>
+<td>Call <code>process</code></td>
+</tr>
+<tr>
+<td><code>PENDING</code> (initial)</td>
+<td>Task not yet consumed</td>
+<td>Wait 1–2 minutes, then investigate</td>
+</tr>
+</tbody>
+</table>
+<h2 id="reverse-sync-troubleshooting-activecampaign">Reverse sync troubleshooting (ActiveCampaign)</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Root cause</th>
+<th>What to do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>deal_status</code> never updates after AC salesperson action</td>
+<td>Webhooks not configured to <code>/v1/marketing/activecampaign/webhook/...</code></td>
+<td>Configure AC webhooks; verify academy slug or id in URL</td>
+</tr>
+<tr>
+<td>Webhook cannot match lead</td>
+<td>No <code>ac_contact_id</code>, <code>ac_deal_id</code>, or matching email on <code>FormEntry</code></td>
+<td>Ensure outbound <code>PERSISTED</code> first; check email match</td>
+</tr>
+<tr>
+<td>Staff <code>PUT deal_status</code> reverts</td>
+<td>AC webhook overwrites on next sync</td>
+<td>Prefer AC as source of truth when double sync on</td>
+</tr>
+<tr>
+<td>Brevo academy</td>
+<td>No reverse deal webhooks</td>
+<td>Deal fields only update via staff <code>PUT</code> or outbound</td>
+</tr>
+<tr>
+<td>Secondary custom-field sync fails</td>
+<td><code>async_update_deal_custom_fields</code> after <code>deal_add</code></td>
+<td>Does not change <code>storage_status</code>; deal core fields may still update</td>
+</tr>
+</tbody>
+</table>
+<p>Webhook processing errors use messages like <code>Impossible to find formentry for webhook …</code> or <code>Impossible to find formentry with deal …</code> — there is <strong>no staff API</strong> to read these logs.</p>
+<h2 id="side-effects-that-do-not-change-storage_status">Side effects that do not change <code>storage_status</code></h2>
+<table>
+<thead>
+<tr>
+<th>Failure</th>
+<th>What you observe</th>
+<th>What to do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>API create <code>400</code> (bad phone, language &gt;2 chars)</td>
+<td>No <code>FormEntry</code> created</td>
+<td>Fix payload; use create skill</td>
+</tr>
+<tr>
+<td>Public empty POST → <code>201</code> then CRM <code>ERROR: Missing location</code></td>
+<td>Record exists, CRM failed</td>
+<td>Fix <code>location</code>; <code>process</code></td>
+</tr>
+<tr>
+<td><code>contact-us</code> tag internal email fails</td>
+<td>CRM may abort before <code>PERSISTED</code></td>
+<td>Rare; check <code>storage_status_text</code>; fix email config</td>
+</tr>
+<tr>
+<td>Geolocation after <code>PERSISTED</code></td>
+<td><code>city</code>/<code>country</code> empty; status stays <code>PERSISTED</code></td>
+<td>Non-blocking; Maps API or missing lat/long</td>
+</tr>
+<tr>
+<td><code>REJECTED</code> status</td>
+<td>Manual/admin only; never auto-set by CRM pipeline</td>
+<td>Read <code>storage_status_text</code> if present</td>
+</tr>
+<tr>
+<td><code>MANUALLY_PERSISTED</code></td>
+<td>Used for reverse-sync email matching</td>
+<td>Not an automated CRM outcome</td>
+</tr>
+</tbody>
+</table>
+<h2 id="bulk-csv-debug-path">Bulk CSV debug path</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Root cause</th>
+<th>What to do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Upload <code>400</code></td>
+<td>Missing required CSV column</td>
+<td>Add <code>first_name</code>, <code>last_name</code>, <code>email</code>, <code>location</code>, <code>phone</code>, <code>language</code></td>
+</tr>
+<tr>
+<td>Row skipped</td>
+<td><code>No location or academy</code>, bad email, missing names, unknown slug</td>
+<td>Fix row; re-upload or create lead manually</td>
+</tr>
+<tr>
+<td>Upload <code>PENDING</code>, leads missing</td>
+<td>Per-row errors logged server-side only</td>
+<td>Search leads by email + <code>created_at</code></td>
+</tr>
+<tr>
+<td>Extra CSV columns ignored</td>
+<td><code>referral_key</code>, <code>tags</code> not mapped by bulk task</td>
+<td>Set fields via staff <code>PUT</code> or use non-bulk create</td>
+</tr>
+</tbody>
+</table>
+<h2 id="integration-confusion-webhooks-crm">Integration confusion (webhooks ≠ CRM)</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Explanation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>n8n/Zapier got <code>form_entry.added</code> but <code>storage_status=ERROR</code></td>
+<td>Platform webhook fires on save; CRM is async and independent</td>
+</tr>
+<tr>
+<td>Staff <code>PUT</code> but CRM contact unchanged</td>
+<td><code>form_entry.changed</code> only; call <code>process</code> to re-push</td>
+</tr>
+</tbody>
+</table>
+<h2 id="api-limitations">API limitations</h2>
+<ul>
+<li>No staff GET for <code>ActiveCampaignWebhook</code> error logs.</li>
+<li>No staff GET for <code>CSVUpload</code> job status or per-row log.</li>
+<li>Do not reference management commands — use API endpoints only.</li>
+</ul>
+<h2 id="cross-references-do-not-deep-dive-here">Cross-references (do not deep-dive here)</h2>
+<ul>
+<li>Facebook inbound intake failures → <a href="../../bc-marketing-inbound-leads-attribution-and-acquisition/SKILL/"><code>bc-marketing-inbound-leads-attribution-and-acquisition</code></a></li>
+<li>Attribution / <code>custom_fields</code> decoding → inbound skill</li>
+<li>Referral commission payouts → inbound skill + <code>/v1/commission/...</code></li>
+<li>Acquisition funnel drill-down → <a href="../../bc-monitoring-read-report-acquisition/SKILL/"><code>bc-monitoring-read-report-acquisition</code></a> + manage skill</li>
+</ul>
+<h2 id="edge-cases">Edge Cases</h2>
+<ul>
+<li><strong><code>DUPLICATED</code> after legitimate re-submit:</strong> same person submitted the same course within the dedup window — expected; do not <code>process</code>.</li>
+<li><strong><code>PERSISTED</code> + empty <code>ac_deal_id</code>:</strong> outbound contact may exist without a deal yet; reverse <code>deal_add</code> webhook sets deal fields.</li>
+<li><strong>Staff create never processed:</strong> <code>PENDING</code> forever until <code>process</code> — not a CRM failure.</li>
+<li><strong><code>SAVE_LEADS=FALSE</code>:</strong> looks like success (<code>PERSISTED</code>) but CRM was skipped — check <code>storage_status_text</code>.</li>
+<li><strong>Race: <code>process</code> before DB visible:</strong> rare <code>FormEntry not found</code> — retry <code>process</code>.</li>
+</ul>
+<h2 id="checklist">Checklist</h2>
+<ol>
+<li>[ ] Retrieved lead by <code>id</code> and recorded <code>storage_status</code>, <code>storage_status_text</code>, <code>ac_contact_id</code>, <code>ac_deal_id</code>, <code>deal_status</code>.</li>
+<li>[ ] Classified outbound vs reverse vs bulk vs webhook-confusion problem.</li>
+<li>[ ] Checked <code>GET /v1/marketing/crmacademy</code> for vendor and sync health.</li>
+<li>[ ] Matched <code>storage_status_text</code> to lookup table and applied fix via <code>PUT</code>.</li>
+<li>[ ] Called <code>process</code> unless status is <code>DUPLICATED</code>.</li>
+<li>[ ] Polled until terminal state (<code>PERSISTED</code>, <code>DUPLICATED</code>, or stable <code>ERROR</code>).</li>
+<li>[ ] If outbound OK but deal fields stale, verified AC reverse webhook configuration.</li>
+<li>[ ] Documented API gaps when webhook or CSV upload logs are needed.</li>
+</ol>
+
+
+
+
+
+
+
+  
+  
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.f8cc74c7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../../../assets/javascripts/bundle.c8b220af.min.js"></script>
+      
+    
+  </body>
+</html>
