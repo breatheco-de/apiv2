@@ -1109,6 +1109,51 @@ class GetAbstractIOweYouSmallSerializer(serpy.Serializer):
     selected_cohort_set = GetCohortSetSerializer(many=False, required=False)
 
 
+class GetConversionInvoiceSerializer(serpy.Serializer):
+    """Invoice fields needed to calculate commissions on the frontend."""
+
+    id = serpy.Field()
+    amount = serpy.Field()
+    amount_refunded = serpy.Field()
+    currency = GetCurrencySmallSerializer(many=False)
+    paid_at = serpy.Field()
+    status = serpy.Field()
+    refunded_at = serpy.Field()
+
+
+class GetConversionIOweYouSerializer(serpy.Serializer):
+    """Subscription / PlanFinancing payload for conversion attribution reporting."""
+
+    id = serpy.Field()
+    status = serpy.Field()
+    status_message = serpy.Field()
+    user = GetUserSmallSerializer(many=False)
+    academy = GetAcademySmallSerializer(many=False)
+    plans = serpy.ManyToManyField(GetPlanSmallTinySerializer(attr="plans", many=True))
+    conversion_info = serpy.Field()
+    invoices = serpy.MethodField()
+    next_payment_at = serpy.Field()
+    valid_until = serpy.Field()
+    created_at = serpy.Field()
+
+    def get_invoices(self, obj):
+        return GetConversionInvoiceSerializer(obj.invoices.all().order_by("paid_at"), many=True).data
+
+
+class GetConversionSubscriptionSerializer(GetConversionIOweYouSerializer):
+    paid_at = serpy.Field()
+    pay_every = serpy.Field()
+    pay_every_unit = serpy.Field()
+
+
+class GetConversionPlanFinancingSerializer(GetConversionIOweYouSerializer):
+    plan_expires_at = serpy.Field()
+    monthly_price = serpy.Field()
+    how_many_installments = serpy.Field()
+    installments_paid = serpy.Field()
+    initial_payment_amount = serpy.Field()
+
+
 class GetBagSerializer(serpy.Serializer):
     id = serpy.Field()
     service_items = serpy.MethodField()

@@ -1,7 +1,31 @@
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 
-__all__ = ["validate_conversion_info"]
+__all__ = ["CONVERSION_INFO_KEYS", "validate_conversion_info"]
+
+CONVERSION_INFO_KEYS = frozenset(
+    {
+        "utm_placement",
+        "utm_referrer",
+        "utm_medium",
+        "utm_source",
+        "utm_term",
+        "utm_content",
+        "utm_campaign",
+        "conversion_url",
+        "landing_url",
+        "user_agent",
+        "plan",
+        "coupon",
+        "ref",
+        "location",
+        "translations",
+        "internal_cta_placement",
+        "internal_cta_content",
+        "internal_cta_campaign",
+        "sale",
+    }
+)
 
 
 def validate_conversion_info(conversion_info, lang):
@@ -17,27 +41,7 @@ def validate_conversion_info(conversion_info, lang):
                 code=400,
             )
 
-        expected_keys = [
-            "utm_placement",
-            "utm_referrer",
-            "utm_medium",
-            "utm_source",
-            "utm_term",
-            "utm_content",
-            "utm_campaign",
-            "conversion_url",
-            "landing_url",
-            "user_agent",
-            "plan",
-            "coupon",
-            "ref",
-            "location",
-            "translations",
-            "internal_cta_placement",
-            "internal_cta_content",
-            "internal_cta_campaign",
-            "sale",
-        ]
+        expected_keys = CONVERSION_INFO_KEYS
 
         expected_sale_keys = [
             "is_offline_sale",
