@@ -191,3 +191,76 @@ class AcademyConversionTestSuite(PaymentsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual([item["id"] for item in data["subscriptions"]], [own.id])
         self.assertEqual(data["plan_financings"], [])
+
+    def test_has_requires_all_listed_conversion_info_keys(self):
+        model = self.bc.database.create(
+            user=1,
+            capability="read_subscription",
+            role=1,
+            profile_academy=1,
+            academy=1,
+            currency=1,
+            skip_cohort=True,
+        )
+        buyer = self.bc.database.create(user=1).user
+
+        with_both = self.bc.database.create(
+            user=buyer,
+            academy=model.academy,
+            currency=model.currency,
+            subscription={
+                "conversion_info": {
+                    "utm_referrer": "marcia@4geeksacademy.com",
+                    "utm_source": "admissions",
+                },
+            },
+            skip_cohort=True,
+        ).subscription
+
+        self.bc.database.create(
+            user=buyer,
+            academy=model.academy,
+            currency=model.currency,
+            subscription={
+                "conversion_info": {"utm_referrer": "marcia@4geeksacademy.com"},
+            },
+            skip_cohort=True,
+        )
+
+        self.bc.database.create(
+            user=buyer,
+            academy=model.academy,
+            currency=model.currency,
+            subscription={"conversion_info": {"landing_url": "/checkout"}},
+            skip_cohort=True,
+        )
+
+        self.client.force_authenticate(model.user)
+        self.bc.request.set_headers(academy=1)
+
+        url = reverse_lazy("payments:academy_conversion") + "?has=utm_referrer,utm_source"
+        response = self.client.get(url)
+        data = response.json()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual([item["id"] for item in data["subscriptions"]], [with_both.id])
+        self.assertEqual(data["plan_financings"], [])
+
+    def test_has_with_invalid_key_returns_400(self):
+        model = self.bc.database.create(
+            user=1,
+            capability="read_subscription",
+            role=1,
+            profile_academy=1,
+            skip_cohort=True,
+        )
+        self.client.force_authenticate(model.user)
+        self.bc.request.set_headers(academy=1)
+
+        url = reverse_lazy("payments:academy_conversion") + "?has=utm_referrer,not_a_real_key"
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        detail = response.json().get("detail")
+        slug = detail.get("slug") if isinstance(detail, dict) else detail
+        self.assertEqual(slug, "conversion-info-has-invalid-key")
