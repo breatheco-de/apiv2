@@ -95,6 +95,8 @@ from breathecode.payments.serializers import (
     GetCohortSerializer,
     GetCohortSetSerializer,
     GetConsumptionSessionSerializer,
+    GetConversionPlanFinancingSerializer,
+    GetConversionSubscriptionSerializer,
     GetCouponSerializer,
     GetCouponWithPlansSerializer,
     GetCurrencySerializer,
@@ -129,7 +131,7 @@ from breathecode.payments.services.coinbase import CoinbaseCommerce
 from breathecode.payments.services.stripe import Stripe
 from breathecode.payments.signals import reimburse_service_units
 from breathecode.payments.utils import parse_date_range_from_request
-from breathecode.utils import APIViewExtensions, getLogger, validate_conversion_info
+from breathecode.utils import APIViewExtensions, CONVERSION_INFO_KEYS, getLogger, validate_conversion_info
 from breathecode.utils.decorators.capable_of import capable_of
 from breathecode.utils.decorators.consume import discount_consumption_sessions
 from breathecode.utils.redis import Lock
@@ -2922,6 +2924,98 @@ class AcademyPlanFinancingView(APIView):
         financing.save()
 
         return Response({"detail": "Plan financing updated successfully"}, status=status.HTTP_200_OK)
+
+
+class AcademyConversionView(APIView):
+    """List academy subscriptions and plan financings filtered by conversion_info fields."""
+
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    def _apply_has_conversion_keys(self, queryset, request, lang):
+        """
+        Require conversion_info to contain all listed keys (AND).
+
+        Example: ?has=utm_referrer,utm_source
+        """
+        has_param = request.GET.get("has")
+        if not has_param:
+            return queryset
+
+        keys = [key.strip() for key in has_param.split(",") if key.strip()]
+        if not keys:
+            return queryset
+
+        invalid_keys = [key for key in keys if key not in CONVERSION_INFO_KEYS]
+        if invalid_keys:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Invalid conversion_info key(s) in has: {', '.join(invalid_keys)}",
+                    es=f"Clave(s) inválida(s) de conversion_info en has: {', '.join(invalid_keys)}",
+                    slug="conversion-info-has-invalid-key",
+                ),
+                code=400,
+            )
+
+        queryset = queryset.exclude(conversion_info=None).exclude(conversion_info={})
+        return queryset.filter(conversion_info__has_keys=keys)
+
+    def _apply_conversion_info_filters(self, queryset, request, lang):
+        # `plan` is reserved for filtering the plans M2M (same as other academy endpoints).
+        # `has` is reserved for requiring conversion_info keys to exist.
+        reserved = {"sort", "limit", "offset", "page", "page_size", "plan", "has"}
+        for key, value in request.GET.items():
+            if key in reserved:
+                continue
+            if key not in CONVERSION_INFO_KEYS:
+                continue
+            if value in (None, ""):
+                continue
+            if key == "sale":
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Filtering by sale is not supported; use a top-level conversion_info key",
+                        es="Filtrar por sale no está soportado; usa una clave de primer nivel de conversion_info",
+                        slug="conversion-info-sale-filter-unsupported",
+                    ),
+                    code=400,
+                )
+            queryset = queryset.filter(**{f"conversion_info__{key}": value})
+        return queryset
+
+    @capable_of("read_subscription")
+    def get(self, request, academy_id=None):
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+
+        subscriptions = Subscription.objects.filter(academy_id=academy_id).prefetch_related("invoices", "plans")
+        plan_financings = PlanFinancing.objects.filter(academy_id=academy_id).prefetch_related("invoices", "plans")
+
+        subscriptions = self._apply_has_conversion_keys(subscriptions, request, lang)
+        plan_financings = self._apply_has_conversion_keys(plan_financings, request, lang)
+
+        subscriptions = self._apply_conversion_info_filters(subscriptions, request, lang)
+        plan_financings = self._apply_conversion_info_filters(plan_financings, request, lang)
+
+        if plan_param := request.GET.get("plan"):
+            values = plan_param.split(",")
+            if all(v.strip().isdigit() for v in values):
+                plan_filter = {"plans__id__in": [int(v) for v in values]}
+            else:
+                plan_filter = {"plans__slug__in": values}
+            subscriptions = subscriptions.filter(**plan_filter)
+            plan_financings = plan_financings.filter(**plan_filter)
+
+        subscriptions = handler.queryset(subscriptions.distinct())
+        plan_financings = handler.queryset(plan_financings.distinct())
+
+        return handler.response(
+            {
+                "subscriptions": GetConversionSubscriptionSerializer(subscriptions, many=True).data,
+                "plan_financings": GetConversionPlanFinancingSerializer(plan_financings, many=True).data,
+            }
+        )
 
 
 class AcademyPlanFinancingPaymentScheduleView(APIView):
