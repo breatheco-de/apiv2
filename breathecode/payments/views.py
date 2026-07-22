@@ -2931,9 +2931,39 @@ class AcademyConversionView(APIView):
 
     extensions = APIViewExtensions(sort="-id", paginate=True)
 
+    def _apply_has_conversion_keys(self, queryset, request, lang):
+        """
+        Require conversion_info to contain all listed keys (AND).
+
+        Example: ?has=utm_referrer,utm_source
+        """
+        has_param = request.GET.get("has")
+        if not has_param:
+            return queryset
+
+        keys = [key.strip() for key in has_param.split(",") if key.strip()]
+        if not keys:
+            return queryset
+
+        invalid_keys = [key for key in keys if key not in CONVERSION_INFO_KEYS]
+        if invalid_keys:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Invalid conversion_info key(s) in has: {', '.join(invalid_keys)}",
+                    es=f"Clave(s) inválida(s) de conversion_info en has: {', '.join(invalid_keys)}",
+                    slug="conversion-info-has-invalid-key",
+                ),
+                code=400,
+            )
+
+        queryset = queryset.exclude(conversion_info=None).exclude(conversion_info={})
+        return queryset.filter(conversion_info__has_keys=keys)
+
     def _apply_conversion_info_filters(self, queryset, request, lang):
         # `plan` is reserved for filtering the plans M2M (same as other academy endpoints).
-        reserved = {"sort", "limit", "offset", "page", "page_size", "plan"}
+        # `has` is reserved for requiring conversion_info keys to exist.
+        reserved = {"sort", "limit", "offset", "page", "page_size", "plan", "has"}
         for key, value in request.GET.items():
             if key in reserved:
                 continue
@@ -2961,6 +2991,9 @@ class AcademyConversionView(APIView):
 
         subscriptions = Subscription.objects.filter(academy_id=academy_id).prefetch_related("invoices", "plans")
         plan_financings = PlanFinancing.objects.filter(academy_id=academy_id).prefetch_related("invoices", "plans")
+
+        subscriptions = self._apply_has_conversion_keys(subscriptions, request, lang)
+        plan_financings = self._apply_has_conversion_keys(plan_financings, request, lang)
 
         subscriptions = self._apply_conversion_info_filters(subscriptions, request, lang)
         plan_financings = self._apply_conversion_info_filters(plan_financings, request, lang)
