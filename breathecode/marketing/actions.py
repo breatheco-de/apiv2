@@ -758,9 +758,15 @@ def register_new_lead(form_entry=None):
         raise ValidationException("Missing location information")
 
     ac_academy = None
-    alias = AcademyAlias.objects.filter(
-        Q(active_campaign_slug=form_entry["location"]) | Q(academy__slug=form_entry["location"])
-    ).first()
+    location = form_entry["location"]
+
+    # Resolve alias in priority order (never OR + .first() across different
+    # match types — that can pick a sibling alias and overwrite utm_location).
+    alias = AcademyAlias.objects.filter(slug=location).first()
+    if alias is None:
+        alias = AcademyAlias.objects.filter(active_campaign_slug=location).first()
+    if alias is None:
+        alias = AcademyAlias.objects.filter(academy__slug=location).first()
 
     try:
         if alias is not None:
@@ -770,12 +776,12 @@ def register_new_lead(form_entry=None):
 
     if ac_academy is None:
         ac_academy = ActiveCampaignAcademy.objects.filter(
-            Q(academy__slug=form_entry["location"]) | Q(academy__academyalias__slug=form_entry["location"])
+            Q(academy__slug=location) | Q(academy__academyalias__slug=location)
         ).first()
 
     if ac_academy is None:
         raise RetryTask(
-            f"No CRM vendor information for academy with slug {form_entry['location']}. Is Active Campaign or Brevo used?"
+            f"No CRM vendor information for academy with slug {location}. Is Active Campaign or Brevo used?"
         )
 
     automations = get_lead_automations(ac_academy, form_entry)
@@ -856,13 +862,15 @@ def register_new_lead(form_entry=None):
 
     contact = set_optional(contact, "utm_url", form_entry, crm_vendor=ac_academy.crm_vendor)
     
-    # Ensure location sent to Active Campaign matches academy.active_campaign_slug
-    location_value = form_entry.get("location")
-    if alias and alias.active_campaign_slug:
+    # Ensure location sent to Active Campaign matches the resolved academy/alias.
+    # Only use alias.active_campaign_slug on slug/AC-slug match, not academy fallback.
+    location_value = location
+    alias_matches_location = bool(alias and (alias.slug == location or alias.active_campaign_slug == location))
+    if alias_matches_location and alias.active_campaign_slug:
         location_value = alias.active_campaign_slug
     elif ac_academy.academy and ac_academy.academy.active_campaign_slug:
         location_value = ac_academy.academy.active_campaign_slug
-    
+
     contact = set_optional(contact, "utm_location", {"location": location_value}, "location", crm_vendor=ac_academy.crm_vendor)
     contact = set_optional(contact, "course", form_entry, crm_vendor=ac_academy.crm_vendor)
     contact = set_optional(contact, "utm_language", form_entry, "language", crm_vendor=ac_academy.crm_vendor)
