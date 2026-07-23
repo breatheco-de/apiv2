@@ -547,6 +547,7 @@ class AssetAdmin(admin.ModelAdmin):
         "lang",
         "external",
         "graded",
+        "is_seo_tracked",
         AssessmentFilter,
         WithKeywordFilter,
         WithDescription,
