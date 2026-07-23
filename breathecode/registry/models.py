@@ -561,7 +561,7 @@ class Asset(models.Model):
         help_text="The owner has the github premissions to update the lesson",
     )
 
-    is_seo_tracked = models.BooleanField(default=True, db_index=True)
+    is_seo_tracked = models.BooleanField(default=False, db_index=True)
     seo_keywords = models.ManyToManyField(
         AssetKeyword, blank=True, help_text="Optimize for a max of two keywords per asset"
     )

@@ -479,6 +479,38 @@ def test_assets_with_category(bc: Breathecode, client):
     assert bc.database.list_of("registry.Asset") == bc.format.to_dict(model.asset)
 
 
+def test_assets_with_is_seo_tracked(bc: Breathecode, client):
+
+    assets = [
+        {
+            "status": "PUBLISHED",
+            "is_seo_tracked": True,
+        },
+        {
+            "status": "PUBLISHED",
+            "is_seo_tracked": False,
+        },
+    ]
+    model = bc.database.create(asset=assets)
+
+    url = reverse_lazy("registry:asset") + "?is_seo_tracked=true"
+    response = client.get(url)
+    json = response.json()
+
+    expected = [get_serializer(model.asset[0])]
+
+    assert json == expected
+    assert bc.database.list_of("registry.Asset") == bc.format.to_dict(model.asset)
+
+    url = reverse_lazy("registry:asset") + "?is_seo_tracked=false"
+    response = client.get(url)
+    json = response.json()
+
+    expected = [get_serializer(model.asset[1])]
+
+    assert json == expected
+
+
 @patch(
     "breathecode.utils.api_view_extensions.extensions.lookup_extension.compile_lookup",
     MagicMock(wraps=lookup_extension.compile_lookup),
@@ -508,7 +540,7 @@ def test_lookup_extension(bc: Breathecode, client):
         },
         ids=["author", "owner"],
         bools={
-            "exact": ["with_video", "interactive", "graded"],
+            "exact": ["with_video", "interactive", "graded", "is_seo_tracked"],
         },
         overwrite={
             "category": "category__slug",
@@ -534,6 +566,7 @@ def test_lookup_extension(bc: Breathecode, client):
         "with_video",
         "interactive",
         "graded",
+        "is_seo_tracked",
     ]
 
     response = client.get(url)
