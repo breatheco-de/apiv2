@@ -30,7 +30,15 @@ class ProvisioningVendorAdmin(admin.ModelAdmin):
 
 @admin.register(ProvisioningLLM)
 class ProvisioningLLMAdmin(admin.ModelAdmin):
-    list_display = ["user", "academy", "vendor", "external_user_id", "status"]
+    list_display = [
+        "user",
+        "academy",
+        "vendor",
+        "external_user_id",
+        "status",
+        "last_known_spend",
+        "last_budget_sync_at",
+    ]
     search_fields = ["user__email", "academy__name", "vendor__name", "external_user_id"]
     list_filter = ["status", "vendor"]
 

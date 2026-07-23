@@ -157,6 +157,197 @@ def test_academy_paymentmethod__reject_invalid_logo_urls(client, database: capy.
     assert "logo_urls" in response.json()
 
 
+@pytest.mark.django_db
+def test_methods__returns_qr_url(client, database: capy.Database):
+    qr_url = "https://cdn.example.com/zelle-qr.png"
+    database.create(
+        city=1,
+        country=1,
+        currency=1,
+        academy=1,
+        payment_method={
+            "academy_id": 1,
+            "currency_id": 1,
+            "title": "Zelle",
+            "lang": "en-US",
+            "qr_url": qr_url,
+        },
+    )
+
+    response = client.get(reverse_lazy("payments:methods"))
+    json_response = response.json()
+
+    assert response.status_code == 200
+    assert len(json_response) == 1
+    assert json_response[0]["qr_url"] == qr_url
+
+
+@pytest.mark.django_db
+def test_academy_paymentmethod__create_with_qr_url(client, database: capy.Database):
+    model = database.create(
+        city=1,
+        country=1,
+        currency=1,
+        academy=1,
+        user=1,
+        role=1,
+        capability="crud_paymentmethod",
+        profile_academy=1,
+    )
+    qr_url = "https://cdn.example.com/zelle-qr.png"
+
+    client.force_authenticate(user=model.user)
+
+    url = reverse_lazy("payments:academy_paymentmethod", kwargs={"academy_id": 1})
+    response = client.post(
+        url,
+        {
+            "title": "Zelle",
+            "description": "Pay with Zelle",
+            "lang": "en-US",
+            "is_credit_card": False,
+            "currency": "USD",
+            "qr_url": qr_url,
+        },
+        format="json",
+        headers={"Academy": "1"},
+    )
+
+    assert response.status_code == 201
+    assert response.json()["qr_url"] == qr_url
+
+
+@pytest.mark.django_db
+def test_academy_paymentmethod__reject_invalid_qr_url(client, database: capy.Database):
+    model = database.create(
+        city=1,
+        country=1,
+        currency=1,
+        academy=1,
+        user=1,
+        role=1,
+        capability="crud_paymentmethod",
+        profile_academy=1,
+    )
+
+    client.force_authenticate(user=model.user)
+
+    url = reverse_lazy("payments:academy_paymentmethod", kwargs={"academy_id": 1})
+    response = client.post(
+        url,
+        {
+            "title": "Zelle",
+            "description": "Pay with Zelle",
+            "lang": "en-US",
+            "is_credit_card": False,
+            "currency": "USD",
+            "qr_url": "http://cdn.example.com/zelle-qr.png",
+        },
+        format="json",
+        headers={"Academy": "1"},
+    )
+
+    assert response.status_code == 400
+    assert "qr_url" in response.json()
+
+
+@pytest.mark.django_db
+def test_methods__filter_by_plan__prefers_specific_over_generic(client, database: capy.Database):
+    model = database.create(
+        city=1,
+        country=1,
+        currency=1,
+        academy=1,
+        plan={"slug": "plan-specific", "owner_id": 1},
+        payment_method=[
+            {
+                "academy_id": 1,
+                "currency_id": 1,
+                "title": "Zelle",
+                "lang": "en-US",
+                "description": "generic@example.com",
+            },
+            {
+                "academy_id": 1,
+                "currency_id": 1,
+                "title": "Zelle",
+                "lang": "en-US",
+                "description": "specific@example.com",
+            },
+        ],
+    )
+    model.payment_method[1].plans.add(model.plan)
+
+    response = client.get(reverse_lazy("payments:methods") + f"?plan={model.plan.slug}")
+    json_response = response.json()
+
+    assert response.status_code == 200
+    assert len(json_response) == 1
+    assert json_response[0]["id"] == model.payment_method[1].id
+    assert json_response[0]["description"] == "specific@example.com"
+
+
+@pytest.mark.django_db
+def test_methods__filter_by_plan__returns_generic_when_no_specific(client, database: capy.Database):
+    model = database.create(
+        city=1,
+        country=1,
+        currency=1,
+        academy=1,
+        plan={"slug": "plan-generic-only", "owner_id": 1},
+        payment_method={
+            "academy_id": 1,
+            "currency_id": 1,
+            "title": "Zelle",
+            "lang": "en-US",
+            "description": "generic@example.com",
+        },
+    )
+
+    response = client.get(reverse_lazy("payments:methods") + f"?plan={model.plan.slug}")
+    json_response = response.json()
+
+    assert response.status_code == 200
+    assert len(json_response) == 1
+    assert json_response[0]["id"] == model.payment_method.id
+    assert json_response[0]["description"] == "generic@example.com"
+
+
+@pytest.mark.django_db
+def test_methods__filter_by_plan__different_titles_do_not_collide(client, database: capy.Database):
+    model = database.create(
+        city=1,
+        country=1,
+        currency=1,
+        academy=1,
+        plan={"slug": "plan-titles", "owner_id": 1},
+        payment_method=[
+            {
+                "academy_id": 1,
+                "currency_id": 1,
+                "title": "Zelle",
+                "lang": "en-US",
+                "description": "zelle@example.com",
+            },
+            {
+                "academy_id": 1,
+                "currency_id": 1,
+                "title": "Wire Transfer",
+                "lang": "en-US",
+                "description": "wire@example.com",
+            },
+        ],
+    )
+    model.payment_method[1].plans.add(model.plan)
+
+    response = client.get(reverse_lazy("payments:methods") + f"?plan={model.plan.slug}")
+    json_response = response.json()
+
+    assert response.status_code == 200
+    assert {pm["title"] for pm in json_response} == {"Zelle", "Wire Transfer"}
+    assert {pm["id"] for pm in json_response} == {pm.id for pm in model.payment_method}
+
+
 # --- Grouped Country Code Filter Tests ---
 
 

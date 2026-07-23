@@ -1049,7 +1049,8 @@ Each academy can have one `AcademyNotifySettings` instance with the following fi
 #### Fields
 
 - **template_variables** (JSONField): Variable overrides for notification templates
-  - Format: `{"template.SLUG.VARIABLE": "value", "global.VARIABLE": "value"}`
+  - Format: `{"template.SLUG.VARIABLE": "value", "template.SLUG.VARIABLE.en": "value", "global.VARIABLE": "value"}`
+  - Optional 2-letter language suffix (`.en`, `.es`): applied only when recipient `LANG` matches; never cross-language
   - Supports interpolation with `{{variable}}` syntax
 
 - **disabled_templates** (JSONField): List of template slugs to disable
@@ -1057,11 +1058,12 @@ Each academy can have one `AcademyNotifySettings` instance with the following fi
   - Disabled templates won't send (silently skipped)
 
 **Variable Override Priority:**
-1. Academy template-specific override (`template.SLUG.VARIABLE`) - highest
-2. Academy global override (`global.VARIABLE`)
-3. Code context from `send_email_message` call (data dict)
-4. Academy model fields (academy.name, academy.logo_url, etc.)
-5. System defaults (environment variables) - lowest
+1. Academy template-specific override with matching language (`template.SLUG.VARIABLE.en`) - highest
+2. Academy template-specific override without language (`template.SLUG.VARIABLE`)
+3. Academy global override (`global.VARIABLE`)
+4. Code context from `send_email_message` call (data dict)
+5. Academy model fields (academy.name, academy.logo_url, etc.)
+6. System defaults (environment variables) - lowest
 
 **Important:** Academy `template_variables` overrides take priority over academy model fields, allowing full customization even for fields like `COMPANY_NAME` that are typically set from `academy.name`.
 
@@ -1647,9 +1649,20 @@ function TemplateManager({ academyId }) {
 - Check for circular references (max depth is 5)
 - Verify referenced variables exist in template_variables
 
+### verify_email contextual variants
+
+The `verify_email` template supports **per-signup-reason** copy based on `UserInvite` (`event_slug`, `asset_slug`, `course`, `cohort`, or generic).
+
+Academies should override **variant-specific** keys (for example `template.verify_email.SUBJECT_EVENT`), not only a single `subject`, so one override does not flatten all contexts.
+
+**Per-language keys:** append `.en` or `.es` (e.g. `template.verify_email.SUBJECT_EVENT.es`). Resolution uses the recipient `LANG`: lang-specific override → legacy key without lang → code i18n default. An `.en` override is never applied to Spanish users.
+
+Full details, pipeline, and examples: [VERIFY_EMAIL_OVERRIDES.md](./VERIFY_EMAIL_OVERRIDES.md).
+
 ## Related Documentation
 
 - [Email Notifications](./notifications.md) - How to send notifications
 - [Template Development](./template_development.md) - Creating notification templates
 - [Webhook System](./webhooks.md) - Notification delivery webhooks
+- [verify_email overrides](./VERIFY_EMAIL_OVERRIDES.md) - Contextual verify_email copy and academy overrides
 

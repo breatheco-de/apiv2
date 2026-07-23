@@ -41,6 +41,7 @@ class LLMClient(Protocol):
         external_user_id: str,
         name: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
+        team_id: Optional[str] = None,
         timeout: float = 10.0,
     ) -> Dict[str, Any]: ...
 
@@ -62,6 +63,14 @@ class LLMClient(Protocol):
     ) -> Dict[str, Any]: ...
 
     def delete_user(self, user_ids: list[str], timeout: float = 10.0) -> bool: ...
+
+    def add_user_to_team(
+        self,
+        team_id: str,
+        user_ids: list[str],
+        max_budget_in_team: Optional[float] = None,
+        timeout: float = 10.0,
+    ) -> bool: ...
 
 
 def register_llm_client(vendor_slug: str):

@@ -217,3 +217,98 @@ class AcademyNotifySettingsTestCase(TestCase, BreathecodeMixin):
 
         assert "must be a string" in str(context.exception).lower()
 
+    def test_lang_specific_override_does_not_cross_language(self):
+        """EN override must not apply when resolving for ES (falls back to no override)."""
+        settings = AcademyNotifySettings.objects.create(
+            academy=self.academy,
+            template_variables={
+                "template.verify_email.SUBJECT_EVENT.en": "EN only {CONTEXT_NAME}",
+                "template.verify_email.MESSAGE_EVENT.en": "EN body",
+            },
+        )
+
+        en_overrides = settings.get_all_overrides_for_template("verify_email", lang="en")
+        es_overrides = settings.get_all_overrides_for_template("verify_email", lang="es")
+
+        assert en_overrides["SUBJECT_EVENT"] == "EN only {CONTEXT_NAME}"
+        assert en_overrides["MESSAGE_EVENT"] == "EN body"
+        assert "SUBJECT_EVENT" not in es_overrides
+        assert "MESSAGE_EVENT" not in es_overrides
+
+    def test_lang_specific_es_override(self):
+        settings = AcademyNotifySettings.objects.create(
+            academy=self.academy,
+            template_variables={
+                "template.verify_email.SUBJECT_EVENT.es": "ES evento {CONTEXT_NAME}",
+                "template.verify_email.SUBJECT_EVENT.en": "EN event {CONTEXT_NAME}",
+            },
+        )
+
+        es_overrides = settings.get_all_overrides_for_template("verify_email", lang="es")
+        en_overrides = settings.get_all_overrides_for_template("verify_email", lang="en-US")
+
+        assert es_overrides["SUBJECT_EVENT"] == "ES evento {CONTEXT_NAME}"
+        assert en_overrides["SUBJECT_EVENT"] == "EN event {CONTEXT_NAME}"
+
+    def test_legacy_override_applies_to_all_langs(self):
+        """Keys without lang suffix still apply for any lang."""
+        settings = AcademyNotifySettings.objects.create(
+            academy=self.academy,
+            template_variables={"template.verify_email.subject": "Legacy subject"},
+        )
+
+        en_overrides = settings.get_all_overrides_for_template("verify_email", lang="en")
+        es_overrides = settings.get_all_overrides_for_template("verify_email", lang="es")
+
+        assert en_overrides["subject"] == "Legacy subject"
+        assert es_overrides["subject"] == "Legacy subject"
+
+    def test_lang_specific_wins_over_legacy(self):
+        settings = AcademyNotifySettings.objects.create(
+            academy=self.academy,
+            template_variables={
+                "template.verify_email.SUBJECT_EVENT": "Legacy all langs",
+                "template.verify_email.SUBJECT_EVENT.es": "ES specific",
+            },
+        )
+
+        es_overrides = settings.get_all_overrides_for_template("verify_email", lang="es")
+        en_overrides = settings.get_all_overrides_for_template("verify_email", lang="en")
+
+        assert es_overrides["SUBJECT_EVENT"] == "ES specific"
+        assert en_overrides["SUBJECT_EVENT"] == "Legacy all langs"
+
+    def test_validation_accepts_lang_suffix(self):
+        settings = AcademyNotifySettings(
+            academy=self.academy,
+            template_variables={
+                "template.verify_email.SUBJECT_EVENT.en": "Hello {CONTEXT_NAME}",
+                "template.verify_email.MESSAGE_EVENT.es": "Hola {CONTEXT_NAME}",
+            },
+        )
+        settings.clean()  # should not raise
+
+    def test_validation_rejects_invalid_lang_code(self):
+        settings = AcademyNotifySettings(
+            academy=self.academy,
+            template_variables={"template.verify_email.SUBJECT_EVENT.english": "Bad"},
+        )
+
+        with self.assertRaises(ValidationError) as context:
+            settings.clean()
+
+        assert "language" in str(context.exception).lower() or "english" in str(context.exception).lower()
+
+    def test_get_variable_override_with_lang(self):
+        settings = AcademyNotifySettings.objects.create(
+            academy=self.academy,
+            template_variables={
+                "template.verify_email.SUBJECT_EVENT.en": "EN",
+                "template.verify_email.SUBJECT_EVENT": "Legacy",
+            },
+        )
+
+        assert settings.get_variable_override("verify_email", "SUBJECT_EVENT", lang="en") == "EN"
+        assert settings.get_variable_override("verify_email", "SUBJECT_EVENT", lang="es") == "Legacy"
+        assert settings.get_variable_override("verify_email", "SUBJECT_EVENT") == "Legacy"
+

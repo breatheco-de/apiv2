@@ -665,6 +665,7 @@ def get_extended_roles():
                 "read_consumable",
                 "read_activity",
                 "read_lead",
+                "read_downloads",
                 "read_user_assessment",
                 "read_won_lead",
                 "crud_review",

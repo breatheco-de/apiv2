@@ -276,7 +276,7 @@ class Service(AbstractAsset):
         READ_LESSON = ("READ_LESSON", "Read lesson")
         AI_INTERACTION = ("AI_INTERACTION", "AI Interaction")
         VPS_SERVER = ("VPS_SERVER", "VPS server")
-        MONTHLY_LLM_BUDGET = ("MONTHLY_LLM_BUDGET", "Monthly LLM budget")
+        LLM_BUDGET = ("LLM_BUDGET", "LLM budget")
         GITHUB_COPILOT = ("GITHUB_COPILOT", "GitHub Copilot")
         NO_SET = ("NO_SET", "No set")
 
@@ -1220,6 +1220,15 @@ class Plan(AbstractPriceByTime):
 
     invites = models.ManyToManyField(UserInvite, blank=True, help_text="Plan's invites", related_name="plans")
 
+    features = models.ForeignKey(
+        "PlanFeatures",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="plans",
+        help_text="Shared checkout marketing bullets; multiple plans may reuse the same PlanFeatures",
+    )
+
     def __str__(self) -> str:
         return self.slug
 
@@ -1290,6 +1299,29 @@ class PlanTranslation(models.Model):
 
     def __str__(self) -> str:
         return f"{self.lang} {self.title}: ({self.plan.slug})"
+
+
+class PlanFeatures(models.Model):
+    """Marketing checkout bullets shared by one or more plans (JSON map of language → list of {title, description})."""
+
+    if TYPE_CHECKING:
+        objects: TypedManager["PlanFeatures"]
+
+    bullets = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='Checkout bullets by language, e.g. {"en": [{"title": "...", "description": "..."}], "es": [...]}',
+    )
+
+    def __str__(self) -> str:
+        slugs = list(self.plans.values_list("slug", flat=True)[:3])
+        if slugs:
+            suffix = ", ".join(slugs)
+            extra = self.plans.count() - len(slugs)
+            if extra > 0:
+                suffix = f"{suffix}, +{extra}"
+            return f"PlanFeatures({self.id}: {suffix})"
+        return f"PlanFeatures({self.id})"
 
 
 class PlanOffer(models.Model):
@@ -1719,6 +1751,12 @@ class PaymentMethod(models.Model):
     description = models.CharField(max_length=480, help_text="Description of the payment method")
     third_party_link = models.URLField(
         blank=True, null=True, default=None, help_text="Link of a third party payment method"
+    )
+    qr_url = models.URLField(
+        blank=True,
+        null=True,
+        default=None,
+        help_text="Public HTTPS URL of a QR image to display at the bottom of this payment method in checkout",
     )
     logo_urls = models.JSONField(
         default=list,
