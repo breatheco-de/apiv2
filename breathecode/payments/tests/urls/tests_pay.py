@@ -1590,6 +1590,7 @@ def test_pay_for_plan_financing_with_country_code_and_ratio(
             amount=int(expected_amount),
             currency=model.currency.code.lower(),
             description="",
+            metadata={"plan_slug": model.plan.slug},
         )
     ]
     user = model.user
@@ -1795,6 +1796,12 @@ def test_pay__stripe_checkout_klarna(bc: Breathecode, client: APIClient, monkeyp
     json = response.json()
     assert json == {"checkout_url": checkout_url, "session_id": session_id}
     assert response.status_code == status.HTTP_201_CREATED
+
+    session_create = stripe.checkout.Session.create
+    assert session_create.call_count == 1
+    session_kwargs = session_create.call_args.kwargs
+    assert session_kwargs["metadata"]["plan_slug"] == model.plan.slug
+    assert session_kwargs["payment_intent_data"]["metadata"]["plan_slug"] == model.plan.slug
 
     assert bc.database.list_of("payments.Bag") == [
         {
