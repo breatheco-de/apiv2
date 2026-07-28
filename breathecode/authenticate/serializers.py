@@ -18,7 +18,15 @@ from rest_framework.exceptions import ValidationError
 
 import breathecode.notify.actions as notify_actions
 from breathecode.admissions.models import Academy, City, Cohort, CohortUser, Country, Syllabus, UP_TO_DATE
-from breathecode.authenticate.actions import convert_youtube_to_embed, get_app_url, get_invite_url, get_user_settings, sync_with_rigobot
+from breathecode.authenticate.actions import (
+    convert_youtube_to_embed,
+    get_app_url,
+    get_invite_url,
+    get_user_phone,
+    get_user_settings,
+    sync_with_rigobot,
+)
+from breathecode.utils.request import get_current_academy
 from breathecode.authenticate.tasks import verify_user_invite_email
 from breathecode.events.models import Event
 from breathecode.registry.models import Asset
@@ -601,10 +609,18 @@ class UserSerializer(AppUserSerializer):
     """The serializer schema definition."""
 
     # Use a Field subclass like IntField if you need more validation.
-
+    phone = serpy.MethodField(required=False)
     roles = serpy.MethodField()
     permissions = serpy.MethodField()
     settings = serpy.MethodField()
+
+    def get_phone(self, obj):
+        request = getattr(self, "context", {}).get("request")
+        if not request or request.GET.get("extended", "").lower() not in ("true", "1", "y"):
+            return None
+
+        academy_id = get_current_academy(request, return_id=True)
+        return get_user_phone(obj, academy_id=academy_id)
 
     def get_permissions(self, obj):
         permissions = Permission.objects.none()

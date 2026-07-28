@@ -23,9 +23,22 @@ def user_setting_serializer(user_setting):
 
 
 def get_serializer(
-    self, user, credentials_github=None, profile_academies=[], profile=None, permissions=[], user_setting=None, data={}
+    self,
+    user,
+    credentials_github=None,
+    profile_academies=[],
+    profile=None,
+    permissions=[],
+    user_setting=None,
+    data={},
+    include_phone=False,
 ):
-    return {
+    data = {**data}
+    phone = data.pop("phone", None)
+    if include_phone and phone is None and profile and getattr(profile, "phone", None):
+        phone = profile.phone
+
+    result = {
         "id": user.id,
         "email": user.email,
         "username": user.username,
@@ -67,6 +80,11 @@ def get_serializer(
         ],
         **data,
     }
+
+    if include_phone:
+        result["phone"] = phone
+
+    return result
 
 
 class AuthenticateTestSuite(AuthTestCase):
@@ -320,3 +338,88 @@ class AuthenticateTestSuite(AuthTestCase):
         )
 
         self.assertEqual(json, expected)
+
+    """
+    🔽🔽🔽 Phone resolution (requires extended=true)
+    """
+
+    def test_user_me__phone_omitted_without_extended(self):
+        profile = {"phone": "+15551234567"}
+        model = self.generate_models(authenticate=True, profile=profile)
+
+        url = reverse_lazy("authenticate:user_me")
+        response = self.client.get(url)
+
+        json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertNotIn("phone", json)
+
+    def test_user_me__phone_from_profile(self):
+        profile = {"phone": "+15551234567"}
+        model = self.generate_models(authenticate=True, profile=profile)
+
+        url = reverse_lazy("authenticate:user_me") + "?extended=true"
+        response = self.client.get(url)
+
+        json = response.json()
+        expected = get_serializer(
+            self,
+            model.user,
+            profile=model.profile,
+            include_phone=True,
+            data={
+                "phone": "+15551234567",
+                "settings": {
+                    "lang": "en",
+                    "main_currency": None,
+                },
+            },
+        )
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_user_me__phone_from_user_invite_without_academy_header(self):
+        model = self.generate_models(
+            authenticate=True,
+            user_invite={"phone": "+15557654321"},
+        )
+        model.user_invite.email = model.user.email
+        model.user_invite.user = model.user
+        model.user_invite.save()
+
+        url = reverse_lazy("authenticate:user_me") + "?extended=true"
+        response = self.client.get(url)
+
+        json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(json["phone"], "+15557654321")
+
+    def test_user_me__phone_prefers_profile_academy_when_academy_header(self):
+        profile = {"phone": "+15551111111"}
+        profile_academy = {"phone": "+15552222222"}
+        model = self.generate_models(
+            authenticate=True, profile=profile, profile_academy=profile_academy, role="student"
+        )
+
+        url = reverse_lazy("authenticate:user_me") + "?extended=true"
+        self.bc.request.set_headers(academy=model.academy.id)
+        response = self.client.get(url)
+
+        json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(json["phone"], "+15552222222")
+
+    def test_user_me__phone_ignores_profile_academy_without_academy_header(self):
+        profile = {"phone": "+15551111111"}
+        profile_academy = {"phone": "+15552222222"}
+        model = self.generate_models(
+            authenticate=True, profile=profile, profile_academy=profile_academy, role="student"
+        )
+
+        url = reverse_lazy("authenticate:user_me") + "?extended=true"
+        response = self.client.get(url)
+
+        json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(json["phone"], "+15551111111")

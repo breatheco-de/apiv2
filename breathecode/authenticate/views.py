@@ -1690,7 +1690,7 @@ class UserMeView(APIView):
         except User.DoesNotExist:
             raise ValidationException("You don't have a user", slug="user-not-found", code=403)
 
-        users = UserSerializer(request.user)
+        users = UserSerializer(request.user, context={"request": request})
         return Response(users.data)
 
     def put(self, request):
