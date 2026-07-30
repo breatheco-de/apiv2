@@ -23,17 +23,25 @@ class EventCheckin(models.Model):
         return [
             ('ID', 'id'),                              # Simple field
             ('Email', 'email'),                        # Simple field
+            ('First Name', 'csv_first_name'),          # Calculated (User preferred)
+            ('Last Name', 'csv_last_name'),            # Calculated (User preferred)
             ('Event Title', 'event.title'),            # Related field (dot notation)
             ('Academy', 'event.academy.name'),         # Deep relation (dot notation)
-            ('Attendee Name', 'attendee_name'),        # Calculated property
+            ('Attendee Full Name', 'attendee_name'),   # Calculated property
         ]
     
+    @property
+    def csv_first_name(self):
+        if self.attendee and (self.attendee.first_name or "").strip():
+            return self.attendee.first_name
+        return self.first_name or ""
+
     @property
     def attendee_name(self):
         """Calculated field example"""
         if self.attendee:
             return f"{self.attendee.first_name} {self.attendee.last_name}".strip()
-        return ''
+        return f"{self.first_name or ''} {self.last_name or ''}".strip()
 ```
 
 ### 2. Field Types Supported
@@ -47,18 +55,25 @@ class EventCheckin(models.Model):
 ```python
 ('Event Title', 'event.title')              # One level deep
 ('Academy', 'event.academy.name')           # Multiple levels deep
-('Attendee First Name', 'attendee.first_name')
 ```
 
 #### Calculated Properties
 ```python
-('Attendee Name', 'attendee_name')  # References @property attendee_name
+('First Name', 'csv_first_name')      # Prefer User, fall back to checkin snapshot
+('Last Name', 'csv_last_name')
+('Attendee Full Name', 'attendee_name')
+
+@property
+def csv_first_name(self):
+    if self.attendee and (self.attendee.first_name or "").strip():
+        return self.attendee.first_name
+    return self.first_name or ""
 
 @property
 def attendee_name(self):
     if self.attendee:
         return f"{self.attendee.first_name} {self.attendee.last_name}".strip()
-    return ''
+    return f"{self.first_name or ''} {self.last_name or ''}".strip()
 ```
 
 #### Methods (without @property)
@@ -79,7 +94,7 @@ The exported CSV will have:
 
 Example output:
 ```csv
-ID,Email,Attendee First Name,Attendee Last Name,Attendee Name,Event ID,Event Slug,Event Title,Academy,Status,Created At,Attended At,UTM Source,UTM Medium,UTM Campaign
+ID,Email,First Name,Last Name,Attendee Full Name,Event ID,Event Slug,Event Title,Academy,Status,Created At,Attended At,UTM Source,UTM Medium,UTM Campaign
 1,john@example.com,John,Doe,John Doe,42,python-workshop,Python Workshop,Miami Campus,DONE,2024-01-15 10:30:00,2024-01-15 11:00:00,google,cpc,workshop
 ```
 
