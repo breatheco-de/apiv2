@@ -68,6 +68,7 @@ from breathecode.payments.models import (
     MentorshipServiceSet,
     PaymentMethod,
     Plan,
+    PlanFeatures,
     PlanFinancing,
     PlanFinancingSeat,
     PlanFinancingTeam,
@@ -117,6 +118,7 @@ from breathecode.payments.serializers import (
     PaymentMethodSerializer,
     PlanSerializer,
     PlanOfferSerializer,
+    PutPlanFeaturesSerializer,
     POSTAcademyServiceSerializer,
     PUTAcademyServiceSerializer,
     ServiceItemSerializer,
@@ -163,7 +165,8 @@ class PlanView(APIView):
             serializer = GetPlanSerializer(
                 item,
                 many=False,
-                context={"academy_id": request.GET.get("academy"), "country_code": country_code},
+                lang=lang,
+                context={"academy_id": request.GET.get("academy"), "country_code": country_code, "lang": lang},
                 select=request.GET.get("select"),
             )
             return handler.response(serializer.data)
@@ -193,7 +196,8 @@ class PlanView(APIView):
         serializer = GetPlanSerializer(
             items,
             many=True,
-            context={"academy_id": request.GET.get("academy"), "country_code": country_code},
+            lang=lang,
+            context={"academy_id": request.GET.get("academy"), "country_code": country_code, "lang": lang},
             select=request.GET.get("select"),
         )
 
@@ -231,7 +235,8 @@ class AcademyPlanView(APIView):
             serializer = GetPlanSerializer(
                 item,
                 many=False,
-                context={"academy_id": academy_id, "country_code": request.GET.get("country_code")},
+                lang=lang,
+                context={"academy_id": academy_id, "country_code": request.GET.get("country_code"), "lang": lang},
                 select=request.GET.get("select"),
             )
             return handler.response(serializer.data)
@@ -270,7 +275,8 @@ class AcademyPlanView(APIView):
         serializer = GetPlanSerializer(
             items,
             many=True,
-            context={"academy_id": academy_id, "country_code": request.GET.get("country_code")},
+            lang=lang,
+            context={"academy_id": academy_id, "country_code": request.GET.get("country_code"), "lang": lang},
             select=request.GET.get("select"),
         )
 
@@ -364,6 +370,90 @@ class AcademyPlanView(APIView):
         plan.save()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademyPlanFeaturesView(APIView):
+    """
+    GET: Return PlanFeatures for a plan (full multi-language bullets + plans sharing it).
+    PUT: Create, attach, update or fork PlanFeatures for any plan (any academy).
+
+    PlanFeatures are global marketing bullets: they can be linked to plans across academies.
+    The Academy header is only required for staff capability checks, not for plan ownership.
+
+    PUT body modes:
+      - {"bullets": {...}}                         → create if plan has none, else update shared
+      - {"bullets": {...}, "mode": "create"}       → always create a new PlanFeatures and assign
+      - {"plan_features_id": <id>}                 → reuse/attach existing PlanFeatures
+      - {"bullets": {...}, "fork": true}           → create unique PlanFeatures for this plan only
+    """
+
+    def _get_plan(self, academy_id, plan_id=None, plan_slug=None, lang="en"):
+        plan = (
+            Plan.objects.filter(Q(id=plan_id) | Q(slug=plan_slug, slug__isnull=False))
+            .exclude(status="DELETED")
+            .first()
+        )
+        if not plan:
+            raise ValidationException(
+                translation(lang, en="Plan not found", es="Plan no existe", slug="not-found"),
+                code=404,
+            )
+        return plan
+
+    def _serialize(self, plan_features: PlanFeatures) -> dict[str, Any]:
+        plans = list(plan_features.plans.order_by("id").values("id", "slug", "owner_id"))
+        return {
+            "id": plan_features.id,
+            "bullets": plan_features.bullets or {},
+            "plans": plans,
+        }
+
+    @capable_of("read_subscription")
+    def get(self, request, plan_id=None, plan_slug=None, academy_id=None):
+        lang = get_user_language(request)
+        plan = self._get_plan(academy_id, plan_id=plan_id, plan_slug=plan_slug, lang=lang)
+
+        plan_features = plan.features
+        if not plan_features:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Plan features not found",
+                    es="Features del plan no existen",
+                    slug="plan-features-not-found",
+                ),
+                code=404,
+            )
+
+        return Response(self._serialize(plan_features), status=status.HTTP_200_OK)
+
+    @capable_of("crud_subscription")
+    def put(self, request, plan_id=None, plan_slug=None, academy_id=None):
+        lang = get_user_language(request)
+        plan = self._get_plan(academy_id, plan_id=plan_id, plan_slug=plan_slug, lang=lang)
+
+        serializer = PutPlanFeaturesSerializer(data=request.data, lang=lang)
+        serializer.is_valid(raise_exception=True)
+        plan_features = serializer.save(plan=plan)
+
+        return Response(self._serialize(plan_features), status=status.HTTP_200_OK)
+
+
+class AcademyPlanFeaturesListView(APIView):
+    """GET: Global catalog of PlanFeatures available to reuse (id, bullets, plans)."""
+
+    @capable_of("read_subscription")
+    def get(self, request, academy_id=None):
+        items = PlanFeatures.objects.prefetch_related("plans").order_by("id")
+        data = [
+            {
+                "id": item.id,
+                "bullets": item.bullets or {},
+                "plans": list(item.plans.order_by("id").values("id", "slug", "owner_id")),
+            }
+            for item in items
+        ]
+        return Response(data, status=status.HTTP_200_OK)
 
 
 class AcademyPlanSyncFinancingExpirationView(APIView):
@@ -7334,6 +7424,23 @@ class PaymentMethodView(APIView):
                 .filter(Q(_plan_count=0) | Q(plans=plan))
                 .distinct()
             )
+
+            # Prefer plan-specific methods over generics with the same title for this academy.
+            rows = list(items.values("id", "title", "academy_id", "_plan_count"))
+            groups: dict[tuple[str, int | None], list[dict]] = {}
+            for row in rows:
+                key = (row["title"].lower(), row["academy_id"])
+                groups.setdefault(key, []).append(row)
+
+            keep_ids: set[int] = set()
+            for group_rows in groups.values():
+                has_specific = any(r["_plan_count"] > 0 for r in group_rows)
+                for r in group_rows:
+                    if has_specific and r["_plan_count"] == 0:
+                        continue
+                    keep_ids.add(r["id"])
+
+            items = items.filter(id__in=keep_ids)
 
         items = handler.queryset(items)
         serializer = GetPaymentMethod(items, many=True)

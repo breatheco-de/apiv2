@@ -461,6 +461,21 @@ curl -X PUT \
 
 ---
 
+## Task status and LearnPack telemetry (anti-downgrade)
+
+When LearnPack sends a `batch` webhook, `calculate_telemetry_indicator` recalculates `completion_rate` and may update linked `Task` rows for graded EXERCISE assets:
+
+- If `completion_rate >= 99.999` → Task is set to `DONE` / `APPROVED`.
+- If `completion_rate` is lower → **only** EXERCISE tasks that are **not** already `DONE` are set to `PENDING`. Tasks already `DONE` in 4Geeks are **never downgraded**.
+
+This protects syllabus/program progress in 4Geeks when LearnPack telemetry is missing or partial (for example after historical telemetry outages). The raw `AssignmentTelemetry` JSON may still show a lower completion rate than the Task status; that divergence is expected.
+
+### Students already downgraded before this guard
+
+The anti-downgrade rule only prevents **future** losses. Students whose Tasks were already reset to `PENDING` by incomplete telemetry need **manual remediation** (re-mark the affected Tasks as `DONE` based on academic evidence, prior webhooks, or staff decision). Re-opening the LearnPack package will not restore 4Geeks progress by itself if the Task was already downgraded and LearnPack still lacks complete telemetry.
+
+---
+
 ## Related Documentation
 
 - [Managing Single Asset](MANAGE_SINGLE_ASSET.md) - Learn about assets and asset slugs

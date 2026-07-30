@@ -848,6 +848,8 @@ def upsert_event_checkin(
     email: str,
     attended: bool = False,
     attended_at=None,
+    first_name: str | None = None,
+    last_name: str | None = None,
     utm_source: str | None = None,
     utm_medium: str | None = None,
     utm_campaign: str | None = None,
@@ -865,6 +867,9 @@ def upsert_event_checkin(
     if not email:
         raise ValueError("Email is required")
 
+    first_name = (first_name or "").strip() or None
+    last_name = (last_name or "").strip() or None
+
     attendee = User.objects.filter(email__iexact=email).first()
     checkin = EventCheckin.objects.filter(email__iexact=email, event=event).first()
     created = False
@@ -877,6 +882,8 @@ def upsert_event_checkin(
             status=PENDING,
             event=event,
             attendee=attendee,
+            first_name=first_name,
+            last_name=last_name,
             utm_source=utm_source,
             utm_medium=utm_medium,
             utm_campaign=utm_campaign,
@@ -889,6 +896,12 @@ def upsert_event_checkin(
         if attendee and checkin.attendee_id != attendee.id:
             checkin.attendee = attendee
             update_fields.append("attendee")
+        if first_name and checkin.first_name != first_name:
+            checkin.first_name = first_name
+            update_fields.append("first_name")
+        if last_name and checkin.last_name != last_name:
+            checkin.last_name = last_name
+            update_fields.append("last_name")
         for field, value in (
             ("utm_source", utm_source),
             ("utm_medium", utm_medium),
@@ -901,6 +914,17 @@ def upsert_event_checkin(
         if update_fields:
             update_fields.append("updated_at")
             checkin.save(update_fields=update_fields)
+
+    if attendee and (first_name or last_name):
+        user_update_fields = []
+        if first_name and not (attendee.first_name or "").strip():
+            attendee.first_name = first_name
+            user_update_fields.append("first_name")
+        if last_name and not (attendee.last_name or "").strip():
+            attendee.last_name = last_name
+            user_update_fields.append("last_name")
+        if user_update_fields:
+            attendee.save(update_fields=user_update_fields)
 
     if attended:
         new_attended_at = attended_at if attended_at is not None else timezone.now()
@@ -1013,7 +1037,13 @@ def register_event_attendee_from_external(
         raise Exception("Organization not have one Academy")
 
     email = (email or "").strip().lower()
-    checkin, _, _ = upsert_event_checkin(event=event, email=email, utm_source=utm_source)
+    checkin, _, _ = upsert_event_checkin(
+        event=event,
+        email=email,
+        first_name=first_name,
+        last_name=last_name,
+        utm_source=utm_source,
+    )
     local_attendee = checkin.attendee
 
     run_event_checkin_marketing(

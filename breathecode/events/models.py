@@ -403,6 +403,8 @@ class EventCheckin(models.Model):
         self.__old_status = self.status
 
     email = models.EmailField(max_length=150)
+    first_name = models.CharField(max_length=100, blank=True, null=True, default=None)
+    last_name = models.CharField(max_length=100, blank=True, null=True, default=None)
 
     attendee = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True, default=None)
     phone = models.CharField(max_length=17, blank=True, null=True, default=None)
@@ -436,8 +438,15 @@ class EventCheckin(models.Model):
         return [
             ("ID", "id"),
             ("Email", "email"),
+<<<<<<< HEAD
             ("First Name", "csv_first_name"),
             ("Last Name", "csv_last_name"),
+=======
+            ("First Name", "first_name"),
+            ("Last Name", "last_name"),
+            ("Attendee First Name", "attendee.first_name"),
+            ("Attendee Last Name", "attendee.last_name"),
+>>>>>>> 65b76554fc84b99b8123243f325a4937fb90a3e4
             ("Attendee Full Name", "attendee_name"),  # Calculated property
             ("Event ID", "event.id"),
             ("Event Slug", "event.slug"),

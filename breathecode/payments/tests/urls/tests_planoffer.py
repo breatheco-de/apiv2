@@ -87,6 +87,7 @@ def plan_serializer(self, plan, service, currency, groups=[], permissions=[], se
         "add_ons": [],
         "seat_service_price": None,
         "consumption_strategy": plan.consumption_strategy,
+        "features": None,
     }
 
 

@@ -399,8 +399,20 @@ class EventCheckinSerializer(serpy.Serializer):
     status = serpy.Field()
     created_at = serpy.Field()
     attended_at = serpy.Field()
+    first_name = serpy.MethodField()
+    last_name = serpy.MethodField()
     attendee = UserSerializer(required=False)
     event = EventTinySerializer()
+
+    def get_first_name(self, obj):
+        if obj.attendee and (obj.attendee.first_name or "").strip():
+            return obj.attendee.first_name
+        return obj.first_name
+
+    def get_last_name(self, obj):
+        if obj.attendee and (obj.attendee.last_name or "").strip():
+            return obj.attendee.last_name
+        return obj.last_name
 
 
 class EventHookCheckinSerializer(serpy.Serializer):
@@ -415,9 +427,21 @@ class EventHookCheckinSerializer(serpy.Serializer):
     utm_location = serpy.Field()
     created_at = serpy.Field()
     attended_at = serpy.Field()
+    first_name = serpy.MethodField()
+    last_name = serpy.MethodField()
     attendee = UserSerializer(required=False)
     event = EventJoinSmallSerializer()
     user_language = serpy.MethodField()
+
+    def get_first_name(self, obj):
+        if obj.attendee and (obj.attendee.first_name or "").strip():
+            return obj.attendee.first_name
+        return obj.first_name
+
+    def get_last_name(self, obj):
+        if obj.attendee and (obj.attendee.last_name or "").strip():
+            return obj.attendee.last_name
+        return obj.last_name
 
     def get_user_language(self, obj):
         if obj.attendee:
