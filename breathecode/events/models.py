@@ -438,15 +438,8 @@ class EventCheckin(models.Model):
         return [
             ("ID", "id"),
             ("Email", "email"),
-<<<<<<< HEAD
             ("First Name", "csv_first_name"),
             ("Last Name", "csv_last_name"),
-=======
-            ("First Name", "first_name"),
-            ("Last Name", "last_name"),
-            ("Attendee First Name", "attendee.first_name"),
-            ("Attendee Last Name", "attendee.last_name"),
->>>>>>> 65b76554fc84b99b8123243f325a4937fb90a3e4
             ("Attendee Full Name", "attendee_name"),  # Calculated property
             ("Event ID", "event.id"),
             ("Event Slug", "event.slug"),
