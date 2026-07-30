@@ -438,10 +438,8 @@ class EventCheckin(models.Model):
         return [
             ("ID", "id"),
             ("Email", "email"),
-            ("First Name", "first_name"),
-            ("Last Name", "last_name"),
-            ("Attendee First Name", "attendee.first_name"),
-            ("Attendee Last Name", "attendee.last_name"),
+            ("First Name", "csv_first_name"),
+            ("Last Name", "csv_last_name"),
             ("Attendee Full Name", "attendee_name"),  # Calculated property
             ("Event ID", "event.id"),
             ("Event Slug", "event.slug"),
@@ -454,6 +452,20 @@ class EventCheckin(models.Model):
             ("UTM Medium", "utm_medium"),
             ("UTM Campaign", "utm_campaign"),
         ]
+
+    @property
+    def csv_first_name(self):
+        """Prefer linked User first name; fall back to checkin snapshot."""
+        if self.attendee and (self.attendee.first_name or "").strip():
+            return self.attendee.first_name
+        return self.first_name or ""
+
+    @property
+    def csv_last_name(self):
+        """Prefer linked User last name; fall back to checkin snapshot."""
+        if self.attendee and (self.attendee.last_name or "").strip():
+            return self.attendee.last_name
+        return self.last_name or ""
 
     @property
     def attendee_name(self):
