@@ -377,6 +377,7 @@ class AssetForm(forms.ModelForm):
         fields = "__all__"
         widgets = {
             "config": PrettyJSONWidget(),
+            "manifest": PrettyJSONWidget(),
         }
 
     def __init__(self, *args, **kwargs):

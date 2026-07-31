@@ -423,6 +423,12 @@ class Asset(models.Model):
     academy = models.ForeignKey(Academy, on_delete=models.SET_NULL, null=True, default=None, blank=True)
 
     config = models.JSONField(null=True, blank=True, default=None)
+    manifest = models.JSONField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="LearnPack Cloud published manifest snapshot (lessons, titles, etc.)",
+    )
 
     external = models.BooleanField(
         default=False,

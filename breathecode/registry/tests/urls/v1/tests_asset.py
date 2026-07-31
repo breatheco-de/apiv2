@@ -87,6 +87,8 @@ def get_serializer(asset, data={}):
         "interactive": asset.interactive,
         "learnpack_deploy_url": asset.learnpack_deploy_url,
         "allow_contributions": asset.allow_contributions,
+        "learnpack_id": asset.learnpack_id,
+        "manifest": asset.manifest,
         **data,
     }
 
@@ -95,6 +97,7 @@ def get_expanded_serializer(asset, data={}):
     return {
         **get_serializer(asset),
         "config": asset.config,
+        "manifest": asset.manifest,
         "agent": asset.agent,
         "with_solutions": asset.with_solutions,
         "with_video": asset.with_solutions,

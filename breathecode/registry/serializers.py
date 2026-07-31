@@ -325,6 +325,7 @@ class AssetSerializer(serpy.Serializer):
     allow_contributions = serpy.Field()
     learnpack_deploy_url = serpy.Field()
     learnpack_id = serpy.Field()
+    manifest = serpy.Field()
 
     translations = serpy.MethodField()
     technologies = serpy.MethodField()
@@ -383,6 +384,7 @@ class AcademyAssetSerializer(AssetSerializer):
     author = UserSerializer(required=False)
     owner = UserSerializer(required=False)
     config = serpy.Field()
+    manifest = serpy.Field()
     flag_seed = serpy.Field()
     dependencies = serpy.Field()
     github_activity_logs = serpy.MethodField()
@@ -432,6 +434,7 @@ class AssetMidSerializer(AssetSerializer):
     updated_at = serpy.Field()
     agent = serpy.Field()
     config = serpy.Field()
+    manifest = serpy.Field()
 
 
 class AssetBigSerializer(AssetMidSerializer):

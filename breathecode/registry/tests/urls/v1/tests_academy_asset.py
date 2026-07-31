@@ -30,6 +30,7 @@ def database_item(academy, category, data={}):
         "cleaning_status": "PENDING",
         "cleaning_status_details": None,
         "config": None,
+        "manifest": None,
         "delivery_formats": "url",
         "delivery_instructions": None,
         "readme_updated_at": None,
@@ -98,6 +99,7 @@ def post_serializer(academy, category, data={}):
         },
         "agent": None,
         "config": None,
+        "manifest": None,
         "delivery_formats": "url",
         "delivery_instructions": None,
         "delivery_regex_url": None,
@@ -201,6 +203,7 @@ def put_serializer(academy, category, asset, data={}):
         "allow_contributions": asset.allow_contributions,
         "academy": asset.academy.id if asset.academy else None,
         "config": asset.config,
+        "manifest": asset.manifest,
         "flag_seed": asset.flag_seed,
         **data,
     }
