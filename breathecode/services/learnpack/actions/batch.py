@@ -12,6 +12,11 @@ def batch(self, webhook: LearnPackWebhook):
     from breathecode.registry.models import Asset
     from breathecode.services.learnpack.resolve_payload_asset import resolve_asset_from_payload_asset_id
 
+    if "user_id" not in (webhook.payload or {}):
+        raise Exception("Impossible to retrive learnpack user id")
+    if webhook.student is None:
+        raise Exception(f"Learnpack student with user id {webhook.payload['user_id']} not found")
+
     asset = None
     if "asset_id" in webhook.payload:
         _id = webhook.payload["asset_id"]

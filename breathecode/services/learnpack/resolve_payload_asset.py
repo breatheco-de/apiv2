@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from breathecode.utils.validators.language import languages_equivalent
 
@@ -31,6 +31,42 @@ def parse_asset_id_candidates(raw) -> list[int]:
         except ValueError:
             continue
     return out
+
+
+def get_asset_id_raw_from_learnpack_payload(payload: dict | None) -> Any:
+    """
+    Prefer root ``asset_id`` / ``asset_ids``, then nested ``payload.package`` or ``package``.
+
+    JSON arrays are normalized to a comma-separated string so ``parse_asset_id_candidates``
+    can keep its original scalar/CSV contract.
+    """
+    if not payload or not isinstance(payload, dict):
+        return None
+
+    raw = None
+    for key in ("asset_id", "asset_ids"):
+        if key in payload and payload[key] is not None:
+            raw = payload[key]
+            break
+
+    if raw is None:
+        for package_container in (payload.get("payload"), payload):
+            if not isinstance(package_container, dict):
+                continue
+            package = package_container.get("package")
+            if not isinstance(package, dict):
+                continue
+            for key in ("asset_id", "asset_ids"):
+                if key in package and package[key] is not None:
+                    raw = package[key]
+                    break
+            if raw is not None:
+                break
+
+    if isinstance(raw, list):
+        return ",".join(str(item) for item in raw)
+
+    return raw
 
 
 def _select_asset_for_candidate_ids(candidate_ids: list[int]) -> Asset | None:
