@@ -19,6 +19,21 @@ def test_parse_asset_id_candidates_split_and_skips_invalid():
     assert parse_asset_id_candidates("141,foo,235") == [141, 235]
 
 
+def test_get_asset_id_raw_from_nested_package_payload():
+    from breathecode.services.learnpack.resolve_payload_asset import get_asset_id_raw_from_learnpack_payload
+
+    assert get_asset_id_raw_from_learnpack_payload({"asset_id": 1}) == 1
+    assert get_asset_id_raw_from_learnpack_payload({"asset_ids": [1, 2]}) == "1,2"
+    assert (
+        get_asset_id_raw_from_learnpack_payload(
+            {"event": "package_published", "payload": {"package": {"asset_id": [3714, 3795]}}}
+        )
+        == "3714,3795"
+    )
+    assert get_asset_id_raw_from_learnpack_payload({"package": {"asset_ids": [3]}}) == "3"
+    assert get_asset_id_raw_from_learnpack_payload({"event": "x"}) is None
+
+
 def test_resolve_prefers_english_then_lowest_id(database: capy.Database):
     model = database.create(
         asset=[

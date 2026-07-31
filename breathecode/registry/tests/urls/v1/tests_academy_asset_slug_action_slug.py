@@ -38,6 +38,7 @@ def get_serializer(utc_now, asset, asset_category):
         "lang": asset.lang,
         "academy": asset.academy.id if asset.academy else None,
         "config": asset.config,
+        "manifest": asset.manifest,
         "flag_seed": asset.flag_seed,
         "category": (
             {"id": asset_category.id, "slug": asset_category.slug, "title": asset_category.title}

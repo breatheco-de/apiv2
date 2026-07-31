@@ -69,6 +69,7 @@ def get_serializer(bc: Breathecode, asset, asset_category=None, data={}):
         "allow_contributions": asset.allow_contributions,
         "academy": asset.academy.id if asset.academy else None,
         "config": asset.config,
+        "manifest": asset.manifest,
         "flag_seed": asset.flag_seed,
         "created_at": bc.datetime.to_iso_string(asset.created_at),
         "updated_at": bc.datetime.to_iso_string(asset.updated_at),
