@@ -3,7 +3,6 @@ import logging
 import os
 from typing import Any
 
-from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from celery import shared_task
 from django.contrib.auth.models import User
@@ -23,6 +22,7 @@ from .actions import (
     deferred_github_copilot_remove_if_still_revoked as run_deferred_github_copilot_remove_if_still_revoked,
     deprovision_github_copilot_for_user,
     get_user_settings,
+    get_verify_email_copy,
     provision_github_copilot_for_user,
     remove_from_organization,
     revoke_user_discord_permissions,
@@ -357,22 +357,19 @@ def verify_user_invite_email(user_invite_id: int, **_):
         raise AbortTask(f"Email already validated for user {user.id}")
 
     settings = get_user_settings(user.id)
-    subject = translation(
-        settings.lang,
-        en="4Geeks - Validate account",
-        es="4Geeks - Valida tu cuenta",
+    email_data = get_verify_email_copy(user_invite, settings.lang)
+    email_data.update(
+        {
+            "LINK": os.getenv("API_URL", "") + f"/v1/auth/password/{user_invite.token}",
+            "INVITE_ID": user_invite.id,
+            "API_URL": os.getenv("API_URL", ""),
+        }
     )
 
     notify_actions.send_email_message(
         "verify_email",
         user.email,
-        {
-            "SUBJECT": subject,
-            "LANG": settings.lang,
-            "LINK": os.getenv("API_URL", "") + f"/v1/auth/password/{user_invite.token}",
-            "INVITE_ID": user_invite.id,
-            "API_URL": os.getenv("API_URL", ""),
-        },
+        email_data,
         academy=user_invite.academy,
     )
 

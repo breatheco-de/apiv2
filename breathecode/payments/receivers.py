@@ -244,7 +244,8 @@ def handle_seat_invite_accepted(sender: Type[UserInvite], instance: UserInvite, 
             Consumable.objects.filter(plan_financing_seat=seat, user__isnull=True).update(user=instance.user)
 
         for plan in financing.plans.all():
-            actions.grant_student_capabilities(instance.user, plan)
+            selected_cohort = instance.cohort.slug if instance.cohort_id else None
+            actions.grant_student_capabilities(instance.user, plan, selected_cohort=selected_cohort)
 
         tasks.build_service_stock_scheduler_from_plan_financing.delay(financing.id, seat_id=seat.id)
         return
@@ -279,8 +280,9 @@ def handle_seat_invite_accepted(sender: Type[UserInvite], instance: UserInvite, 
             Consumable.objects.filter(subscription_seat=seat, user__isnull=True).update(user=instance.user)
 
             # Grant student capabilities for each plan
+            selected_cohort = instance.cohort.slug if instance.cohort_id else None
             for p in subscription.plans.all():
-                actions.grant_student_capabilities(instance.user, p)
+                actions.grant_student_capabilities(instance.user, p, selected_cohort=selected_cohort)
 
 
 # to be able to use unittest instead of integration test

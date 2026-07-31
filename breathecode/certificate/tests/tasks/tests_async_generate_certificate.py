@@ -66,6 +66,27 @@ class ActionCertificateGenerateOneCertificateTestCase(CertificateTestCase):
 
         self.assertEqual(logging.Logger.error.call_args_list, [])
 
+    @patch("logging.Logger.info", MagicMock())
+    @patch("logging.Logger.error", MagicMock())
+    @patch("breathecode.certificate.actions.generate_certificate", MagicMock())
+    @patch("breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event", MagicMock())
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
+    def test_async_generate_certificate_with_user_role_reviewer(self):
+        cohort_user = {"role": "REVIEWER"}
+        with patch("breathecode.activity.tasks.get_attendancy_log.delay", MagicMock()):
+            model = self.generate_models(cohort_user=cohort_user)
+            logging.Logger.info.call_args_list = []
+
+        layout = "vanilla"
+        async_generate_certificate(1, 1, layout)
+        self.assertEqual(
+            actions.generate_certificate.call_args_list,
+            [
+                call(model.user, model.cohort, "vanilla"),
+            ],
+        )
+
     """
     🔽🔽🔽 Call generate_certificate raise a exception
     """

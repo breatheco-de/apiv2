@@ -22,6 +22,7 @@ class MeLLMKeysViewTestSuite(ProvisioningTestCase):
         model.provisioning_vendor.api_url = "https://litellm.example.com"
         model.provisioning_vendor.save()
         model.provisioning_academy.credentials_token = "test-token"
+        model.provisioning_academy.vendor_settings = {"team_id": "team-1"}
         model.provisioning_academy.save()
 
         ProvisioningLLM.objects.create(
@@ -71,6 +72,15 @@ class MeLLMKeysViewTestSuite(ProvisioningTestCase):
 
         llm_client_mock = MagicMock()
         llm_client_mock.get_user_info.return_value = get_user_info_payload
+        llm_client_mock.get_team_info.return_value = {
+            "team_memberships": [
+                {
+                    "user_id": f"{model.user.username}-{model.academy.slug}",
+                    "spend": 1.5,
+                    "litellm_budget_table": {"max_budget": 10.0},
+                }
+            ]
+        }
         get_llm_client_views_mock.return_value = llm_client_mock
         get_llm_client_actions_mock.return_value = llm_client_mock
 
@@ -88,6 +98,11 @@ class MeLLMKeysViewTestSuite(ProvisioningTestCase):
         self.assertEqual(by_token["tok-b"]["host"], "https://litellm.example.com")
         self.assertEqual(by_token["tok-a"]["vendor_name"], "litellm")
         self.assertEqual(by_token["tok-b"]["vendor_name"], "litellm")
+        self.assertEqual(
+            by_token["tok-a"]["member_budget"],
+            {"spend": 1.5, "max": 10.0, "remaining": 8.5, "currency": "USD"},
+        )
+        self.assertEqual(by_token["tok-b"]["member_budget"], by_token["tok-a"]["member_budget"])
 
     @patch("breathecode.provisioning.actions.get_llm_client")
     @patch("breathecode.provisioning.views.get_llm_client")
@@ -100,6 +115,7 @@ class MeLLMKeysViewTestSuite(ProvisioningTestCase):
         model.provisioning_vendor.api_url = "https://litellm.example.com"
         model.provisioning_vendor.save()
         model.provisioning_academy.credentials_token = "test-token"
+        model.provisioning_academy.vendor_settings = {"team_id": "team-1"}
         model.provisioning_academy.save()
 
         ProvisioningLLM.objects.create(
@@ -141,6 +157,7 @@ class MeLLMKeysViewTestSuite(ProvisioningTestCase):
         pa_llm_mock = MagicMock()
         pa_llm_mock.vendor.api_url = "https://litellm.example.com"
         pa_llm_mock.vendor.name = "LiteLLM"
+        pa_llm_mock.vendor_settings = {"team_id": "team-abc"}
         resolve_pa_for_llm_mock.return_value = pa_llm_mock
 
         llm_client_mock = MagicMock()
@@ -155,7 +172,7 @@ class MeLLMKeysViewTestSuite(ProvisioningTestCase):
             "keys": [],
             "teams": [],
         }
-        resolve_llm_client_mock.return_value = (llm_client_mock, "external-user")
+        resolve_llm_client_mock.return_value = (llm_client_mock, "external-user", 1, False)
 
         self.client.force_authenticate(model.user)
         self.headers(academy=1)
@@ -166,5 +183,11 @@ class MeLLMKeysViewTestSuite(ProvisioningTestCase):
         self.assertEqual(response.json()["models"], [])
         self.assertEqual(response.json()["host"], "https://litellm.example.com")
         self.assertEqual(response.json()["vendor_name"], "LiteLLM")
+        llm_client_mock.create_api_key.assert_called_once_with(
+            external_user_id="external-user",
+            name="alias",
+            metadata=None,
+            team_id="team-abc",
+        )
         resolve_pa_for_llm_mock.assert_called_once()
         self.assertEqual(resolve_pa_for_llm_mock.call_args[0][0].pk, model.academy.pk)

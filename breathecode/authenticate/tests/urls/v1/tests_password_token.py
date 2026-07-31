@@ -379,7 +379,7 @@ class AuthenticateTestSuite(AuthTestCase):
                 "You password has been successfully set.",
                 button="Continue to sign in",
                 button_target="_self",
-                link=os.getenv("APP_URL", "https://4geeks.com") + "/login",
+                link=os.getenv("APP_URL", "https://learn.4geeks.com") + "/login",
             )
 
             # dump error in external files

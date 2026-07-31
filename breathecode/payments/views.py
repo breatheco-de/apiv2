@@ -68,6 +68,7 @@ from breathecode.payments.models import (
     MentorshipServiceSet,
     PaymentMethod,
     Plan,
+    PlanFeatures,
     PlanFinancing,
     PlanFinancingSeat,
     PlanFinancingTeam,
@@ -94,6 +95,8 @@ from breathecode.payments.serializers import (
     GetCohortSerializer,
     GetCohortSetSerializer,
     GetConsumptionSessionSerializer,
+    GetConversionPlanFinancingSerializer,
+    GetConversionSubscriptionSerializer,
     GetCouponSerializer,
     GetCouponWithPlansSerializer,
     GetCurrencySerializer,
@@ -117,6 +120,7 @@ from breathecode.payments.serializers import (
     PaymentMethodSerializer,
     PlanSerializer,
     PlanOfferSerializer,
+    PutPlanFeaturesSerializer,
     POSTAcademyServiceSerializer,
     PUTAcademyServiceSerializer,
     ServiceItemSerializer,
@@ -127,7 +131,7 @@ from breathecode.payments.services.coinbase import CoinbaseCommerce
 from breathecode.payments.services.stripe import Stripe
 from breathecode.payments.signals import reimburse_service_units
 from breathecode.payments.utils import parse_date_range_from_request
-from breathecode.utils import APIViewExtensions, getLogger, validate_conversion_info
+from breathecode.utils import APIViewExtensions, CONVERSION_INFO_KEYS, getLogger, validate_conversion_info
 from breathecode.utils.decorators.capable_of import capable_of
 from breathecode.utils.decorators.consume import discount_consumption_sessions
 from breathecode.utils.redis import Lock
@@ -163,7 +167,8 @@ class PlanView(APIView):
             serializer = GetPlanSerializer(
                 item,
                 many=False,
-                context={"academy_id": request.GET.get("academy"), "country_code": country_code},
+                lang=lang,
+                context={"academy_id": request.GET.get("academy"), "country_code": country_code, "lang": lang},
                 select=request.GET.get("select"),
             )
             return handler.response(serializer.data)
@@ -193,7 +198,8 @@ class PlanView(APIView):
         serializer = GetPlanSerializer(
             items,
             many=True,
-            context={"academy_id": request.GET.get("academy"), "country_code": country_code},
+            lang=lang,
+            context={"academy_id": request.GET.get("academy"), "country_code": country_code, "lang": lang},
             select=request.GET.get("select"),
         )
 
@@ -231,7 +237,8 @@ class AcademyPlanView(APIView):
             serializer = GetPlanSerializer(
                 item,
                 many=False,
-                context={"academy_id": academy_id, "country_code": request.GET.get("country_code")},
+                lang=lang,
+                context={"academy_id": academy_id, "country_code": request.GET.get("country_code"), "lang": lang},
                 select=request.GET.get("select"),
             )
             return handler.response(serializer.data)
@@ -270,7 +277,8 @@ class AcademyPlanView(APIView):
         serializer = GetPlanSerializer(
             items,
             many=True,
-            context={"academy_id": academy_id, "country_code": request.GET.get("country_code")},
+            lang=lang,
+            context={"academy_id": academy_id, "country_code": request.GET.get("country_code"), "lang": lang},
             select=request.GET.get("select"),
         )
 
@@ -364,6 +372,90 @@ class AcademyPlanView(APIView):
         plan.save()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademyPlanFeaturesView(APIView):
+    """
+    GET: Return PlanFeatures for a plan (full multi-language bullets + plans sharing it).
+    PUT: Create, attach, update or fork PlanFeatures for any plan (any academy).
+
+    PlanFeatures are global marketing bullets: they can be linked to plans across academies.
+    The Academy header is only required for staff capability checks, not for plan ownership.
+
+    PUT body modes:
+      - {"bullets": {...}}                         → create if plan has none, else update shared
+      - {"bullets": {...}, "mode": "create"}       → always create a new PlanFeatures and assign
+      - {"plan_features_id": <id>}                 → reuse/attach existing PlanFeatures
+      - {"bullets": {...}, "fork": true}           → create unique PlanFeatures for this plan only
+    """
+
+    def _get_plan(self, academy_id, plan_id=None, plan_slug=None, lang="en"):
+        plan = (
+            Plan.objects.filter(Q(id=plan_id) | Q(slug=plan_slug, slug__isnull=False))
+            .exclude(status="DELETED")
+            .first()
+        )
+        if not plan:
+            raise ValidationException(
+                translation(lang, en="Plan not found", es="Plan no existe", slug="not-found"),
+                code=404,
+            )
+        return plan
+
+    def _serialize(self, plan_features: PlanFeatures) -> dict[str, Any]:
+        plans = list(plan_features.plans.order_by("id").values("id", "slug", "owner_id"))
+        return {
+            "id": plan_features.id,
+            "bullets": plan_features.bullets or {},
+            "plans": plans,
+        }
+
+    @capable_of("read_subscription")
+    def get(self, request, plan_id=None, plan_slug=None, academy_id=None):
+        lang = get_user_language(request)
+        plan = self._get_plan(academy_id, plan_id=plan_id, plan_slug=plan_slug, lang=lang)
+
+        plan_features = plan.features
+        if not plan_features:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Plan features not found",
+                    es="Features del plan no existen",
+                    slug="plan-features-not-found",
+                ),
+                code=404,
+            )
+
+        return Response(self._serialize(plan_features), status=status.HTTP_200_OK)
+
+    @capable_of("crud_subscription")
+    def put(self, request, plan_id=None, plan_slug=None, academy_id=None):
+        lang = get_user_language(request)
+        plan = self._get_plan(academy_id, plan_id=plan_id, plan_slug=plan_slug, lang=lang)
+
+        serializer = PutPlanFeaturesSerializer(data=request.data, lang=lang)
+        serializer.is_valid(raise_exception=True)
+        plan_features = serializer.save(plan=plan)
+
+        return Response(self._serialize(plan_features), status=status.HTTP_200_OK)
+
+
+class AcademyPlanFeaturesListView(APIView):
+    """GET: Global catalog of PlanFeatures available to reuse (id, bullets, plans)."""
+
+    @capable_of("read_subscription")
+    def get(self, request, academy_id=None):
+        items = PlanFeatures.objects.prefetch_related("plans").order_by("id")
+        data = [
+            {
+                "id": item.id,
+                "bullets": item.bullets or {},
+                "plans": list(item.plans.order_by("id").values("id", "slug", "owner_id")),
+            }
+            for item in items
+        ]
+        return Response(data, status=status.HTTP_200_OK)
 
 
 class AcademyPlanSyncFinancingExpirationView(APIView):
@@ -2279,10 +2371,24 @@ class MeSubscriptionView(APIView):
 
         now = timezone.now()
 
-        subscriptions = Subscription.objects.filter(user=request.user)
+        subscriptions = Subscription.objects.filter(
+            Q(user=request.user)
+            | Q(
+                id__in=SubscriptionSeat.objects.filter(user=request.user, is_active=True).values_list(
+                    "billing_team__subscription_id", flat=True
+                )
+            )
+        )
 
         # NOTE: this is before feature/add-plan-duration branch, this will be outdated
-        plan_financings = PlanFinancing.objects.filter(user=request.user)
+        plan_financings = PlanFinancing.objects.filter(
+            Q(user=request.user)
+            | Q(
+                id__in=PlanFinancingSeat.objects.filter(user=request.user, is_active=True).values_list(
+                    "team__financing_id", flat=True
+                )
+            )
+        )
 
         if subscription := request.GET.get("subscription"):
             subscriptions = subscriptions.filter(id=int(subscription))
@@ -2818,6 +2924,98 @@ class AcademyPlanFinancingView(APIView):
         financing.save()
 
         return Response({"detail": "Plan financing updated successfully"}, status=status.HTTP_200_OK)
+
+
+class AcademyConversionView(APIView):
+    """List academy subscriptions and plan financings filtered by conversion_info fields."""
+
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    def _apply_has_conversion_keys(self, queryset, request, lang):
+        """
+        Require conversion_info to contain all listed keys (AND).
+
+        Example: ?has=utm_referrer,utm_source
+        """
+        has_param = request.GET.get("has")
+        if not has_param:
+            return queryset
+
+        keys = [key.strip() for key in has_param.split(",") if key.strip()]
+        if not keys:
+            return queryset
+
+        invalid_keys = [key for key in keys if key not in CONVERSION_INFO_KEYS]
+        if invalid_keys:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Invalid conversion_info key(s) in has: {', '.join(invalid_keys)}",
+                    es=f"Clave(s) inválida(s) de conversion_info en has: {', '.join(invalid_keys)}",
+                    slug="conversion-info-has-invalid-key",
+                ),
+                code=400,
+            )
+
+        queryset = queryset.exclude(conversion_info=None).exclude(conversion_info={})
+        return queryset.filter(conversion_info__has_keys=keys)
+
+    def _apply_conversion_info_filters(self, queryset, request, lang):
+        # `plan` is reserved for filtering the plans M2M (same as other academy endpoints).
+        # `has` is reserved for requiring conversion_info keys to exist.
+        reserved = {"sort", "limit", "offset", "page", "page_size", "plan", "has"}
+        for key, value in request.GET.items():
+            if key in reserved:
+                continue
+            if key not in CONVERSION_INFO_KEYS:
+                continue
+            if value in (None, ""):
+                continue
+            if key == "sale":
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Filtering by sale is not supported; use a top-level conversion_info key",
+                        es="Filtrar por sale no está soportado; usa una clave de primer nivel de conversion_info",
+                        slug="conversion-info-sale-filter-unsupported",
+                    ),
+                    code=400,
+                )
+            queryset = queryset.filter(**{f"conversion_info__{key}": value})
+        return queryset
+
+    @capable_of("read_subscription")
+    def get(self, request, academy_id=None):
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+
+        subscriptions = Subscription.objects.filter(academy_id=academy_id).prefetch_related("invoices", "plans")
+        plan_financings = PlanFinancing.objects.filter(academy_id=academy_id).prefetch_related("invoices", "plans")
+
+        subscriptions = self._apply_has_conversion_keys(subscriptions, request, lang)
+        plan_financings = self._apply_has_conversion_keys(plan_financings, request, lang)
+
+        subscriptions = self._apply_conversion_info_filters(subscriptions, request, lang)
+        plan_financings = self._apply_conversion_info_filters(plan_financings, request, lang)
+
+        if plan_param := request.GET.get("plan"):
+            values = plan_param.split(",")
+            if all(v.strip().isdigit() for v in values):
+                plan_filter = {"plans__id__in": [int(v) for v in values]}
+            else:
+                plan_filter = {"plans__slug__in": values}
+            subscriptions = subscriptions.filter(**plan_filter)
+            plan_financings = plan_financings.filter(**plan_filter)
+
+        subscriptions = handler.queryset(subscriptions.distinct())
+        plan_financings = handler.queryset(plan_financings.distinct())
+
+        return handler.response(
+            {
+                "subscriptions": GetConversionSubscriptionSerializer(subscriptions, many=True).data,
+                "plan_financings": GetConversionPlanFinancingSerializer(plan_financings, many=True).data,
+            }
+        )
 
 
 class AcademyPlanFinancingPaymentScheduleView(APIView):
@@ -7321,6 +7519,23 @@ class PaymentMethodView(APIView):
                 .distinct()
             )
 
+            # Prefer plan-specific methods over generics with the same title for this academy.
+            rows = list(items.values("id", "title", "academy_id", "_plan_count"))
+            groups: dict[tuple[str, int | None], list[dict]] = {}
+            for row in rows:
+                key = (row["title"].lower(), row["academy_id"])
+                groups.setdefault(key, []).append(row)
+
+            keep_ids: set[int] = set()
+            for group_rows in groups.values():
+                has_specific = any(r["_plan_count"] > 0 for r in group_rows)
+                for r in group_rows:
+                    if has_specific and r["_plan_count"] == 0:
+                        continue
+                    keep_ids.add(r["id"])
+
+            items = items.filter(id__in=keep_ids)
+
         items = handler.queryset(items)
         serializer = GetPaymentMethod(items, many=True)
 
@@ -7702,6 +7917,7 @@ class SubscriptionBillingTeamView(APIView):
             "additional_seats": team.additional_seats,
             "seats_count": team.seats.filter(is_active=True).count(),
             "seats_log": team.seats_log,
+            "consumption_strategy": team.consumption_strategy,
             # Auto-recharge settings
             "auto_recharge_enabled": team.auto_recharge_enabled,
             "recharge_threshold_amount": str(team.recharge_threshold_amount),
@@ -7946,7 +8162,11 @@ class SubscriptionSeatView(APIView):
 
         for seat in add_seats:
             try:
-                result.append(actions.create_seat(seat["email"], seat["user"], team, lang))
+                plan = subscription.plans.first()
+                cohort = actions.validate_seat_cohort_for_owner(
+                    request.user, plan, subscription, seat.get("cohort_id"), lang
+                )
+                result.append(actions.create_seat(seat["email"], seat["user"], team, lang, cohort))
             except ValidationException as e:
                 errors.append(e)
 
@@ -8226,6 +8446,13 @@ class PlanFinancingSeatView(APIView):
                         new_user,
                         team,
                         lang,
+                        actions.validate_seat_cohort_for_owner(
+                            request.user,
+                            financing.plans.first(),
+                            financing,
+                            seat.get("cohort_id"),
+                            lang,
+                        ),
                         seat.get("first_name", ""),
                         seat.get("last_name", ""),
                     )

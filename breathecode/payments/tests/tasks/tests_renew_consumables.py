@@ -11,7 +11,7 @@ from dateutil.relativedelta import relativedelta
 from django.utils import timezone
 from django.contrib.auth.models import User
 
-from breathecode.payments.models import SubscriptionBillingTeam, SubscriptionSeat
+from breathecode.payments.models import PlanFinancingTeam, SubscriptionBillingTeam, SubscriptionSeat
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
 from ...tasks import renew_consumables
@@ -32,6 +32,8 @@ def consumable_item(data={}):
         "valid_until": UTC_NOW,
         "sort_priority": 1,
         "plan_financing_id": None,
+        "plan_financing_team_id": None,
+        "plan_financing_seat_id": None,
         "subscription_id": None,
         "subscription_seat_id": None,
         "subscription_billing_team_id": None,
@@ -60,6 +62,59 @@ def test_scheduler_not_found(database):
     ]
 
     assert database.list_of("payments.Consumable") == []
+
+
+def test_plan_financing_team_scheduler_creates_team_owned_consumable(database):
+    plan_financing = {
+        "monthly_price": random.random() * 99.99 + 0.01,
+        "plan_expires_at": UTC_NOW + relativedelta(minutes=5),
+        "valid_until": UTC_NOW + relativedelta(minutes=5),
+        "next_payment_at": UTC_NOW + relativedelta(minutes=3),
+        "seat_service_item_id": None,
+    }
+    model = database.create(
+        service_stock_scheduler=1,
+        plan_financing=plan_financing,
+        plan=1,
+        service={"type": "VOID"},
+        service_item={"how_many": -1, "is_team_allowed": True},
+        plan_service_item={"plan_id": 1, "service_item_id": 1},
+        plan_service_item_handler={"handler_id": 1},
+    )
+    team = PlanFinancingTeam.objects.create(
+        financing=model.plan_financing,
+        name=f"Financing Team {model.plan_financing.id}",
+        additional_seats=1,
+        consumption_strategy=PlanFinancingTeam.ConsumptionStrategy.PER_TEAM,
+    )
+    scheduler = model.service_stock_scheduler
+    scheduler.plan_financing_team = team
+    scheduler.save()
+
+    logging.Logger.info.call_args_list = []
+    logging.Logger.error.call_args_list = []
+
+    renew_consumables.delay(scheduler.id)
+
+    assert logging.Logger.info.call_args_list == [
+        call("Starting renew_consumables for service stock scheduler 1"),
+        call("The consumable 1 was built"),
+        call("The scheduler 1 was renewed"),
+    ]
+    assert logging.Logger.error.call_args_list == []
+    assert database.list_of("payments.Consumable") == [
+        consumable_item(
+            {
+                "id": 1,
+                "service_item_id": 1,
+                "user_id": None,
+                "how_many": model.service_item.how_many,
+                "valid_until": UTC_NOW + relativedelta(minutes=5),
+                "plan_financing_id": model.plan_financing.id,
+                "plan_financing_team_id": team.id,
+            }
+        ),
+    ]
 
 
 @pytest.mark.parametrize(

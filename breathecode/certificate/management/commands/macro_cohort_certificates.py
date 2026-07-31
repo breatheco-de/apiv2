@@ -15,7 +15,7 @@ from __future__ import annotations
 from capyc.rest_framework.exceptions import ValidationException
 from django.core.management.base import BaseCommand, CommandError
 
-from breathecode.admissions.models import GRADUATED, STUDENT, Cohort, CohortUser
+from breathecode.admissions.models import CERTIFICATE_RECIPIENT_ROLES, GRADUATED, STUDENT, Cohort, CohortUser
 from breathecode.certificate.actions import generate_certificate
 from breathecode.certificate.diagnostics import print_certificate_diagnostic
 
@@ -113,7 +113,7 @@ class Command(BaseCommand):
             )
 
         students_qs = (
-            CohortUser.objects.filter(cohort=macro, role=STUDENT)
+            CohortUser.objects.filter(cohort=macro, role__in=CERTIFICATE_RECIPIENT_ROLES)
             .exclude(cohort__stage="DELETED")
             .select_related("user", "cohort", "cohort__academy")
             .order_by("id")
@@ -170,7 +170,7 @@ class Command(BaseCommand):
                     CohortUser.objects.filter(
                         user_id=user.id,
                         cohort=micro,
-                        role=STUDENT,
+                        role__in=CERTIFICATE_RECIPIENT_ROLES,
                         educational_status=GRADUATED,
                     )
                     .exclude(cohort__stage="DELETED")
@@ -179,7 +179,7 @@ class Command(BaseCommand):
                 )
                 if cu is None:
                     other = (
-                        CohortUser.objects.filter(user_id=user.id, cohort=micro, role=STUDENT)
+                        CohortUser.objects.filter(user_id=user.id, cohort=micro, role__in=CERTIFICATE_RECIPIENT_ROLES)
                         .exclude(cohort__stage="DELETED")
                         .only("id", "educational_status")
                         .first()

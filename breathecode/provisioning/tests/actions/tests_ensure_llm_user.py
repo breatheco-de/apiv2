@@ -21,12 +21,19 @@ class EnsureLLMUserTestSuite(ProvisioningTestCase):
         client.create_user.return_value = {"user_id": "ok"}
         client.add_user_to_team.return_value = True
 
-        provisioning_llm = ensure_llm_user(model.user, model.provisioning_academy, client=client)
+        provisioning_llm, llm_external_user_created = ensure_llm_user(
+            model.user, model.provisioning_academy, client=client
+        )
 
         self.assertIsNotNone(provisioning_llm)
+        self.assertTrue(llm_external_user_created)
         external_user_id = provisioning_llm.external_user_id
         client.create_user.assert_called_once()
-        client.add_user_to_team.assert_called_once_with(team_id="team-1", user_ids=[external_user_id])
+        client.add_user_to_team.assert_called_once_with(
+            team_id="team-1",
+            user_ids=[external_user_id],
+            max_budget_in_team=10,
+        )
 
     def test_ensure_llm_user_skips_add_when_user_info_teams_already_include_team(self):
         model = self.bc.database.create(user=1, academy=1, provisioning_vendor=1, provisioning_academy=1)
@@ -39,7 +46,8 @@ class EnsureLLMUserTestSuite(ProvisioningTestCase):
 
         client = MagicMock()
         client.get_user_info.return_value = {"user_id": "exists", "user_info": {"teams": ["team-1"]}}
-        ensure_llm_user(model.user, model.provisioning_academy, client=client)
+        _, llm_external_user_created = ensure_llm_user(model.user, model.provisioning_academy, client=client)
+        self.assertFalse(llm_external_user_created)
         client.add_user_to_team.assert_not_called()
 
     def test_ensure_llm_user_adds_when_teams_known_but_missing_configured_team(self):
@@ -54,8 +62,15 @@ class EnsureLLMUserTestSuite(ProvisioningTestCase):
         client = MagicMock()
         client.get_user_info.return_value = {"user_info": {"teams": ["other-team"]}}
 
-        provisioning_llm = ensure_llm_user(model.user, model.provisioning_academy, client=client)
-        client.add_user_to_team.assert_called_once_with(team_id="team-1", user_ids=[provisioning_llm.external_user_id])
+        provisioning_llm, llm_external_user_created = ensure_llm_user(
+            model.user, model.provisioning_academy, client=client
+        )
+        self.assertFalse(llm_external_user_created)
+        client.add_user_to_team.assert_called_once_with(
+            team_id="team-1",
+            user_ids=[provisioning_llm.external_user_id],
+            max_budget_in_team=10,
+        )
 
     def test_ensure_llm_user_adds_when_teams_empty_missing_configured_team(self):
         model = self.bc.database.create(user=1, academy=1, provisioning_vendor=1, provisioning_academy=1)
@@ -69,8 +84,15 @@ class EnsureLLMUserTestSuite(ProvisioningTestCase):
         client = MagicMock()
         client.get_user_info.return_value = {"user_id": "exists", "user_info": {"teams": []}}
 
-        provisioning_llm = ensure_llm_user(model.user, model.provisioning_academy, client=client)
-        client.add_user_to_team.assert_called_once_with(team_id="team-1", user_ids=[provisioning_llm.external_user_id])
+        provisioning_llm, llm_external_user_created = ensure_llm_user(
+            model.user, model.provisioning_academy, client=client
+        )
+        self.assertFalse(llm_external_user_created)
+        client.add_user_to_team.assert_called_once_with(
+            team_id="team-1",
+            user_ids=[provisioning_llm.external_user_id],
+            max_budget_in_team=10,
+        )
 
     def test_ensure_llm_user_skips_team_assignment_when_team_id_missing(self):
         model = self.bc.database.create(user=1, academy=1, provisioning_vendor=1, provisioning_academy=1)
@@ -85,6 +107,7 @@ class EnsureLLMUserTestSuite(ProvisioningTestCase):
         client.get_user_info.return_value = {"user_id": "exists"}
         client.add_user_to_team.return_value = True
 
-        ensure_llm_user(model.user, model.provisioning_academy, client=client)
+        _, llm_external_user_created = ensure_llm_user(model.user, model.provisioning_academy, client=client)
+        self.assertFalse(llm_external_user_created)
 
         client.add_user_to_team.assert_not_called()

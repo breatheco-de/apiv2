@@ -11,8 +11,8 @@ def service_deprovisioner(service_slug: str):
     """
     Register a function as the deprovision handler for a given service slug.
     Usage:
-        @service_deprovisioner("free_monthly_llm_budget")
-        def deprovision_free_monthly_llm_budget(user_id: int, source: str, context: dict):
+        @service_deprovisioner("llm-budget")
+        def deprovision_llm_budget(user_id: int, source: str, context: dict):
             ...
     Only one handler per service slug is allowed; attempting to register a second
     handler for the same slug will raise a ValidationException.

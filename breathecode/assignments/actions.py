@@ -216,7 +216,11 @@ def calculate_telemetry_indicator(telemetry, asset_tasks=None):
                 logger = logging.getLogger(__name__)
                 logger.error(f"Error triggering survey for learnpack completion: {str(e)}", exc_info=True)
         else:
+            # Never downgrade EXERCISE tasks already DONE (incomplete LearnPack telemetry).
             for task in asset_tasks:
+                if task.task_type == Task.TaskType.EXERCISE and task.task_status == Task.TaskStatus.DONE:
+                    continue
+
                 task.task_status = (
                     Task.TaskStatus.PENDING if task.task_type == Task.TaskType.EXERCISE else task.task_status
                 )

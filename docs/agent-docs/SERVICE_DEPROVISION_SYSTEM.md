@@ -155,7 +155,7 @@ Design notes:
 
 ## Example: LLM Deprovision
 
-LLM registers handler for `free_monthly_llm_budget`, which schedules async deprovision task:
+LLM registers handler for `llm-budget`, which schedules async deprovision task:
 
 ```1168:1169:/workspaces/apiv2/breathecode/provisioning/actions.py
     deprovision_litellm_user_task.delay(user_id=user_id)
@@ -173,8 +173,8 @@ Task behavior:
 @task(priority=TaskPriority.STUDENT.value)
 def deprovision_litellm_user_task(user_id: int, **_: Any):
     ...
-    if Consumable.list(user=user, service="free_monthly_llm_budget").exists():
-        logger.info(f"User {user_id} still has free_monthly_llm_budget, skipping deprovision")
+    if Consumable.list(user=user, service="llm-budget").exists():
+        logger.info(f"User {user_id} still has llm-budget, skipping deprovision")
         return
     ...
     client.delete_user(user_ids=user_id_list)

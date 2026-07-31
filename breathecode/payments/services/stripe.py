@@ -406,12 +406,16 @@ class Stripe:
         # Stripe expects amount in cents (or smallest unit)
         amount = math.ceil(amount * decimals_factor)
 
+        plan = bag.plans.first()
+        charge_metadata = {"plan_slug": plan.slug} if plan else {}
+
         def callback():
             return stripe.Charge.create(
                 customer=customer.stripe_id,
                 amount=amount,  # Use the amount in cents
                 currency=currency.code.lower(),
                 description=description,
+                **({"metadata": charge_metadata} if charge_metadata else {}),
             )
 
         charge = self._i18n_validations(callback)
@@ -606,6 +610,9 @@ class Stripe:
         plan = bag.plans.first()
         description = product_name or (plan.title if plan else "4Geeks purchase")
 
+        # Synder reads PaymentIntent metadata to map payments to QuickBooks products.
+        session_metadata = {**(metadata or {}), "plan_slug": plan.slug if plan else ""}
+
         line_items = [
             {
                 "price_data": {
@@ -627,7 +634,8 @@ class Stripe:
                 mode="payment",
                 payment_method_types=payment_method_types,
                 line_items=line_items,
-                metadata=metadata,
+                metadata=session_metadata,
+                payment_intent_data={"metadata": session_metadata},
                 success_url=success_url,
                 cancel_url=cancel_url,
                 **customer_params,

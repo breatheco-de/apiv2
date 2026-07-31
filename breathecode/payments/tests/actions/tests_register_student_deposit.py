@@ -77,6 +77,7 @@ def test_register_student_deposit_applies_payment_to_plan_financing(
     assert invoices[1]["amount"] == 1200
     assert invoices[1]["externally_managed"] is True
     assert invoices[1]["invoice_kind"] == "MANUAL_DEPOSIT"
+    assert invoices[1]["invoice_notes"] == "Cash payment"
     assert invoices[1]["amount_breakdown"] == {
         "plans": {
             model.plan.slug: {
@@ -873,6 +874,70 @@ def test_register_student_deposit_inside_early_window_can_close_installment(
     assert result.allocation.installment_applied is True
     assert result.allocation.credit_added == pytest.approx(0, abs=1e-6)
     assert result.credit_balance == pytest.approx(0, abs=1e-6)
-    assert financing["next_payment_at"] == model.plan_financing.next_payment_at + relativedelta(months=1)
+    assert financing["next_payment_at"] == model.plan_financing.next_payment_at
     assert tasks.renew_plan_financing_consumables.delay.call_args_list == [call(model.plan_financing.id)]
     assert actions.reschedule_billing_tasks.call_args_list == [call(plan_financing_id=model.plan_financing.id)]
+
+
+def test_register_student_deposit_after_unpaid_staff_charge_does_not_double_advance(
+    database: capy.Database, monkeypatch: pytest.MonkeyPatch, utc_now
+):
+    """
+    When charge_plan_financing already rolled next_payment_at on an unpaid staff cycle,
+    a deposit that closes the installment must not advance the due date a second time.
+    """
+    monkeypatch.setattr(actions.timezone, "now", MagicMock(return_value=utc_now))
+    monkeypatch.setattr(tasks.renew_plan_financing_consumables, "delay", MagicMock())
+    monkeypatch.setattr(actions, "reschedule_billing_tasks", MagicMock())
+
+    rolled_next_payment_at = utc_now + relativedelta(days=20)
+
+    model = database.create(
+        country=1,
+        city=1,
+        academy=1,
+        user=1,
+        plan={"is_renewable": False},
+        currency=1,
+        proof_of_payment=2,
+        payment_method={"currency_id": 1, "is_credit_card": False, "is_crypto": False},
+        bag={"was_delivered": True},
+        invoice={
+            "amount": 300,
+            "paid_at": utc_now - relativedelta(months=2),
+            "status": "FULFILLED",
+            "externally_managed": True,
+            "proof_id": 1,
+        },
+        plan_financing={
+            "academy_id": 1,
+            "user_id": 1,
+            "monthly_price": 300,
+            "how_many_installments": 4,
+            "installments_paid": 1,
+            "next_payment_at": rolled_next_payment_at,
+            "valid_until": utc_now + relativedelta(months=3),
+            "plan_expires_at": utc_now + relativedelta(months=12),
+            "status": "ACTIVE",
+            "currency_id": 1,
+        },
+    )
+    model.plan_financing.invoices.add(model.invoice)
+    model.plan_financing.plans.add(model.plan)
+    AcademyPaymentSettings.objects.create(academy=model.academy, early_renewal_window_days=30)
+
+    result = actions.register_student_deposit(
+        {
+            "plan_financing": model.plan_financing.id,
+            "amount": 300,
+            "payment_method": model.payment_method.id,
+        },
+        model.proof_of_payment[1],
+        model.academy.id,
+        "en",
+    )
+
+    financing = database.list_of("payments.PlanFinancing")[0]
+    assert result.allocation.installment_applied is True
+    assert financing["installments_paid"] == 2
+    assert financing["next_payment_at"] == rolled_next_payment_at

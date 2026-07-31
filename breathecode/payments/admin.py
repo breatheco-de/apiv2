@@ -34,6 +34,7 @@ from breathecode.payments.models import (
     PlanFinancing,
     PlanFinancingSeat,
     PlanFinancingTeam,
+    PlanFeatures,
     PlanOffer,
     PlanOfferTranslation,
     PlanServiceItem,
@@ -114,6 +115,27 @@ class PlanTranslationInline(admin.StackedInline):
     extra = 0
 
 
+class PlanFeaturesForm(forms.ModelForm):
+    linked_plans = forms.ModelMultipleChoiceField(
+        queryset=Plan.objects.exclude(status="DELETED").order_by("slug"),
+        required=False,
+        widget=admin.widgets.FilteredSelectMultiple("plans", is_stacked=False),
+        help_text="Planes que comparten estos bullets. Puedes asignar varios al mismo PlanFeatures.",
+    )
+
+    class Meta:
+        model = PlanFeatures
+        fields = ("bullets",)
+        widgets = {
+            "bullets": PrettyJSONWidget(),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            self.fields["linked_plans"].initial = self.instance.plans.all()
+
+
 class PlanOfferInline(admin.StackedInline):
     model = PlanOffer
     fk_name = "original_plan"
@@ -170,6 +192,7 @@ def duplicate_plans(modeladmin, request, queryset):
                 mentorship_service_set=original_plan.mentorship_service_set,
                 event_type_set=original_plan.event_type_set,
                 pricing_ratio_exceptions=original_plan.pricing_ratio_exceptions,
+                features=original_plan.features,
             )
             new_plan.save()
 
@@ -243,6 +266,7 @@ class PlanAdmin(admin.ModelAdmin):
         "cohort_set",
         "mentorship_service_set",
         "event_type_set",
+        "features",
     ]
     filter_horizontal = ("financing_options", "add_ons", "plan_addons")
     list_select_related = ("owner",)
@@ -306,6 +330,7 @@ class PlanAdmin(admin.ModelAdmin):
             "Relations",
             {
                 "fields": (
+                    "features",
                     "financing_options",
                     "add_ons",
                     "plan_addons",
@@ -332,6 +357,48 @@ class PlanTranslationAdmin(admin.ModelAdmin):
     search_fields = ["title", "plan__slug"]
 
 
+@admin.register(PlanFeatures)
+class PlanFeaturesAdmin(admin.ModelAdmin):
+    form = PlanFeaturesForm
+    list_display = ("id", "plans_count", "plans_slugs")
+    search_fields = ["plans__slug", "plans__title"]
+    fields = ("bullets", "linked_plans")
+
+    class Media:
+        css = {"all": ("admin/css/widgets.css",)}
+        js = ("admin/js/core.js", "admin/js/SelectBox.js", "admin/js/SelectFilter2.js")
+
+    def plans_count(self, obj):
+        return obj.plans.count()
+
+    plans_count.short_description = "Plans"
+
+    def plans_slugs(self, obj):
+        slugs = list(obj.plans.values_list("slug", flat=True)[:5])
+        if not slugs:
+            return "—"
+        extra = obj.plans.count() - len(slugs)
+        label = ", ".join(slugs)
+        if extra > 0:
+            label = f"{label}, +{extra}"
+        return label
+
+    plans_slugs.short_description = "Plan slugs"
+
+    def save_related(self, request, form, formsets, change):
+        super().save_related(request, form, formsets, change)
+        plan_features = form.instance
+        selected = form.cleaned_data.get("linked_plans")
+        if selected is None:
+            return
+
+        selected_ids = {plan.id for plan in selected}
+        # Unlink plans removed from the dual selector
+        plan_features.plans.exclude(id__in=selected_ids).update(features=None)
+        # Link (or move) selected plans onto this PlanFeatures
+        Plan.objects.filter(id__in=selected_ids).update(features=plan_features)
+
+
 def grant_service_permissions(modeladmin, request, queryset):
     for item in queryset.all():
         signals.grant_service_permissions.send_robust(instance=item, sender=item.__class__)
@@ -351,7 +418,8 @@ class ConsumableAdmin(admin.ModelAdmin):
         "plan_financing",
         "valid_until",
     )
-    list_filter = ["unit_type", "service_item__service__slug"]
+    # Avoid JOIN over the whole Consumable table for distinct service slugs
+    list_filter = ["unit_type", "service_item__service"]
     search_fields = [
         "service_item__service__slug",
         "user__email",
@@ -362,6 +430,8 @@ class ConsumableAdmin(admin.ModelAdmin):
     ]
     raw_id_fields = [
         "user",
+        "subscription",
+        "plan_financing",
         "service_item",
         "cohort_set",
         "event_type_set",
@@ -370,14 +440,20 @@ class ConsumableAdmin(admin.ModelAdmin):
         "subscription_seat",
         "plan_financing_team",
         "plan_financing_seat",
+        "standalone_invoice",
     ]
+    # raw_id_fields only help the change form; changelist needs select_related
+    # to avoid N+1 when rendering FK __str__ (service_item.service, subscription.user, etc.)
+    list_select_related = (
+        "service_item__service",
+        "user",
+        "subscription__user",
+        "plan_financing__user",
+        "plan_financing_team",
+        "plan_financing_seat",
+    )
+    show_full_result_count = False
     actions = [grant_service_permissions]
-
-    def plan_financing_team(self, obj):
-        return getattr(obj, "plan_financing_team", None)
-
-    def plan_financing_seat(self, obj):
-        return getattr(obj, "plan_financing_seat", None)
 
 
 class CreditNoteInline(admin.TabularInline):
@@ -1171,6 +1247,7 @@ class PaymentMethodAdmin(admin.ModelAdmin):
         "description",
         "academy",
         "third_party_link",
+        "qr_url",
         "is_financing_managed_by_provider",
         "lang",
         "visibility",

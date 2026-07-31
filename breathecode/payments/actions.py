@@ -2,10 +2,11 @@ import json
 import os
 import re
 import uuid
+from collections.abc import Iterable
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from decimal import ROUND_FLOOR, Decimal
 from functools import lru_cache
-from dataclasses import dataclass, field
 from typing import Any, Literal, Optional, Tuple, Type, TypedDict, Union
 
 import redis
@@ -15,6 +16,7 @@ from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from dateutil.relativedelta import relativedelta
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.core.handlers.wsgi import WSGIRequest
 from django.db import transaction
 from django.db.models import F, Q, QuerySet, Sum
@@ -32,13 +34,13 @@ from breathecode.authenticate.actions import get_app_url, get_invite_url, get_us
 from breathecode.authenticate.models import Role, UserInvite, UserSetting
 from breathecode.marketing.actions import validate_email_local
 from breathecode.media.models import File
+from breathecode.monitoring.models import StripeEvent
 from breathecode.notify import actions as notify_actions
 from breathecode.payments import tasks
 from breathecode.payments.signals import consume_service, deprovision_service
 from breathecode.utils import getLogger
 from breathecode.utils.decorators.service_deprovisioner import get_service_deprovisioner
 from breathecode.utils.validate_conversion_info import validate_conversion_info
-from breathecode.monitoring.models import StripeEvent
 from settings import GENERAL_PRICING_RATIOS
 
 from .models import (
@@ -53,13 +55,14 @@ from .models import (
     AcademyService,
     Bag,
     CohortSet,
+    CohortSetCohort,
     Consumable,
     Coupon,
+    CreditLedgerEntry,
     CreditNote,
     Currency,
     EventTypeSet,
     FinancingOption,
-    CreditLedgerEntry,
     Invoice,
     MentorshipServiceSet,
     PaymentMethod,
@@ -81,6 +84,42 @@ logger = getLogger(__name__)
 # Schedule charge tasks a few seconds after `next_payment_at` so execution time is strictly
 # past the deadline (avoids clock skew and ``next_payment_at > utc_now`` in charge tasks).
 SCHEDULE_CHARGE_LAG_AFTER_NEXT_PAYMENT = timedelta(seconds=3)
+
+
+def sync_micro_cohorts_into_cohort_sets(macro: Cohort, micro_pks: Iterable[int]) -> None:
+    """
+    Add newly linked micro cohorts to every CohortSet that already contains the macro.
+
+    Only adds; never removes micros from a set when they are unlinked from the macro.
+    Micros that fail CohortSetCohort validation (e.g. not available as SaaS) are skipped.
+    """
+    micro_pk_list = list(micro_pks)
+    if not micro_pk_list:
+        return
+
+    cohort_sets = CohortSet.objects.filter(cohorts=macro)
+    if not cohort_sets.exists():
+        return
+
+    micros = list(Cohort.objects.filter(pk__in=micro_pk_list))
+    if not micros:
+        return
+
+    for cohort_set in cohort_sets:
+        for micro in micros:
+            if CohortSetCohort.objects.filter(cohort_set=cohort_set, cohort=micro).exists():
+                continue
+            try:
+                CohortSetCohort(cohort_set=cohort_set, cohort=micro).save()
+            except ValidationError as e:
+                logger.warning(
+                    "Skipping micro cohort %s for cohort set %s after linking to macro %s: %s",
+                    micro.id,
+                    cohort_set.id,
+                    macro.id,
+                    e,
+                )
+
 
 def _cancel_pending_future_scheduled(task_callable: Any, entity_id: int, *, utc_now: datetime) -> None:
     from task_manager.core.actions import get_fn_desc, parse_payload
@@ -368,6 +407,295 @@ def align_consumer_vps_stock_with_active_machines(consumable: Consumable) -> Non
     pre_consume_units = min(active_after, current_consumable.how_many)
     if pre_consume_units > 0:
         consume_service.send_robust(sender=Consumable, instance=current_consumable, how_many=pre_consume_units)
+
+
+def sync_llm_member_budget_to_llm_provider(
+    provisioning_llm,
+    provisioning_academy,
+    client,
+    *,
+    team_data: dict | None = None,
+) -> None:
+    """
+    Push the user's LiteLLM team member budget to match consumables.
+
+    Sums active llm-budget consumables for the provisioning user and academy, then sets
+    ``max_budget_in_team`` to current LiteLLM spend plus that pool (USD). Also applies
+    tpm/rpm from the team template and records sync metadata on ``ProvisioningLLM``.
+
+    When ``team_data`` is provided (e.g. from ``align_llm_member_budget_with_consumables``),
+    skips ``GET /team/info``.
+    """
+
+    def _skip_budget_sync(message: str) -> None:
+        logger.warning(message)
+        provisioning_llm.last_budget_sync_error = message[:255]
+        provisioning_llm.save(update_fields=["last_budget_sync_error", "updated_at"])
+
+    vendor_settings = provisioning_academy.vendor_settings or {}
+    team_id = str(vendor_settings.get("team_id") or "").strip()
+    if not team_id:
+        _skip_budget_sync(f"LLM budget sync skipped: academy {provisioning_academy.id} has no LiteLLM team_id")
+        return
+
+    external_user_id = provisioning_llm.external_user_id
+    if not external_user_id:
+        _skip_budget_sync(
+            f"LLM budget sync skipped: ProvisioningLLM {provisioning_llm.id} has no external_user_id"
+        )
+        return
+
+    if provisioning_llm.litellm_team_id and provisioning_llm.litellm_team_id != team_id:
+        # Academy team_id changed since last sync: zero the spend cursor and store the new team.
+        logger.warning(
+            "LiteLLM team_id changed for ProvisioningLLM %s (%s -> %s); resetting last_known_spend",
+            provisioning_llm.id,
+            provisioning_llm.litellm_team_id,
+            team_id,
+        )
+        provisioning_llm.last_known_spend = Decimal("0")
+        provisioning_llm.litellm_team_id = team_id
+        provisioning_llm.save(update_fields=["last_known_spend", "litellm_team_id", "updated_at"])
+
+    if team_data is None:
+        team_data = client.get_team_info(team_id=team_id)
+
+    membership = None
+    for row in team_data.get("team_memberships") or []:
+        if row["user_id"] == external_user_id:
+            membership = row
+            break
+    if membership is None:
+        is_team_member = False
+        for row in ((team_data.get("team_info") or {}).get("members_with_roles") or []):
+            if isinstance(row, dict) and row.get("user_id") == external_user_id:
+                is_team_member = True
+                break
+
+        if not is_team_member:
+            _skip_budget_sync(
+                f"LLM budget sync skipped: member {external_user_id} not in team_memberships for team {team_id}"
+            )
+            return
+
+        membership = {
+            "user_id": external_user_id,
+            "spend": 0,
+            "litellm_budget_table": {},
+        }
+
+    member_spend = Decimal(str(membership["spend"]))
+
+    academy_id = provisioning_llm.academy_id
+    utc_now = timezone.now()
+    sub_cutoff = utc_now + timedelta(hours=1)
+    pf_cutoff = utc_now + timedelta(hours=2)
+
+    # Calculate the total budget to grant in the LLM provider.
+    # Exclude consumables in the renew rollover window (subscription 1h, PF 2h).
+    budget_total = (
+        Consumable.list(
+            user=provisioning_llm.user_id,
+            service="llm-budget",
+            include_zero_balance=False,
+        )
+        .filter(
+            Q(subscription__academy_id=academy_id)
+            | Q(plan_financing__academy_id=academy_id)
+            | Q(standalone_invoice__bag__academy_id=academy_id)
+            | Q(subscription_seat__billing_team__subscription__academy_id=academy_id)
+            | Q(plan_financing_seat__team__financing__academy_id=academy_id)
+        )
+        .filter(
+            Q(subscription__isnull=False)
+            & (Q(valid_until__isnull=True) | Q(valid_until__gt=sub_cutoff))
+            | Q(subscription_seat__isnull=False)
+            & (Q(valid_until__isnull=True) | Q(valid_until__gt=sub_cutoff))
+            | Q(plan_financing__isnull=False)
+            & (Q(valid_until__isnull=True) | Q(valid_until__gt=pf_cutoff))
+            | Q(plan_financing_seat__isnull=False)
+            & (Q(valid_until__isnull=True) | Q(valid_until__gt=pf_cutoff))
+            | Q(standalone_invoice__isnull=False)
+        )
+        .aggregate(total=Sum("how_many"))["total"]
+    )
+
+    budget_cents_to_grant = int(budget_total or 0)
+    if budget_cents_to_grant <= 0:
+        _skip_budget_sync(
+            f"LLM budget sync skipped: user {provisioning_llm.user_id} "
+            f"has no active llm-budget balance in academy {academy_id}"
+        )
+        return
+
+    team_info = team_data.get("team_info")
+    if team_info and team_info.get("team_member_budget_table"):
+        team_member_budget_table = team_info["team_member_budget_table"]
+        member_tpm = team_member_budget_table.get("tpm_limit")
+        member_rpm = team_member_budget_table.get("rpm_limit")
+    else:
+        member_budget = membership.get("litellm_budget_table") or {}
+        member_tpm = member_budget.get("tpm_limit")
+        member_rpm = member_budget.get("rpm_limit")
+
+    # LiteLLM spend is cumulative: this cap is the member's total allowed spend in USD
+    # (current spend plus the llm-budget pool we are granting from BreatheCode consumables).
+    member_max_budget_in_team = member_spend + (Decimal(budget_cents_to_grant) / 100)
+
+    try:
+        client.update_team_member(
+            team_id=team_id,
+            user_id=external_user_id,
+            max_budget_in_team=member_max_budget_in_team,
+            budget_duration=None,
+            tpm_limit=member_tpm,
+            rpm_limit=member_rpm,
+        )
+    except Exception as exc:
+        provisioning_llm.last_budget_sync_error = str(exc)[:255]
+        provisioning_llm.save(update_fields=["last_budget_sync_error", "updated_at"])
+        raise
+
+    provisioning_llm.last_known_spend = member_spend
+    provisioning_llm.litellm_team_id = team_id
+    provisioning_llm.last_budget_sync_at = utc_now
+    provisioning_llm.last_budget_sync_error = ""
+    provisioning_llm.save()
+
+    logger.info(
+        "Aligned LLM member budget with LLM provider:user=%s academy=%s team=%s spend=%s max=%s budget_cents_to_grant=%s",
+        provisioning_llm.user_id,
+        provisioning_llm.academy_id,
+        team_id,
+        member_spend,
+        member_max_budget_in_team,
+        budget_cents_to_grant,
+    )
+
+
+def align_llm_member_budget_with_consumables(consumable: Consumable) -> None:
+    """
+    Runs after a new llm-budget consumable is issued on renew.
+
+    Reads how much the user spent in LLM provider since the last sync and subtracts that
+    amount from their llm-budget consumables in the academy (oldest first). Then updates
+    LLM provider so their budget cap reflects current spend plus active consumables.
+    """
+    from breathecode.provisioning.actions import resolve_llm_provisioning_context
+
+    current_consumable = (
+        Consumable.objects.filter(pk=consumable.pk)
+        .select_related(
+            "service_item__service",
+            "user",
+            "subscription",
+            "plan_financing",
+            "subscription_seat__user",
+            "plan_financing_seat__user",
+        )
+        .first()
+    )
+    if not current_consumable or current_consumable.service_item.service.consumer != Service.Consumer.LLM_BUDGET:
+        return
+
+    user = current_consumable.user or (
+        current_consumable.subscription_seat.user
+        if current_consumable.subscription_seat_id and current_consumable.subscription_seat.user_id
+        else None
+    ) or (
+        current_consumable.plan_financing_seat.user
+        if current_consumable.plan_financing_seat_id and current_consumable.plan_financing_seat.user_id
+        else None
+    )
+    if not user:
+        return
+
+    academy_id = None
+    if current_consumable.subscription_id and current_consumable.subscription.academy_id:
+        academy_id = current_consumable.subscription.academy_id
+    elif current_consumable.plan_financing_id and current_consumable.plan_financing.academy_id:
+        academy_id = current_consumable.plan_financing.academy_id
+    if not academy_id:
+        return
+
+    ctx = resolve_llm_provisioning_context(user, academy_id)
+    if not ctx:
+        return
+
+    provisioning_llm, provisioning_academy, client = ctx
+    vendor_settings = provisioning_academy.vendor_settings or {}
+    team_id = str(vendor_settings.get("team_id") or "").strip()
+    external_user_id = provisioning_llm.external_user_id
+
+    if provisioning_llm.litellm_team_id and provisioning_llm.litellm_team_id != team_id:
+        # Academy team_id changed since last sync: zero the spend cursor and store the new team.
+        logger.warning(
+            "LiteLLM team_id changed for ProvisioningLLM %s (%s -> %s); resetting last_known_spend",
+            provisioning_llm.id,
+            provisioning_llm.litellm_team_id,
+            team_id,
+        )
+        provisioning_llm.last_known_spend = Decimal("0")
+        provisioning_llm.litellm_team_id = team_id
+        provisioning_llm.save(update_fields=["last_known_spend", "litellm_team_id", "updated_at"])
+
+    team_data = client.get_team_info(team_id=team_id)
+    membership = None
+    for row in team_data["team_memberships"]:
+        if row["user_id"] == external_user_id:
+            membership = row
+            break
+    if not membership:
+        return  # User not on the academy's configured LiteLLM team yet.
+
+    member_spend = Decimal(str(membership["spend"]))
+
+    # LiteLLM spend not yet reflected on consumables since last_known_spend.
+    unreconciled_spend_cents = int((member_spend - provisioning_llm.last_known_spend) * 100)
+
+    if unreconciled_spend_cents > 0:
+        for consumable in (
+            Consumable.list(
+                user=user.id,
+                service="llm-budget",
+                include_zero_balance=False,
+            )
+            .filter(
+                Q(subscription__academy_id=academy_id)
+                | Q(plan_financing__academy_id=academy_id)
+                | Q(standalone_invoice__bag__academy_id=academy_id)
+                | Q(subscription_seat__billing_team__subscription__academy_id=academy_id)
+                | Q(plan_financing_seat__team__financing__academy_id=academy_id)
+            )
+            .exclude(pk=current_consumable.pk)
+            .order_by("valid_until", "id")
+        ):
+            if unreconciled_spend_cents <= 0:
+                break
+
+            # LiteLLM may have used more than this row can cover, or more than one row is needed (FEFO).
+            # min: use the row's full balance when unreconciled usage is larger; otherwise only the leftover usage.
+            consumption_cents = min(consumable.how_many, unreconciled_spend_cents)
+            consume_service.send_robust(sender=Consumable, instance=consumable, how_many=consumption_cents)
+            unreconciled_spend_cents -= consumption_cents
+
+    provisioning_llm.last_known_spend = member_spend
+    provisioning_llm.save()
+
+    try:
+        sync_llm_member_budget_to_llm_provider(
+            provisioning_llm,
+            provisioning_academy,
+            client,
+            team_data=team_data,
+        )
+    except Exception as exc:
+        logger.error(
+            "LLM budget renew sync failed user=%s academy=%s: %s",
+            user.id,
+            academy_id,
+            exc,
+        )
 
 
 def reschedule_billing_tasks(
@@ -1311,8 +1639,18 @@ def get_amount_by_chosen_period(bag: Bag, chosen_period: str, lang: str) -> floa
 
 
 def get_bag_from_subscription(
-    subscription: Subscription, settings: Optional[UserSetting] = None, lang: Optional[str] = None
+    subscription: Subscription,
+    settings: Optional[UserSetting] = None,
+    lang: Optional[str] = None,
+    coupons_as_of: Optional[datetime] = None,
 ) -> Bag:
+    """
+    Build a RENEWAL bag from an existing subscription.
+
+    coupons_as_of: optional moment used to decide if subscription coupons are still
+    valid for this charge. Defaults to now (actual renew / charge_subscription).
+    Pass subscription.next_payment_at when previewing the upcoming scheduled charge.
+    """
     bag = Bag()
 
     if not lang and not settings:
@@ -1354,37 +1692,44 @@ def get_bag_from_subscription(
         service_item = handler.service_item
         bag.service_items.add(service_item)
 
-    # Add only valid (non-expired) coupons from the subscription to the bag
-    # Also exclude coupons where the user is the seller
+    # Coupons already on the subscription persist for renewals (see COUPONS.md):
+    # do not re-check how_many_offers — that limit applies to acquiring new purchases.
+    # Expiration is evaluated at coupons_as_of (now for real charges, next_payment_at for previews).
     utc_now = timezone.now()
+    as_of = coupons_as_of or utc_now
 
-    # Add valid (non-expired and with remaining uses) coupons from the subscription and from auto applied user restricted coupons
-    subscription_coupons = (
-        subscription.coupons.filter(Q(expires_at__isnull=True) | Q(expires_at__gt=utc_now))
+    subscription_coupons = list(
+        subscription.coupons.filter(Q(expires_at__isnull=True) | Q(expires_at__gte=as_of))
         .exclude(seller__user=subscription.user)
         .exclude(~Q(referral_type=Coupon.Referral.NO_REFERRAL))
     )
-    user_coupons = Coupon.objects.filter(
-        Q(offered_at=None) | Q(offered_at__lte=utc_now),
-        Q(expires_at=None) | Q(expires_at__gte=utc_now),
-        allowed_user=subscription.user,
-        auto=True,
-    ).exclude(how_many_offers=0)
-    coupon_slugs = list(
-        set(
-            list(subscription_coupons.values_list("slug", flat=True))
-            + list(user_coupons.values_list("slug", flat=True))
+
+    # Auto-applied user-restricted coupons still go through availability (usage limits matter).
+    user_coupon_slugs = list(
+        Coupon.objects.filter(
+            Q(offered_at=None) | Q(offered_at__lte=utc_now),
+            Q(expires_at=None) | Q(expires_at__gte=as_of),
+            allowed_user=subscription.user,
+            auto=True,
         )
+        .exclude(how_many_offers=0)
+        .values_list("slug", flat=True)
     )
 
-    if subscription_coupons.exists() or user_coupons.exists():
-        valid_coupons = get_available_coupons(
+    valid_user_coupons = []
+    if user_coupon_slugs:
+        valid_user_coupons = get_available_coupons(
             subscription.plans.first(),
-            coupon_slugs,
+            user_coupon_slugs,
             subscription.user,
             only_sent_coupons=True,
+            as_of=as_of,
         )
-        bag.coupons.set(valid_coupons)
+
+    if subscription_coupons or valid_user_coupons:
+        # Deduplicate by id in case a coupon appears in both sets
+        by_id = {c.id: c for c in [*subscription_coupons, *valid_user_coupons]}
+        bag.coupons.set(by_id.values())
 
     early_renewal_subscription = (
         subscription if (subscription.next_payment_at and subscription.next_payment_at > utc_now) else None
@@ -1397,6 +1742,44 @@ def get_bag_from_subscription(
     bag.save()
 
     return bag
+
+
+def preview_subscription_renewal_amount(
+    subscription: Subscription, settings: Optional[UserSetting] = None, lang: Optional[str] = None
+) -> Optional[float]:
+    """
+    Compute the amount that would be charged on the next subscription renewal
+    without persisting any Bag or related side effects.
+
+    Uses the same pricing path as charge_subscription / renew, but rolls back
+    the transaction so GET me/subscription does not create orphan RENEWAL bags.
+    """
+    try:
+        with transaction.atomic():
+            if not lang and not settings:
+                settings = get_user_settings(subscription.user.id)
+                lang = settings.lang
+            elif settings and not lang:
+                lang = settings.lang
+            elif not lang:
+                lang = "en"
+
+            bag = get_bag_from_subscription(
+                subscription,
+                settings=settings,
+                lang=lang,
+                # Preview the scheduled charge: coupon must still be valid on that date.
+                coupons_as_of=subscription.next_payment_at,
+            )
+            amount = get_amount_by_chosen_period(bag, bag.chosen_period, lang)
+            coupons = list(bag.coupons.all())
+            if coupons:
+                amount = get_discounted_price(amount, coupons)
+
+            transaction.set_rollback(True)
+            return float(amount)
+    except Exception:
+        return None
 
 
 def get_bag_from_plan_financing(plan_financing: PlanFinancing, settings: Optional[UserSetting] = None) -> Bag:
@@ -2270,6 +2653,7 @@ def get_available_coupons(
     coupons: Optional[list[str]] = None,
     user: Optional[User] = None,
     only_sent_coupons: bool = False,
+    as_of: Optional[datetime] = None,
 ) -> list[Coupon]:
 
     def get_total_spent_coupons(coupon: Coupon) -> int:
@@ -2322,11 +2706,12 @@ def get_available_coupons(
 
     founded_coupons = []
     founded_coupon_slugs = []
+    validity_moment = as_of or timezone.now()
 
     cou_args = (
         Q(plans=plan) | Q(plans=None),
         Q(offered_at=None) | Q(offered_at__lte=timezone.now()),
-        Q(expires_at=None) | Q(expires_at__gte=timezone.now()),
+        Q(expires_at=None) | Q(expires_at__gte=validity_moment),
     )
 
     cou_fields = ("id", "slug", "how_many_offers", "offered_at", "expires_at", "seller", "allowed_user")
@@ -3257,6 +3642,29 @@ def get_remaining_installments(plan_financing: PlanFinancing) -> int:
     return max(plan_financing.how_many_installments - int(plan_financing.installments_paid or 0), 0)
 
 
+def plan_financing_was_staff_assigned(
+    plan_financing: PlanFinancing,
+    first_invoice: Invoice | None = None,
+) -> bool:
+    """
+    True when the financing was created by staff (academy subscription or student invite),
+    not by self-checkout (PayView / Stripe / Coinbase webhooks).
+    """
+    if first_invoice is None:
+        first_invoice = (
+            plan_financing.invoices.select_related("bag", "proof").order_by("paid_at", "id").first()
+        )
+
+    if not first_invoice:
+        return False
+
+    if first_invoice.proof_id is not None:
+        return True
+
+    bag = first_invoice.bag
+    return bag is not None and bag.type == Bag.Type.INVITED
+
+
 def get_credit_balance(plan_financing: PlanFinancing) -> float:
     """Return the current credit balance for a PlanFinancing from the CreditLedgerEntry ledger.
 
@@ -3496,7 +3904,7 @@ def register_student_deposit(
             code=400,
         )
 
-    notes = data.get("notes") or data.get("deposit_notes")
+    notes = data.get("notes") or data.get("deposit_notes") or data.get("invoice_notes")
     if notes and len(notes) > 250:
         raise ValidationException(
             translation(
@@ -3622,6 +4030,14 @@ def register_student_deposit(
         amount_breakdown=amount_breakdown,
         invoice_kind=Invoice.InvoiceKind.MANUAL_DEPOSIT,
     )
+    staff_user_id = None
+    if isinstance(request, (WSGIRequest, AsyncRequest, HttpRequest, Request)) and getattr(request, "user", None):
+        if request.user.is_authenticated:
+            staff_user_id = request.user.id
+    invoice_notes = format_note_made_by_user(notes, staff_user_id)
+    if invoice_notes:
+        invoice.invoice_notes = invoice_notes
+        invoice.save(update_fields=["invoice_notes"])
     bag.was_delivered = True
     bag.save()
     # Every manual deposit invoice represents real cash received for this financing.
@@ -3706,11 +4122,16 @@ def register_student_deposit(
         # Recompute remaining after the new invoice is linked.
         remaining_installments = get_remaining_installments(plan_financing)
 
-        delta = relativedelta(months=1)
-        while utc_now >= plan_financing.next_payment_at + delta:
-            delta += relativedelta(months=1)
+        # Only roll next_payment_at when the due date has passed. If charge_plan_financing
+        # already advanced the calendar on an unpaid staff cycle, next_payment_at may be in
+        # the future — closing the installment must not push the due date forward again.
+        if utc_now >= plan_financing.next_payment_at:
+            delta = relativedelta(months=1)
+            while utc_now >= plan_financing.next_payment_at + delta:
+                delta += relativedelta(months=1)
 
-        plan_financing.next_payment_at += delta
+            plan_financing.next_payment_at += delta
+
         plan_financing.valid_until = plan_financing.next_payment_at + relativedelta(
             months=max(remaining_installments - 1, 0)
         )
@@ -5446,6 +5867,7 @@ class SeatDict(TypedDict, total=False):
     first_name: str | None
     last_name: str | None
     role: str | None
+    cohort: Cohort
 
 
 class AddSeat(TypedDict):
@@ -5454,6 +5876,7 @@ class AddSeat(TypedDict):
     first_name: str
     last_name: str
     role: str | None
+    cohort_id: int | None
 
 
 class ReplaceSeat(TypedDict):
@@ -5544,6 +5967,7 @@ def invite_user_to_subscription_team(
         - See Issue #9973 for the complete invitation flow
     """
     student_role = _get_student_role()
+    cohort = obj.get("cohort")
 
     invite, created = UserInvite.objects.get_or_create(
         email=obj.get("email", ""),
@@ -5558,8 +5982,12 @@ def invite_user_to_subscription_team(
             "sent_at": timezone.now(),
             "first_name": obj.get("first_name", ""),
             "last_name": obj.get("last_name", ""),
+            "cohort": cohort,
         },
     )
+    if not created and cohort and invite.cohort_id is None:
+        invite.cohort = cohort
+        invite.save(update_fields=["cohort"])
     if created or invite.status == "PENDING":
         billing_team_name = subscription_seat.billing_team.name if subscription_seat.billing_team else "team"
         callback_url = get_app_url(academy=subscription.academy)
@@ -5602,7 +6030,13 @@ def _validate_email(email: str, lang: str):
         )
 
 
-def create_seat(email: str, user: User | None, billing_team: SubscriptionBillingTeam, lang: str):
+def create_seat(
+    email: str,
+    user: User | None,
+    billing_team: SubscriptionBillingTeam,
+    lang: str,
+    cohort: Cohort,
+):
     _validate_email(email, lang)
 
     if SubscriptionSeat.objects.filter(billing_team=billing_team, email=email).exists():
@@ -5628,7 +6062,7 @@ def create_seat(email: str, user: User | None, billing_team: SubscriptionBilling
 
     if not user:
         invite_user_to_subscription_team(
-            {"email": email, "first_name": None, "last_name": None},
+            {"email": email, "first_name": None, "last_name": None, "cohort": cohort},
             seat.billing_team.subscription,
             seat,
             lang,
@@ -5641,7 +6075,7 @@ def create_seat(email: str, user: User | None, billing_team: SubscriptionBilling
             lang,
         )
         for plan in seat.billing_team.subscription.plans.all():
-            grant_student_capabilities(user, plan)
+            grant_student_capabilities(user, plan, selected_cohort=cohort.slug)
 
     # create consumables unless shared per team
     strategy = getattr(
@@ -5684,6 +6118,8 @@ def invite_user_to_plan_financing_team(
 ):
     financing = team.financing
     student_role = _get_student_role()
+    cohort = obj.get("cohort")
+
     invite, created = UserInvite.objects.get_or_create(
         email=obj.get("email", ""),
         academy=financing.academy,
@@ -5697,8 +6133,12 @@ def invite_user_to_plan_financing_team(
             "sent_at": timezone.now(),
             "first_name": obj.get("first_name", ""),
             "last_name": obj.get("last_name", ""),
+            "cohort": cohort,
         },
     )
+    if not created and cohort and invite.cohort_id is None:
+        invite.cohort = cohort
+        invite.save(update_fields=["cohort"])
 
     if created or invite.status == "PENDING":
         callback_url = get_app_url(academy=financing.academy)
@@ -6280,6 +6720,7 @@ def create_plan_financing_seat(
     user: User | None,
     team: PlanFinancingTeam,
     lang: str,
+    cohort: Cohort,
     first_name: str = "",
     last_name: str = "",
 ):
@@ -6308,11 +6749,11 @@ def create_plan_financing_seat(
 
     if user:
         for plan in team.financing.plans.all():
-            grant_student_capabilities(user, plan)
+            grant_student_capabilities(user, plan, selected_cohort=cohort.slug)
         notify_user_was_added_to_plan_financing_team(team, seat, lang)
     else:
         invite_user_to_plan_financing_team(
-            {"email": email, "first_name": first_name or "", "last_name": last_name or ""},
+            {"email": email, "first_name": first_name or "", "last_name": last_name or "", "cohort": cohort},
             team,
             seat,
             lang,
@@ -6494,12 +6935,16 @@ def _normalize_user_value(user_value: Any) -> int | None:
 def normalize_add_seats(add_seats: list[dict[str, Any]]) -> list[AddSeat]:
     l: list[AddSeat] = []
     for seat in add_seats:
+        cohort_id = seat.get("cohort_id") or seat.get("cohort")
+        if isinstance(cohort_id, dict):
+            cohort_id = cohort_id.get("id")
         serialized = {
             "email": normalize_email(seat["email"]),
             "user": _normalize_user_value(seat.get("user")),
             "first_name": seat.get("first_name", ""),
             "last_name": seat.get("last_name", ""),
             "role": _normalize_role(seat.get("role")),
+            "cohort_id": int(cohort_id) if cohort_id is not None else None,
         }
         l.append(serialized)
     return l
@@ -6559,6 +7004,80 @@ def validate_seats_limit(
             ),
             code=400,
         )
+
+
+def validate_seat_cohort_for_owner(
+    owner: User,
+    plan: Plan | None,
+    resource: Subscription | PlanFinancing,
+    cohort_id: int | None,
+    lang: str,
+) -> Cohort:
+    if not cohort_id:
+        raise ValidationException(
+            translation(
+                lang,
+                en="You must select a cohort for the invited member",
+                es="Debes seleccionar una cohorte para el miembro invitado",
+                slug="seat-cohort-required",
+            ),
+            code=400,
+        )
+
+    if plan is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Plan not found for this subscription",
+                es="No se encontró el plan para esta suscripción",
+                slug="plan-not-found",
+            ),
+            code=404,
+        )
+
+    bad_stages = ["DELETED", "ENDED"]
+    cohort = Cohort.objects.filter(id=cohort_id).exclude(stage__in=bad_stages).first()
+    if not cohort:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Cohort not found",
+                es="Cohorte no encontrada",
+                slug="cohort-not-found",
+            ),
+            code=404,
+        )
+
+    if not CohortUser.objects.filter(user=owner, cohort=cohort).exists():
+        raise ValidationException(
+            translation(
+                lang,
+                en="You can only invite members to cohorts you belong to",
+                es="Solo puedes invitar miembros a cohortes en las que estás inscrito",
+                slug="owner-not-in-cohort",
+            ),
+            code=400,
+        )
+
+    if plan.cohort_set_id:
+        in_scope = plan.cohort_set.cohorts.filter(id=cohort.id).exists()
+    elif resource.selected_cohort_set_id:
+        in_scope = resource.selected_cohort_set.cohorts.filter(id=cohort.id).exists()
+    else:
+        in_scope = False
+
+    if not in_scope:
+        raise ValidationException(
+            translation(
+                lang,
+                en="This cohort is not included in your plan",
+                es="Esta cohorte no está incluida en tu plan",
+                slug="cohort-not-in-plan",
+            ),
+            code=400,
+        )
+
+    return cohort
 
 
 def grant_student_capabilities(user: User, plan: Plan, selected_cohort: Optional[str] = None):

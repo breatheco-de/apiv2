@@ -39,7 +39,9 @@ def test_get_ok_integration_db(client):
         next_payment_at=timezone.now(),
     )
 
-    team = SubscriptionBillingTeam.objects.create(subscription=subscription, name="Team", seats_limit=10, seats_log=[])
+    team = SubscriptionBillingTeam.objects.create(
+        subscription=subscription, name="Team", additional_seats=9, seats_log=[]
+    )
 
     # Active seat counts; inactive does not
     SubscriptionSeat.objects.create(billing_team=team, email="a@b.com", user=None, is_active=True)
@@ -61,8 +63,10 @@ def test_get_ok_integration_db(client):
         "subscription": subscription.id,
         "name": "Team",
         "seats_limit": 10,
+        "additional_seats": 9,
         "seats_count": 1,  # only active seats counted
         "seats_log": [],
+        "consumption_strategy": "PER_SEAT",
         # Auto-recharge settings
         "auto_recharge_enabled": False,
         "recharge_threshold_amount": "10.00",

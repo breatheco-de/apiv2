@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from breathecode.admissions.diagnostics import build_graduation_diagnostic
-from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
+from breathecode.admissions.models import Academy, CERTIFICATE_RECIPIENT_ROLES, Cohort, CohortUser, Syllabus
 from breathecode.authenticate.models import ProfileAcademy, User
 from breathecode.authenticate.actions import get_user_language
 from breathecode.utils import GenerateLookupsMixin, HeaderLimitOffsetPagination, capable_of
@@ -57,14 +57,10 @@ class AcademySpecialtiesView(APIView, GenerateLookupsMixin):
     def get(self, request, academy_id=None):
         handler = self.extensions(request)
 
-        # Include specialties linked via syllabi owned by academy OR owned by the academy,
-        # but never specialties whose academy FK is another academy.
-        # Exclude deleted specialties
+        # Global specialties (no academy) apply to every academy; also include
+        # specialties owned by this academy. Never another academy's.
         items = (
-            Specialty.objects.filter(
-                (Q(syllabuses__academy_owner=academy_id) | Q(academy_id=academy_id))
-                & _specialty_visible_to_academy_q(academy_id)
-            )
+            Specialty.objects.filter(_specialty_visible_to_academy_q(academy_id))
             .exclude(status=Specialty.DELETED)
             .distinct()
         )
@@ -150,11 +146,7 @@ class AcademySpecialtyByIdView(APIView):
     @capable_of("read_certificate")
     def get(self, request, specialty_id, academy_id=None):
         specialty = (
-            Specialty.objects.filter(
-                Q(id=specialty_id),
-                (Q(academy_id=academy_id) | Q(syllabuses__academy_owner=academy_id))
-                & _specialty_visible_to_academy_q(academy_id),
-            )
+            Specialty.objects.filter(Q(id=specialty_id) & _specialty_visible_to_academy_q(academy_id))
             .exclude(status=Specialty.DELETED)
             .distinct()
             .first()
@@ -213,11 +205,7 @@ class AcademySpecialtySyllabusView(APIView):
     @capable_of("crud_syllabus")
     def post(self, request, specialty_id, academy_id=None):
         specialty = (
-            Specialty.objects.filter(
-                Q(id=specialty_id),
-                (Q(academy_id=academy_id) | Q(syllabuses__academy_owner=academy_id))
-                & _specialty_visible_to_academy_q(academy_id),
-            )
+            Specialty.objects.filter(Q(id=specialty_id) & _specialty_visible_to_academy_q(academy_id))
             .exclude(status=Specialty.DELETED)
             .distinct()
             .first()
@@ -308,13 +296,15 @@ def get_certificate(request, token):
         raise NotFound("Certificate not found")
 
     lang = get_user_language(request)
-    cohort_user = CohortUser.objects.filter(cohort__id=item.cohort.id, user__id=item.user.id, role="STUDENT").first()
+    cohort_user = CohortUser.objects.filter(
+        cohort__id=item.cohort.id, user__id=item.user.id, role__in=CERTIFICATE_RECIPIENT_ROLES
+    ).first()
     if cohort_user is None:
         raise ValidationException(
             translation(
                 lang,
-                en="Certificate is not valid because no record of this user has been found as student in this cohort",
-                es="Este certificado no es válido porque no se encontró ningún registro de este usuario como estudiante en esta cohorte",
+                en="Certificate is not valid because no record of this user was found with an eligible role in this cohort",
+                es="Este certificado no es válido porque no se encontró ningún registro de este usuario con un rol elegible en esta cohorte",
                 slug="certificate-not-valid",
             ),
             code=400,
@@ -374,7 +364,10 @@ class CertificateView(APIView):
             layout_slug = request.data["layout_slug"]
 
         cu = CohortUser.objects.filter(
-            cohort__id=cohort_id, user__id=student_id, role="STUDENT", cohort__academy__id=academy_id
+            cohort__id=cohort_id,
+            user__id=student_id,
+            role__in=CERTIFICATE_RECIPIENT_ROLES,
+            cohort__academy__id=academy_id,
         ).first()
 
         if cu is None:
@@ -416,7 +409,9 @@ class CertificateCohortView(APIView):
                     slug="invalid-student-id",
                 )
 
-        cohort_users = CohortUser.objects.filter(cohort__id=cohort_id, role="STUDENT", cohort__academy__id=academy_id)
+        cohort_users = CohortUser.objects.filter(
+            cohort__id=cohort_id, role__in=CERTIFICATE_RECIPIENT_ROLES, cohort__academy__id=academy_id
+        )
 
         if student_id is not None:
             cohort_users = cohort_users.filter(user__id=student_id)
@@ -433,7 +428,9 @@ class CertificateCohortView(APIView):
                     slug="student-not-found",
                 )
             raise ValidationException(
-                "There are no users with STUDENT role in this cohort", code=400, slug="no-user-with-student-role"
+                "There are no users with an eligible role (STUDENT, TEACHER, ASSISTANT, or REVIEWER) in this cohort",
+                code=400,
+                slug="no-user-with-student-role",
             )
 
         cohort__users = []
@@ -544,7 +541,10 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination, GenerateLooku
                 cohort__slug = items.get("cohort_slug")
                 user__id = items.get("user_id")
                 cohort_user = CohortUser.objects.filter(
-                    cohort__slug=cohort__slug, user_id=user__id, role="STUDENT", cohort__academy__id=academy_id
+                    cohort__slug=cohort__slug,
+                    user_id=user__id,
+                    role__in=CERTIFICATE_RECIPIENT_ROLES,
+                    cohort__academy__id=academy_id,
                 ).first()
 
                 if cohort_user is not None:
@@ -687,7 +687,7 @@ class AcademyStudentDiagnosticView(APIView):
                     slug="invalid-pagination",
                 )
             qs = (
-                CohortUser.objects.filter(cohort_id=cohort_id, role="STUDENT")
+                CohortUser.objects.filter(cohort_id=cohort_id, role__in=CERTIFICATE_RECIPIENT_ROLES)
                 .exclude(cohort__stage="DELETED")
                 .order_by("id")[offset : offset + limit]
             )

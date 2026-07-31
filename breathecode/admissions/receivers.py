@@ -4,7 +4,7 @@ import re
 from typing import Any, Type
 
 from asgiref.sync import sync_to_async
-from django.db.models.signals import post_migrate
+from django.db.models.signals import m2m_changed, post_migrate
 from django.dispatch import receiver
 from django.utils import timezone
 
@@ -24,6 +24,25 @@ from .signals import academy_saved, cohort_log_saved, cohort_user_created, stude
 logger = logging.getLogger(__name__)
 GITHUB_URL_PATTERN = re.compile(r"https?:\/\/github\.com\/(?P<user>[^\/]+)\/(?P<repo>[^\/\s]+)\/?")
 BREATHECODE_USERS = ["breatheco-de", "4GeeksAcademy", "4geeksacademy"]
+
+
+@receiver(m2m_changed, sender=Cohort.micro_cohorts.through)
+def sync_cohort_sets_when_micro_added(
+    sender: Type[Any], instance: Cohort, action: str, reverse: bool, pk_set: set[int] | None, **kwargs: Any
+):
+    """When micros are linked to a macro, add those micros to CohortSets that contain the macro."""
+    if action != "post_add" or not pk_set:
+        return
+
+    from breathecode.payments.actions import sync_micro_cohorts_into_cohort_sets
+
+    if reverse:
+        # instance is the micro; pk_set are macro cohort IDs
+        for macro in Cohort.objects.filter(pk__in=pk_set):
+            sync_micro_cohorts_into_cohort_sets(macro, {instance.pk})
+    else:
+        # instance is the macro; pk_set are micro cohort IDs
+        sync_micro_cohorts_into_cohort_sets(instance, pk_set)
 
 
 @receiver(cohort_log_saved, sender=Cohort)

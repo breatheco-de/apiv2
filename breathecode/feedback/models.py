@@ -333,6 +333,87 @@ def validate_question_structure(value):
         raise ValidationError(f'Missing required keys: {", ".join(missing_keys)}')
 
 
+def default_when_asking_event():
+    return {
+        "title": strings["en"]["event"]["title"],
+        "highest": strings["en"]["event"]["highest"],
+        "lowest": strings["en"]["event"]["lowest"],
+        "survey_subject": strings["en"]["event"]["survey_subject"],
+    }
+
+
+def default_when_asking_mentor():
+    return {
+        "title": strings["en"]["mentor"]["title"],
+        "highest": strings["en"]["mentor"]["highest"],
+        "lowest": strings["en"]["mentor"]["lowest"],
+        "survey_subject": strings["en"]["mentor"]["survey_subject"],
+    }
+
+
+def default_when_asking_cohort():
+    return {
+        "title": strings["en"]["cohort"]["title"],
+        "highest": strings["en"]["cohort"]["highest"],
+        "lowest": strings["en"]["cohort"]["lowest"],
+        "survey_subject": strings["en"]["cohort"]["survey_subject"],
+    }
+
+
+def default_when_asking_academy():
+    return {
+        "title": strings["en"]["academy"]["title"],
+        "highest": strings["en"]["academy"]["highest"],
+        "lowest": strings["en"]["academy"]["lowest"],
+        "survey_subject": strings["en"]["academy"]["survey_subject"],
+    }
+
+
+def default_when_asking_mentorshipsession():
+    return {
+        "title": strings["en"]["mentorship_session"]["title"],
+        "highest": strings["en"]["mentorship_session"]["highest"],
+        "lowest": strings["en"]["mentorship_session"]["lowest"],
+        "survey_subject": strings["en"]["mentorship_session"]["survey_subject"],
+    }
+
+
+def default_when_asking_platform():
+    return {
+        "title": strings["en"]["platform"]["title"],
+        "highest": strings["en"]["platform"]["highest"],
+        "lowest": strings["en"]["platform"]["lowest"],
+        "survey_subject": strings["en"]["platform"]["survey_subject"],
+    }
+
+
+def default_when_asking_liveclass_mentor():
+    return {
+        "title": strings["en"]["liveclass_mentor"]["title"],
+        "highest": strings["en"]["liveclass_mentor"]["highest"],
+        "lowest": strings["en"]["liveclass_mentor"]["lowest"],
+        "survey_subject": strings["en"]["liveclass_mentor"]["survey_subject"],
+    }
+
+
+def default_when_asking_mentor_communication():
+    return {
+        "title": strings["en"]["mentor_communication"]["title"],
+        "highest": strings["en"]["mentor_communication"]["highest"],
+        "lowest": strings["en"]["mentor_communication"]["lowest"],
+        "survey_subject": strings["en"]["mentor_communication"]["survey_subject"],
+    }
+
+
+def default_when_asking_mentor_participation():
+    return {
+        "title": strings["en"]["mentor_participation"]["title"],
+        "highest": strings["en"]["mentor_participation"]["highest"],
+        "lowest": strings["en"]["mentor_participation"]["lowest"],
+        "survey_subject": strings["en"]["mentor_participation"]["survey_subject"],
+    }
+
+
 class SurveyTemplate(models.Model):
     """Template used to create surveys with predefined questions"""
 
@@ -350,108 +431,63 @@ class SurveyTemplate(models.Model):
         blank=True,
         validators=[validate_question_structure],
         help_text="Questions to ask about an event",
-        default=dict(
-            title=strings["en"]["event"]["title"],
-            highest=strings["en"]["event"]["highest"],
-            lowest=strings["en"]["event"]["lowest"],
-            survey_subject=strings["en"]["event"]["survey_subject"],
-        ),
+        default=default_when_asking_event,
     )
     when_asking_mentor = models.JSONField(
         null=True,
         blank=True,
         validators=[validate_question_structure],
         help_text="Questions to ask about a mentor",
-        default=dict(
-            title=strings["en"]["mentor"]["title"],
-            highest=strings["en"]["mentor"]["highest"],
-            lowest=strings["en"]["mentor"]["lowest"],
-            survey_subject=strings["en"]["mentor"]["survey_subject"],
-        ),
+        default=default_when_asking_mentor,
     )
     when_asking_cohort = models.JSONField(
         null=True,
         blank=True,
         validators=[validate_question_structure],
         help_text="Questions to ask about a cohort",
-        default=dict(
-            title=strings["en"]["cohort"]["title"],
-            highest=strings["en"]["cohort"]["highest"],
-            lowest=strings["en"]["cohort"]["lowest"],
-            survey_subject=strings["en"]["cohort"]["survey_subject"],
-        ),
+        default=default_when_asking_cohort,
     )
     when_asking_academy = models.JSONField(
         null=True,
         blank=True,
         validators=[validate_question_structure],
         help_text="Questions to ask about the academy",
-        default=dict(
-            title=strings["en"]["academy"]["title"],
-            highest=strings["en"]["academy"]["highest"],
-            lowest=strings["en"]["academy"]["lowest"],
-            survey_subject=strings["en"]["academy"]["survey_subject"],
-        ),
+        default=default_when_asking_academy,
     )
     when_asking_mentorshipsession = models.JSONField(
         null=True,
         blank=True,
         validators=[validate_question_structure],
         help_text="Questions to ask about a mentorship session",
-        default=dict(
-            title=strings["en"]["mentorship_session"]["title"],
-            highest=strings["en"]["mentorship_session"]["highest"],
-            lowest=strings["en"]["mentorship_session"]["lowest"],
-            survey_subject=strings["en"]["mentorship_session"]["survey_subject"],
-        ),
+        default=default_when_asking_mentorshipsession,
     )
     when_asking_platform = models.JSONField(
         null=True,
         blank=True,
         validators=[validate_question_structure],
         help_text="Questions to ask about the 4Geeks.com platform",
-        default=dict(
-            title=strings["en"]["platform"]["title"],
-            highest=strings["en"]["platform"]["highest"],
-            lowest=strings["en"]["platform"]["lowest"],
-            survey_subject=strings["en"]["platform"]["survey_subject"],
-        ),
+        default=default_when_asking_platform,
     )
     when_asking_liveclass_mentor = models.JSONField(
         null=True,
         blank=True,
         validators=[validate_question_structure],
         help_text="Questions to ask about a live class mentor",
-        default=dict(
-            title=strings["en"]["liveclass_mentor"]["title"],
-            highest=strings["en"]["liveclass_mentor"]["highest"],
-            lowest=strings["en"]["liveclass_mentor"]["lowest"],
-            survey_subject=strings["en"]["liveclass_mentor"]["survey_subject"],
-        ),
+        default=default_when_asking_liveclass_mentor,
     )
     when_asking_mentor_communication = models.JSONField(
         null=True,
         blank=True,
         validators=[validate_question_structure],
         help_text="Questions to ask about mentor communication during class",
-        default=dict(
-            title=strings["en"]["mentor_communication"]["title"],
-            highest=strings["en"]["mentor_communication"]["highest"],
-            lowest=strings["en"]["mentor_communication"]["lowest"],
-            survey_subject=strings["en"]["mentor_communication"]["survey_subject"],
-        ),
+        default=default_when_asking_mentor_communication,
     )
     when_asking_mentor_participation = models.JSONField(
         null=True,
         blank=True,
         validators=[validate_question_structure],
         help_text="Questions to ask about class how the mentor answers and encoursges participation",
-        default=dict(
-            title=strings["en"]["mentor_participation"]["title"],
-            highest=strings["en"]["mentor_participation"]["highest"],
-            lowest=strings["en"]["mentor_participation"]["lowest"],
-            survey_subject=strings["en"]["mentor_participation"]["survey_subject"],
-        ),
+        default=default_when_asking_mentor_participation,
     )
     additional_questions = models.JSONField(
         null=True, blank=True, help_text="Additional custom questions in the same structure"

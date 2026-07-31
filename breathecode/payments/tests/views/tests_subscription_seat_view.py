@@ -194,6 +194,7 @@ def test_put_permission_denied_when_not_owner(mock_get_subscription, mock_lang, 
 
 
 @patch("breathecode.payments.views.get_user_language", return_value="en")
+@patch("breathecode.payments.views.actions.validate_seat_cohort_for_owner")
 @patch("breathecode.payments.views.actions.create_seat")
 @patch("breathecode.payments.views.actions.validate_seats_limit")
 @patch("breathecode.payments.views.actions.normalize_replace_seat", return_value=[])
@@ -207,6 +208,7 @@ def test_put_add_seats_happy_path(
     mock_norm_replace,
     mock_validate_limit,
     mock_create_seat,
+    mock_validate_cohort,
     mock_lang,
     factory,
 ):
@@ -218,9 +220,12 @@ def test_put_add_seats_happy_path(
     mock_get_team.return_value = team
 
     mock_norm_add.return_value = [
-        MagicMock(email="a@b.com", user=10, first_name="A", last_name="B"),
-        MagicMock(email="c@d.com", user=None, first_name="C", last_name="D"),
+        {"email": "a@b.com", "user": 10, "first_name": "A", "last_name": "B", "cohort_id": 1},
+        {"email": "c@d.com", "user": None, "first_name": "C", "last_name": "D", "cohort_id": 2},
     ]
+
+    mock_cohort = MagicMock()
+    mock_validate_cohort.side_effect = [mock_cohort, mock_cohort]
 
     seat1 = build_seat(id=1, email="a@b.com", user_id=10)
     seat2 = build_seat(id=2, email="c@d.com", user_id=None)
@@ -265,6 +270,7 @@ def test_put_add_seats_happy_path(
 
 
 @patch("breathecode.payments.views.get_user_language", return_value="en")
+@patch("breathecode.payments.views.actions.validate_seat_cohort_for_owner")
 @patch("breathecode.payments.views.actions.create_seat")
 @patch("breathecode.payments.views.actions.validate_seats_limit")
 @patch("breathecode.payments.views.actions.normalize_replace_seat", return_value=[])
@@ -278,6 +284,7 @@ def test_put_add_seats_with_errors(
     mock_norm_replace,
     mock_validate_limit,
     mock_create_seat,
+    mock_validate_cohort,
     mock_lang,
     factory,
 ):
@@ -290,9 +297,11 @@ def test_put_add_seats_with_errors(
     mock_get_team.return_value = team
 
     mock_norm_add.return_value = [
-        MagicMock(email="a@b.com", user=10, first_name="A", last_name="B"),
-        MagicMock(email="bad", user=None, first_name="C", last_name="D"),
+        {"email": "a@b.com", "user": 10, "first_name": "A", "last_name": "B", "cohort_id": 1},
+        {"email": "bad", "user": None, "first_name": "C", "last_name": "D", "cohort_id": 2},
     ]
+
+    mock_validate_cohort.return_value = MagicMock()
 
     seat1 = build_seat(id=1, email="a@b.com", user_id=10)
     # first succeeds, second raises validation error
@@ -412,15 +421,16 @@ def test_put_add_seats_integration_db(client):
         patch("breathecode.payments.views.actions.normalize_add_seats") as mock_norm,
         patch("breathecode.payments.views.actions.normalize_replace_seat", return_value=[]),
         patch("breathecode.payments.views.actions.validate_seats_limit"),
+        patch("breathecode.payments.views.actions.validate_seat_cohort_for_owner", return_value=MagicMock()),
     ):
         # return dicts as normalize_add_seats would in production
         mock_norm.return_value = [
-            {"email": "a@b.com", "user": u1},
-            {"email": "c@d.com", "user": u2},
+            {"email": "a@b.com", "user": u1, "cohort_id": 1},
+            {"email": "c@d.com", "user": u2, "cohort_id": 1},
         ]
 
         # create_seat to persist into DB
-        def create_seat_side_effect(email, user, billing_team, lang):
+        def create_seat_side_effect(email, user, billing_team, lang, cohort):
             return SubscriptionSeat.objects.create(
                 billing_team=team,
                 user=user,

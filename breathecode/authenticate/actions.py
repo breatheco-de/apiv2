@@ -37,6 +37,7 @@ from .models import (
     DeviceId,
     GithubAcademyUser,
     GitpodUser,
+    Profile,
     ProfileAcademy,
     Role,
     Token,
@@ -689,6 +690,142 @@ def reset_password(users=None, extra=None, academy=None):
     return True
 
 
+def _unslugify(slug: str) -> str:
+    """Turn a slug into a readable fallback title without exposing raw slug form."""
+    if not slug:
+        return ""
+    return slug.replace("-", " ").replace("_", " ").strip().title()
+
+
+def _course_display_title(course, lang: str) -> str | None:
+    from breathecode.marketing.models import CourseTranslation
+
+    if course is None:
+        return None
+
+    lang_prefix = (lang or "en").split("-")[0]
+    translation_obj = (
+        CourseTranslation.objects.filter(course=course, lang__iexact=lang).first()
+        or CourseTranslation.objects.filter(course=course, lang__istartswith=lang_prefix).first()
+        or CourseTranslation.objects.filter(course=course).first()
+    )
+    if translation_obj and translation_obj.title:
+        return translation_obj.title
+    if course.slug:
+        return _unslugify(course.slug)
+    return None
+
+
+def get_verify_email_copy(invite: UserInvite, lang: str = "en") -> dict[str, Any]:
+    """
+    Build contextual verify_email defaults from UserInvite.
+
+    Returns CONTEXT_TYPE, CONTEXT_NAME and SUBJECT_*/MESSAGE_* defaults for every
+    variant so AcademyNotifySettings can override a single variant without
+    flattening the others.
+    """
+    from breathecode.events.models import Event
+    from breathecode.registry.models import Asset
+
+    lang = lang or "en"
+
+    context_type = "generic"
+    context_name = ""
+
+    # Priority: event → asset → course → cohort → generic
+    if invite.event_slug:
+        event = Event.objects.filter(slug=invite.event_slug).first()
+        if event is not None:
+            context_type = "event"
+            context_name = (event.title or "").strip() or _unslugify(invite.event_slug)
+
+    if context_type == "generic" and invite.asset_slug:
+        asset = Asset.objects.filter(slug=invite.asset_slug).first()
+        if asset is not None:
+            context_type = "asset"
+            context_name = (asset.title or "").strip() or _unslugify(invite.asset_slug)
+
+    if context_type == "generic" and invite.course_id:
+        title = _course_display_title(invite.course, lang)
+        if title:
+            context_type = "course"
+            context_name = title
+
+    if context_type == "generic" and invite.cohort_id:
+        cohort_name = (invite.cohort.name or "").strip() if invite.cohort else ""
+        if cohort_name:
+            context_type = "cohort"
+            context_name = cohort_name
+
+    # Defaults for all variants (placeholders use {CONTEXT_NAME} for academy overrides)
+    subject_event = translation(
+        lang,
+        en='Finish setup to join the "{CONTEXT_NAME}" event',
+        es='Finaliza tu registro para asistir a "{CONTEXT_NAME}"',
+    )
+    message_event = translation(
+        lang,
+        en='To join the "{CONTEXT_NAME}" event, set a password and validate your 4Geeks account.',
+        es='Para unirte al evento "{CONTEXT_NAME}", crea una contraseña y valida tu cuenta de 4Geeks.',
+    )
+    subject_asset = translation(
+        lang,
+        en='Finish setup to open "{CONTEXT_NAME}"',
+        es='Finaliza tu registro para aprender "{CONTEXT_NAME}"',
+    )
+    message_asset = translation(
+        lang,
+        en='To access more content like "{CONTEXT_NAME}", set a password and validate your 4Geeks account.',
+        es='Para acceder a mas contenido como "{CONTEXT_NAME}", crea una contraseña y valida tu cuenta de 4Geeks.',
+    )
+    subject_course = translation(
+        lang,
+        en='Finish setup to access "{CONTEXT_NAME}"',
+        es='Finaliza tu registro para acceder a "{CONTEXT_NAME}"',
+    )
+    message_course = translation(
+        lang,
+        en='To access "{CONTEXT_NAME}", set a password and validate your 4Geeks account.',
+        es='Para acceder a "{CONTEXT_NAME}", crea una contraseña y valida tu cuenta de 4Geeks.',
+    )
+    subject_cohort = translation(
+        lang,
+        en='Finish setup to access "{CONTEXT_NAME}"',
+        es='Finaliza tu registro para acceder a "{CONTEXT_NAME}"',
+    )
+    message_cohort = translation(
+        lang,
+        en='To access "{CONTEXT_NAME}", set a password and validate your 4Geeks account.',
+        es='Para acceder a "{CONTEXT_NAME}", crea una contraseña y valida tu cuenta de 4Geeks.',
+    )
+    subject_generic = translation(
+        lang,
+        en="4Geeks - Validate account",
+        es="4Geeks - Valida tu cuenta",
+    )
+    message_generic = translation(
+        lang,
+        en="In order to validate your 4Geeks account, you have to set a password. Please click the button below to set a password and validate your account.",
+        es="Para validar tu cuenta de 4Geeks debes crear una contraseña. Haz clic en el botón de abajo para crearla y validar tu cuenta.",
+    )
+
+    return {
+        "CONTEXT_TYPE": context_type,
+        "CONTEXT_NAME": context_name,
+        "SUBJECT_EVENT": subject_event,
+        "MESSAGE_EVENT": message_event,
+        "SUBJECT_ASSET": subject_asset,
+        "MESSAGE_ASSET": message_asset,
+        "SUBJECT_COURSE": subject_course,
+        "MESSAGE_COURSE": message_course,
+        "SUBJECT_COHORT": subject_cohort,
+        "MESSAGE_COHORT": message_cohort,
+        "SUBJECT": subject_generic,
+        "MESSAGE": message_generic,
+        "LANG": lang,
+    }
+
+
 def resend_invite(token=None, email=None, first_name=None, extra=None, academy=None, invite_id=None):
     if extra is None:
         extra = {}
@@ -902,6 +1039,57 @@ def update_gitpod_users(html):
             )
 
     return {"active": all_active_users, "inactive": all_inactive_users}
+
+
+def get_user_phone(user: User, academy_id: int | None = None) -> str | None:
+    """
+    Resolve a phone for the user with this priority:
+    1. ProfileAcademy.phone for academy_id (only when academy_id is provided)
+    2. Profile.phone
+    3. UserInvite.phone for this user (with academy_id: matching academy, then academy=null; else most recent)
+    """
+    if academy_id is not None:
+        profile_academy = (
+            ProfileAcademy.objects.filter(user=user, academy_id=academy_id)
+            .exclude(phone="")
+            .exclude(phone__isnull=True)
+            .only("phone")
+            .first()
+        )
+        if profile_academy and profile_academy.phone:
+            return profile_academy.phone
+
+    try:
+        profile = user.profile
+        if profile.phone:
+            return profile.phone
+    except Profile.DoesNotExist:
+        pass
+
+    invites = UserInvite.objects.filter(user=user).exclude(phone="")
+
+    if academy_id is not None:
+        phone = (
+            invites.filter(academy_id=academy_id)
+            .order_by("-created_at")
+            .values_list("phone", flat=True)
+            .first()
+        )
+        if phone:
+            return phone
+
+        phone = (
+            invites.filter(academy__isnull=True)
+            .order_by("-created_at")
+            .values_list("phone", flat=True)
+            .first()
+        )
+        if phone:
+            return phone
+
+        return None
+
+    return invites.order_by("-created_at").values_list("phone", flat=True).first()
 
 
 def get_user_settings(user_id: int) -> UserSetting | None:
@@ -1561,8 +1749,10 @@ def accept_invite_action(data=None, token=None, lang="en"):
             invite.subscription_seat.user = user
             invite.subscription_seat.save()
 
-        for plan in invite.subscription_seat.billing_team.plans.all():
-            payments_actions.grant_student_capabilities(user, plan)
+        subscription = invite.subscription_seat.billing_team.subscription
+        selected_cohort = invite.cohort.slug if invite.cohort_id else None
+        for plan in subscription.plans.all():
+            payments_actions.grant_student_capabilities(user, plan, selected_cohort=selected_cohort)
 
     # StudentPOSTSerializer creates one UserInvite per cohort (each with its own token). Accepting any
     # of those tokens must enroll the user in every cohort in that batch (same email + academy + role).

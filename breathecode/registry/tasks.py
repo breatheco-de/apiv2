@@ -161,16 +161,19 @@ def async_test_asset(asset_slug, log_errors=True, reset_errors=True, force=False
     a = Asset.objects.filter(slug=asset_slug).first()
     if a is None:
         logger.debug(f"Error: Error testing asset with slug {asset_slug}, does not exist.")
+        return False
 
     try:
-        # if the asset was tested in the last 30 days, we don't need to test it again unless force is True
-        if a.last_test_at is not None and a.last_test_at > timezone.now() - timedelta(days=30) and not force:
-            if test_asset(a, log_errors=log_errors, reset_errors=reset_errors):
-                return True
+        recently_tested = (
+            a.last_test_at is not None and a.last_test_at > timezone.now() - timedelta(days=30) and not force
+        )
+        if recently_tested:
+            return a.test_status in ["OK", "WARNING"]
+
+        return test_asset(a, log_errors=log_errors, reset_errors=reset_errors)
     except Exception:
         logger.exception(f"Error testing asset {a.slug}")
-
-    return False
+        return False
 
 
 @shared_task(priority=TaskPriority.ACADEMY.value)

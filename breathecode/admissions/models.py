@@ -669,6 +669,9 @@ COHORT_ROLE = (
     (STUDENT, "Student"),
 )
 
+# Cohort roles that may receive a program completion certificate.
+CERTIFICATE_RECIPIENT_ROLES = (STUDENT, TEACHER, ASSISTANT, REVIEWER)
+
 FULLY_PAID = "FULLY_PAID"
 UP_TO_DATE = "UP_TO_DATE"
 LATE = "LATE"

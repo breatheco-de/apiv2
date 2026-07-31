@@ -1,7 +1,7 @@
 {
     "slug": "verify_email",
     "name": "Verify Email",
-    "description": "Email verification for new user accounts to confirm email ownership",
+    "description": "Email verification for new user accounts. Copy varies by UserInvite context (event, asset/tutorial, course, cohort, or generic).",
     "category": "authentication",
     "channels": {
         "email": {
@@ -14,16 +14,92 @@
             "name": "LINK",
             "description": "Email verification URL with token",
             "source": "Generated from API_URL + verification token",
-            "example": "https://api.4geeks.com/v1/auth/email/verify?token=xyz789abc",
+            "example": "https://api.4geeks.com/v1/auth/password/<TOKEN>",
             "required": true
         },
         {
+            "name": "CONTEXT_TYPE",
+            "description": "Active invite context: event, asset, course, cohort, or generic",
+            "source": "Resolved from UserInvite fields",
+            "example": "event",
+            "required": false
+        },
+        {
+            "name": "CONTEXT_NAME",
+            "description": "Human-readable title for the active context (Event.title, Asset.title, course/cohort name). Use {CONTEXT_NAME} in variant overrides.",
+            "source": "Resolved from Event/Asset/Course/Cohort",
+            "example": "Intro to Python Workshop",
+            "required": false
+        },
+        {
             "name": "subject",
-            "description": "Email subject line",
-            "source": "Passed in data dict or uses default",
-            "example": "Verify your email address",
+            "description": "Final email subject after variant resolution (also set as SUBJECT)",
+            "source": "Picked from the active variant after academy overrides",
+            "example": "Finish setup to join the \"Intro to Python Workshop\" event",
             "required": true
+        },
+        {
+            "name": "MESSAGE",
+            "description": "Final email body paragraph after variant resolution",
+            "source": "Picked from the active variant after academy overrides",
+            "example": "To join the \"Intro to Python Workshop\" event, set a password and validate your 4Geeks account.",
+            "required": true
+        },
+        {
+            "name": "SUBJECT_EVENT",
+            "description": "Subject override for event signups. Supports {CONTEXT_NAME}.",
+            "source": "Code default or AcademyNotifySettings template.verify_email.SUBJECT_EVENT",
+            "example": "Finish setup to join the \"{CONTEXT_NAME}\" event",
+            "required": false
+        },
+        {
+            "name": "MESSAGE_EVENT",
+            "description": "Body override for event signups. Supports {CONTEXT_NAME}.",
+            "source": "Code default or AcademyNotifySettings template.verify_email.MESSAGE_EVENT",
+            "example": "To join the \"{CONTEXT_NAME}\" event, set a password and validate your account.",
+            "required": false
+        },
+        {
+            "name": "SUBJECT_ASSET",
+            "description": "Subject override for asset/tutorial signups. Supports {CONTEXT_NAME}.",
+            "source": "Code default or AcademyNotifySettings template.verify_email.SUBJECT_ASSET",
+            "example": "Finish setup to open \"{CONTEXT_NAME}\"",
+            "required": false
+        },
+        {
+            "name": "MESSAGE_ASSET",
+            "description": "Body override for asset/tutorial signups. Supports {CONTEXT_NAME}.",
+            "source": "Code default or AcademyNotifySettings template.verify_email.MESSAGE_ASSET",
+            "example": "To open \"{CONTEXT_NAME}\", set a password and validate your account.",
+            "required": false
+        },
+        {
+            "name": "SUBJECT_COURSE",
+            "description": "Subject override for course signups. Supports {CONTEXT_NAME}.",
+            "source": "Code default or AcademyNotifySettings template.verify_email.SUBJECT_COURSE",
+            "example": "Finish setup to access \"{CONTEXT_NAME}\"",
+            "required": false
+        },
+        {
+            "name": "MESSAGE_COURSE",
+            "description": "Body override for course signups. Supports {CONTEXT_NAME}.",
+            "source": "Code default or AcademyNotifySettings template.verify_email.MESSAGE_COURSE",
+            "example": "To access \"{CONTEXT_NAME}\", set a password and validate your account.",
+            "required": false
+        },
+        {
+            "name": "SUBJECT_COHORT",
+            "description": "Subject override for cohort signups. Supports {CONTEXT_NAME}.",
+            "source": "Code default or AcademyNotifySettings template.verify_email.SUBJECT_COHORT",
+            "example": "Finish setup to access \"{CONTEXT_NAME}\"",
+            "required": false
+        },
+        {
+            "name": "MESSAGE_COHORT",
+            "description": "Body override for cohort signups. Supports {CONTEXT_NAME}.",
+            "source": "Code default or AcademyNotifySettings template.verify_email.MESSAGE_COHORT",
+            "example": "To access \"{CONTEXT_NAME}\", set a password and validate your account.",
+            "required": false
         }
     ]
 }
-

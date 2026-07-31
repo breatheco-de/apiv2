@@ -4,7 +4,7 @@ Certificate issuance diagnostic: explains why a certificate may not have been ge
 
 from __future__ import annotations
 
-from breathecode.admissions.models import CohortUser, FULLY_PAID, UP_TO_DATE
+from breathecode.admissions.models import CERTIFICATE_RECIPIENT_ROLES, CohortUser, FULLY_PAID, UP_TO_DATE
 from breathecode.admissions.services.completion import evaluate_cohort_user_completion
 from breathecode.admissions.utils.academy_features import has_feature_flag
 from breathecode.assignments.models import Task
@@ -354,7 +354,7 @@ def list_graduated_without_certificate_cohort_users(academy_id: int | None, limi
     """
     query = {
         "educational_status": "GRADUATED",
-        "role": "STUDENT",
+        "role__in": CERTIFICATE_RECIPIENT_ROLES,
     }
     cohort_users = CohortUser.objects.filter(**query).exclude(cohort__stage="DELETED")
     if academy_id is not None:

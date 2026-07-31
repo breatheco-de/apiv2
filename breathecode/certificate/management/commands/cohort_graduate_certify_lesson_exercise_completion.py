@@ -12,7 +12,7 @@ from __future__ import annotations
 from capyc.rest_framework.exceptions import ValidationException
 from django.core.management.base import BaseCommand, CommandError
 
-from breathecode.admissions.models import GRADUATED, LATE, STUDENT, Cohort, CohortUser
+from breathecode.admissions.models import CERTIFICATE_RECIPIENT_ROLES, GRADUATED, LATE, STUDENT, Cohort, CohortUser
 from breathecode.assignments.models import Task
 from breathecode.certificate.actions import (
     generate_certificate,
@@ -246,7 +246,7 @@ class Command(BaseCommand):
             )
 
         students = (
-            CohortUser.objects.filter(cohort=cohort, role=STUDENT)
+            CohortUser.objects.filter(cohort=cohort, role__in=CERTIFICATE_RECIPIENT_ROLES)
             .exclude(cohort__stage="DELETED")
             .select_related("user")
             .order_by("id")
@@ -333,7 +333,9 @@ class Command(BaseCommand):
                     else "generate_certificate"
                 )
                 graduated_in_db = list(
-                    CohortUser.objects.filter(cohort=cohort, role=STUDENT, educational_status=GRADUATED)
+                    CohortUser.objects.filter(
+                        cohort=cohort, role__in=CERTIFICATE_RECIPIENT_ROLES, educational_status=GRADUATED
+                    )
                     .exclude(cohort__stage="DELETED")
                     .select_related("user")
                     .order_by("id")
@@ -353,7 +355,9 @@ class Command(BaseCommand):
                     cert_ok += 1
             else:
                 for cu in (
-                    CohortUser.objects.filter(cohort=cohort, role=STUDENT, educational_status=GRADUATED)
+                    CohortUser.objects.filter(
+                        cohort=cohort, role__in=CERTIFICATE_RECIPIENT_ROLES, educational_status=GRADUATED
+                    )
                     .exclude(cohort__stage="DELETED")
                     .select_related("user")
                     .order_by("id")
@@ -415,7 +419,9 @@ class Command(BaseCommand):
             )
         if dry_run and cohort is not None:
             db_grad_total = (
-                CohortUser.objects.filter(cohort=cohort, role=STUDENT, educational_status=GRADUATED)
+                CohortUser.objects.filter(
+                    cohort=cohort, role__in=CERTIFICATE_RECIPIENT_ROLES, educational_status=GRADUATED
+                )
                 .exclude(cohort__stage="DELETED")
                 .count()
             )
