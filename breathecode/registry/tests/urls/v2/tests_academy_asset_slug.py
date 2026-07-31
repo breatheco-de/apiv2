@@ -38,7 +38,7 @@ def get_serializer(bc: Breathecode, asset, asset_category=None, data={}):
         "graded": False,
         "id": asset.id,
         "intro_video_url": None,
-        "is_seo_tracked": True,
+        "is_seo_tracked": False,
         "lang": asset.lang,
         "feature": False,
         "last_synch_at": None,

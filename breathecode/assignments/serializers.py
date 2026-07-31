@@ -98,6 +98,10 @@ class TaskGETSerializer(serpy.Serializer):
         telemetry = AssignmentTelemetry.objects.filter(user=obj.user, asset_slug=obj.associated_slug).first()
         if telemetry is not None:
             return telemetry.telemetry
+        # Fallback: LearnPack stores telemetry under the canonical translation slug,
+        # which may differ from task.associated_slug while Task.telemetry is still linked.
+        if obj.telemetry_id is not None and obj.telemetry is not None:
+            return obj.telemetry.telemetry
         return None
 
 class TaskUserSmallSerializer(serpy.Serializer):
@@ -150,6 +154,10 @@ class TaskHookSerializer(serpy.Serializer):
         telemetry = AssignmentTelemetry.objects.filter(user=obj.user, asset_slug=obj.associated_slug).first()
         if telemetry is not None:
             return telemetry.telemetry
+        # Fallback: LearnPack stores telemetry under the canonical translation slug,
+        # which may differ from task.associated_slug while Task.telemetry is still linked.
+        if obj.telemetry_id is not None and obj.telemetry is not None:
+            return obj.telemetry.telemetry
         return None
 
 

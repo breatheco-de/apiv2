@@ -261,10 +261,12 @@ def originality_report(modeladmin, request, queryset):
             messages.error(request, a.slug + ": " + str(e))
 
 
+@admin.display(description="Deactivate SEO Tracking")
 def seo_optimization_off(modeladmin, request, queryset):
     queryset.update(is_seo_tracked=False)
 
 
+@admin.display(description="Activate SEO Tracking")
 def seo_optimization_on(modeladmin, request, queryset):
     queryset.update(is_seo_tracked=True)
 
@@ -546,6 +548,7 @@ class AssetAdmin(admin.ModelAdmin):
         "lang",
         "external",
         "graded",
+        "is_seo_tracked",
         AssessmentFilter,
         WithKeywordFilter,
         WithDescription,
