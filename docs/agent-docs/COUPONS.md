@@ -248,7 +248,9 @@ The **Coupon** system in the BreatheCode payments app enables flexible discount 
 #### `PUT /v1/payments/academy/coupon/<coupon_slug>`
 **Permission**: `crud_subscription`  
 **Behavior**: Partial updates supported  
-**Validations**: Same as POST
+**Validations**:
+- Same as POST, except `plans` may include plans from any academy (or global)
+- This allows linking the coupon to plans owned by other academies so those plans can use it
 
 #### `DELETE /v1/payments/academy/coupon/<coupon_slug>`
 **Permission**: `crud_subscription`  

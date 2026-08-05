@@ -285,6 +285,39 @@ class AcademyCouponTestSuite(PaymentsTestCase):
         created.coupon.refresh_from_db()
         self.assertEqual(created.coupon.discount_value, 0.35)
 
+    def test_put__allows_plans_from_other_academy(self):
+        model = self._auth(capability="crud_subscription")
+        now = timezone.now()
+        other_academy = self.bc.database.create(academy=1).academy
+        created = self.bc.database.create(
+            coupon={
+                "slug": "cross-academy-coupon",
+                "discount_value": 0.2,
+                "offered_at": now - timedelta(days=1),
+                "expires_at": now + timedelta(days=30),
+                "how_many_offers": -1,
+            },
+            plan={"slug": "other-academy-plan"},
+            currency=1,
+        )
+        created.plan.owner = other_academy
+        created.plan.save()
+
+        url = reverse_lazy("payments:academy_coupon_slug", kwargs={"coupon_slug": created.coupon.slug})
+        response = self.client.put(
+            url,
+            data={"plans": [created.plan.id]},
+            format="json",
+            headers={"academy": model.academy.id},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        payload = response.json()
+        self.assertEqual(len(payload["plans"]), 1)
+        self.assertEqual(payload["plans"][0]["slug"], "other-academy-plan")
+        created.coupon.refresh_from_db()
+        self.assertEqual(list(created.coupon.plans.values_list("id", flat=True)), [created.plan.id])
+
     def test_delete__removes_coupon_without_plans(self):
         model = self._auth(capability="crud_subscription")
         now = timezone.now()
