@@ -65,6 +65,8 @@ def deduplicate_asset_error_logs(apps, schema_editor):
 
 class Migration(migrations.Migration):
 
+    atomic = False
+
     dependencies = [
         ("registry", "0011_asseterrorlog_priority"),
     ]

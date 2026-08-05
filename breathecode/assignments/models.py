@@ -276,7 +276,7 @@ LEARNPACK_WEBHOOK_STATUS = (
 class LearnPackWebhook(models.Model):
 
     is_streaming = models.BooleanField()
-    event = models.CharField(max_length=15)
+    event = models.CharField(max_length=60)
     asset_id = models.BigIntegerField(null=True, blank=True, db_index=True)
     learnpack_package_id = models.BigIntegerField(null=True, blank=True, db_index=True)
     package_slug = models.SlugField(max_length=200, null=True, blank=True, db_index=True)

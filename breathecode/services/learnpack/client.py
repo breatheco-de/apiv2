@@ -3,7 +3,10 @@ import traceback
 
 import breathecode.services.learnpack.actions as actions
 from breathecode.assignments.models import LearnPackWebhook
-from breathecode.services.learnpack.resolve_payload_asset import resolve_asset_id_from_payload_value
+from breathecode.services.learnpack.resolve_payload_asset import (
+    get_asset_id_raw_from_learnpack_payload,
+    resolve_asset_id_from_payload_value,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -44,18 +47,15 @@ class LearnPack:
             if not webhook.payload:
                 raise Exception("Impossible to retrive webhook payload")
 
-            if "slug" not in webhook.payload:
+            if "slug" not in webhook.payload and "package_slug" not in webhook.payload:
                 raise Exception("Impossible to retrive learnpack exercise slug")
 
-            if "user_id" not in webhook.payload:
-                raise Exception("Impossible to retrive learnpack user id")
-            else:
-                user_id = webhook.payload["user_id"]
-                user = User.objects.filter(id=user_id).first()
+            # Bind student when present; each action validates its own requirements.
+            if "user_id" in webhook.payload:
+                user = User.objects.filter(id=webhook.payload["user_id"]).first()
                 if user is None:
-                    raise Exception(f"Learnpack student with user id {user_id} not found")
-                else:
-                    webhook.student = user
+                    raise Exception(f"Learnpack student with user id {webhook.payload['user_id']} not found")
+                webhook.student = user
 
             logger.debug(f"Executing => {webhook.event}")
             if not hasattr(actions, webhook.event):
@@ -104,10 +104,9 @@ class LearnPack:
         webhook.is_streaming = is_streaming
         webhook.payload = payload
         webhook.package_slug = payload.get("package_slug") or payload.get("slug")
+        asset_id_raw = get_asset_id_raw_from_learnpack_payload(payload)
         webhook.asset_id = (
-            resolve_asset_id_from_payload_value(payload.get("asset_id"))
-            if payload.get("asset_id") is not None
-            else None
+            resolve_asset_id_from_payload_value(asset_id_raw) if asset_id_raw is not None else None
         )
 
         try:

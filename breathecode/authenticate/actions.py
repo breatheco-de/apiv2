@@ -37,6 +37,7 @@ from .models import (
     DeviceId,
     GithubAcademyUser,
     GitpodUser,
+    Profile,
     ProfileAcademy,
     Role,
     Token,
@@ -1038,6 +1039,57 @@ def update_gitpod_users(html):
             )
 
     return {"active": all_active_users, "inactive": all_inactive_users}
+
+
+def get_user_phone(user: User, academy_id: int | None = None) -> str | None:
+    """
+    Resolve a phone for the user with this priority:
+    1. ProfileAcademy.phone for academy_id (only when academy_id is provided)
+    2. Profile.phone
+    3. UserInvite.phone for this user (with academy_id: matching academy, then academy=null; else most recent)
+    """
+    if academy_id is not None:
+        profile_academy = (
+            ProfileAcademy.objects.filter(user=user, academy_id=academy_id)
+            .exclude(phone="")
+            .exclude(phone__isnull=True)
+            .only("phone")
+            .first()
+        )
+        if profile_academy and profile_academy.phone:
+            return profile_academy.phone
+
+    try:
+        profile = user.profile
+        if profile.phone:
+            return profile.phone
+    except Profile.DoesNotExist:
+        pass
+
+    invites = UserInvite.objects.filter(user=user).exclude(phone="")
+
+    if academy_id is not None:
+        phone = (
+            invites.filter(academy_id=academy_id)
+            .order_by("-created_at")
+            .values_list("phone", flat=True)
+            .first()
+        )
+        if phone:
+            return phone
+
+        phone = (
+            invites.filter(academy__isnull=True)
+            .order_by("-created_at")
+            .values_list("phone", flat=True)
+            .first()
+        )
+        if phone:
+            return phone
+
+        return None
+
+    return invites.order_by("-created_at").values_list("phone", flat=True).first()
 
 
 def get_user_settings(user_id: int) -> UserSetting | None:

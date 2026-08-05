@@ -982,7 +982,7 @@ class AssetView(APIView, GenerateLookupsMixin):
             },
             ids=["author", "owner"],
             bools={
-                "exact": ["with_video", "interactive", "graded"],
+                "exact": ["with_video", "interactive", "graded", "is_seo_tracked"],
             },
             overwrite={
                 "category": "category__slug",
@@ -1140,7 +1140,7 @@ class AssetMeView(APIView, GenerateLookupsMixin):
             },
             ids=["author", "owner"],
             bools={
-                "exact": ["with_video", "interactive", "graded"],
+                "exact": ["with_video", "interactive", "graded", "is_seo_tracked"],
             },
             overwrite={
                 "category": "category__slug",
