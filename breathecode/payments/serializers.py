@@ -873,6 +873,29 @@ class GetCouponSerializer(serpy.Serializer):
     stats_updated_at = serpy.Field(required=False)
 
 
+class GetAcademyCouponSerializer(serpy.Serializer):
+    """Serializer for academy coupon admin (includes plans and usage limits)."""
+
+    slug = serpy.Field()
+    discount_type = serpy.Field()
+    discount_value = serpy.Field()
+    referral_type = serpy.Field()
+    referral_value = serpy.Field()
+    auto = serpy.Field()
+    how_many_offers = serpy.Field()
+    allowed_user = GetUserSmallSerializer(many=False, required=False)
+    plans = serpy.MethodField()
+    offered_at = serpy.Field()
+    expires_at = serpy.Field()
+    times_used = serpy.Field()
+    last_used_at = serpy.Field(required=False)
+    stats = serpy.Field(required=False)
+    stats_updated_at = serpy.Field(required=False)
+
+    def get_plans(self, obj):
+        return GetPlanSmallTinySerializer(obj.plans.all(), many=True).data
+
+
 class GetCouponWithPlansSerializer(serpy.Serializer):
 
     slug = serpy.Field()
