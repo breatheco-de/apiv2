@@ -3810,7 +3810,6 @@ class AcademyCouponView(APIView):
     @capable_of("crud_subscription")
     def put(self, request, coupon_slug=None, academy_id=None):
         lang = get_user_language(request)
-        _academy_id = int(academy_id) if academy_id is not None else None
         # Mutations can target non-offered coupons; referral coupons stay out of this admin view
         coupon = self._coupons_queryset(only_offered=False, include_referral=False).filter(slug=coupon_slug).first()
 
@@ -3821,10 +3820,10 @@ class AcademyCouponView(APIView):
 
         data = request.data.copy()
 
-        # Validate plans if provided
+        # Validate plans if provided. PUT allows plans from any academy (or global)
+        # so a coupon can be linked to plans that should accept it across academies.
         plans_data = data.get("plans")
         if plans_data is not None:
-            # Convert plan IDs/slugs to Plan objects and validate they belong to academy
             plan_objects = []
             for plan_identifier in plans_data:
                 plan_kwargs = {}
@@ -3856,18 +3855,6 @@ class AcademyCouponView(APIView):
                             slug="plan-not-found",
                         ),
                         code=404,
-                    )
-
-                # Validate plan belongs to academy or is global
-                if plan.owner_id is not None and _academy_id is not None and plan.owner_id != _academy_id:
-                    raise ValidationException(
-                        translation(
-                            lang,
-                            en=f"Plan {plan_identifier} does not belong to this academy",
-                            es=f"El plan {plan_identifier} no pertenece a esta academia",
-                            slug="plan-not-belonging-to-academy",
-                        ),
-                        code=403,
                     )
 
                 plan_objects.append(plan)
