@@ -81,6 +81,7 @@ from breathecode.payments.models import (
     Subscription,
     SubscriptionBillingTeam,
     SubscriptionSeat,
+    limit_coupon_choices,
 )
 from breathecode.payments.serializers import (
     AcademyPaymentSettingsPUTSerializer,
@@ -96,6 +97,7 @@ from breathecode.payments.serializers import (
     GetCohortSerializer,
     GetCohortSetSerializer,
     GetConsumptionSessionSerializer,
+    GetAcademyCouponSerializer,
     GetConversionPlanFinancingSerializer,
     GetConversionSubscriptionSerializer,
     GetCouponSerializer,
@@ -3630,36 +3632,54 @@ class AcademyInvoiceRecordRefundView(APIView):
 
 
 class AcademyCouponView(APIView):
-    """Manage coupons for an academy. Academies can manage coupons associated with their plans."""
+    """Manage coupons for an academy."""
 
     extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    def _parse_include_referral(self, request) -> bool:
+        return str(request.GET.get("include_referral", "")).lower() in ("true", "1", "yes")
+
+    def _coupons_queryset(self, *, only_offered: bool = True, include_referral: bool = False):
+        """
+        Base coupon queryset for academy admin.
+
+        - only_offered: currently offered (offered_at/expires_at/how_many_offers)
+        - include_referral: when False, excludes referral coupons
+        """
+        items = Coupon.objects.all().prefetch_related("plans")
+        if only_offered:
+            items = items.filter(limit_coupon_choices())
+        if not include_referral:
+            items = items.filter(referral_type=Coupon.Referral.NO_REFERRAL)
+        return items
 
     @capable_of("read_subscription")
     def get(self, request, coupon_slug=None, academy_id=None):
         handler = self.extensions(request)
         lang = get_user_language(request)
         _academy_id = int(academy_id) if academy_id is not None else None
-        # Filter coupons that have at least one plan associated with the academy
-        # Include both academy-owned plans and global plans (owner=None)
-        base_query = Q(plans__owner__id=_academy_id) | Q(plans__owner=None)
-        items = Coupon.objects.filter(base_query).distinct()
+        include_referral = self._parse_include_referral(request)
 
-        # Filter by specific plan if provided
+        # List: currently offered by default. Detail/edit: allow non-offered via path slug.
+        # status=all on list returns coupons regardless of offer window / remaining uses.
+        only_offered = True
+        if coupon_slug or request.GET.get("status") == "all":
+            only_offered = False
+
+        items = self._coupons_queryset(only_offered=only_offered, include_referral=include_referral)
+
+        # Optional: filter coupons associated with a plan (by slug)
         plan_filter = request.GET.get("plan")
         if plan_filter:
-            plan_kwargs = {}
-            if plan_filter.isdigit():
-                plan_kwargs["id"] = int(plan_filter)
-            else:
-                plan_kwargs["slug"] = plan_filter
+            plan = Plan.objects.filter(slug=plan_filter).first()
+            if not plan and plan_filter.isdigit():
+                plan = Plan.objects.filter(id=int(plan_filter)).first()
 
-            plan = Plan.objects.filter(**plan_kwargs).first()
             if not plan:
                 raise ValidationException(
                     translation(lang, en="Plan not found", es="Plan no encontrado", slug="plan-not-found"), code=404
                 )
 
-            # Validate plan belongs to academy or is global
             if plan.owner_id is not None and _academy_id is not None and plan.owner_id != _academy_id:
                 raise ValidationException(
                     translation(
@@ -3671,7 +3691,6 @@ class AcademyCouponView(APIView):
                     code=403,
                 )
 
-            # Filter coupons that are associated with this specific plan
             items = items.filter(plans__id=plan.id).distinct()
 
         if coupon_slug:
@@ -3681,15 +3700,14 @@ class AcademyCouponView(APIView):
                     translation(lang, en="Coupon not found", es="Cupón no encontrado", slug="not-found"), code=404
                 )
 
-            serializer = GetCouponSerializer(item, many=False)
+            serializer = GetAcademyCouponSerializer(item, many=False)
             return handler.response(serializer.data)
 
-        # Add "like" search filter for slug
         if like := request.GET.get("like"):
             items = items.filter(slug__icontains=like)
 
         items = handler.queryset(items)
-        serializer = GetCouponSerializer(items, many=True)
+        serializer = GetAcademyCouponSerializer(items, many=True)
 
         return handler.response(serializer.data)
 
@@ -3789,17 +3807,14 @@ class AcademyCouponView(APIView):
         # Create coupon (serializer handles ManyToMany relationships)
         coupon = serializer.save()
 
-        # Return using GET serializer for consistent response
-        response_serializer = GetCouponSerializer(coupon, many=False)
+        response_serializer = GetAcademyCouponSerializer(coupon, many=False)
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
     @capable_of("crud_subscription")
     def put(self, request, coupon_slug=None, academy_id=None):
         lang = get_user_language(request)
-        _academy_id = int(academy_id) if academy_id is not None else None
-        # Filter coupons that have at least one plan associated with the academy
-        base_query = Q(plans__owner__id=academy_id) | Q(plans__owner=None)
-        coupon = Coupon.objects.filter(base_query, slug=coupon_slug).distinct().first()
+        # Mutations can target non-offered coupons; referral coupons stay out of this admin view
+        coupon = self._coupons_queryset(only_offered=False, include_referral=False).filter(slug=coupon_slug).first()
 
         if not coupon:
             raise ValidationException(
@@ -3808,10 +3823,10 @@ class AcademyCouponView(APIView):
 
         data = request.data.copy()
 
-        # Validate plans if provided
+        # Validate plans if provided. PUT allows plans from any academy (or global)
+        # so a coupon can be linked to plans that should accept it across academies.
         plans_data = data.get("plans")
         if plans_data is not None:
-            # Convert plan IDs/slugs to Plan objects and validate they belong to academy
             plan_objects = []
             for plan_identifier in plans_data:
                 plan_kwargs = {}
@@ -3845,18 +3860,6 @@ class AcademyCouponView(APIView):
                         code=404,
                     )
 
-                # Validate plan belongs to academy or is global
-                if plan.owner_id is not None and _academy_id is not None and plan.owner_id != _academy_id:
-                    raise ValidationException(
-                        translation(
-                            lang,
-                            en=f"Plan {plan_identifier} does not belong to this academy",
-                            es=f"El plan {plan_identifier} no pertenece a esta academia",
-                            slug="plan-not-belonging-to-academy",
-                        ),
-                        code=403,
-                    )
-
                 plan_objects.append(plan)
 
             data["plans"] = [p.id for p in plan_objects]
@@ -3885,17 +3888,13 @@ class AcademyCouponView(APIView):
         # Refresh from DB to get updated relationships
         coupon.refresh_from_db()
 
-        # Return using GET serializer for consistent response
-        response_serializer = GetCouponSerializer(coupon, many=False)
+        response_serializer = GetAcademyCouponSerializer(coupon, many=False)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
 
     @capable_of("crud_subscription")
     def delete(self, request, coupon_slug=None, academy_id=None):
         lang = get_user_language(request)
-
-        # Filter coupons that have at least one plan associated with the academy
-        base_query = Q(plans__owner__id=academy_id) | Q(plans__owner=None)
-        coupon = Coupon.objects.filter(base_query, slug=coupon_slug).distinct().first()
+        coupon = self._coupons_queryset(only_offered=False, include_referral=False).filter(slug=coupon_slug).first()
 
         if not coupon:
             raise ValidationException(

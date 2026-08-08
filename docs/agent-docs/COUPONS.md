@@ -208,16 +208,18 @@ The **Coupon** system in the BreatheCode payments app enables flexible discount 
 #### `GET /v1/payments/academy/coupon`
 **Permission**: `read_subscription`  
 **Query Parameters:**
-- `plan` (optional): Filter by plan ID or slug
+- `plan` (optional): Filter by plan slug (or id)
 - `like` (optional): Search by coupon slug
+- `include_referral` (optional): `true` to include referral coupons
+- `status` (optional): `all` to include non-offered / expired / disabled coupons
 - Standard pagination and sorting
 
-**Response**: Array of coupon objects associated with academy plans
+**Response**: Array of academy coupon objects (`GetAcademyCouponSerializer`, includes `plans` and `how_many_offers`)
 
-**Filtering:**
-- Shows coupons linked to academy-owned plans or global plans
-- If `plan` parameter provided, filters to coupons for that specific plan
-- Validates plan belongs to academy
+**Default filtering:**
+- Only currently offered coupons (`offered_at` / `expires_at` / `how_many_offers`)
+- Excludes referral coupons unless `include_referral=true`
+- If `plan` is provided, returns coupons associated with that plan
 
 #### `POST /v1/payments/academy/coupon`
 **Permission**: `crud_subscription`  
@@ -246,7 +248,9 @@ The **Coupon** system in the BreatheCode payments app enables flexible discount 
 #### `PUT /v1/payments/academy/coupon/<coupon_slug>`
 **Permission**: `crud_subscription`  
 **Behavior**: Partial updates supported  
-**Validations**: Same as POST
+**Validations**:
+- Same as POST, except `plans` may include plans from any academy (or global)
+- This allows linking the coupon to plans owned by other academies so those plans can use it
 
 #### `DELETE /v1/payments/academy/coupon/<coupon_slug>`
 **Permission**: `crud_subscription`  
