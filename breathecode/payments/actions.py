@@ -31,7 +31,7 @@ from task_manager.django.actions import schedule_task
 from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
 from breathecode.authenticate.actions import get_app_url, get_invite_url, get_user_settings
-from breathecode.authenticate.models import Role, UserInvite, UserSetting
+from breathecode.authenticate.models import ProfileAcademy, Role, UserInvite, UserSetting
 from breathecode.marketing.actions import validate_email_local
 from breathecode.media.models import File
 from breathecode.monitoring.models import StripeEvent
@@ -7862,7 +7862,7 @@ def generate_active_users_bill(
     currency_code = config["currency"]
     exclude_patterns = config["exclude_cohort_slug_patterns"]
 
-    cohort_users = (
+    cohort_users = list(
         CohortUser.objects.filter(
             role="STUDENT",
             educational_status__in=["ACTIVE", "NOT_COMPLETING"],
@@ -7874,9 +7874,39 @@ def generate_active_users_bill(
         .order_by("cohort_id", "user_id")
     )
 
+    # ProfileAcademy rules (match report_active_students_by_academy / ops SQL):
+    # - must have a student ProfileAcademy at this academy (by user or email)
+    # - drop users who also have any non-student ProfileAcademy role at this academy
+    profiles = list(ProfileAcademy.objects.filter(academy=academy).select_related("role", "user"))
+    users_with_non_student_role: set[int] = set()
+    student_user_ids: set[int] = set()
+    student_emails: set[str] = set()
+    for pa in profiles:
+        role_slug = pa.role.slug if pa.role_id else None
+        if role_slug != "student":
+            if pa.user_id:
+                users_with_non_student_role.add(pa.user_id)
+            continue
+        if pa.user_id:
+            student_user_ids.add(pa.user_id)
+        if pa.email:
+            student_emails.add(pa.email.lower())
+
+    def _is_billable_student(user) -> bool:
+        if user is None:
+            return False
+        if user.id in users_with_non_student_role:
+            return False
+        if user.id in student_user_ids:
+            return True
+        email = (user.email or "").lower()
+        return bool(email and email in student_emails)
+
     excluded_cohort_slugs: list[str] = []
     seen_excluded: set[int] = set()
     billed_users: set[int] = set()
+    skipped_no_student_profile = 0
+    skipped_non_student_role = 0
     duplicate_samples: list[str] = []
     duplicate_user_count = 0
     # cohort_id -> {user_ids, notes_parts, cohort}
@@ -7890,11 +7920,19 @@ def generate_active_users_bill(
                 excluded_cohort_slugs.append(cohort.slug)
             continue
 
+        user = cu.user
         user_id = cu.user_id
+        if user_id in users_with_non_student_role:
+            skipped_non_student_role += 1
+            continue
+        if not _is_billable_student(user):
+            skipped_no_student_profile += 1
+            continue
+
         if user_id in billed_users:
             duplicate_user_count += 1
             if len(duplicate_samples) < 10:
-                email = getattr(cu.user, "email", None) or str(user_id)
+                email = getattr(user, "email", None) or str(user_id)
                 first_cohort = next(
                     (data["cohort"].slug for data in by_cohort.values() if user_id in data["user_ids"]),
                     "unknown",
@@ -7927,6 +7965,14 @@ def generate_active_users_bill(
         note_parts.append(
             f"{len(excluded_cohort_slugs)} cohort(s) skipped by exclude_cohort_slug_patterns: "
             + ", ".join(excluded_cohort_slugs[:20])
+        )
+    if skipped_no_student_profile:
+        note_parts.append(
+            f"{skipped_no_student_profile} enrollment(s) skipped (no student ProfileAcademy)"
+        )
+    if skipped_non_student_role:
+        note_parts.append(
+            f"{skipped_non_student_role} enrollment(s) skipped (non-student ProfileAcademy role)"
         )
 
     unique_user_count = len(billed_users)

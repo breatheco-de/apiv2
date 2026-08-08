@@ -1,12 +1,12 @@
-from datetime import date, timedelta
+from datetime import date
 from decimal import Decimal
 
 import pytest
 from capyc.rest_framework.exceptions import ValidationException
-from django.utils import timezone
 
+from breathecode.authenticate.models import ProfileAcademy, Role
 from breathecode.payments.actions import generate_active_users_bill, get_active_users_month_invoice
-from breathecode.payments.models import ActiveUsersBill, AcademyPaymentSettings
+from breathecode.payments.models import ActiveUsersBill, ActiveUsersBillItem, AcademyPaymentSettings
 
 
 def _enable_billing(academy, price=10, patterns=None):
@@ -21,6 +21,21 @@ def _enable_billing(academy, price=10, patterns=None):
             }
         },
     )
+
+
+def _ensure_student_role():
+    role, _ = Role.objects.get_or_create(slug="student", defaults={"name": "Student"})
+    return role
+
+
+def _make_student_profiles(academy, users):
+    role = _ensure_student_role()
+    for user in users:
+        ProfileAcademy.objects.get_or_create(
+            user=user,
+            academy=academy,
+            defaults={"role": role, "email": user.email, "status": "ACTIVE"},
+        )
 
 
 @pytest.mark.django_db
@@ -55,6 +70,7 @@ def test_generate_counts_active_and_not_completing_excludes_late(database):
             {"user_id": 3, "role": "STUDENT", "educational_status": "ACTIVE", "finantial_status": "LATE"},
         ],
     )
+    _make_student_profiles(model.academy, model.user)
     _enable_billing(model.academy, price=10)
     billing_date = date(2026, 8, 7)
     bill = generate_active_users_bill(model.academy, billing_date=billing_date)
@@ -94,6 +110,7 @@ def test_generate_excludes_ended_cohorts(database):
             },
         ],
     )
+    _make_student_profiles(model.academy, model.user)
     _enable_billing(model.academy, price=10)
     bill = generate_active_users_bill(model.academy, billing_date=date(2026, 8, 7))
 
@@ -130,6 +147,7 @@ def test_generate_excludes_cohort_slug_patterns(database):
             },
         ],
     )
+    _make_student_profiles(model.academy, model.user)
     _enable_billing(model.academy, price=5, patterns=[".*land-a-job-in-tech.*"])
     bill = generate_active_users_bill(model.academy, billing_date=date(2026, 8, 7))
 
@@ -167,17 +185,128 @@ def test_generate_dedupes_across_cohorts(database):
             },
         ],
     )
+    _make_student_profiles(model.academy, [model.user])
     _enable_billing(model.academy, price=10)
     bill = generate_active_users_bill(model.academy, billing_date=date(2026, 8, 7))
 
     assert bill.unique_user_count == 1
     assert bill.duplicate_user_count == 1
     assert "duplicate" in bill.notes.lower()
-    # First cohort wins; second cohort has no attributed users so no item (or only notes)
     items = list(bill.items.all())
     assert len(items) == 1
     assert items[0].cohort.slug == "cohort-a"
     assert items[0].user_count == 1
+
+
+@pytest.mark.django_db
+def test_generate_requires_student_profile_academy(database):
+    model = database.create(
+        user=2,
+        academy=1,
+        city=1,
+        country=1,
+        cohort={"stage": "STARTED"},
+        cohort_user=[
+            {
+                "user_id": 1,
+                "role": "STUDENT",
+                "educational_status": "ACTIVE",
+                "finantial_status": "UP_TO_DATE",
+            },
+            {
+                "user_id": 2,
+                "role": "STUDENT",
+                "educational_status": "ACTIVE",
+                "finantial_status": "UP_TO_DATE",
+            },
+        ],
+    )
+    # Only user 1 gets a student ProfileAcademy
+    _make_student_profiles(model.academy, [model.user[0]])
+    _enable_billing(model.academy, price=10)
+    bill = generate_active_users_bill(model.academy, billing_date=date(2026, 8, 7))
+
+    assert bill.unique_user_count == 1
+    assert bill.items.first().user_ids == [model.user[0].id]
+    assert "no student ProfileAcademy" in bill.notes
+
+
+@pytest.mark.django_db
+def test_generate_excludes_non_student_profile_academy_role(database):
+    model = database.create(
+        user=2,
+        academy=1,
+        city=1,
+        country=1,
+        cohort={"stage": "STARTED"},
+        cohort_user=[
+            {
+                "user_id": 1,
+                "role": "STUDENT",
+                "educational_status": "ACTIVE",
+                "finantial_status": "UP_TO_DATE",
+            },
+            {
+                "user_id": 2,
+                "role": "STUDENT",
+                "educational_status": "ACTIVE",
+                "finantial_status": "UP_TO_DATE",
+            },
+        ],
+    )
+    student_role = _ensure_student_role()
+    teacher_role, _ = Role.objects.get_or_create(slug="teacher", defaults={"name": "Teacher"})
+    ProfileAcademy.objects.create(
+        user=model.user[0],
+        academy=model.academy,
+        role=student_role,
+        email=model.user[0].email,
+        status="ACTIVE",
+    )
+    # Staff enrolled as cohort student — should not be billed
+    ProfileAcademy.objects.create(
+        user=model.user[1],
+        academy=model.academy,
+        role=teacher_role,
+        email=model.user[1].email,
+        status="ACTIVE",
+    )
+    _enable_billing(model.academy, price=10)
+    bill = generate_active_users_bill(model.academy, billing_date=date(2026, 8, 7))
+
+    assert bill.unique_user_count == 1
+    assert bill.items.first().user_ids == [model.user[0].id]
+    assert "non-student ProfileAcademy role" in bill.notes
+
+
+@pytest.mark.django_db
+def test_generate_matches_student_profile_by_email(database):
+    model = database.create(
+        user=1,
+        academy=1,
+        city=1,
+        country=1,
+        cohort={"stage": "STARTED"},
+        cohort_user={
+            "role": "STUDENT",
+            "educational_status": "ACTIVE",
+            "finantial_status": "UP_TO_DATE",
+        },
+    )
+    student_role = _ensure_student_role()
+    # Profile linked by email only (user FK null) — still billable
+    ProfileAcademy.objects.create(
+        user=None,
+        academy=model.academy,
+        role=student_role,
+        email=model.user.email,
+        status="ACTIVE",
+    )
+    _enable_billing(model.academy, price=10)
+    bill = generate_active_users_bill(model.academy, billing_date=date(2026, 8, 7))
+
+    assert bill.unique_user_count == 1
+    assert bill.items.first().user_ids == [model.user.id]
 
 
 @pytest.mark.django_db
@@ -194,6 +323,7 @@ def test_generate_idempotent(database):
             "finantial_status": "UP_TO_DATE",
         },
     )
+    _make_student_profiles(model.academy, [model.user])
     _enable_billing(model.academy)
     d = date(2026, 8, 7)
     bill1 = generate_active_users_bill(model.academy, billing_date=d)
@@ -245,8 +375,6 @@ def test_month_invoice_peak_day_and_items(database):
         status="IGNORED",
         title="ignored",
     )
-
-    from breathecode.payments.models import ActiveUsersBillItem
 
     item = ActiveUsersBillItem.objects.create(
         bill=peak,
