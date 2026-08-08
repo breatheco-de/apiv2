@@ -6,6 +6,7 @@ from typing import Any, Optional
 from urllib.parse import urlencode
 
 from capyc.core.i18n import translation
+from capyc.rest_framework.exceptions import ValidationException
 from dateutil.relativedelta import relativedelta
 from django.core.cache import cache
 from django.db.models import F, Sum
@@ -2771,3 +2772,33 @@ def send_checkout_fulfillment_error_email(
             str(e),
             exc_info=True,
         )
+
+
+@task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
+def generate_active_users_bill_task(self, academy_id: int, billing_date: Optional[str] = None, **_: Any):
+    """Generate daily ActiveUsersBill for one academy (idempotent)."""
+    from datetime import date as date_cls
+
+    from breathecode.admissions.models import Academy
+
+    academy = Academy.objects.filter(id=academy_id).first()
+    if academy is None:
+        raise AbortTask(f"Academy {academy_id} not found")
+
+    parsed_date = None
+    if billing_date:
+        parsed_date = date_cls.fromisoformat(billing_date)
+
+    try:
+        bill = actions.generate_active_users_bill(academy, billing_date=parsed_date)
+    except ValidationException as e:
+        raise AbortTask(str(e)) from e
+
+    logger.info(
+        "generate_active_users_bill_task: academy_id=%s billing_date=%s bill_id=%s unique=%s",
+        academy_id,
+        bill.billing_date,
+        bill.id,
+        bill.unique_user_count,
+    )
+    return bill.id

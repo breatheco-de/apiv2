@@ -54,6 +54,7 @@ from breathecode.payments.caches import PlanFinancingCache, PlanOfferCache, Subs
 from breathecode.payments.models import (
     AcademyPaymentSettings,
     AcademyService,
+    ActiveUsersBill,
     Bag,
     CohortSet,
     Consumable,
@@ -105,6 +106,8 @@ from breathecode.payments.serializers import (
     GetFinancingOptionSerializer,
     GetInvoiceSerializer,
     GetInvoiceSmallSerializer,
+    GetActiveUsersBillDetailSerializer,
+    GetActiveUsersBillSmallSerializer,
     GetMentorshipServiceSetSerializer,
     GetMentorshipServiceSetSmallSerializer,
     GetPaymentMethod,
@@ -8580,3 +8583,93 @@ class AcademyPaymentSettingsView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AcademyActiveUsersBillView(APIView):
+    """List and retrieve daily ActiveUsersBill for an academy."""
+
+    extensions = APIViewExtensions(sort="-billing_date", paginate=True)
+
+    @capable_of("read_active_users_bill")
+    def get(self, request, academy_id=None, bill_id=None):
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+
+        if bill_id is not None:
+            bill = (
+                ActiveUsersBill.objects.filter(id=bill_id, academy_id=academy_id)
+                .prefetch_related("items", "items__cohort")
+                .select_related("academy")
+                .first()
+            )
+            if bill is None:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Active users bill not found",
+                        es="Factura de usuarios activos no encontrada",
+                        slug="active-users-bill-not-found",
+                    ),
+                    code=404,
+                )
+            serializer = GetActiveUsersBillDetailSerializer(bill, many=False)
+            return Response(serializer.data)
+
+        items = ActiveUsersBill.objects.filter(academy_id=academy_id).select_related("academy")
+
+        if status_param := request.GET.get("status"):
+            items = items.filter(status__in=status_param.upper().split(","))
+
+        if year := request.GET.get("year"):
+            items = items.filter(billing_date__year=int(year))
+        if month := request.GET.get("month"):
+            items = items.filter(billing_date__month=int(month))
+
+        items = handler.queryset(items)
+        serializer = GetActiveUsersBillSmallSerializer(items, many=True)
+        return handler.response(serializer.data)
+
+
+class AcademyActiveUsersBillMonthView(APIView):
+    """Month invoice: high-water mark peak day with that day's cohort items."""
+
+    @capable_of("read_active_users_bill")
+    def get(self, request, academy_id=None):
+        lang = get_user_language(request)
+
+        year = request.GET.get("year")
+        month = request.GET.get("month")
+        if not year or not month:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="year and month query params are required",
+                    es="Los parámetros year y month son requeridos",
+                    slug="year-month-required",
+                ),
+                code=400,
+            )
+
+        try:
+            year_i = int(year)
+            month_i = int(month)
+        except ValueError:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="year and month must be integers",
+                    es="year y month deben ser enteros",
+                    slug="year-month-invalid",
+                ),
+                code=400,
+            )
+
+        academy = Academy.objects.filter(id=academy_id).first()
+        if academy is None:
+            raise ValidationException(
+                translation(lang, en="Academy not found", es="Academia no encontrada", slug="academy-not-found"),
+                code=404,
+            )
+
+        payload = actions.get_active_users_month_invoice(academy, year_i, month_i, lang=lang)
+        return Response(payload)

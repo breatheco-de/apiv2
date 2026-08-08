@@ -4201,8 +4201,123 @@ class AcademyPaymentSettings(models.Model):
         help_text="Feature flags and configuration settings for academy-specific features",
     )
 
+    internal_billing = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text=(
+            "Internal billing settings between 4Geeks and this academy (not student checkout). "
+            'Shape: {"active_users_billing": {"enabled": true, "price_per_user": 10.0, '
+            '"currency": "USD", "exclude_cohort_slug_patterns": [".*land-a-job-in-tech.*", ".*pt-general.*"]}}. '
+            "`enabled` toggles daily billing; `price_per_user` is the unit price; month charge = peak daily "
+            "unique users × that price (from the peak day's snapshot); `exclude_cohort_slug_patterns` are "
+            "regexes against cohort.slug."
+        ),
+    )
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self) -> str:
         return f"Payment settings for {self.academy.name}"
+
+
+ACTIVE_USERS_BILL_DUE = "DUE"
+ACTIVE_USERS_BILL_DISPUTED = "DISPUTED"
+ACTIVE_USERS_BILL_PAID = "PAID"
+ACTIVE_USERS_BILL_IGNORED = "IGNORED"
+ACTIVE_USERS_BILL_PENDING = "PENDING"
+ACTIVE_USERS_BILL_ERROR = "ERROR"
+ACTIVE_USERS_BILL_STATUS = (
+    (ACTIVE_USERS_BILL_DUE, "Due"),
+    (ACTIVE_USERS_BILL_DISPUTED, "Disputed"),
+    (ACTIVE_USERS_BILL_IGNORED, "Ignored"),
+    (ACTIVE_USERS_BILL_PENDING, "Pending"),
+    (ACTIVE_USERS_BILL_PAID, "Paid"),
+    (ACTIVE_USERS_BILL_ERROR, "Error"),
+)
+
+
+class ActiveUsersBill(models.Model):
+    """Daily snapshot of billable active students for an academy (4Geeks internal billing)."""
+
+    if TYPE_CHECKING:
+        objects: TypedManager["ActiveUsersBill"]
+
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, db_index=True, help_text="Academy")
+    billing_date = models.DateField(db_index=True, help_text="Calendar day this snapshot represents")
+    total_amount = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=0,
+        help_text="That day's unique_user_count × price_per_user (daily audit, not the month invoice alone)",
+    )
+    currency_code = models.CharField(max_length=3, default="USD")
+    price_per_user = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=0,
+        help_text="Snapshot of active_users_billing.price_per_user at generation time",
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=ACTIVE_USERS_BILL_STATUS,
+        default=ACTIVE_USERS_BILL_DUE,
+        db_index=True,
+    )
+    title = models.CharField(max_length=64, blank=True, default="", help_text="e.g. 2026-08-07 active users")
+    notes = models.TextField(
+        blank=True,
+        default="",
+        help_text="Bill-level clarifications (duplicates disregarded, cohorts skipped by exclusion patterns)",
+    )
+    unique_user_count = models.PositiveIntegerField(default=0, help_text="Distinct billable users that day")
+    duplicate_user_count = models.PositiveIntegerField(
+        default=0, help_text="Enrollment rows skipped as duplicates that day"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    class Meta:
+        unique_together = [["academy", "billing_date"]]
+        ordering = ["-billing_date", "-id"]
+
+    def clean(self):
+        if self.currency_code:
+            self.currency_code = self.currency_code.upper()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return f"{self.academy} {self.billing_date} - {self.unique_user_count} users"
+
+
+class ActiveUsersBillItem(models.Model):
+    """One cohort line on a daily ActiveUsersBill."""
+
+    if TYPE_CHECKING:
+        objects: TypedManager["ActiveUsersBillItem"]
+
+    bill = models.ForeignKey(
+        ActiveUsersBill, on_delete=models.CASCADE, related_name="items", help_text="Daily active users bill"
+    )
+    cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, help_text="Cohort this line represents")
+    user_count = models.PositiveIntegerField(
+        default=0, help_text="Students attributed to this cohort after same-day dedupe"
+    )
+    amount = models.DecimalField(
+        max_digits=14, decimal_places=2, default=0, help_text="user_count × bill.price_per_user"
+    )
+    user_ids = models.JSONField(default=list, blank=True, help_text="Billed user ids for this cohort that day")
+    notes = models.TextField(blank=True, default="", help_text="Item-level clarifications")
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    class Meta:
+        ordering = ["cohort_id"]
+
+    def __str__(self) -> str:
+        return f"{self.bill_id} / {self.cohort} - {self.user_count} users"

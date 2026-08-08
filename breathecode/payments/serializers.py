@@ -2219,3 +2219,34 @@ class CouponSerializer(serializers.ModelSerializer):
             relation.set(value)
 
         return instance
+
+
+class GetActiveUsersBillItemSerializer(serpy.Serializer):
+    id = serpy.Field()
+    cohort = GetCohortSerializer()
+    user_count = serpy.Field()
+    amount = serpy.Field()
+    user_ids = serpy.Field()
+    notes = serpy.Field()
+
+
+class GetActiveUsersBillSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    academy = GetAcademySmallSerializer()
+    billing_date = serpy.Field()
+    title = serpy.Field()
+    status = serpy.Field()
+    currency_code = serpy.Field()
+    price_per_user = serpy.Field()
+    unique_user_count = serpy.Field()
+    duplicate_user_count = serpy.Field()
+    total_amount = serpy.Field()
+    notes = serpy.Field()
+    created_at = serpy.Field()
+
+
+class GetActiveUsersBillDetailSerializer(GetActiveUsersBillSmallSerializer):
+    items = serpy.MethodField()
+
+    def get_items(self, obj):
+        return GetActiveUsersBillItemSerializer(obj.items.all().order_by("cohort_id"), many=True).data

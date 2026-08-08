@@ -19,6 +19,8 @@ from ..views import (
     AcademyInvoiceRefundView,
     AcademyInvoiceRecordRefundView,
     AcademyInvoiceView,
+    AcademyActiveUsersBillMonthView,
+    AcademyActiveUsersBillView,
     AcademyUserCreditLedgerView,
     AcademyPaymentMethodView,
     AcademyPaymentSettingsView,
@@ -251,6 +253,21 @@ urlpatterns = [
     path("me/invoice/<int:invoice_id>", MeInvoiceView.as_view()),
     path("academy/invoice", AcademyInvoiceView.as_view(), name="academy_invoice"),
     path("academy/invoice/<int:invoice_id>", AcademyInvoiceView.as_view(), name="academy_invoice_id"),
+    path(
+        "academy/active-users-bill/month",
+        AcademyActiveUsersBillMonthView.as_view(),
+        name="academy_active_users_bill_month",
+    ),
+    path(
+        "academy/active-users-bill",
+        AcademyActiveUsersBillView.as_view(),
+        name="academy_active_users_bill",
+    ),
+    path(
+        "academy/active-users-bill/<int:bill_id>",
+        AcademyActiveUsersBillView.as_view(),
+        name="academy_active_users_bill_id",
+    ),
     path(
         "academy/user/<int:user_id>/credit-ledger",
         AcademyUserCreditLedgerView.as_view(),
