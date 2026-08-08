@@ -67,6 +67,42 @@ def test_generate_counts_active_and_not_completing_excludes_late(database):
 
 
 @pytest.mark.django_db
+def test_generate_excludes_ended_cohorts(database):
+    model = database.create(
+        user=2,
+        academy=1,
+        city=1,
+        country=1,
+        cohort=[
+            {"slug": "active-cohort", "stage": "STARTED"},
+            {"slug": "ended-cohort", "stage": "ENDED"},
+        ],
+        cohort_user=[
+            {
+                "user_id": 1,
+                "cohort_id": 1,
+                "role": "STUDENT",
+                "educational_status": "ACTIVE",
+                "finantial_status": "UP_TO_DATE",
+            },
+            {
+                "user_id": 2,
+                "cohort_id": 2,
+                "role": "STUDENT",
+                "educational_status": "ACTIVE",
+                "finantial_status": "UP_TO_DATE",
+            },
+        ],
+    )
+    _enable_billing(model.academy, price=10)
+    bill = generate_active_users_bill(model.academy, billing_date=date(2026, 8, 7))
+
+    assert bill.unique_user_count == 1
+    assert bill.items.count() == 1
+    assert bill.items.first().cohort.slug == "active-cohort"
+
+
+@pytest.mark.django_db
 def test_generate_excludes_cohort_slug_patterns(database):
     model = database.create(
         user=2,

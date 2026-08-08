@@ -1273,8 +1273,19 @@ class ProofOfPaymentAdmin(admin.ModelAdmin):
         return format_html(f"<a target='blank' href='{obj.confirmation_image_url}'>link</a>")
 
 
+class AcademyPaymentSettingsForm(forms.ModelForm):
+    class Meta:
+        model = AcademyPaymentSettings
+        fields = "__all__"
+        widgets = {
+            "feature_flags": PrettyJSONWidget(),
+            "internal_billing": PrettyJSONWidget(),
+        }
+
+
 @admin.register(AcademyPaymentSettings)
 class AcademyPaymentSettingsAdmin(admin.ModelAdmin):
+    form = AcademyPaymentSettingsForm
     list_display = ("academy", "created_at")
     search_fields = ["academy__name", "academy__slug"]
     raw_id_fields = ["academy"]

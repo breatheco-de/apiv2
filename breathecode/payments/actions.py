@@ -7869,7 +7869,7 @@ def generate_active_users_bill(
             cohort__academy=academy,
         )
         .exclude(finantial_status="LATE")
-        .exclude(cohort__stage="DELETED")
+        .exclude(cohort__stage__in=["DELETED", "ENDED"])
         .select_related("cohort", "user")
         .order_by("cohort_id", "user_id")
     )
