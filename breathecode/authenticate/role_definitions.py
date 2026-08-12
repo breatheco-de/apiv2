@@ -248,6 +248,10 @@ CAPABILITIES = [
         "description": "Read invoice information",
     },
     {
+        "slug": "read_active_users_bill",
+        "description": "Read academy active users bills (daily snapshots and month high-water-mark invoice)",
+    },
+    {
         "slug": "crud_invoice",
         "description": "Create, update, and delete invoices",
     },
@@ -694,6 +698,7 @@ def get_extended_roles():
                 "read_project_invoice",
                 "crud_project_invoice",
                 "read_invoice",
+                "read_active_users_bill",
                 "issue_refund",
                 "get_github_user",
                 "read_provisioning_bill",
@@ -773,6 +778,7 @@ def get_extended_roles():
                 "read_freelance_projects",
                 "sync_organization_users",
                 "read_provisioning_bill",
+                "read_active_users_bill",
                 "read_provisioning_activity",
                 "crud_provisioning_activity",
                 "read_calendly_organization",

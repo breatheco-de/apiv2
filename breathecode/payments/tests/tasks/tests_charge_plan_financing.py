@@ -1282,3 +1282,33 @@ class PaymentsTestSuite(PaymentsTestCase):
         charge_tasks = [t for t in scheduled if t["task_name"] == "charge_plan_financing"]
         self.assertEqual(len(charge_tasks), 1)
         self.assertEqual(charge_tasks[0]["status"], "PENDING")
+
+    @patch("logging.Logger.info", MagicMock())
+    @patch("logging.Logger.error", MagicMock())
+    @patch("breathecode.payments.tasks.renew_plan_financing_consumables.delay", MagicMock())
+    @patch("mixer.main.LOGGER.info", MagicMock())
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test_reconcile_active_plan_when_installments_already_paid(self):
+        """ACTIVE + installments_paid >= how_many_installments must reconcile to FULLY_PAID without charging."""
+        plan_financing = {
+            "valid_until": UTC_NOW + relativedelta(months=6),
+            "next_payment_at": UTC_NOW + relativedelta(days=20),
+            "monthly_price": 15000.0,
+            "how_many_installments": 1,
+            "installments_paid": 1,
+            "plan_expires_at": UTC_NOW + relativedelta(months=12),
+        }
+        plan = {"is_renewable": False}
+        bag = {"how_many_installments": 1, "was_delivered": True}
+        invoice = {"paid_at": UTC_NOW - relativedelta(days=5), "amount": 15000.0, "status": "FULFILLED"}
+        model = self.bc.database.create(academy=1, plan_financing=plan_financing, invoice=invoice, plan=plan, bag=bag)
+        model.plan_financing.invoices.add(model.invoice)
+
+        with patch("breathecode.payments.services.stripe.Stripe.pay", MagicMock()) as mock_stripe_pay:
+            charge_plan_financing.delay(1)
+
+        mock_stripe_pay.assert_not_called()
+        pf = self.bc.database.list_of("payments.PlanFinancing")[0]
+        self.assertEqual(pf["status"], "FULLY_PAID")
+        self.assertEqual(pf["installments_paid"], 1)
+        tasks.renew_plan_financing_consumables.delay.assert_called_once_with(1)

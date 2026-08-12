@@ -402,6 +402,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         financing = self.bc.database.list_of("payments.PlanFinancing")[0]
         next_payment_at = model.invoice.paid_at + relativedelta(weeks=2)
         assert financing["installments_paid"] == 0
+        assert financing["status"] == "ACTIVE"
         assert financing["monthly_price"] == 1200
         assert financing["initial_payment_amount"] == 0
         assert financing["grace_period_duration"] == 2
@@ -862,3 +863,60 @@ class PaymentsTestSuite(PaymentsTestCase):
         assert financing["installments_paid"] == installments
         assert financing["externally_managed"] is True
         assert self.bc.database.list_of("task_manager.ScheduledTask") == []
+
+    @patch("logging.Logger.info", MagicMock())
+    @patch("logging.Logger.error", MagicMock())
+    @patch.object(timezone, "now", MagicMock(return_value=UTC_NOW))
+    @patch("breathecode.payments.tasks.build_service_stock_scheduler_from_plan_financing.delay", MagicMock())
+    def test_single_installment_plan_created_as_fully_paid(self):
+        """Single-installment checkout pays upfront; plan must start FULLY_PAID, not ACTIVE."""
+        amount = 15000.0
+        bag = {
+            "status": "PAID",
+            "was_delivered": False,
+            "chosen_period": "NO_SET",
+            "how_many_installments": 1,
+        }
+        invoice = {"status": "FULFILLED", "amount": amount}
+        plan = {"is_renewable": False}
+
+        self.bc.database.create(bag=bag, invoice=invoice, plan=plan)
+
+        build_plan_financing.delay(1, 1)
+
+        financing = self.bc.database.list_of("payments.PlanFinancing")[0]
+        assert financing["status"] == "FULLY_PAID"
+        assert financing["installments_paid"] == 1
+        assert financing["how_many_installments"] == 1
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == []
+
+    @patch("logging.Logger.info", MagicMock())
+    @patch("logging.Logger.error", MagicMock())
+    @patch.object(timezone, "now", MagicMock(return_value=UTC_NOW))
+    @patch("breathecode.payments.tasks.build_service_stock_scheduler_from_plan_financing.delay", MagicMock())
+    def test_single_installment_with_initial_payment_stays_active(self):
+        """Upfront deposit + 1 installment must NOT be FULLY_PAID at creation."""
+        bag = {
+            "status": "PAID",
+            "was_delivered": False,
+            "chosen_period": "NO_SET",
+            "how_many_installments": 1,
+        }
+        invoice = {"status": "FULFILLED", "amount": 5000}
+        plan = {"is_renewable": False}
+
+        self.bc.database.create(bag=bag, invoice=invoice, plan=plan)
+
+        build_plan_financing.delay(
+            1,
+            1,
+            principal_amount=15000,
+            initial_payment_amount=5000,
+            initial_payment_notes="Enrollment deposit",
+        )
+
+        financing = self.bc.database.list_of("payments.PlanFinancing")[0]
+        assert financing["status"] == "ACTIVE"
+        assert financing["installments_paid"] == 0
+        assert financing["how_many_installments"] == 1
+        assert financing["initial_payment_amount"] == 5000

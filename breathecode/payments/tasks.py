@@ -6,6 +6,7 @@ from typing import Any, Optional
 from urllib.parse import urlencode
 
 from capyc.core.i18n import translation
+from capyc.rest_framework.exceptions import ValidationException
 from dateutil.relativedelta import relativedelta
 from django.core.cache import cache
 from django.db.models import F, Sum
@@ -1112,6 +1113,19 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                     f"PlanFinancing with id {plan_financing_id} is in status {plan_financing.status} and cannot be charged"
                 )
 
+            # Reconcile plans whose installment counter is complete but status was never updated.
+            # Common with single-installment checkout (installments_paid=1 at creation, status=ACTIVE).
+            if (
+                plan_financing.how_many_installments > 0
+                and plan_financing.installments_paid >= plan_financing.how_many_installments
+                and plan_financing.status == PlanFinancing.Status.ACTIVE
+            ):
+                plan_financing.status = PlanFinancing.Status.FULLY_PAID
+                plan_financing.status_message = "Changed Through Charge Plan Financing Because of All Installments Paid"
+                plan_financing.save(update_fields=["status", "status_message"])
+                renew_plan_financing_consumables.delay(plan_financing.id)
+                raise AbortTask(f"PlanFinancing {plan_financing_id} reconciled to FULLY_PAID")
+
             if plan_financing.status == PlanFinancing.Status.PAYMENT_ISSUE:
                 if actions.plan_financing_was_staff_assigned(plan_financing):
                     plan_financing.status = PlanFinancing.Status.ACTIVE
@@ -2049,8 +2063,14 @@ def build_plan_financing(
     if is_full_financing_amount:
         initial_installments_paid = bag.how_many_installments
         financing_status = PlanFinancing.Status.FULLY_PAID
+    elif initial_payment_amount is not None:
+        initial_installments_paid = 0
+        financing_status = PlanFinancing.Status.ACTIVE
+    elif bag.how_many_installments == 1:
+        initial_installments_paid = 1
+        financing_status = PlanFinancing.Status.FULLY_PAID
     else:
-        initial_installments_paid = 0 if initial_payment_amount is not None else 1
+        initial_installments_paid = 1
         financing_status = PlanFinancing.Status.ACTIVE
 
     financing = PlanFinancing.objects.create(
@@ -2107,7 +2127,7 @@ def build_plan_financing(
 
     build_service_stock_scheduler_from_plan_financing.delay(financing.id)
 
-    if not is_full_financing_amount:
+    if not is_full_financing_amount and financing_status != PlanFinancing.Status.FULLY_PAID:
         # Schedule monthly charges based on days until next payment
         days_until_next_payment = (next_payment_at - invoice.paid_at).days
         manager = schedule_task(charge_plan_financing, f"{days_until_next_payment}d")
@@ -2771,3 +2791,33 @@ def send_checkout_fulfillment_error_email(
             str(e),
             exc_info=True,
         )
+
+
+@task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
+def generate_active_users_bill_task(self, academy_id: int, billing_date: Optional[str] = None, **_: Any):
+    """Generate daily ActiveUsersBill for one academy (idempotent)."""
+    from datetime import date as date_cls
+
+    from breathecode.admissions.models import Academy
+
+    academy = Academy.objects.filter(id=academy_id).first()
+    if academy is None:
+        raise AbortTask(f"Academy {academy_id} not found")
+
+    parsed_date = None
+    if billing_date:
+        parsed_date = date_cls.fromisoformat(billing_date)
+
+    try:
+        bill = actions.generate_active_users_bill(academy, billing_date=parsed_date)
+    except ValidationException as e:
+        raise AbortTask(str(e)) from e
+
+    logger.info(
+        "generate_active_users_bill_task: academy_id=%s billing_date=%s bill_id=%s unique=%s",
+        academy_id,
+        bill.billing_date,
+        bill.id,
+        bill.unique_user_count,
+    )
+    return bill.id

@@ -31,7 +31,7 @@ from task_manager.django.actions import schedule_task
 from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
 from breathecode.authenticate.actions import get_app_url, get_invite_url, get_user_settings
-from breathecode.authenticate.models import Role, UserInvite, UserSetting
+from breathecode.authenticate.models import ProfileAcademy, Role, UserInvite, UserSetting
 from breathecode.marketing.actions import validate_email_local
 from breathecode.media.models import File
 from breathecode.monitoring.models import StripeEvent
@@ -53,6 +53,8 @@ from .models import (
     AbstractIOweYou,
     AcademyPaymentSettings,
     AcademyService,
+    ActiveUsersBill,
+    ActiveUsersBillItem,
     Bag,
     CohortSet,
     CohortSetCohort,
@@ -7778,3 +7780,339 @@ def resolve_plan_for_academy(
         )
 
     return plan
+
+
+def get_active_users_billing_config(academy: Academy, lang: str = "en") -> dict:
+    """
+    Return active_users_billing config from AcademyPaymentSettings.internal_billing.
+    Raises ValidationException if disabled or price_per_user is missing.
+    """
+    settings = AcademyPaymentSettings.objects.filter(academy=academy).first()
+    if settings is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Academy payment settings not found",
+                es="No se encontraron configuraciones de pago de la academia",
+                slug="academy-payment-settings-not-found",
+            ),
+            code=400,
+        )
+
+    config = (settings.internal_billing or {}).get("active_users_billing") or {}
+    if not config.get("enabled"):
+        raise ValidationException(
+            translation(
+                lang,
+                en="Active users billing is disabled for this academy",
+                es="La facturación de usuarios activos está deshabilitada para esta academia",
+                slug="active-users-billing-disabled",
+            ),
+            code=400,
+        )
+
+    price = config.get("price_per_user")
+    if price is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="active_users_billing.price_per_user is required when enabled",
+                es="active_users_billing.price_per_user es requerido cuando está habilitado",
+                slug="active-users-billing-price-missing",
+            ),
+            code=400,
+        )
+
+    return {
+        "enabled": True,
+        "price_per_user": Decimal(str(price)),
+        "currency": (config.get("currency") or "USD").upper(),
+        "exclude_cohort_slug_patterns": list(config.get("exclude_cohort_slug_patterns") or []),
+    }
+
+
+def _cohort_slug_excluded(slug: str, patterns: list[str]) -> bool:
+    for pattern in patterns:
+        try:
+            if re.search(pattern, slug or ""):
+                return True
+        except re.error:
+            continue
+    return False
+
+
+def generate_active_users_bill(
+    academy: Academy,
+    billing_date=None,
+    lang: str = "en",
+) -> ActiveUsersBill:
+    """
+    Create (or return existing) daily ActiveUsersBill for academy on billing_date.
+    Idempotent on (academy, billing_date).
+    """
+    if billing_date is None:
+        billing_date = timezone.now().date()
+
+    existing = ActiveUsersBill.objects.filter(academy=academy, billing_date=billing_date).first()
+    if existing is not None:
+        return existing
+
+    config = get_active_users_billing_config(academy, lang=lang)
+    price_per_user = config["price_per_user"]
+    currency_code = config["currency"]
+    exclude_patterns = config["exclude_cohort_slug_patterns"]
+
+    cohort_users = list(
+        CohortUser.objects.filter(
+            role="STUDENT",
+            educational_status__in=["ACTIVE", "NOT_COMPLETING"],
+            cohort__academy=academy,
+        )
+        .exclude(finantial_status="LATE")
+        .exclude(cohort__stage__in=["DELETED", "ENDED"])
+        .select_related("cohort", "user")
+        .order_by("cohort_id", "user_id")
+    )
+
+    # ProfileAcademy rules (match report_active_students_by_academy / ops SQL):
+    # - must have a student ProfileAcademy at this academy (by user or email)
+    # - drop users who also have any non-student ProfileAcademy role at this academy
+    profiles = list(ProfileAcademy.objects.filter(academy=academy).select_related("role", "user"))
+    users_with_non_student_role: set[int] = set()
+    student_user_ids: set[int] = set()
+    student_emails: set[str] = set()
+    for pa in profiles:
+        role_slug = pa.role.slug if pa.role_id else None
+        if role_slug != "student":
+            if pa.user_id:
+                users_with_non_student_role.add(pa.user_id)
+            continue
+        if pa.user_id:
+            student_user_ids.add(pa.user_id)
+        if pa.email:
+            student_emails.add(pa.email.lower())
+
+    def _is_billable_student(user) -> bool:
+        if user is None:
+            return False
+        if user.id in users_with_non_student_role:
+            return False
+        if user.id in student_user_ids:
+            return True
+        email = (user.email or "").lower()
+        return bool(email and email in student_emails)
+
+    excluded_cohort_slugs: list[str] = []
+    seen_excluded: set[int] = set()
+    billed_users: set[int] = set()
+    skipped_no_student_profile = 0
+    skipped_non_student_role = 0
+    duplicate_samples: list[str] = []
+    duplicate_user_count = 0
+    # cohort_id -> {user_ids, notes_parts, cohort}
+    by_cohort: dict[int, dict] = {}
+
+    for cu in cohort_users:
+        cohort = cu.cohort
+        if _cohort_slug_excluded(cohort.slug, exclude_patterns):
+            if cohort.id not in seen_excluded:
+                seen_excluded.add(cohort.id)
+                excluded_cohort_slugs.append(cohort.slug)
+            continue
+
+        user = cu.user
+        user_id = cu.user_id
+        if user_id in users_with_non_student_role:
+            skipped_non_student_role += 1
+            continue
+        if not _is_billable_student(user):
+            skipped_no_student_profile += 1
+            continue
+
+        if user_id in billed_users:
+            duplicate_user_count += 1
+            if len(duplicate_samples) < 10:
+                email = getattr(user, "email", None) or str(user_id)
+                first_cohort = next(
+                    (data["cohort"].slug for data in by_cohort.values() if user_id in data["user_ids"]),
+                    "unknown",
+                )
+                duplicate_samples.append(f"{email} (already on {first_cohort})")
+            if cohort.id in by_cohort:
+                by_cohort[cohort.id]["dup_count"] += 1
+            else:
+                by_cohort[cohort.id] = {
+                    "cohort": cohort,
+                    "user_ids": [],
+                    "dup_count": 1,
+                }
+            continue
+
+        billed_users.add(user_id)
+        if cohort.id not in by_cohort:
+            by_cohort[cohort.id] = {"cohort": cohort, "user_ids": [], "dup_count": 0}
+        by_cohort[cohort.id]["user_ids"].append(user_id)
+
+    # Drop cohorts that only had duplicates (no attributed users) from items — still note them on bill
+    note_parts: list[str] = []
+    if duplicate_user_count:
+        sample = "; ".join(duplicate_samples)
+        note_parts.append(
+            f"{duplicate_user_count} duplicate enrollment(s) disregarded"
+            + (f": {sample}" if sample else "")
+        )
+    if excluded_cohort_slugs:
+        note_parts.append(
+            f"{len(excluded_cohort_slugs)} cohort(s) skipped by exclude_cohort_slug_patterns: "
+            + ", ".join(excluded_cohort_slugs[:20])
+        )
+    if skipped_no_student_profile:
+        note_parts.append(
+            f"{skipped_no_student_profile} enrollment(s) skipped (no student ProfileAcademy)"
+        )
+    if skipped_non_student_role:
+        note_parts.append(
+            f"{skipped_non_student_role} enrollment(s) skipped (non-student ProfileAcademy role)"
+        )
+
+    unique_user_count = len(billed_users)
+    total_amount = (price_per_user * unique_user_count).quantize(Decimal("0.01"))
+
+    with transaction.atomic():
+        # Re-check inside transaction for race safety
+        existing = ActiveUsersBill.objects.filter(academy=academy, billing_date=billing_date).first()
+        if existing is not None:
+            return existing
+
+        bill = ActiveUsersBill.objects.create(
+            academy=academy,
+            billing_date=billing_date,
+            total_amount=total_amount,
+            currency_code=currency_code,
+            price_per_user=price_per_user,
+            title=f"{billing_date.isoformat()} active users",
+            notes=". ".join(note_parts),
+            unique_user_count=unique_user_count,
+            duplicate_user_count=duplicate_user_count,
+        )
+
+        items = []
+        for cohort_id, data in sorted(by_cohort.items(), key=lambda x: x[0]):
+            user_ids = data["user_ids"]
+            if not user_ids:
+                continue
+            user_count = len(user_ids)
+            item_notes = ""
+            if data["dup_count"]:
+                item_notes = (
+                    f"{data['dup_count']} student(s) on this cohort already billed on another cohort"
+                )
+            items.append(
+                ActiveUsersBillItem(
+                    bill=bill,
+                    cohort=data["cohort"],
+                    user_count=user_count,
+                    amount=(price_per_user * user_count).quantize(Decimal("0.01")),
+                    user_ids=user_ids,
+                    notes=item_notes,
+                )
+            )
+        if items:
+            ActiveUsersBillItem.objects.bulk_create(items)
+
+    return bill
+
+
+def get_active_users_month_invoice(academy: Academy, year: int, month: int, lang: str = "en") -> dict:
+    """
+    Build month invoice payload: high-water mark (peak day) amount and peak-day cohort items.
+    """
+    from calendar import monthrange
+
+    if month < 1 or month > 12:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Invalid month",
+                es="Mes inválido",
+                slug="invalid-month",
+            ),
+            code=400,
+        )
+
+    last_day = monthrange(year, month)[1]
+    start = datetime(year, month, 1).date()
+    end = datetime(year, month, last_day).date()
+
+    bills = list(
+        ActiveUsersBill.objects.filter(academy=academy, billing_date__gte=start, billing_date__lte=end)
+        .exclude(status__in=["IGNORED", "ERROR"])
+        .prefetch_related("items", "items__cohort")
+        .order_by("billing_date", "id")
+    )
+
+    days = [
+        {
+            "id": b.id,
+            "billing_date": b.billing_date.isoformat(),
+            "unique_user_count": b.unique_user_count,
+            "status": b.status,
+        }
+        for b in bills
+    ]
+
+    if not bills:
+        return {
+            "academy": {"id": academy.id, "slug": academy.slug, "name": academy.name},
+            "year": year,
+            "month": month,
+            "peak_date": None,
+            "peak_bill_id": None,
+            "unique_user_count": 0,
+            "price_per_user": "0.00",
+            "currency_code": "USD",
+            "amount": "0.00",
+            "notes": "No daily active users bills found for this month.",
+            "items": [],
+            "days": days,
+        }
+
+    # Highest unique_user_count; ties → earliest billing_date then id
+    peak = sorted(bills, key=lambda b: (-b.unique_user_count, b.billing_date, b.id))[0]
+
+    amount = (peak.price_per_user * peak.unique_user_count).quantize(Decimal("0.01"))
+    items = []
+    for item in peak.items.all().order_by("cohort_id"):
+        items.append(
+            {
+                "id": item.id,
+                "cohort": {
+                    "id": item.cohort_id,
+                    "slug": item.cohort.slug,
+                    "name": item.cohort.name,
+                },
+                "user_count": item.user_count,
+                "amount": str(item.amount),
+                "user_ids": item.user_ids or [],
+                "notes": item.notes or "",
+            }
+        )
+
+    notes = f"Month charge based on peak day {peak.billing_date.isoformat()}."
+    if peak.notes:
+        notes = f"{notes} {peak.notes}"
+
+    return {
+        "academy": {"id": academy.id, "slug": academy.slug, "name": academy.name},
+        "year": year,
+        "month": month,
+        "peak_date": peak.billing_date.isoformat(),
+        "peak_bill_id": peak.id,
+        "unique_user_count": peak.unique_user_count,
+        "price_per_user": str(peak.price_per_user),
+        "currency_code": peak.currency_code,
+        "amount": str(amount),
+        "notes": notes,
+        "items": items,
+        "days": days,
+    }

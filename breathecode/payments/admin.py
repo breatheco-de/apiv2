@@ -11,6 +11,8 @@ from breathecode.utils.admin.widgets import PrettyJSONWidget
 from breathecode.payments.models import (
     AcademyPaymentSettings,
     AcademyService,
+    ActiveUsersBill,
+    ActiveUsersBillItem,
     Bag,
     CohortSet,
     CohortSetCohort,
@@ -1271,10 +1273,56 @@ class ProofOfPaymentAdmin(admin.ModelAdmin):
         return format_html(f"<a target='blank' href='{obj.confirmation_image_url}'>link</a>")
 
 
+class AcademyPaymentSettingsForm(forms.ModelForm):
+    class Meta:
+        model = AcademyPaymentSettings
+        fields = "__all__"
+        widgets = {
+            "feature_flags": PrettyJSONWidget(),
+            "internal_billing": PrettyJSONWidget(),
+        }
+
+
 @admin.register(AcademyPaymentSettings)
 class AcademyPaymentSettingsAdmin(admin.ModelAdmin):
+    form = AcademyPaymentSettingsForm
     list_display = ("academy", "created_at")
     search_fields = ["academy__name", "academy__slug"]
+    raw_id_fields = ["academy"]
+
+
+class ActiveUsersBillItemInline(admin.TabularInline):
+    model = ActiveUsersBillItem
+    extra = 0
+    raw_id_fields = ["cohort"]
+    readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(ActiveUsersBill)
+class ActiveUsersBillAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "academy",
+        "billing_date",
+        "unique_user_count",
+        "total_amount",
+        "currency_code",
+        "status",
+        "created_at",
+    )
+    list_filter = ["status", "billing_date", "academy"]
+    search_fields = ["academy__name", "academy__slug", "title", "notes"]
+    raw_id_fields = ["academy"]
+    inlines = [ActiveUsersBillItemInline]
+    readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(ActiveUsersBillItem)
+class ActiveUsersBillItemAdmin(admin.ModelAdmin):
+    list_display = ("id", "bill", "cohort", "user_count", "amount")
+    search_fields = ["cohort__slug", "cohort__name", "notes"]
+    raw_id_fields = ["bill", "cohort"]
+    readonly_fields = ("created_at", "updated_at")
 
 
 class CreditNoteForm(forms.ModelForm):
