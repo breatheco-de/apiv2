@@ -9,7 +9,7 @@ from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from dateutil.relativedelta import relativedelta
 from django.core.cache import cache
-from django.db.models import F, Sum
+from django.db.models import F, Max, Sum
 from django.utils import timezone
 from django_redis import get_redis_connection
 from redis.exceptions import LockError
@@ -1123,7 +1123,20 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                 plan_financing.status = PlanFinancing.Status.FULLY_PAID
                 plan_financing.status_message = "Changed Through Charge Plan Financing Because of All Installments Paid"
                 plan_financing.save(update_fields=["status", "status_message"])
-                renew_plan_financing_consumables.delay(plan_financing.id)
+
+                # Only renew now if stock is missing or about to expire (same window as renew_consumables cron).
+                # Otherwise skip and let the scheduler renew when valid_until approaches.
+                last_consumable_valid_until = (
+                    ServiceStockScheduler.objects.filter(plan_handler__plan_financing_id=plan_financing.id)
+                    .annotate(last_valid_until=Max("consumables__valid_until"))
+                    .aggregate(m=Max("last_valid_until"))["m"]
+                )
+                needs_renew = last_consumable_valid_until is None or last_consumable_valid_until <= utc_now + timedelta(
+                    hours=2
+                )
+                if needs_renew:
+                    renew_plan_financing_consumables.delay(plan_financing.id)
+
                 raise AbortTask(f"PlanFinancing {plan_financing_id} reconciled to FULLY_PAID")
 
             if plan_financing.status == PlanFinancing.Status.PAYMENT_ISSUE:
