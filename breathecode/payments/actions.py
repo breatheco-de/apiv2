@@ -83,6 +83,64 @@ from .models import (
 
 logger = getLogger(__name__)
 
+
+@transaction.atomic
+def duplicate_plan(original_plan: Plan, *, slug: str | None = None, title: str | None = None) -> Plan:
+    """Duplicate a plan and its reusable configuration."""
+    new_slug = slug
+    if new_slug is None:
+        base_slug = re.sub(r"-\d+$", "", original_plan.slug)
+        counter = 2
+
+        while True:
+            suffix = f"-{counter}"
+            new_slug = f"{base_slug[: Plan._meta.get_field('slug').max_length - len(suffix)]}{suffix}"
+            if not Plan.objects.filter(slug=new_slug).exists():
+                break
+            counter += 1
+
+    new_plan = Plan.objects.create(
+        slug=new_slug,
+        title=original_plan.title if title is None else title,
+        status=original_plan.status,
+        discontinued_reason=original_plan.discontinued_reason,
+        owner=original_plan.owner,
+        is_onboarding=original_plan.is_onboarding,
+        has_waiting_list=original_plan.has_waiting_list,
+        exclude_from_referral_program=original_plan.exclude_from_referral_program,
+        is_renewable=original_plan.is_renewable,
+        trial_duration=original_plan.trial_duration,
+        trial_duration_unit=original_plan.trial_duration_unit,
+        time_of_life=original_plan.time_of_life,
+        time_of_life_unit=original_plan.time_of_life_unit,
+        seat_service_price=original_plan.seat_service_price,
+        consumption_strategy=original_plan.consumption_strategy,
+        currency=original_plan.currency,
+        price_per_month=original_plan.price_per_month,
+        price_per_quarter=original_plan.price_per_quarter,
+        price_per_half=original_plan.price_per_half,
+        price_per_year=original_plan.price_per_year,
+        cohort_set=original_plan.cohort_set,
+        mentorship_service_set=original_plan.mentorship_service_set,
+        event_type_set=original_plan.event_type_set,
+        pricing_ratio_exceptions=original_plan.pricing_ratio_exceptions,
+        features=original_plan.features,
+    )
+
+    new_plan.financing_options.set(original_plan.financing_options.all())
+    new_plan.add_ons.set(original_plan.add_ons.all())
+    new_plan.plan_addons.set(original_plan.plan_addons.all())
+    new_plan.invites.set(original_plan.invites.all())
+    PlanServiceItem.objects.bulk_create(
+        [
+            PlanServiceItem(plan=new_plan, service_item_id=service_item_id)
+            for service_item_id in original_plan.service_items.values_list("id", flat=True)
+        ]
+    )
+
+    return new_plan
+
+
 # Schedule charge tasks a few seconds after `next_payment_at` so execution time is strictly
 # past the deadline (avoids clock skew and ``next_payment_at > utc_now`` in charge tasks).
 SCHEDULE_CHARGE_LAG_AFTER_NEXT_PAYMENT = timedelta(seconds=3)
