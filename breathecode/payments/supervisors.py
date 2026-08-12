@@ -3,6 +3,7 @@ from datetime import timedelta
 from urllib.parse import parse_qs, urlparse
 
 from django.contrib.auth.models import User
+from django.db.models import F
 from django.utils import timezone
 
 from breathecode.authenticate.actions import get_app_url, get_user_settings
@@ -17,6 +18,7 @@ from breathecode.payments.models import (
     Service,
     Consumable,
     Invoice,
+    PlanFinancing,
     Subscription,
     SubscriptionBillingTeam,
     SubscriptionSeat,
@@ -26,6 +28,7 @@ from breathecode.payments.models import (
 )
 from breathecode.payments.tasks import (
     build_service_stock_scheduler_from_subscription,
+    charge_plan_financing,
 )
 from breathecode.utils.decorators import issue, supervisor
 
@@ -314,6 +317,50 @@ def pending_bag_delivery(bag_id: int):
         return None
 
     return False
+
+
+@supervisor(delta=timedelta(hours=6))
+def supervise_active_plan_financing_fully_paid_drift():
+    """
+    Detect plan financings that are ACTIVE but have already closed every installment.
+
+    This drift can happen when installments_paid was incremented without running the status
+    transition logic (e.g. single-installment checkout or migration backfill).
+    """
+    qs = PlanFinancing.objects.filter(
+        status=PlanFinancing.Status.ACTIVE,
+        how_many_installments__gt=0,
+        installments_paid__gte=F("how_many_installments"),
+    ).select_related("user")
+
+    for plan_financing in qs.iterator():
+        yield (
+            f"PlanFinancing {plan_financing.id} for user {plan_financing.user.email} is ACTIVE "
+            f"but installments_paid ({plan_financing.installments_paid}) >= "
+            f"how_many_installments ({plan_financing.how_many_installments})",
+            "plan-financing-fully-paid-drift",
+            {"plan_financing_id": plan_financing.id},
+        )
+
+
+@issue(supervise_active_plan_financing_fully_paid_drift, delta=timedelta(minutes=30), attempts=3)
+def plan_financing_fully_paid_drift(plan_financing_id: int):
+    """
+    Reconcile drift by running charge_plan_financing, which transitions ACTIVE plans with
+    completed installments to FULLY_PAID and regenerates consumables.
+    """
+    plan_financing = PlanFinancing.objects.filter(id=plan_financing_id).first()
+    if not plan_financing:
+        return True
+
+    if plan_financing.status != PlanFinancing.Status.ACTIVE:
+        return True
+
+    if plan_financing.installments_paid < plan_financing.how_many_installments:
+        return True
+
+    charge_plan_financing.delay(plan_financing_id)
+    return None
 
 
 # ------------------------------

@@ -9,7 +9,7 @@ from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from dateutil.relativedelta import relativedelta
 from django.core.cache import cache
-from django.db.models import F, Sum
+from django.db.models import F, Max, Sum
 from django.utils import timezone
 from django_redis import get_redis_connection
 from redis.exceptions import LockError
@@ -1113,6 +1113,32 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                     f"PlanFinancing with id {plan_financing_id} is in status {plan_financing.status} and cannot be charged"
                 )
 
+            # Reconcile plans whose installment counter is complete but status was never updated.
+            # Common with single-installment checkout (installments_paid=1 at creation, status=ACTIVE).
+            if (
+                plan_financing.how_many_installments > 0
+                and plan_financing.installments_paid >= plan_financing.how_many_installments
+                and plan_financing.status == PlanFinancing.Status.ACTIVE
+            ):
+                plan_financing.status = PlanFinancing.Status.FULLY_PAID
+                plan_financing.status_message = "Changed Through Charge Plan Financing Because of All Installments Paid"
+                plan_financing.save(update_fields=["status", "status_message"])
+
+                # Only renew now if stock is missing or about to expire (same window as renew_consumables cron).
+                # Otherwise skip and let the scheduler renew when valid_until approaches.
+                last_consumable_valid_until = (
+                    ServiceStockScheduler.objects.filter(plan_handler__plan_financing_id=plan_financing.id)
+                    .annotate(last_valid_until=Max("consumables__valid_until"))
+                    .aggregate(m=Max("last_valid_until"))["m"]
+                )
+                needs_renew = last_consumable_valid_until is None or last_consumable_valid_until <= utc_now + timedelta(
+                    hours=2
+                )
+                if needs_renew:
+                    renew_plan_financing_consumables.delay(plan_financing.id)
+
+                raise AbortTask(f"PlanFinancing {plan_financing_id} reconciled to FULLY_PAID")
+
             if plan_financing.status == PlanFinancing.Status.PAYMENT_ISSUE:
                 if actions.plan_financing_was_staff_assigned(plan_financing):
                     plan_financing.status = PlanFinancing.Status.ACTIVE
@@ -2050,8 +2076,14 @@ def build_plan_financing(
     if is_full_financing_amount:
         initial_installments_paid = bag.how_many_installments
         financing_status = PlanFinancing.Status.FULLY_PAID
+    elif initial_payment_amount is not None:
+        initial_installments_paid = 0
+        financing_status = PlanFinancing.Status.ACTIVE
+    elif bag.how_many_installments == 1:
+        initial_installments_paid = 1
+        financing_status = PlanFinancing.Status.FULLY_PAID
     else:
-        initial_installments_paid = 0 if initial_payment_amount is not None else 1
+        initial_installments_paid = 1
         financing_status = PlanFinancing.Status.ACTIVE
 
     financing = PlanFinancing.objects.create(
@@ -2108,7 +2140,7 @@ def build_plan_financing(
 
     build_service_stock_scheduler_from_plan_financing.delay(financing.id)
 
-    if not is_full_financing_amount:
+    if not is_full_financing_amount and financing_status != PlanFinancing.Status.FULLY_PAID:
         # Schedule monthly charges based on days until next payment
         days_until_next_payment = (next_payment_at - invoice.paid_at).days
         manager = schedule_task(charge_plan_financing, f"{days_until_next_payment}d")
