@@ -123,6 +123,7 @@ from breathecode.payments.serializers import (
     GetUserCreditLedgerEntrySerializer,
     MentorshipServiceSetSerializer,
     PaymentMethodSerializer,
+    DuplicatePlanSerializer,
     PlanSerializer,
     PlanOfferSerializer,
     PutPlanFeaturesSerializer,
@@ -377,6 +378,30 @@ class AcademyPlanView(APIView):
         plan.save()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademyPlanDuplicateView(APIView):
+    @capable_of("crud_subscription")
+    def post(self, request, plan_id=None, plan_slug=None, academy_id=None):
+        lang = get_user_language(request)
+        plan = (
+            Plan.objects.filter(
+                Q(id=plan_id) | Q(slug=plan_slug, slug__isnull=False),
+                Q(owner__id=academy_id) | Q(owner=None),
+            )
+            .exclude(status=Plan.Status.DELETED)
+            .first()
+        )
+        if not plan:
+            raise ValidationException(
+                translation(lang, en="Plan not found", es="Plan no existe", slug="not-found"),
+                code=404,
+            )
+
+        serializer = DuplicatePlanSerializer(data=request.data, lang=lang)
+        serializer.is_valid(raise_exception=True)
+        duplicated_plan = actions.duplicate_plan(plan, **serializer.validated_data)
+        return Response(PlanSerializer(duplicated_plan).data, status=status.HTTP_201_CREATED)
 
 
 class AcademyPlanFeaturesView(APIView):
