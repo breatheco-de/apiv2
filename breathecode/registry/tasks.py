@@ -92,6 +92,9 @@ def async_pull_from_github(
     )
     if ok:
         async_pull_project_dependencies.delay(asset_slug)
+        if source_webhook_id is not None:
+            # Same as PUT /v1/registry/academy/asset/<slug>/action/clean
+            async_regenerate_asset_readme.delay(asset_slug)
 
     return ok
 

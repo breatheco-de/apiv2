@@ -42,29 +42,6 @@ logger = logging.getLogger(__name__)
 ASSET_STATUS_DICT = [x for x, y in ASSET_STATUS]
 
 
-def invalidate_asset_caches_after_sync(asset_slug: str) -> None:
-    """
-    Clear API AssetCache and refresh the frontend markdown cache after a successful sync.
-
-    post_save already schedules an async cache clean, but that can race with immediate GETs.
-    Frontend KV cache is only refreshed via readme/title signals otherwise, so syncs that
-    don't change readme_raw would leave stale content visible.
-    """
-    from .caches import AssetCache
-
-    try:
-        AssetCache.clear()
-    except Exception:
-        logger.exception(f"Failed clearing AssetCache after syncing {asset_slug}")
-
-    try:
-        from breathecode.registry.tasks import async_update_frontend_asset_cache
-
-        async_update_frontend_asset_cache.delay(asset_slug)
-    except Exception:
-        logger.exception(f"Failed scheduling frontend cache update after syncing {asset_slug}")
-
-
 # remove markdown elemnts from text and return the clean text output only
 def unmark(text):
 
@@ -155,7 +132,6 @@ def pull_from_github(asset_slug, author_id=None, override_meta=False):
             asset.sync_status = "OK"
             asset.last_synch_at = None
             asset.save()
-            invalidate_asset_caches_after_sync(asset_slug)
             return asset.sync_status
 
         if asset.owner is not None:
@@ -189,7 +165,6 @@ def pull_from_github(asset_slug, author_id=None, override_meta=False):
         asset.last_synch_at = timezone.now()
         asset.save()
         logger.debug(f"Successfully re-synched asset {asset_slug} with github")
-        invalidate_asset_caches_after_sync(asset_slug)
 
         return asset
     except Exception as e:
