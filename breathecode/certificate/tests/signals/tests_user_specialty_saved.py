@@ -390,3 +390,25 @@ class TestAcademyEvent(LegacyAPITestCase):
                 "update_hash": generate_update_hash(model.user_specialty),
             }
         ]
+
+    """
+    🔽🔽🔽 Screenshot pipeline must not re-enqueue itself
+    """
+
+    @patch("breathecode.certificate.tasks.reset_screenshot.delay", MagicMock())
+    @patch("breathecode.certificate.tasks.take_screenshot.delay", MagicMock())
+    def test_user_specialty_saved__skip_screenshot_task(self, enable_signals):
+        enable_signals("breathecode.certificate.signals.user_specialty_saved")
+
+        user_specialty = {"status": "PERSISTED", "preview_url": "GOD 🤷‍♂️", "update_hash": "⬛🌷"}
+        model = self.bc.database.create(user_specialty=user_specialty)
+
+        tasks.reset_screenshot.delay.call_args_list = []
+        tasks.take_screenshot.delay.call_args_list = []
+
+        model.user_specialty.signed_by = "GOD 🤷‍♂️"
+        model.user_specialty._skip_screenshot_task = True
+        model.user_specialty.save()
+
+        assert tasks.reset_screenshot.delay.call_args_list == []
+        assert tasks.take_screenshot.delay.call_args_list == []
