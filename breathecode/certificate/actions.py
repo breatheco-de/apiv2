@@ -532,6 +532,8 @@ def certificate_screenshot(certificate_id: int):
         # after created, lets save the URL
         if file.blob is not None:
             certificate.preview_url = file.url()
+            # Screenshot tasks must not re-enqueue themselves via user_specialty_saved.
+            certificate._skip_screenshot_task = True
             certificate.save()
 
 
@@ -546,6 +548,8 @@ def remove_certificate_screenshot(certificate_id):
     file.delete()
 
     certificate.preview_url = ""
+    # Screenshot tasks must not re-enqueue themselves via user_specialty_saved.
+    certificate._skip_screenshot_task = True
     certificate.save()
 
     return True
