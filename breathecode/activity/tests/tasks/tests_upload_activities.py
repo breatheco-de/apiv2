@@ -315,3 +315,28 @@ def test_with_data_in_both_workers(bc: Breathecode, fake, apply_patch, get_schem
         ],
     )
     assert insert_rows_mock.call_args_list == [call(get_table_mock.return_value, [data1, data2, data3])]
+
+
+def test_dyno_slot_limit(monkeypatch):
+    from redis.exceptions import LockError
+    from task_manager.core.exceptions import RetryTask
+
+    from breathecode.activity.tasks import acquire_upload_activities_dyno_slot
+
+    class BusyLock:
+
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def __enter__(self):
+            raise LockError("busy")
+
+        def __exit__(self, *args):
+            pass
+
+    monkeypatch.setattr("breathecode.activity.tasks.Lock", BusyLock)
+    monkeypatch.setenv("UPLOAD_ACTIVITIES_PER_DYNO", "2")
+    monkeypatch.setenv("DYNO", "celeryworker.1")
+
+    with pytest.raises(RetryTask, match="Too many upload_activities running on this dyno"):
+        acquire_upload_activities_dyno_slot()
