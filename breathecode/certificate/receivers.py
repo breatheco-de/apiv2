@@ -17,10 +17,25 @@ logger = logging.getLogger(__name__)
 
 @receiver(user_specialty_saved, sender=UserSpecialty)
 def post_save_user_specialty(sender, instance: UserSpecialty, **kwargs):
+    if getattr(instance, "_skip_screenshot_task", False):
+        logger.info(
+            "[CERT_SCREENSHOT] signal skipped reason=skip-flag user_specialty_id=%s",
+            instance.id,
+        )
+        return
+
     if instance._hash_was_updated and instance.status == "PERSISTED" and instance.preview_url:
+        logger.info(
+            "[CERT_SCREENSHOT] enqueue reset_screenshot user_specialty_id=%s",
+            instance.id,
+        )
         tasks.reset_screenshot.delay(instance.id)
 
     elif instance._hash_was_updated and instance.status == "PERSISTED" and not instance.preview_url:
+        logger.info(
+            "[CERT_SCREENSHOT] enqueue take_screenshot user_specialty_id=%s",
+            instance.id,
+        )
         tasks.take_screenshot.delay(instance.id)
 
 

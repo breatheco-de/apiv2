@@ -2,37 +2,61 @@
 Tasks tests
 """
 
-import os
 from unittest.mock import MagicMock, PropertyMock, call, patch
-from urllib.parse import urlencode
 
 import pytest
 import requests
 
 import breathecode.certificate.signals as signals
 from breathecode.services.google_cloud import File, Storage
-from breathecode.tests.mocks import apply_requests_get_mock
+from breathecode.tests.mocks import apply_requests_post_mock
 
 from ...actions import certificate_screenshot
 from ...models import UserSpecialty
 from ..mixins import CertificateTestCase
 
 token = "12345a67890b12345c67890d"
-query_string = urlencode(
-    {
-        "key": os.environ.get("SCREENSHOT_MACHINE_KEY", "00000"),
-        "url": f"https://certificate.4geeks.com/preview/{token}",
-        "dimension": "1024x707",
-        "device": "desktop",
-        "delay": 3000,
-        "cacheLimit": "0",
-    }
+CF_ACCOUNT_ID = "test-account"
+CF_API_TOKEN = "test-token"
+CF_SCREENSHOT_URL = (
+    f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/browser-rendering/screenshot"
 )
+CERT_PREVIEW_URL = f"https://certificate.4geeks.com/preview/{token}"
+CHROME_UA = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+)
+
+
+def expected_screenshot_call():
+    return call(
+        CF_SCREENSHOT_URL,
+        json={
+            "url": CERT_PREVIEW_URL,
+            "viewport": {"width": 1024, "height": 707},
+            "gotoOptions": {
+                "waitUntil": "networkidle0",
+                "timeout": 60000,
+            },
+            "screenshotOptions": {
+                "type": "png",
+                "fullPage": False,
+            },
+            "waitForTimeout": 3000,
+            "userAgent": CHROME_UA,
+        },
+        headers={
+            "Authorization": f"Bearer {CF_API_TOKEN}",
+            "Content-Type": "application/json",
+        },
+        timeout=90,
+    )
 
 
 @pytest.fixture(autouse=True)
 def setup(monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setenv("SCREENSHOT_MACHINE_KEY", "00000")
+    monkeypatch.setenv("CLOUDFLARE_ACCOUNT_ID", CF_ACCOUNT_ID)
+    monkeypatch.setenv("CLOUDFLARE_API_TOKEN", CF_API_TOKEN)
     monkeypatch.delenv("VERCEL_CERTIFICATE_BYPASS_SECRET", raising=False)
 
 
@@ -44,15 +68,14 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
     """
 
     @patch(
-        "requests.get",
-        apply_requests_get_mock(
+        "requests.post",
+        apply_requests_post_mock(
             [
-                (200, f"https://api.screenshotmachine.com?{query_string}", "mailgun response"),
+                (200, CF_SCREENSHOT_URL, "mailgun response"),
             ]
         ),
     )
     @patch("breathecode.certificate.signals.user_specialty_saved.send_robust", MagicMock())
-    @patch("requests.get", apply_requests_get_mock([(200, f"https://api.screenshotmachine.com?{query_string}")]))
     @patch.multiple(
         "breathecode.services.google_cloud.Storage",
         __init__=MagicMock(return_value=None),
@@ -76,7 +99,7 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
             certificate_screenshot(1)
 
         self.assertEqual(self.bc.database.list_of("certificate.UserSpecialty"), [])
-        self.assertEqual(requests.get.call_args_list, [])
+        self.assertEqual(requests.post.call_args_list, [])
         self.assertEqual(signals.user_specialty_saved.send_robust.call_args_list, [])
 
         self.assertEqual(File.upload.call_args_list, [])
@@ -87,15 +110,14 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
     """
 
     @patch(
-        "requests.get",
-        apply_requests_get_mock(
+        "requests.post",
+        apply_requests_post_mock(
             [
-                (200, f"https://api.screenshotmachine.com?{query_string}", "mailgun response"),
+                (200, CF_SCREENSHOT_URL, "mailgun response"),
             ]
         ),
     )
     @patch("breathecode.certificate.signals.user_specialty_saved.send_robust", MagicMock())
-    @patch("requests.get", apply_requests_get_mock([(200, f"https://api.screenshotmachine.com?{query_string}")]))
     @patch.multiple(
         "breathecode.services.google_cloud.Storage",
         __init__=MagicMock(return_value=None),
@@ -130,9 +152,7 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
             ],
         )
 
-        assert requests.get.call_args_list == [
-            call(f"https://api.screenshotmachine.com?{query_string}", timeout=25, stream=True),
-        ]
+        assert requests.post.call_args_list == [expected_screenshot_call()]
 
         assert signals.user_specialty_saved.send_robust.call_args_list == [
             # Mixer
@@ -149,10 +169,10 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
     """
 
     @patch(
-        "requests.get",
-        apply_requests_get_mock(
+        "requests.post",
+        apply_requests_post_mock(
             [
-                (200, f"https://api.screenshotmachine.com?{query_string}", "mailgun response"),
+                (200, CF_SCREENSHOT_URL, "mailgun response"),
             ]
         ),
     )
@@ -191,9 +211,7 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
             ],
         )
 
-        assert requests.get.call_args_list == [
-            call(f"https://api.screenshotmachine.com?{query_string}", timeout=25, stream=True),
-        ]
+        assert requests.post.call_args_list == [expected_screenshot_call()]
 
         assert signals.user_specialty_saved.send_robust.call_args_list == [
             # Mixer
@@ -210,10 +228,10 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
     """
 
     @patch(
-        "requests.get",
-        apply_requests_get_mock(
+        "requests.post",
+        apply_requests_post_mock(
             [
-                (200, f"https://api.screenshotmachine.com?{query_string}", "mailgun response"),
+                (200, CF_SCREENSHOT_URL, "mailgun response"),
             ]
         ),
     )
@@ -252,7 +270,7 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
             ],
         )
 
-        self.assertEqual(requests.get.call_args_list, [])
+        self.assertEqual(requests.post.call_args_list, [])
         self.assertEqual(
             signals.user_specialty_saved.send_robust.call_args_list,
             [
@@ -271,10 +289,10 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
     """
 
     @patch(
-        "requests.get",
-        apply_requests_get_mock(
+        "requests.post",
+        apply_requests_post_mock(
             [
-                (200, f"https://api.screenshotmachine.com?{query_string}", "mailgun response"),
+                (200, CF_SCREENSHOT_URL, "mailgun response"),
             ]
         ),
     )
@@ -313,7 +331,7 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
             ],
         )
 
-        self.assertEqual(requests.get.call_args_list, [])
+        self.assertEqual(requests.post.call_args_list, [])
         self.assertEqual(
             signals.user_specialty_saved.send_robust.call_args_list,
             [

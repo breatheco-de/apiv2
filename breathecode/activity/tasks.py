@@ -22,7 +22,7 @@ from breathecode.activity import actions
 from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.admissions.utils.cohort_log import CohortDayLog
 from breathecode.services.google_cloud.big_query import BigQuery
-from breathecode.utils.decorators.task import TaskPriority
+from breathecode.utils.decorators.task import TaskPriority, limit_per_dyno
 from breathecode.utils.redis import Lock
 
 from .models import StudentActivity
@@ -172,7 +172,12 @@ def get_attendancy_log_per_cohort_user(cohort_user_id: int):
 
 
 @task(bind=True, priority=TaskPriority.ACTIVITY.value)
+@limit_per_dyno(2)
 def upload_activities(self, task_manager_id: int, **_):
+    _upload_activities(self, task_manager_id)
+
+
+def _upload_activities(self, task_manager_id: int):
 
     def extract_data():
         nonlocal worker, res

@@ -27,7 +27,7 @@ from breathecode.monitoring.decorators import WebhookTask
 from breathecode.services.google_cloud import FunctionV1
 from breathecode.services.google_cloud.storage import Storage
 from breathecode.services.seo import SEOAnalyzer
-from breathecode.utils.decorators import TaskPriority
+from breathecode.utils.decorators import TaskPriority, limit_per_dyno
 from breathecode.utils.views import set_query_parameter
 
 from .actions import (
@@ -92,6 +92,9 @@ def async_pull_from_github(
     )
     if ok:
         async_pull_project_dependencies.delay(asset_slug)
+        if source_webhook_id is not None:
+            # Same as PUT /v1/registry/academy/asset/<slug>/action/clean
+            async_regenerate_asset_readme.delay(asset_slug)
 
     return ok
 
@@ -270,6 +273,7 @@ def async_create_asset_thumbnail_legacy(asset_slug: str, **_):
 
 
 @task(priority=TaskPriority.ACADEMY.value)
+@limit_per_dyno(1)
 def async_create_asset_thumbnail(asset_slug: str, **_):
 
     asset = Asset.objects.filter(slug=asset_slug).first()
