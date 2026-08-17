@@ -321,7 +321,7 @@ def test_dyno_slot_limit(monkeypatch):
     from redis.exceptions import LockError
     from task_manager.core.exceptions import RetryTask
 
-    from breathecode.activity.tasks import acquire_upload_activities_dyno_slot
+    from breathecode.utils.decorators.task import acquire_dyno_slot
 
     class BusyLock:
 
@@ -334,9 +334,9 @@ def test_dyno_slot_limit(monkeypatch):
         def __exit__(self, *args):
             pass
 
-    monkeypatch.setattr("breathecode.activity.tasks.Lock", BusyLock)
-    monkeypatch.setenv("UPLOAD_ACTIVITIES_PER_DYNO", "2")
+    monkeypatch.setattr("breathecode.utils.decorators.task.Lock", BusyLock)
+    monkeypatch.setenv("CELERY_MAX_WORKERS", "2")
     monkeypatch.setenv("DYNO", "celeryworker.1")
 
     with pytest.raises(RetryTask, match="Too many upload_activities running on this dyno"):
-        acquire_upload_activities_dyno_slot()
+        acquire_dyno_slot("upload_activities", 2)

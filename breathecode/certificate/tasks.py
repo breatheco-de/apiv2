@@ -4,13 +4,14 @@ from task_manager.django.decorators import task
 from breathecode.admissions.models import CERTIFICATE_RECIPIENT_ROLES, CohortUser
 from breathecode.certificate.models import UserSpecialty
 from breathecode.utils import getLogger
-from breathecode.utils.decorators import TaskPriority
+from breathecode.utils.decorators import TaskPriority, limit_per_dyno
 
 # Get an instance of a logger
 logger = getLogger(__name__)
 
 
 @task(bind=True, priority=TaskPriority.CERTIFICATE.value)
+@limit_per_dyno(1)
 def take_screenshot(self, certificate_id, **_):
     logger.debug("Starting take_screenshot")
     # unittest.mock.patch is poor applying mocks
@@ -35,6 +36,7 @@ def remove_screenshot(self, certificate_id, **_):
 
 
 @task(bind=True, priority=TaskPriority.CERTIFICATE.value)
+@limit_per_dyno(1)
 def reset_screenshot(self, certificate_id, **_):
     logger.debug("Starting reset_screenshot")
     # unittest.mock.patch is poor applying mocks
