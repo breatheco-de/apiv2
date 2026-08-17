@@ -22,7 +22,7 @@ from breathecode.activity import actions
 from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.admissions.utils.cohort_log import CohortDayLog
 from breathecode.services.google_cloud.big_query import BigQuery
-from breathecode.utils.decorators.task import TaskPriority
+from breathecode.utils.decorators.task import TaskPriority, limit_per_dyno
 from breathecode.utils.redis import Lock
 
 from .models import StudentActivity
@@ -40,37 +40,6 @@ def get_activity_sampling_rate():
 IS_DJANGO_REDIS = hasattr(cache, "fake") is False
 
 API_URL = os.getenv("API_URL", "")
-UPLOAD_ACTIVITIES_SLOT_TIMEOUT = 600
-
-
-def acquire_upload_activities_dyno_slot():
-    """Allow at most N concurrent upload_activities per Heroku dyno (default 2)."""
-    dyno = os.getenv("DYNO") or "local"
-    limit = int(os.getenv("UPLOAD_ACTIVITIES_PER_DYNO") or 2)
-    client = get_redis_connection("default") if IS_DJANGO_REDIS else None
-
-    for slot in range(limit):
-        lock = Lock(
-            client,
-            f"lock:activity:upload-slot:{dyno}:{slot}",
-            timeout=UPLOAD_ACTIVITIES_SLOT_TIMEOUT,
-            blocking_timeout=0,
-        )
-        try:
-            lock.__enter__()
-            return lock
-        except LockError:
-            continue
-
-    raise RetryTask("Too many upload_activities running on this dyno")
-
-
-def release_upload_activities_dyno_slot(lock):
-    if lock is None:
-        return
-
-    lock.__exit__(None, None, None)
-
 
 logger = logging.getLogger(__name__)
 
@@ -203,13 +172,9 @@ def get_attendancy_log_per_cohort_user(cohort_user_id: int):
 
 
 @task(bind=True, priority=TaskPriority.ACTIVITY.value)
+@limit_per_dyno(2)
 def upload_activities(self, task_manager_id: int, **_):
-    slot = acquire_upload_activities_dyno_slot()
-
-    try:
-        _upload_activities(self, task_manager_id)
-    finally:
-        release_upload_activities_dyno_slot(slot)
+    _upload_activities(self, task_manager_id)
 
 
 def _upload_activities(self, task_manager_id: int):
