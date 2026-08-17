@@ -2600,6 +2600,8 @@ class PlanFinancing(AbstractIOweYou):
             signals.grant_plan_permissions.send_robust(instance=self, sender=self.__class__)
 
         if old_instance and old_instance.status != self.status:
+            signals.sync_cohort_user_finantial_status.send_robust(instance=self, sender=self.__class__)
+
             if self.status == self.Status.ACTIVE and is_paid:
                 signals.grant_plan_permissions.send_robust(instance=self, sender=self.__class__)
 
