@@ -6,9 +6,6 @@ import os
 import pathlib
 import re
 from typing import Optional
-from urllib.parse import urlencode
-
-import aiohttp
 import requests
 from asgiref.sync import sync_to_async
 from django.db.models import Q
@@ -19,6 +16,7 @@ from github import Github
 from breathecode.assessment.actions import create_from_asset
 from breathecode.authenticate.models import CredentialsGithub
 from breathecode.media.models import Media, MediaResolution
+from breathecode.services.cloudflare import BrowserRun
 from breathecode.services.google_cloud.storage import Storage
 from breathecode.utils.views import set_query_parameter
 
@@ -370,40 +368,8 @@ def set_blob_content(repo, path_name, content, file_name, branch="main", create_
     return repo.update_file(file[0].path, f"Update {file_name}", content, file[0].sha, branch=branch)
 
 
-def get_screenshot_machine_params(url: str, dimension: str = "1200x630", **kwargs):
-    screenshot_key = os.getenv("SCREENSHOT_MACHINE_KEY", "")
-    params = {
-        "key": screenshot_key,
-        "url": url,
-        "dimension": dimension,
-        "device": kwargs.get("device", "desktop"),
-        "delay": kwargs.get("delay", "1000"),
-        "cacheLimit": kwargs.get("cacheLimit", "0"),
-        **kwargs,
-    }
-
-    # Remove these parameters from kwargs since they're now in params
-    if "device" in kwargs:
-        del kwargs["device"]
-    if "delay" in kwargs:
-        del kwargs["delay"]
-    if "cacheLimit" in kwargs:
-        del kwargs["cacheLimit"]
-
-    return params
-
-
 def generate_screenshot(url: str, dimension: str = "1200x630", **kwargs):
-    params = get_screenshot_machine_params(url, dimension, **kwargs)
-
-    # Log para certificados: verificar params enviados a Screenshot Machine (sin exponer secret)
-    if "certificate.4geeks.com" in url:
-        safe_params = {k: ("***" if k == "key" else v) for k, v in params.items()}
-        safe_params["url"] = params.get("url", "").split("?")[0] + ("?***" if "?" in params.get("url", "") else "")
-        logger.info(f"[CERT_SCREENSHOT] Screenshot Machine API params: {safe_params}")
-
-    # Always use stream=True for screenshot downloads to handle large files properly
-    return requests.get(f"https://api.screenshotmachine.com?{urlencode(params)}", timeout=25, stream=True)
+    return BrowserRun().screenshot(url, dimension, **kwargs)
 
 
 async def agenerate_screenshot(url: str, dimension: str = "1200x630", **kwargs):
@@ -412,19 +378,7 @@ async def agenerate_screenshot(url: str, dimension: str = "1200x630", **kwargs):
     This should only be used in async views, not in Celery tasks.
     """
 
-    params = get_screenshot_machine_params(url, dimension, **kwargs)
-
-    async with aiohttp.ClientSession() as session:
-        async with session.get("https://api.screenshotmachine.com/", params=params, timeout=25) as response:
-            if response.status != 200:
-                logger.error(f"Screenshot service returned error code: {response.status}")
-                return response
-
-            content = await response.read()
-
-            response.content = content
-            response.status_code = response.status
-            return response
+    return await BrowserRun().ascreenshot(url, dimension, **kwargs)
 
 
 def push_github_asset(github, asset: Asset):
