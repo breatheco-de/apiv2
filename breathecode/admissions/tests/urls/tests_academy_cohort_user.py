@@ -12,11 +12,25 @@ from django.urls.base import reverse_lazy
 from django.utils import timezone
 from rest_framework import status
 
-from breathecode.admissions.models import STARTED
+from breathecode.admissions.models import CohortUser, STARTED
+from breathecode.admissions.services.completion import evaluate_cohort_user_completion
 
 from ..mixins import AdmissionsTestCase
 
 UTC_NOW = timezone.now()
+
+
+def _source_macro_payload(cohort_user):
+    if cohort_user is None or cohort_user.source_macro_cohort is None:
+        return None
+    cohort = cohort_user.source_macro_cohort
+    return {"id": cohort.id, "slug": cohort.slug, "name": cohort.name}
+
+
+def _completion_payload(cohort_user):
+    if cohort_user is None:
+        return None
+    return evaluate_cohort_user_completion(cohort_user)
 
 
 def cohort_user_item(data={}):
@@ -29,6 +43,7 @@ def cohort_user_item(data={}):
         "user_id": 0,
         "watching": False,
         "history_log": {},
+        "source_macro_cohort_id": None,
         **data,
     }
 
@@ -47,6 +62,7 @@ def post_serializer(self, cohort, user, profile_academy=None, data={}):
             "available_as_saas": cohort.available_as_saas,
             "shortcuts": cohort.shortcuts,
             "micro_cohorts": list(cohort.micro_cohorts.values_list("id", flat=True)),
+            "syllabus_version": None,
         },
         "created_at": self.bc.datetime.to_iso_string(UTC_NOW),
         "updated_at": self.bc.datetime.to_iso_string(UTC_NOW),
@@ -73,6 +89,8 @@ def post_serializer(self, cohort, user, profile_academy=None, data={}):
             "last_login": user.last_login,
         },
         "watching": False,
+        "source_macro_cohort": _source_macro_payload(CohortUser.objects.filter(id=data.get("id", 1)).first()),
+        "completion": _completion_payload(CohortUser.objects.filter(id=data.get("id", 1)).first()),
         **data,
     }
 
@@ -91,6 +109,7 @@ def put_serializer(self, cohort_user, cohort, user, profile_academy=None, data={
             "available_as_saas": cohort.available_as_saas,
             "shortcuts": cohort.shortcuts,
             "micro_cohorts": list(cohort.micro_cohorts.values_list("id", flat=True)),
+            "syllabus_version": None,
         },
         "created_at": self.bc.datetime.to_iso_string(cohort_user.created_at),
         "updated_at": self.bc.datetime.to_iso_string(cohort_user.updated_at),
@@ -117,6 +136,8 @@ def put_serializer(self, cohort_user, cohort, user, profile_academy=None, data={
             "last_login": user.last_login,
         },
         "watching": cohort_user.watching,
+        "source_macro_cohort": _source_macro_payload(cohort_user),
+        "completion": _completion_payload(cohort_user),
         **data,
     }
 
@@ -199,6 +220,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
                     "shortcuts": model["cohort_user"].cohort.shortcuts,
                     "micro_cohorts": [],
+                    "syllabus_version": None,
                 },
                 "user": {
                     "id": model["cohort_user"].user.id,
@@ -215,6 +237,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "phone": model["profile_academy"].phone,
                 },
                 "watching": False,
+                "source_macro_cohort": None,
+                "completion": evaluate_cohort_user_completion(model["cohort_user"]),
             }
         ]
 
@@ -282,6 +306,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
                     "shortcuts": model["cohort_user"].cohort.shortcuts,
                     "micro_cohorts": [],
+                    "syllabus_version": None,
                 },
                 "user": {
                     "id": model["cohort_user"].user.id,
@@ -298,6 +323,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "phone": model["profile_academy"].phone,
                 },
                 "watching": False,
+                "source_macro_cohort": None,
+                "completion": evaluate_cohort_user_completion(model["cohort_user"]),
             }
         ]
 
@@ -348,6 +375,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
                     "shortcuts": model["cohort_user"].cohort.shortcuts,
                     "micro_cohorts": [],
+                    "syllabus_version": None,
                 },
                 "role": model["cohort_user"].role,
                 "finantial_status": model["cohort_user"].finantial_status,
@@ -355,6 +383,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 "created_at": re.sub(r"\+00:00$", "Z", model["cohort_user"].created_at.isoformat()),
                 "updated_at": re.sub(r"\+00:00$", "Z", model["cohort_user"].updated_at.isoformat()),
                 "watching": False,
+                "source_macro_cohort": None,
+                "completion": evaluate_cohort_user_completion(model["cohort_user"]),
             }
         ]
 
@@ -428,6 +458,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
                     "shortcuts": model["cohort_user"].cohort.shortcuts,
                     "micro_cohorts": [],
+                    "syllabus_version": None,
                 },
                 "user": {
                     "id": model["cohort_user"].user.id,
@@ -444,6 +475,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "phone": model["profile_academy"].phone,
                 },
                 "watching": False,
+                "source_macro_cohort": None,
+                "completion": evaluate_cohort_user_completion(model["cohort_user"]),
             }
         ]
 
@@ -503,8 +536,11 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
                     "shortcuts": model["cohort_user"].cohort.shortcuts,
                     "micro_cohorts": [],
+                    "syllabus_version": None,
                 },
                 "watching": False,
+                "source_macro_cohort": None,
+                "completion": evaluate_cohort_user_completion(model["cohort_user"]),
             }
         ]
 
@@ -592,8 +628,11 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
                     "shortcuts": model["cohort_user"].cohort.shortcuts,
                     "micro_cohorts": [],
+                    "syllabus_version": None,
                 },
                 "watching": False,
+                "source_macro_cohort": None,
+                "completion": evaluate_cohort_user_completion(model["cohort_user"]),
             }
         ]
 
@@ -653,8 +692,11 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
                     "shortcuts": model["cohort_user"].cohort.shortcuts,
                     "micro_cohorts": [],
+                    "syllabus_version": None,
                 },
                 "watching": False,
+                "source_macro_cohort": None,
+                "completion": evaluate_cohort_user_completion(model["cohort_user"]),
             }
         ]
 
@@ -718,8 +760,11 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
                     "shortcuts": model["cohort_user"].cohort.shortcuts,
                     "micro_cohorts": [],
+                    "syllabus_version": None,
                 },
                 "watching": False,
+                "source_macro_cohort": None,
+                "completion": evaluate_cohort_user_completion(model["cohort_user"]),
             }
         ]
 
@@ -779,8 +824,11 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
                     "shortcuts": model["cohort_user"].cohort.shortcuts,
                     "micro_cohorts": [],
+                    "syllabus_version": None,
                 },
                 "watching": False,
+                "source_macro_cohort": None,
+                "completion": evaluate_cohort_user_completion(model["cohort_user"]),
             }
         ]
 
@@ -850,6 +898,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
                     "shortcuts": model["cohort_user"].cohort.shortcuts,
                     "micro_cohorts": [],
+                    "syllabus_version": None,
                 },
                 "user": {
                     "id": model["cohort_user"].user.id,
@@ -866,6 +915,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "phone": model["profile_academy"].phone,
                 },
                 "watching": False,
+                "source_macro_cohort": None,
+                "completion": evaluate_cohort_user_completion(model["cohort_user"]),
             }
         ]
 
@@ -926,8 +977,11 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
                     "shortcuts": model["cohort_user"].cohort.shortcuts,
                     "micro_cohorts": [],
+                    "syllabus_version": None,
                 },
                 "watching": False,
+                "source_macro_cohort": None,
+                "completion": evaluate_cohort_user_completion(model["cohort_user"]),
             }
         ]
 
@@ -988,8 +1042,11 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
                     "shortcuts": model["cohort_user"].cohort.shortcuts,
                     "micro_cohorts": [],
+                    "syllabus_version": None,
                 },
                 "watching": False,
+                "source_macro_cohort": None,
+                "completion": evaluate_cohort_user_completion(model["cohort_user"]),
             }
         ]
 
@@ -1059,8 +1116,11 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
                     "shortcuts": model["cohort_user"].cohort.shortcuts,
                     "micro_cohorts": [],
+                    "syllabus_version": None,
                 },
                 "watching": False,
+                "source_macro_cohort": None,
+                "completion": evaluate_cohort_user_completion(model["cohort_user"]),
             }
         ]
 
@@ -1133,8 +1193,11 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
                     "shortcuts": model["cohort_user"].cohort.shortcuts,
                     "micro_cohorts": [],
+                    "syllabus_version": None,
                 },
                 "watching": False,
+                "source_macro_cohort": None,
+                "completion": evaluate_cohort_user_completion(model["cohort_user"]),
             }
         ]
 
@@ -1215,8 +1278,11 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
                     "shortcuts": model["cohort_user"].cohort.shortcuts,
                     "micro_cohorts": [],
+                    "syllabus_version": None,
                 },
                 "watching": False,
+                "source_macro_cohort": None,
+                "completion": evaluate_cohort_user_completion(model["cohort_user"]),
             }
         ]
 
