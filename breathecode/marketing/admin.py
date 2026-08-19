@@ -31,6 +31,7 @@ from .models import (
     Automation,
     Course,
     CourseTranslation,
+    CrmLeadOverride,
     Downloadable,
     EmailDomainValidation,
     FormEntry,
@@ -87,6 +88,23 @@ def sync_ac_automations(modeladmin, request, queryset):
     except Exception as e:
         logger.fatal(str(e))
         messages.error(request, message=str(e))
+
+
+@admin.register(CrmLeadOverride)
+class CrmLeadOverrideAdmin(admin.ModelAdmin):
+    """If the FormEntry matches, this replaces the academy CRM. Empty destination = do not send."""
+    search_fields = ["match_field", "match_value", "academy__slug", "academy__name"]
+    list_display = (
+        "id",
+        "match_field",
+        "match_value",
+        "academy",
+        "destination_crm_vendor",
+        "is_active",
+        "updated_at",
+    )
+    list_filter = ["is_active", "match_field", "destination_crm_vendor"]
+    raw_id_fields = ["academy"]
 
 
 class CustomForm(forms.ModelForm):
