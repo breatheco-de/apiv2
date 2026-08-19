@@ -4,6 +4,7 @@ import re
 import socket
 from datetime import timedelta
 from itertools import chain
+from types import SimpleNamespace
 from typing import Optional
 
 try:
@@ -32,6 +33,7 @@ from .models import (
     AcademyAlias,
     ActiveCampaignAcademy,
     Automation,
+    CrmLeadOverride,
     EmailDomainValidation,
     FormEntry,
     Tag,
@@ -750,6 +752,37 @@ def add_to_active_campaign(contact, academy_id: int, automation_id: int):
     logger.debug(f"Triggered automation with id {str(acp_id)}", response)
 
 
+def _form_entry_match_value(form_entry, field):
+    if field == "language":
+        raw = form_entry.get("utm_language") or form_entry.get("language")
+    else:
+        raw = form_entry.get(field)
+    if raw is None:
+        return ""
+    return str(raw).strip().lower()
+
+
+def find_crm_lead_override(form_entry, academy):
+    matched = []
+    for override in CrmLeadOverride.objects.filter(is_active=True):
+        if _form_entry_match_value(form_entry, override.match_field) != (override.match_value or "").strip().lower():
+            continue
+        if override.academy_id and (academy is None or override.academy_id != academy.id):
+            continue
+        matched.append(override)
+
+    if not matched:
+        return None
+
+    specific = [item for item in matched if item.academy_id]
+    pool = specific if specific else matched
+    return sorted(pool, key=lambda item: item.id)[0]
+
+
+def _crm_destination_academy(url, key, vendor, academy=None):
+    return SimpleNamespace(ac_url=url, ac_key=key, crm_vendor=vendor, academy=academy)
+
+
 def register_new_lead(form_entry=None):
     if form_entry is None:
         raise ValidationException("You need to specify the form entry data")
@@ -784,37 +817,61 @@ def register_new_lead(form_entry=None):
             f"No CRM vendor information for academy with slug {location}. Is Active Campaign or Brevo used?"
         )
 
-    automations = get_lead_automations(ac_academy, form_entry)
+    override = find_crm_lead_override(form_entry, ac_academy.academy)
+    skip_crm = bool(override and not override.has_destination())
+    custom_destination = bool(override and override.has_destination())
+    if override:
+        logger.info(
+            "CrmLeadOverride matched id=%s field=%s value=%s skip_crm=%s custom_destination=%s",
+            override.id,
+            override.match_field,
+            override.match_value,
+            skip_crm,
+            custom_destination,
+        )
 
-    if automations:
-        logger.info("found automations")
-        logger.info(list(automations))
-    else:
-        logger.info("automations not found")
+    send_academy = ac_academy
+    if custom_destination:
+        send_academy = _crm_destination_academy(
+            override.destination_ac_url,
+            override.destination_ac_key,
+            override.destination_crm_vendor,
+            academy=ac_academy.academy,
+        )
 
-    # Tags are only for ACTIVE CAMPAIGN
+    automations = []
     tags = []
-    if ac_academy.crm_vendor == "BREVO":
-        # brevo uses slugs instead of ID for automations
-        if hasattr(automations, "values_list"):
-            automations = automations.values_list("slug", flat=True)
-        if "tags" in form_entry and len(form_entry["tags"]) > 0:
-            raise Exception("Brevo CRM does not support tags, please remove them from the contact payload")
-    else:
-        if hasattr(automations, "values_list"):
-            automations = automations.values_list("acp_id", flat=True)
+    if not skip_crm and not custom_destination:
+        automations = get_lead_automations(ac_academy, form_entry)
 
-        tags = get_lead_tags(ac_academy, form_entry)
-        logger.info("found tags")
-        logger.info(set(t.slug for t in tags))
+        if automations:
+            logger.info("found automations")
+            logger.info(list(automations))
+        else:
+            logger.info("automations not found")
 
-    if (automations is None or len(automations) == 0) and len(tags) > 0:
-        if tags[0].automation is None:
-            raise ValidationException(
-                "No automation was specified and the specified tag (if any) has no automation either"
-            )
+        if ac_academy.crm_vendor == "BREVO":
+            if hasattr(automations, "values_list"):
+                automations = automations.values_list("slug", flat=True)
+            if "tags" in form_entry and len(form_entry["tags"]) > 0:
+                raise Exception("Brevo CRM does not support tags, please remove them from the contact payload")
+        else:
+            if hasattr(automations, "values_list"):
+                automations = automations.values_list("acp_id", flat=True)
 
-        automations = [tags[0].automation.acp_id]
+            tags = get_lead_tags(ac_academy, form_entry)
+            logger.info("found tags")
+            logger.info(set(t.slug for t in tags))
+
+        if (automations is None or len(automations) == 0) and len(tags) > 0:
+            if tags[0].automation is None:
+                raise ValidationException(
+                    "No automation was specified and the specified tag (if any) has no automation either"
+                )
+
+            automations = [tags[0].automation.acp_id]
+    elif custom_destination and send_academy.crm_vendor == "BREVO" and "tags" in form_entry and len(form_entry["tags"]) > 0:
+        logger.info("Ignoring tags because CrmLeadOverride destination is Brevo")
 
     if not "email" in form_entry:
         raise ValidationException("The email doesn't exist")
@@ -860,7 +917,7 @@ def register_new_lead(form_entry=None):
         "phone": form_entry["phone"],
     }
 
-    contact = set_optional(contact, "utm_url", form_entry, crm_vendor=ac_academy.crm_vendor)
+    contact = set_optional(contact, "utm_url", form_entry, crm_vendor=send_academy.crm_vendor)
     
     # Ensure location sent to Active Campaign matches the resolved academy/alias.
     # Only use alias.active_campaign_slug on slug/AC-slug match, not academy fallback.
@@ -871,26 +928,26 @@ def register_new_lead(form_entry=None):
     elif ac_academy.academy and ac_academy.academy.active_campaign_slug:
         location_value = ac_academy.academy.active_campaign_slug
 
-    contact = set_optional(contact, "utm_location", {"location": location_value}, "location", crm_vendor=ac_academy.crm_vendor)
-    contact = set_optional(contact, "course", form_entry, crm_vendor=ac_academy.crm_vendor)
-    contact = set_optional(contact, "utm_language", form_entry, "language", crm_vendor=ac_academy.crm_vendor)
-    contact = set_optional(contact, "utm_country", form_entry, "country", crm_vendor=ac_academy.crm_vendor)
-    contact = set_optional(contact, "utm_campaign", form_entry, crm_vendor=ac_academy.crm_vendor)
-    contact = set_optional(contact, "utm_source", form_entry, crm_vendor=ac_academy.crm_vendor)
-    contact = set_optional(contact, "utm_content", form_entry, crm_vendor=ac_academy.crm_vendor)
-    contact = set_optional(contact, "utm_medium", form_entry, crm_vendor=ac_academy.crm_vendor)
-    contact = set_optional(contact, "utm_plan", form_entry, crm_vendor=ac_academy.crm_vendor)
-    contact = set_optional(contact, "utm_placement", form_entry, crm_vendor=ac_academy.crm_vendor)
-    contact = set_optional(contact, "utm_term", form_entry, crm_vendor=ac_academy.crm_vendor)
-    contact = set_optional(contact, "gender", form_entry, "sex", crm_vendor=ac_academy.crm_vendor)
-    contact = set_optional(contact, "client_comments", form_entry, crm_vendor=ac_academy.crm_vendor)
-    contact = set_optional(contact, "gclid", form_entry, crm_vendor=ac_academy.crm_vendor)
-    contact = set_optional(contact, "current_download", form_entry, crm_vendor=ac_academy.crm_vendor)
-    contact = set_optional(contact, "referral_key", form_entry, crm_vendor=ac_academy.crm_vendor)
+    contact = set_optional(contact, "utm_location", {"location": location_value}, "location", crm_vendor=send_academy.crm_vendor)
+    contact = set_optional(contact, "course", form_entry, crm_vendor=send_academy.crm_vendor)
+    contact = set_optional(contact, "utm_language", form_entry, "language", crm_vendor=send_academy.crm_vendor)
+    contact = set_optional(contact, "utm_country", form_entry, "country", crm_vendor=send_academy.crm_vendor)
+    contact = set_optional(contact, "utm_campaign", form_entry, crm_vendor=send_academy.crm_vendor)
+    contact = set_optional(contact, "utm_source", form_entry, crm_vendor=send_academy.crm_vendor)
+    contact = set_optional(contact, "utm_content", form_entry, crm_vendor=send_academy.crm_vendor)
+    contact = set_optional(contact, "utm_medium", form_entry, crm_vendor=send_academy.crm_vendor)
+    contact = set_optional(contact, "utm_plan", form_entry, crm_vendor=send_academy.crm_vendor)
+    contact = set_optional(contact, "utm_placement", form_entry, crm_vendor=send_academy.crm_vendor)
+    contact = set_optional(contact, "utm_term", form_entry, crm_vendor=send_academy.crm_vendor)
+    contact = set_optional(contact, "gender", form_entry, "sex", crm_vendor=send_academy.crm_vendor)
+    contact = set_optional(contact, "client_comments", form_entry, crm_vendor=send_academy.crm_vendor)
+    contact = set_optional(contact, "gclid", form_entry, crm_vendor=send_academy.crm_vendor)
+    contact = set_optional(contact, "current_download", form_entry, crm_vendor=send_academy.crm_vendor)
+    contact = set_optional(contact, "referral_key", form_entry, crm_vendor=send_academy.crm_vendor)
 
     # only for brevo
-    if ac_academy.crm_vendor == "BREVO":
-        contact = set_optional(contact, "utm_landing", form_entry, crm_vendor=ac_academy.crm_vendor)
+    if send_academy.crm_vendor == "BREVO":
+        contact = set_optional(contact, "utm_landing", form_entry, crm_vendor=send_academy.crm_vendor)
 
     if len(tags) > 0 and "contact-us" == tags[0].slug:
 
@@ -927,10 +984,23 @@ def register_new_lead(form_entry=None):
         entry.save()
         return entry
 
-    if ac_academy.crm_vendor == "ACTIVE_CAMPAIGN":
-        entry = send_to_active_campaign(entry, ac_academy, contact, automations, tags)
-    elif ac_academy.crm_vendor == "BREVO":
-        entry = send_to_brevo(entry, ac_academy, contact, automations)
+    if skip_crm:
+        entry.storage_status = "PERSISTED"
+        entry.storage_status_text = (
+            f"Not sent to CRM because CrmLeadOverride matched "
+            f"(id={override.id} {override.match_field}={override.match_value})"
+        )
+        entry.save()
+        form_entry["storage_status"] = "PERSISTED"
+        logger.info("FormEntry persisted without CRM because CrmLeadOverride has no destination id=%s", override.id)
+        return entry
+
+    if send_academy.crm_vendor == "ACTIVE_CAMPAIGN":
+        entry = send_to_active_campaign(entry, send_academy, contact, automations, tags)
+    elif send_academy.crm_vendor == "BREVO":
+        if not hasattr(automations, "count"):
+            automations = Automation.objects.none()
+        entry = send_to_brevo(entry, send_academy, contact, automations)
 
     if entry.storage_status == "ERROR":
         return entry
@@ -985,10 +1055,15 @@ def send_to_active_campaign(form_entry, ac_academy, contact, automations, tags):
 
 def send_to_brevo(form_entry, ac_academy, contact, automations):
 
-    if automations.count() > 1:
-        raise Exception("Only one automation at a time is allowed for Brevo")
-
-    _a = automations.first()
+    if automations is None:
+        _a = None
+    elif hasattr(automations, "count"):
+        if automations.count() > 1:
+            raise Exception("Only one automation at a time is allowed for Brevo")
+        first = automations.first()
+        _a = first.slug if first is not None and hasattr(first, "slug") else first
+    else:
+        _a = None
 
     brevo_client = Brevo(ac_academy.ac_key)
     response = brevo_client.create_contact(contact, _a)

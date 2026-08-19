@@ -7,6 +7,7 @@ from django import forms
 from django.contrib.auth.models import User
 from django.core.validators import RegexValidator
 from django.db import models
+from django.db.models import Q, UniqueConstraint, CheckConstraint
 from django.forms import ValidationError
 
 from breathecode.admissions.models import Academy, Cohort, Syllabus
@@ -19,6 +20,7 @@ from .signals import form_entry_won_or_lost, new_form_entry_deal
 
 __all__ = [
     "ActiveCampaignAcademy",
+    "CrmLeadOverride",
     "AcademyAlias",
     "Automation",
     "Tag",
@@ -99,6 +101,100 @@ class ActiveCampaignAcademy(models.Model):
 
     def __str__(self):
         return f"{self.academy.name}" if self.academy else "Unnamed"
+
+
+CRM_LEAD_OVERRIDE_MATCH_FIELDS = (
+    ("course", "course"),
+    ("utm_campaign", "utm_campaign"),
+    ("utm_source", "utm_source"),
+    ("utm_medium", "utm_medium"),
+    ("utm_content", "utm_content"),
+    ("location", "location"),
+    ("tags", "tags"),
+    ("country", "country"),
+    ("language", "language"),
+)
+
+
+class CrmLeadOverride(models.Model):
+    """Replace the academy CRM destination when a FormEntry field matches."""
+
+    match_field = models.CharField(max_length=30, choices=CRM_LEAD_OVERRIDE_MATCH_FIELDS)
+    match_value = models.CharField(max_length=255, help_text="Case-insensitive exact match against the FormEntry payload")
+    academy = models.ForeignKey(
+        Academy,
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
+        default=None,
+        help_text="Empty = all academies. Set = only FormEntries whose location resolved to this academy",
+    )
+    destination_ac_url = models.URLField(blank=True, null=True, default=None)
+    destination_ac_key = models.CharField(max_length=150, blank=True, null=True, default=None)
+    destination_crm_vendor = models.CharField(
+        max_length=20,
+        choices=CRM_VENDORS,
+        blank=True,
+        null=True,
+        default=None,
+        help_text="Leave empty with url and key to skip CRM. Fill all three to send to another AC/Brevo",
+    )
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    class Meta:
+        constraints = [
+            UniqueConstraint(
+                fields=["match_field", "match_value", "academy"],
+                name="uniq_crm_lead_override_match",
+                nulls_distinct=False,
+            ),
+            CheckConstraint(
+                name="crm_lead_override_destination_all_or_nothing",
+                condition=(
+                    (
+                        (Q(destination_ac_url="") | Q(destination_ac_url__isnull=True))
+                        & (Q(destination_ac_key="") | Q(destination_ac_key__isnull=True))
+                        & (Q(destination_crm_vendor="") | Q(destination_crm_vendor__isnull=True))
+                    )
+                    | (
+                        Q(destination_ac_url__isnull=False)
+                        & ~Q(destination_ac_url="")
+                        & Q(destination_ac_key__isnull=False)
+                        & ~Q(destination_ac_key="")
+                        & Q(destination_crm_vendor__isnull=False)
+                        & ~Q(destination_crm_vendor="")
+                    )
+                ),
+            ),
+        ]
+
+    def has_destination(self):
+        return bool(self.destination_ac_url and self.destination_ac_key and self.destination_crm_vendor)
+
+    def clean(self):
+        super().clean()
+        url = (self.destination_ac_url or "").strip()
+        key = (self.destination_ac_key or "").strip()
+        vendor = (self.destination_crm_vendor or "").strip()
+        filled = [bool(url), bool(key), bool(vendor)]
+        if any(filled) and not all(filled):
+            raise ValidationError("destination_ac_url, destination_ac_key and destination_crm_vendor must all be set or all empty")
+        self.destination_ac_url = url or None
+        self.destination_ac_key = key or None
+        self.destination_crm_vendor = vendor or None
+        if self.match_value:
+            self.match_value = self.match_value.strip()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        scope = self.academy.slug if self.academy else "all-academies"
+        dest = self.destination_crm_vendor or "no-crm"
+        return f"{self.match_field}={self.match_value} → {dest} ({scope})"
 
 
 class AcademyAlias(models.Model):
