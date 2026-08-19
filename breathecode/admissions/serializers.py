@@ -659,6 +659,7 @@ class GetCohortUserSerializer(serpy.Serializer):
     updated_at = serpy.Field()
     profile_academy = serpy.MethodField()
     completion = serpy.MethodField()
+    source_macro_cohort = serpy.MethodField()
 
     def get_profile_academy(self, obj):
         profile = ProfileAcademy.objects.filter(user=obj.user, academy=obj.cohort.academy).first()
@@ -666,6 +667,12 @@ class GetCohortUserSerializer(serpy.Serializer):
 
     def get_completion(self, obj):
         return evaluate_cohort_user_completion(obj)
+
+    def get_source_macro_cohort(self, obj):
+        cohort = obj.source_macro_cohort
+        if cohort is None:
+            return None
+        return {"id": cohort.id, "slug": cohort.slug, "name": cohort.name}
 
 
 class GetCohortUserBigSerializer(serpy.Serializer):
@@ -684,6 +691,7 @@ class GetCohortUserBigSerializer(serpy.Serializer):
     updated_at = serpy.Field()
     profile_academy = serpy.MethodField()
     completion = serpy.MethodField()
+    source_macro_cohort = serpy.MethodField()
 
     def get_profile_academy(self, obj):
         profile = ProfileAcademy.objects.filter(user=obj.user, academy=obj.cohort.academy).first()
@@ -695,6 +703,12 @@ class GetCohortUserBigSerializer(serpy.Serializer):
 
     def get_completion(self, obj):
         return evaluate_cohort_user_completion(obj)
+
+    def get_source_macro_cohort(self, obj):
+        cohort = obj.source_macro_cohort
+        if cohort is None:
+            return None
+        return {"id": cohort.id, "slug": cohort.slug, "name": cohort.name}
 
 
 class GetCohortUserTasksSerializer(GetCohortUserSerializer):
@@ -775,9 +789,16 @@ class GETCohortUserSmallSerializer(serpy.Serializer):
     educational_status = serpy.Field()
     created_at = serpy.Field()
     completion = serpy.MethodField()
+    source_macro_cohort = serpy.MethodField()
 
     def get_completion(self, obj):
         return evaluate_cohort_user_completion(obj)
+
+    def get_source_macro_cohort(self, obj):
+        cohort = obj.source_macro_cohort
+        if cohort is None:
+            return None
+        return {"id": cohort.id, "slug": cohort.slug, "name": cohort.name}
 
 
 # Create your models here.

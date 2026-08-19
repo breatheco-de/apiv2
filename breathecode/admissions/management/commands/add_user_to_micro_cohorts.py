@@ -47,6 +47,7 @@ class Command(BaseCommand):
                             educational_status=cohort_user.educational_status,
                             finantial_status=cohort_user.finantial_status,
                             watching=cohort_user.watching,
+                            source_macro_cohort=main_cohort,
                         )
                         self.stdout.write(
                             self.style.SUCCESS(
