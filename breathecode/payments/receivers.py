@@ -41,6 +41,7 @@ from .signals import (
     lose_service_permissions,
     reimburse_service_units,
     revoke_plan_permissions,
+    sync_cohort_user_finantial_status,
     update_plan_m2m_service_items,
 )
 
@@ -183,6 +184,20 @@ def grant_plan_permissions_receiver(
 
 grant_plan_permissions.connect(grant_plan_permissions_receiver, sender=Subscription)
 grant_plan_permissions.connect(grant_plan_permissions_receiver, sender=PlanFinancing)
+
+
+def sync_cohort_user_finantial_status_receiver(sender: Type[PlanFinancing], instance: PlanFinancing, **kwargs):
+    """Keep CohortUser.finantial_status aligned when PlanFinancing.status changes."""
+    logger.info(
+        "sync_cohort_user_finantial_status_receiver plan_financing_id=%s user_id=%s status=%s",
+        instance.id,
+        instance.user_id,
+        instance.status,
+    )
+    actions.sync_cohort_user_finantial_status_from_plan_financing(instance)
+
+
+sync_cohort_user_finantial_status.connect(sync_cohort_user_finantial_status_receiver, sender=PlanFinancing)
 
 
 def revoke_plan_permissions_receiver(sender, instance, **kwargs):

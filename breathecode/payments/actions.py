@@ -29,7 +29,15 @@ from task_manager.core.exceptions import AbortTask, RetryTask
 from task_manager.django.actions import schedule_task
 
 from breathecode.admissions import tasks as admissions_tasks
-from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
+from breathecode.admissions.models import (
+    FULLY_PAID,
+    LATE,
+    UP_TO_DATE,
+    Academy,
+    Cohort,
+    CohortUser,
+    Syllabus,
+)
 from breathecode.authenticate.actions import get_app_url, get_invite_url, get_user_settings
 from breathecode.authenticate.models import ProfileAcademy, Role, UserInvite, UserSetting
 from breathecode.marketing.actions import validate_email_local
@@ -5893,6 +5901,165 @@ def user_has_active_4geeks_plus_plans(user: User) -> bool:
             return True
 
     return False
+
+
+def get_cohort_ids_for_iou(resource: Subscription | PlanFinancing) -> set[int]:
+    """Cohort IDs covered by selected_cohort_set and each plan.cohort_set."""
+    cohort_ids: set[int] = set()
+
+    if resource.selected_cohort_set_id:
+        cohort_ids.update(resource.selected_cohort_set.cohorts.values_list("id", flat=True))
+
+    for plan in resource.plans.all():
+        if plan.cohort_set_id:
+            cohort_ids.update(plan.cohort_set.cohorts.values_list("id", flat=True))
+
+    return cohort_ids
+
+
+def user_has_active_access_to_cohort(
+    user: User,
+    cohort_id: int,
+    *,
+    exclude_plan_financing_id: int | None = None,
+) -> bool:
+    """
+    True if the user has another product that still grants access to this cohort:
+    an ACTIVE Subscription, or another PlanFinancing in ACTIVE/FULLY_PAID.
+    """
+    for subscription in Subscription.objects.filter(user=user, status=Subscription.Status.ACTIVE):
+        if cohort_id in get_cohort_ids_for_iou(subscription):
+            return True
+
+    financing_qs = PlanFinancing.objects.filter(
+        user=user,
+        status__in=[PlanFinancing.Status.ACTIVE, PlanFinancing.Status.FULLY_PAID],
+    )
+    if exclude_plan_financing_id is not None:
+        financing_qs = financing_qs.exclude(id=exclude_plan_financing_id)
+
+    for plan_financing in financing_qs:
+        if cohort_id in get_cohort_ids_for_iou(plan_financing):
+            return True
+
+    return False
+
+
+def sync_cohort_user_finantial_status_from_plan_financing(plan_financing: PlanFinancing) -> int:
+    """
+    Map PlanFinancing.status onto CohortUser.finantial_status for cohorts in its cohort sets.
+
+    - FULLY_PAID -> FULLY_PAID
+    - ACTIVE -> UP_TO_DATE
+    - PAYMENT_ISSUE / CANCELLED / EXPIRED -> LATE (unless another product covers the cohort)
+    - Other statuses: no-op
+
+    PlanFinancing is the source of truth: an existing CohortUser FULLY_PAID can be overwritten.
+    Returns how many CohortUser rows were updated.
+    """
+    status = plan_financing.status
+    S = PlanFinancing.Status
+    pf_id = plan_financing.id
+    user_id = plan_financing.user_id
+
+    logger.info(
+        "sync_cohort_user_finantial_status start plan_financing_id=%s user_id=%s status=%s",
+        pf_id,
+        user_id,
+        status,
+    )
+
+    if status == S.FULLY_PAID:
+        target = FULLY_PAID
+    elif status == S.ACTIVE:
+        target = UP_TO_DATE
+    elif status in (S.PAYMENT_ISSUE, S.CANCELLED, S.EXPIRED):
+        target = LATE
+    else:
+        logger.info(
+            "sync_cohort_user_finantial_status skip plan_financing_id=%s status=%s reason=unmapped_status",
+            pf_id,
+            status,
+        )
+        return 0
+
+    cohort_ids = get_cohort_ids_for_iou(plan_financing)
+    if not cohort_ids:
+        logger.warning(
+            "sync_cohort_user_finantial_status abort plan_financing_id=%s user_id=%s reason=no_cohort_ids",
+            pf_id,
+            user_id,
+        )
+        return 0
+
+    cohort_users = list(CohortUser.objects.filter(user_id=user_id, cohort_id__in=cohort_ids))
+    if not cohort_users:
+        logger.warning(
+            "sync_cohort_user_finantial_status abort plan_financing_id=%s user_id=%s "
+            "cohort_ids=%s reason=no_cohort_users",
+            pf_id,
+            user_id,
+            sorted(cohort_ids),
+        )
+        return 0
+
+    logger.info(
+        "sync_cohort_user_finantial_status mapping plan_financing_id=%s target=%s "
+        "cohort_ids=%s cohort_user_count=%s",
+        pf_id,
+        target,
+        sorted(cohort_ids),
+        len(cohort_users),
+    )
+
+    covered_cache: dict[int, bool] = {}
+    to_update: list[CohortUser] = []
+
+    for cu in cohort_users:
+        if target == LATE:
+            if cu.cohort_id not in covered_cache:
+                covered_cache[cu.cohort_id] = user_has_active_access_to_cohort(
+                    plan_financing.user,
+                    cu.cohort_id,
+                    exclude_plan_financing_id=plan_financing.id,
+                )
+            if covered_cache[cu.cohort_id]:
+                logger.info(
+                    "sync_cohort_user_finantial_status skip_late plan_financing_id=%s "
+                    "cohort_user_id=%s cohort_id=%s reason=alternative_access",
+                    pf_id,
+                    cu.id,
+                    cu.cohort_id,
+                )
+                continue
+
+        if cu.finantial_status == target:
+            continue
+
+        logger.info(
+            "sync_cohort_user_finantial_status update plan_financing_id=%s cohort_user_id=%s "
+            "cohort_id=%s from=%s to=%s",
+            pf_id,
+            cu.id,
+            cu.cohort_id,
+            cu.finantial_status,
+            target,
+        )
+        cu.finantial_status = target
+        to_update.append(cu)
+
+    if to_update:
+        CohortUser.objects.bulk_update(to_update, ["finantial_status"])
+
+    logger.info(
+        "sync_cohort_user_finantial_status end plan_financing_id=%s user_id=%s "
+        "target=%s updated=%s",
+        pf_id,
+        user_id,
+        target,
+        len(to_update),
+    )
+    return len(to_update)
 
 
 # ------------------------------
