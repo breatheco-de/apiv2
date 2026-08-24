@@ -171,21 +171,10 @@ def get_save_leads():
 
 
 def bind_formentry_with_webhook(webhook):
-    payload = json.loads(webhook.payload)
+    from breathecode.services.activecampaign.actions.resolve_formentry import find_formentry_for_deal_payload
 
-    entry = FormEntry.objects.filter(ac_deal_id=payload["deal[id]"]).order_by("-created_at").first()
-    if entry is None and "deal[contactid]" in payload:
-        entry = (
-            FormEntry.objects.filter(ac_contact_id=payload["deal[contactid]"], ac_deal_id__isnull=True)
-            .order_by("-created_at")
-            .first()
-        )
-    if entry is None and "deal[contact_email]" in payload:
-        entry = (
-            FormEntry.objects.filter(email=payload["deal[contact_email]"], ac_deal_id__isnull=True)
-            .order_by("-created_at")
-            .first()
-        )
+    payload = json.loads(webhook.payload)
+    entry = find_formentry_for_deal_payload(payload, persisted_only=False)
 
     if entry is None:
         return False
