@@ -984,6 +984,69 @@ class PlanFinder:
         return self.get_plans_belongs(**additional_args)
 
 
+# A second PlanFinancing for the same Plan is blocked only while one is still ACTIVE or FULLY_PAID.
+PLAN_FINANCING_STATUSES_BLOCKING_REPURCHASE = (
+    PlanFinancing.Status.ACTIVE,
+    PlanFinancing.Status.FULLY_PAID,
+)
+
+
+def user_blocking_plan_financings(user: User, plan: Plan, *, lock: bool = False) -> QuerySet:
+    """PlanFinancings that still occupy this plan for the user (ACTIVE or FULLY_PAID)."""
+    qs = PlanFinancing.objects.filter(
+        user=user,
+        plans=plan,
+        status__in=PLAN_FINANCING_STATUSES_BLOCKING_REPURCHASE,
+    )
+    if lock:
+        qs = qs.select_for_update()
+    return qs
+
+
+def ensure_user_can_buy_plan_financing(user: User, plans, lang: str | None = "en"):
+    """
+    Block a new PlanFinancing when the user already has an ACTIVE or FULLY_PAID one for the same Plan.
+
+    Any other status (CANCELLED, EXPIRED, PAYMENT_ISSUE, ERROR, ...) allows buying again.
+    If ``lang`` is None, raise AbortTask (Celery). Otherwise raise ValidationException.
+    """
+    from task_manager.core.exceptions import AbortTask
+
+    if isinstance(plans, Plan):
+        plan_list = [plans]
+    else:
+        plan_list = list(plans)
+
+    for plan in plan_list:
+        existing = user_blocking_plan_financings(user, plan).first()
+        if existing is None:
+            continue
+
+        logger.warning(
+            "ensure_user_can_buy_plan_financing blocked user_id=%s plan_id=%s plan_slug=%s "
+            "existing_plan_financing_id=%s status=%s",
+            user.id,
+            plan.id,
+            plan.slug,
+            existing.id,
+            existing.status,
+        )
+        if lang is None:
+            raise AbortTask(
+                f"User {user.id} already has PlanFinancing {existing.id} "
+                f"(status={existing.status}) for plan {plan.slug}"
+            )
+        raise ValidationException(
+            translation(
+                lang,
+                en="You already have an active financing on this plan",
+                es="Ya tienes un financiamiento activo en este plan",
+            ),
+            slug="plan-already-financed",
+            code=400,
+        )
+
+
 def ask_to_add_plan_and_charge_it_in_the_bag(
     plan: Plan,
     user: User,
@@ -1028,17 +1091,9 @@ def ask_to_add_plan_and_charge_it_in_the_bag(
             code=400,
         )
 
-    # avoid financing plans if it was financed before
-    if not plan.is_renewable and PlanFinancing.objects.filter(user=user, plans=plan):
-        raise ValidationException(
-            translation(
-                lang,
-                en="You already have or had a financing on this plan",
-                es="Ya tienes o tuviste un financiamiento en este plan",
-                slug="plan-already-financed",
-            ),
-            code=400,
-        )
+    # Avoid a second financing while one is still ACTIVE or FULLY_PAID.
+    if not plan.is_renewable:
+        ensure_user_can_buy_plan_financing(user, plan, lang=lang)
 
     # avoid to buy a plan if exists a subscription with same plan with remaining days, except for early renewals
     active_subscriptions = subscriptions.filter(
@@ -3361,16 +3416,18 @@ def validate_and_create_subscriptions(
 
     user = resolve_user_from_data(data, lang)
 
-    if PlanFinancing.objects.filter(plans=plan, user=user, valid_until__gt=timezone.now()).exists():
+    try:
+        ensure_user_can_buy_plan_financing(user, plan, lang=lang)
+    except ValidationException as e:
         raise ValidationException(
             translation(
                 lang,
-                en=f"User already has a valid subscription for this plan: {data.get('user')}",
-                es=f"Usuario ya tiene una suscripción válida para este plan: {data.get('user')}",
+                en=f"User already has a valid financing for this plan: {data.get('user')}",
+                es=f"Usuario ya tiene un financiamiento válido para este plan: {data.get('user')}",
                 slug="user-already-has-valid-subscription",
             ),
             code=409,
-        )
+        ) from e
 
     # Get available coupons for this user (excluding their own coupons if they are a seller)
     coupons = get_available_coupons(plan, data.get("coupons", []), user=user)
@@ -5709,6 +5766,8 @@ def build_plan_addons_financings(bag: Bag, invoice: Invoice, lang: str, conversi
         addon_coupons = get_coupons_for_plan(plan, coupons)
         price = get_discounted_price(base_price, addon_coupons)
 
+        ensure_user_can_buy_plan_financing(bag.user, plan, lang=lang)
+
         if plan.time_of_life and plan.time_of_life_unit:
             delta = calculate_relative_delta(plan.time_of_life, plan.time_of_life_unit)
             plan_expires_at = invoice.paid_at + delta
@@ -6733,6 +6792,8 @@ def create_invited_plan_financing_for_user(
     Mirrors staff subscription financing: optional installments, initial payment, grace period.
     ``cohort`` / ``joined_cohorts``: optional; when omitted, financing is created without ``joined_cohorts``.
     """
+    ensure_user_can_buy_plan_financing(user, plan, lang=lang)
+
     if plan.status == Plan.Status.DRAFT:
         raise ValidationException(
             translation(

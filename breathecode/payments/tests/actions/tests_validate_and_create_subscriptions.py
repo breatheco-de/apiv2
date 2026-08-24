@@ -289,6 +289,7 @@ def test_plan_already_exists(database: capy.Database, format: capy.Format, is_re
             "monthly_price": 100,
         },
     )
+    model.plan_financing.plans.add(model.plan)
     data = {"plans": [model.plan.slug], "user": model.user.id, "payment_method": 1}
     academy = 1
 
