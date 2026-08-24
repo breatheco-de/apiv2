@@ -1060,7 +1060,7 @@ class AcademyCohortUserView(APIView, GenerateLookupsMixin):
         if user_id is not None:
             item = CohortUser.objects.filter(
                 cohort__academy__id=academy_id, user__id=user_id, cohort__id=cohort_id
-            ).first()
+            ).select_related("cohort", "user", "source_macro_cohort").first()
             if item is None:
                 raise ValidationException("Cohort user not found", 404)
             tasks = request.GET.get("tasks", None)
@@ -3430,6 +3430,7 @@ class UserMicroCohortsSyncView(APIView):
                 role=user_macro_cohort.role,
                 finantial_status=user_macro_cohort.finantial_status,
                 educational_status=user_macro_cohort.educational_status,
+                source_macro_cohort=macro_cohort,
             )
             added_count += 1
             micro_cohorts_added.append(

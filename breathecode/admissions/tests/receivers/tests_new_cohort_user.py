@@ -33,6 +33,7 @@ def test_with_one_micro_cohort(enable_signals, bc: Breathecode):
             "id": 2,
             "cohort_id": 1,
             "finantial_status": "FULLY_PAID",
+            "source_macro_cohort_id": model_main_cohort.cohort.id,
         },
     ]
 
@@ -62,12 +63,14 @@ def test_with_many_micro_cohorts(enable_signals, bc: Breathecode):
             "id": 2,
             "cohort_id": 1,
             "finantial_status": "FULLY_PAID",
+            "source_macro_cohort_id": model_main_cohort.cohort.id,
         },
         {
             **bc.format.to_dict(model_main_cohort.cohort_user),
             "id": 3,
             "cohort_id": 2,
             "finantial_status": "FULLY_PAID",
+            "source_macro_cohort_id": model_main_cohort.cohort.id,
         },
     ]
 

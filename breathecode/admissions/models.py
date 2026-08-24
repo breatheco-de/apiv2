@@ -741,6 +741,16 @@ class CohortUser(models.Model):
         max_length=15, choices=EDU_STATUS, default=ACTIVE, null=True, blank=True, db_index=True
     )
 
+    source_macro_cohort = models.ForeignKey(
+        Cohort,
+        on_delete=models.SET_NULL,
+        default=None,
+        null=True,
+        blank=True,
+        related_name="sourced_micro_cohort_users",
+        help_text="Macro cohort this micro enrollment was created from. Null means legacy or ambiguous.",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
