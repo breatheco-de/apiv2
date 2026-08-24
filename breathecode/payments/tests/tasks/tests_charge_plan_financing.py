@@ -1397,3 +1397,53 @@ class PaymentsTestSuite(PaymentsTestCase):
         pf = self.bc.database.list_of("payments.PlanFinancing")[0]
         self.assertEqual(pf["status"], "FULLY_PAID")
         tasks.renew_plan_financing_consumables.delay.assert_called_once_with(1)
+
+    @patch("logging.Logger.info", MagicMock())
+    @patch("logging.Logger.error", MagicMock())
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    @patch("breathecode.payments.signals.revoke_plan_permissions.send_robust")
+    @patch("breathecode.payments.signals.sync_cohort_user_finantial_status.send_robust")
+    def test_cancelled_due_emits_revoke_and_sync(self, mock_sync, mock_revoke):
+        plan_financing = {
+            "status": "CANCELLED",
+            "valid_until": UTC_NOW + relativedelta(months=3),
+            "next_payment_at": UTC_NOW - relativedelta(days=1),
+            "monthly_price": 100.0,
+            "how_many_installments": 3,
+            "plan_expires_at": UTC_NOW + relativedelta(months=12),
+        }
+        self.bc.database.create(
+            plan_financing=plan_financing,
+            plan={"is_renewable": False, "time_of_life": 1, "time_of_life_unit": "MONTH"},
+            user=1,
+        )
+
+        charge_plan_financing.delay(1)
+
+        mock_revoke.assert_called()
+        mock_sync.assert_called()
+
+    @patch("logging.Logger.info", MagicMock())
+    @patch("logging.Logger.error", MagicMock())
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    @patch("breathecode.payments.signals.revoke_plan_permissions.send_robust")
+    @patch("breathecode.payments.signals.sync_cohort_user_finantial_status.send_robust")
+    def test_cancelled_before_next_payment_skips_revoke_and_sync(self, mock_sync, mock_revoke):
+        plan_financing = {
+            "status": "CANCELLED",
+            "valid_until": UTC_NOW + relativedelta(months=3),
+            "next_payment_at": UTC_NOW + relativedelta(months=1),
+            "monthly_price": 100.0,
+            "how_many_installments": 3,
+            "plan_expires_at": UTC_NOW + relativedelta(months=12),
+        }
+        self.bc.database.create(
+            plan_financing=plan_financing,
+            plan={"is_renewable": False, "time_of_life": 1, "time_of_life_unit": "MONTH"},
+            user=1,
+        )
+
+        charge_plan_financing.delay(1)
+
+        mock_revoke.assert_not_called()
+        mock_sync.assert_not_called()
