@@ -2606,8 +2606,9 @@ class PlanFinancing(AbstractIOweYou):
                 signals.grant_plan_permissions.send_robust(instance=self, sender=self.__class__)
 
             if self.status == self.Status.CANCELLED:
-                # Revoke when the billing tick runs (charge_plan_financing) after next_payment_at.
+                # Revoke (and LATE) when the billing tick runs after next_payment_at.
                 # If that moment already passed, revoke immediately.
+                # CohortUser LATE is gated inside sync_cohort_user_finantial_status_from_plan_financing.
                 cutoff = self.next_payment_at
                 if not cutoff or cutoff <= timezone.now():
                     signals.revoke_plan_permissions.send_robust(instance=self, sender=self.__class__)

@@ -1104,6 +1104,9 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                     from breathecode.payments import signals
 
                     signals.revoke_plan_permissions.send_robust(instance=plan_financing, sender=PlanFinancing)
+                    signals.sync_cohort_user_finantial_status.send_robust(
+                        instance=plan_financing, sender=PlanFinancing
+                    )
                 raise AbortTask(
                     f"PlanFinancing with id {plan_financing_id} is in status {plan_financing.status} and cannot be charged"
                 )

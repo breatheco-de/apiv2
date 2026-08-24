@@ -73,9 +73,19 @@ class SyncCohortUserFinantialStatusTestSuite(PaymentsTestCase):
         self.assertEqual(updated, 1)
         self.assertEqual(self._covered_cohort_user(model).finantial_status, "LATE")
 
-    def test_cancelled_sets_late(self):
+    def test_cancelled_before_next_payment_does_not_set_late(self):
         model = self._setup(financing_status="CANCELLED", finantial_status="UP_TO_DATE")
         updated = sync_cohort_user_finantial_status_from_plan_financing(model.plan_financing)
+        self.assertEqual(updated, 0)
+        self.assertEqual(self._covered_cohort_user(model).finantial_status, "UP_TO_DATE")
+
+    def test_cancelled_after_next_payment_sets_late(self):
+        model = self._setup(financing_status="CANCELLED", finantial_status="UP_TO_DATE")
+        financing = model.plan_financing
+        financing.next_payment_at = timezone.now() - relativedelta(days=1)
+        financing.save(update_fields=["next_payment_at"])
+
+        updated = sync_cohort_user_finantial_status_from_plan_financing(financing)
         self.assertEqual(updated, 1)
         self.assertEqual(self._covered_cohort_user(model).finantial_status, "LATE")
 
@@ -208,3 +218,23 @@ class SyncCohortUserFinantialStatusTestSuite(PaymentsTestCase):
         mock_send.assert_called()
         self.assertEqual(mock_send.call_args.kwargs["instance"].id, financing.id)
         self.assertEqual(mock_send.call_args.kwargs["sender"], PlanFinancing)
+
+    def test_save_cancelled_before_next_payment_keeps_up_to_date(self):
+        model = self._setup(financing_status="ACTIVE", finantial_status="UP_TO_DATE")
+        financing = model.plan_financing
+        financing.status = PlanFinancing.Status.CANCELLED
+        financing.save()
+
+        # Even if the sync signal runs immediately, LATE waits for next_payment_at.
+        sync_cohort_user_finantial_status_from_plan_financing(financing)
+        self.assertEqual(self._covered_cohort_user(model).finantial_status, "UP_TO_DATE")
+
+    def test_save_cancelled_after_next_payment_sets_late(self):
+        model = self._setup(financing_status="ACTIVE", finantial_status="UP_TO_DATE")
+        financing = model.plan_financing
+        financing.next_payment_at = timezone.now() - relativedelta(days=1)
+        financing.status = PlanFinancing.Status.CANCELLED
+        financing.save()
+
+        sync_cohort_user_finantial_status_from_plan_financing(financing)
+        self.assertEqual(self._covered_cohort_user(model).finantial_status, "LATE")

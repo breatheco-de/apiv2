@@ -5951,7 +5951,9 @@ def sync_cohort_user_finantial_status_from_plan_financing(plan_financing: PlanFi
 
     - FULLY_PAID -> FULLY_PAID
     - ACTIVE -> UP_TO_DATE
-    - PAYMENT_ISSUE / CANCELLED / EXPIRED -> LATE (unless another product covers the cohort)
+    - PAYMENT_ISSUE / EXPIRED -> LATE (unless another product covers the cohort)
+    - CANCELLED -> LATE only after next_payment_at (same cutoff as revoke_plan_permissions).
+      Until that date the student already paid the current cycle, so CohortUser stays unchanged.
     - Other statuses: no-op
 
     PlanFinancing is the source of truth: an existing CohortUser FULLY_PAID can be overwritten.
@@ -5963,17 +5965,30 @@ def sync_cohort_user_finantial_status_from_plan_financing(plan_financing: PlanFi
     user_id = plan_financing.user_id
 
     logger.info(
-        "sync_cohort_user_finantial_status start plan_financing_id=%s user_id=%s status=%s",
+        "sync_cohort_user_finantial_status start plan_financing_id=%s user_id=%s status=%s "
+        "next_payment_at=%s",
         pf_id,
         user_id,
         status,
+        plan_financing.next_payment_at,
     )
 
     if status == S.FULLY_PAID:
         target = FULLY_PAID
     elif status == S.ACTIVE:
         target = UP_TO_DATE
-    elif status in (S.PAYMENT_ISSUE, S.CANCELLED, S.EXPIRED):
+    elif status == S.CANCELLED:
+        cutoff = plan_financing.next_payment_at
+        if cutoff and cutoff > timezone.now():
+            logger.info(
+                "sync_cohort_user_finantial_status skip plan_financing_id=%s status=CANCELLED "
+                "reason=period_not_ended next_payment_at=%s",
+                pf_id,
+                cutoff,
+            )
+            return 0
+        target = LATE
+    elif status in (S.PAYMENT_ISSUE, S.EXPIRED):
         target = LATE
     else:
         logger.info(
