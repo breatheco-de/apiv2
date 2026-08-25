@@ -93,3 +93,50 @@ def resolve_asset_id_from_payload_value(raw) -> int | None:
 
 def resolve_asset_from_payload_asset_id(raw) -> Asset | None:
     return _select_asset_for_candidate_ids(parse_asset_id_candidates(raw))
+
+
+def translation_slugs_for_asset(asset: Asset) -> set[str]:
+    """Slugs of this asset plus its canonical translation group."""
+    canonical = asset.get_canonical_translation_asset()
+    slugs = {canonical.slug, asset.slug}
+    slugs.update(elem.slug for elem in canonical.all_translations.all() if elem and elem.slug)
+    return {slug for slug in slugs if slug}
+
+
+def collect_learnpack_candidate_assets(payload: dict | None) -> list[Asset]:
+    """
+    All registry assets that may belong to this LearnPack event.
+
+    LearnPack can send several asset ids for one package (translations + duplicates).
+    We keep every candidate and also pull siblings that share ``learnpack_id``.
+    """
+    from breathecode.registry.models import Asset
+
+    if not payload or not isinstance(payload, dict):
+        return []
+
+    raw = get_asset_id_raw_from_learnpack_payload(payload)
+    ids = parse_asset_id_candidates(raw)
+    by_id: dict[int, Asset] = {}
+    if ids:
+        for asset in Asset.objects.filter(id__in=ids):
+            by_id[asset.id] = asset
+
+    slug = payload.get("slug") or payload.get("package_slug")
+    if slug:
+        by_slug = Asset.get_by_slug(slug)
+        if by_slug is not None:
+            by_id[by_slug.id] = by_slug
+
+    learnpack_ids: set[int] = {asset.learnpack_id for asset in by_id.values() if asset.learnpack_id}
+    if "package_id" in payload:
+        try:
+            learnpack_ids.add(int(payload["package_id"]))
+        except (TypeError, ValueError):
+            pass
+
+    if learnpack_ids:
+        for asset in Asset.objects.filter(learnpack_id__in=learnpack_ids):
+            by_id[asset.id] = asset
+
+    return list(by_id.values())
