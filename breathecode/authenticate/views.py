@@ -3016,6 +3016,16 @@ def sync_gitpod_users_view(request):
 
 def reset_password_view(request):
 
+    def render_reset_password(form, redirect_url=None):
+        return shortcuts.render(
+            request,
+            "reset_password.html",
+            {
+                "form": form,
+                "redirect_url": redirect_url if redirect_url is not None else request.GET.get("url", None),
+            },
+        )
+
     if request.method == "POST":
         _dict = request.POST.copy()
         # Use ResetPasswordForm for POST to only handle email submission
@@ -3023,13 +3033,12 @@ def reset_password_view(request):
 
         if "email" not in _dict or _dict["email"] == "":
             messages.error(request, "Email is required")
-            # Pass the correct form instance to the template
-            return shortcuts.render(request, "form.html", {"form": form})
+            return render_reset_password(form, request.POST.get("callback", None) or request.POST.get("url", None))
 
         # If ResetPasswordForm has validation (e.g., email format)
         if not form.is_valid():
             messages.error(request, "Invalid email format.")
-            return shortcuts.render(request, "form.html", {"form": form})
+            return render_reset_password(form, request.POST.get("callback", None) or request.POST.get("url", None))
 
         users = User.objects.filter(email__iexact=_dict["email"])
         if users.exists():
@@ -3043,9 +3052,9 @@ def reset_password_view(request):
             return shortcuts.render(request, "message.html", {"MESSAGE": "Check your email for a password reset!"})
     else:  # GET request
         _dict = request.GET.copy()
-        _dict["callback"] = request.GET.get("callback", "")
+        _dict["callback"] = request.GET.get("callback", "") or request.GET.get("url", "")
         form = ResetPasswordForm(_dict)
-        return shortcuts.render(request, "form.html", {"form": form})
+        return render_reset_password(form)
 
 
 def pick_password(request, token):
