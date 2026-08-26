@@ -23,7 +23,7 @@ Students use **two parallel authorization layers**. Both may appear on `GET /v1/
 | **Dynamic?** | Changes when role/capability assignment changes per academy | Groups change via enrollment, plan, seat, mentor signals — not directly assignable via auth API |
 
 - **Login token**: Main API token returned by login flows; send it as `Authorization: Token <token>`.
-- **Universal hosted login**: API-hosted HTML login for **cross-app browser authentication**. Other BreatheCode apps redirect users to `GET /v1/auth/view/login?url=<callback>` instead of building their own login UI. The `url` query param is the callback where the user returns after success (plain HTTPS or Base64-encoded — API auto-detects). Returns the same `login` token as `POST /v1/auth/login/`; successful auth redirects to `<callback>?token=<login_token>&attempt=1`.
+- **Universal hosted login**: API-hosted HTML login for **cross-app browser authentication**. Other BreatheCode apps redirect users to `GET /v1/auth/view/login?url=<callback>` instead of building their own login UI. The `url` query param is the callback where the user returns after success (plain HTTPS or Base64-encoded — API auto-detects). Returns the same `login` token as `POST /v1/auth/login/`; successful auth redirects to `<callback>?token=<login_token>&attempt=1`. In production, hosted login uses **Cloudflare Turnstile** when `APPLY_CAPTCHA=true`. Both hosted login and `POST /v1/auth/login/` share **failed-attempt rate limiting** when `LOGIN_RATE_LIMIT_ENABLED=true` (429 / form error after too many bad credentials).
 - **ProfileAcademy**: Anchor for capabilities — every capability check resolves user + academy + role.
 - **Groups** (`Default`, `Student`, `Paid Student`, `Events`, `Classes`, `Mentorships`, `Legacy`, etc.): grant permission codenames independent of which academy the student belongs to. Membership changes as side effects of admissions, payments, and enrollment flows.
 - **Staff**: non-student academy roles use **capabilities only** — see [`bc-authenticate-staff-authentication`](../bc-authenticate-staff-authentication/SKILL.md).
@@ -39,7 +39,7 @@ Students use **two parallel authorization layers**. Both may appear on `GET /v1/
 Other BreatheCode apps authenticate users by redirecting the browser to the API login page instead of building their own login UI. OAuth (`/github`, `/google`) uses a different entrypoint but the same `url` callback pattern — see steps 8–9 below.
 
 1. App redirects user to `GET /v1/auth/view/login?url=<callback>` (`url` required; plain HTTPS or Base64-encoded).
-2. User submits email/password on the API HTML form.
+2. User submits email/password on the API HTML form (Turnstile widget present when `APPLY_CAPTCHA=true`).
 3. API redirects to `<callback>?token=<login_token>&attempt=1`.
 4. App reads `token` from the query string, stores it, and sends `Authorization: Token <token>` on API calls.
 5. Optionally validate with `GET /v1/auth/user/me`.

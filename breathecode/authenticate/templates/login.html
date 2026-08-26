@@ -11,6 +11,10 @@
     {% endif %}
     {% csrf_token %}
     {{ form }}
+    {% if apply_captcha and turnstile_site_key %}
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}"></div>
+    {% endif %}
     <button class="btn btn-primary" type="submit">SEND</button>
     <ul style="text-align: center;">
         <li><a href="/v1/auth/password/reset?url={{ redirect_url }}"">Forgot your password?</a></li>

@@ -272,8 +272,12 @@ https://breathecode.herokuapp.com/v1/auth/view/login?url=https://yourapp.com/aut
 
 **User Flow:**
 1. User is redirected to the login form
-2. User enters email and password
+2. User enters email and password (and completes Cloudflare Turnstile when `APPLY_CAPTCHA=true`)
 3. After successful authentication, user is redirected to your callback URL with token appended
+
+**Bot protection:**
+- When `APPLY_CAPTCHA=true`, the hosted login page renders a Cloudflare Turnstile widget and verifies `cf-turnstile-response` on POST (requires `CLOUDFLARE_TURNSTILE_SITE_KEY` / `CLOUDFLARE_TURNSTILE_SECRET_KEY`).
+- Failed login attempts on both `POST /v1/auth/view/login` and `POST /v1/auth/login/` can be rate-limited when `LOGIN_RATE_LIMIT_ENABLED=true` (defaults: 5 failures / 15 minutes per IP or email). Over-limit API login returns **429** with `silent_code: login-rate-limit-exceeded`.
 
 **Redirect After Success:**
 ```

@@ -445,7 +445,11 @@ class Asset(models.Model):
         default=False, help_text="If true, it will be shown in the landing pages of the website for marketing purposes"
     )
     with_video = models.BooleanField(default=False, db_index=True)
-    graded = models.BooleanField(default=False, db_index=True)
+    graded = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Deprecated. All assets are graded with AI. Do not use this flag to enable grading or telemetry.",
+    )
     gitpod = models.BooleanField(
         default=False,
         help_text="If true, it means it can be opened on cloud provisioning vendors like Gitpod or Codespaces",
