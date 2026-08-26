@@ -2020,7 +2020,7 @@ def build_plan_financing(
 
     utc_now = timezone.now()
     months = bag.how_many_installments
-    plans = bag.plans.all()
+    plans = list(bag.plans.all())
     delta = relativedelta(0)
 
     for plan in plans:
@@ -2034,7 +2034,7 @@ def build_plan_financing(
         if utc_now + new_delta > utc_now + delta:
             delta = new_delta
 
-    plan = bag.plans.first()
+    plan = plans[0] if plans else None
 
     if plan:
         cohort_set = plan.cohort_set
@@ -2088,6 +2088,8 @@ def build_plan_financing(
     else:
         initial_installments_paid = 1
         financing_status = PlanFinancing.Status.ACTIVE
+
+    actions.ensure_user_can_buy_plan_financing(bag.user, plans, lang=None)
 
     financing = PlanFinancing.objects.create(
         user=bag.user,

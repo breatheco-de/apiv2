@@ -5,6 +5,8 @@ Unit tests for create_invited_plan_financing_for_user action.
 from unittest.mock import MagicMock, patch
 
 from capyc.rest_framework.exceptions import ValidationException
+from dateutil.relativedelta import relativedelta
+from django.utils import timezone
 
 from breathecode.payments.actions import create_invited_plan_financing_for_user
 from breathecode.payments.models import Bag, Invoice
@@ -358,3 +360,38 @@ class CreateInvitedPlanFinancingForUserTestSuite(PaymentsTestCase):
                 lang="en",
             )
         self.assertEqual(getattr(cm.exception, "slug", None), "financing-option-not-found")
+
+    @patch("breathecode.payments.tasks.build_plan_financing.delay", MagicMock())
+    def test_rejects_when_user_already_has_active_financing_for_plan(self):
+        utc_now = timezone.now()
+        model = self.bc.database.create(
+            user=1,
+            academy=1,
+            currency=1,
+            cohort={"available_as_saas": True},
+            cohort_set=1,
+            cohort_set_cohort=1,
+            financing_option={"how_many_months": 1, "monthly_price": 1},
+            plan={"is_renewable": False, "time_of_life": 1, "time_of_life_unit": "MONTH", "status": "ACTIVE"},
+            plan_financing={
+                "status": "ACTIVE",
+                "monthly_price": 1,
+                "how_many_installments": 1,
+                "valid_until": utc_now + relativedelta(months=1),
+                "next_payment_at": utc_now + relativedelta(months=1),
+                "plan_expires_at": utc_now + relativedelta(months=12),
+            },
+        )
+        model.plan_financing.plans.add(model.plan)
+
+        with self.assertRaises(ValidationException) as cm:
+            create_invited_plan_financing_for_user(
+                user=model.user,
+                plan=model.plan,
+                academy=model.academy,
+                cohort=model.cohort,
+                payment_method=None,
+                author=None,
+                lang="en",
+            )
+        self.assertEqual(getattr(cm.exception, "slug", None), "plan-already-financed")
