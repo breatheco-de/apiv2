@@ -173,8 +173,22 @@ heroku run "python -m celery -A breathecode.celery inspect ping" --app breatheco
 heroku ps --app breathecode
 ```
 
+### Límite de tasks pesadas por dyno
+
+Usa `@limit_per_dyno(n)` debajo de `@task` cuando una task es pesada y no quieres N copias a la vez en el mismo dyno. `n` se recorta a `CELERY_MAX_WORKERS`. Si no hay cupo, `RetryTask`.
+
+```python
+from breathecode.utils.decorators import TaskPriority, limit_per_dyno
+
+@task(bind=True, priority=TaskPriority.ACTIVITY.value)
+@limit_per_dyno(2)
+def upload_activities(self, ...):
+    ...
+```
+
 ### Configuración Recomendada
-- Mantener `CELERY_MIN_WORKERS` y `CELERY_MAX_WORKERS` balanceados
+- Mantener `CELERY_MIN_WORKERS` y `CELERY_MAX_WORKERS` balanceados (pocos hijos por dyno de 1 GB)
+- Limitar tasks pesadas con `@limit_per_dyno`
 - Monitorear logs de workers regularmente
 - Verificar conexión al broker periódicamente
 

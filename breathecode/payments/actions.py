@@ -29,7 +29,15 @@ from task_manager.core.exceptions import AbortTask, RetryTask
 from task_manager.django.actions import schedule_task
 
 from breathecode.admissions import tasks as admissions_tasks
-from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
+from breathecode.admissions.models import (
+    FULLY_PAID,
+    LATE,
+    UP_TO_DATE,
+    Academy,
+    Cohort,
+    CohortUser,
+    Syllabus,
+)
 from breathecode.authenticate.actions import get_app_url, get_invite_url, get_user_settings
 from breathecode.authenticate.models import ProfileAcademy, Role, UserInvite, UserSetting
 from breathecode.marketing.actions import validate_email_local
@@ -82,6 +90,64 @@ from .models import (
 )
 
 logger = getLogger(__name__)
+
+
+@transaction.atomic
+def duplicate_plan(original_plan: Plan, *, slug: str | None = None, title: str | None = None) -> Plan:
+    """Duplicate a plan and its reusable configuration."""
+    new_slug = slug
+    if new_slug is None:
+        base_slug = re.sub(r"-\d+$", "", original_plan.slug)
+        counter = 2
+
+        while True:
+            suffix = f"-{counter}"
+            new_slug = f"{base_slug[: Plan._meta.get_field('slug').max_length - len(suffix)]}{suffix}"
+            if not Plan.objects.filter(slug=new_slug).exists():
+                break
+            counter += 1
+
+    new_plan = Plan.objects.create(
+        slug=new_slug,
+        title=original_plan.title if title is None else title,
+        status=original_plan.status,
+        discontinued_reason=original_plan.discontinued_reason,
+        owner=original_plan.owner,
+        is_onboarding=original_plan.is_onboarding,
+        has_waiting_list=original_plan.has_waiting_list,
+        exclude_from_referral_program=original_plan.exclude_from_referral_program,
+        is_renewable=original_plan.is_renewable,
+        trial_duration=original_plan.trial_duration,
+        trial_duration_unit=original_plan.trial_duration_unit,
+        time_of_life=original_plan.time_of_life,
+        time_of_life_unit=original_plan.time_of_life_unit,
+        seat_service_price=original_plan.seat_service_price,
+        consumption_strategy=original_plan.consumption_strategy,
+        currency=original_plan.currency,
+        price_per_month=original_plan.price_per_month,
+        price_per_quarter=original_plan.price_per_quarter,
+        price_per_half=original_plan.price_per_half,
+        price_per_year=original_plan.price_per_year,
+        cohort_set=original_plan.cohort_set,
+        mentorship_service_set=original_plan.mentorship_service_set,
+        event_type_set=original_plan.event_type_set,
+        pricing_ratio_exceptions=original_plan.pricing_ratio_exceptions,
+        features=original_plan.features,
+    )
+
+    new_plan.financing_options.set(original_plan.financing_options.all())
+    new_plan.add_ons.set(original_plan.add_ons.all())
+    new_plan.plan_addons.set(original_plan.plan_addons.all())
+    new_plan.invites.set(original_plan.invites.all())
+    PlanServiceItem.objects.bulk_create(
+        [
+            PlanServiceItem(plan=new_plan, service_item_id=service_item_id)
+            for service_item_id in original_plan.service_items.values_list("id", flat=True)
+        ]
+    )
+
+    return new_plan
+
 
 # Schedule charge tasks a few seconds after `next_payment_at` so execution time is strictly
 # past the deadline (avoids clock skew and ``next_payment_at > utc_now`` in charge tasks).
@@ -5835,6 +5901,180 @@ def user_has_active_4geeks_plus_plans(user: User) -> bool:
             return True
 
     return False
+
+
+def get_cohort_ids_for_iou(resource: Subscription | PlanFinancing) -> set[int]:
+    """Cohort IDs covered by selected_cohort_set and each plan.cohort_set."""
+    cohort_ids: set[int] = set()
+
+    if resource.selected_cohort_set_id:
+        cohort_ids.update(resource.selected_cohort_set.cohorts.values_list("id", flat=True))
+
+    for plan in resource.plans.all():
+        if plan.cohort_set_id:
+            cohort_ids.update(plan.cohort_set.cohorts.values_list("id", flat=True))
+
+    return cohort_ids
+
+
+def user_has_active_access_to_cohort(
+    user: User,
+    cohort_id: int,
+    *,
+    exclude_plan_financing_id: int | None = None,
+) -> bool:
+    """
+    True if the user has another product that still grants access to this cohort:
+    an ACTIVE Subscription, or another PlanFinancing in ACTIVE/FULLY_PAID.
+    """
+    for subscription in Subscription.objects.filter(user=user, status=Subscription.Status.ACTIVE):
+        if cohort_id in get_cohort_ids_for_iou(subscription):
+            return True
+
+    financing_qs = PlanFinancing.objects.filter(
+        user=user,
+        status__in=[PlanFinancing.Status.ACTIVE, PlanFinancing.Status.FULLY_PAID],
+    )
+    if exclude_plan_financing_id is not None:
+        financing_qs = financing_qs.exclude(id=exclude_plan_financing_id)
+
+    for plan_financing in financing_qs:
+        if cohort_id in get_cohort_ids_for_iou(plan_financing):
+            return True
+
+    return False
+
+
+def sync_cohort_user_finantial_status_from_plan_financing(plan_financing: PlanFinancing) -> int:
+    """
+    Map PlanFinancing.status onto CohortUser.finantial_status for cohorts in its cohort sets.
+
+    - FULLY_PAID -> FULLY_PAID
+    - ACTIVE -> UP_TO_DATE
+    - PAYMENT_ISSUE / EXPIRED -> LATE (unless another product covers the cohort)
+    - CANCELLED -> LATE only after next_payment_at (same cutoff as revoke_plan_permissions).
+      Until that date the student already paid the current cycle, so CohortUser stays unchanged.
+    - Other statuses: no-op
+
+    PlanFinancing is the source of truth: an existing CohortUser FULLY_PAID can be overwritten.
+    Returns how many CohortUser rows were updated.
+    """
+    status = plan_financing.status
+    S = PlanFinancing.Status
+    pf_id = plan_financing.id
+    user_id = plan_financing.user_id
+
+    logger.info(
+        "sync_cohort_user_finantial_status start plan_financing_id=%s user_id=%s status=%s "
+        "next_payment_at=%s",
+        pf_id,
+        user_id,
+        status,
+        plan_financing.next_payment_at,
+    )
+
+    if status == S.FULLY_PAID:
+        target = FULLY_PAID
+    elif status == S.ACTIVE:
+        target = UP_TO_DATE
+    elif status == S.CANCELLED:
+        cutoff = plan_financing.next_payment_at
+        if cutoff and cutoff > timezone.now():
+            logger.info(
+                "sync_cohort_user_finantial_status skip plan_financing_id=%s status=CANCELLED "
+                "reason=period_not_ended next_payment_at=%s",
+                pf_id,
+                cutoff,
+            )
+            return 0
+        target = LATE
+    elif status in (S.PAYMENT_ISSUE, S.EXPIRED):
+        target = LATE
+    else:
+        logger.info(
+            "sync_cohort_user_finantial_status skip plan_financing_id=%s status=%s reason=unmapped_status",
+            pf_id,
+            status,
+        )
+        return 0
+
+    cohort_ids = get_cohort_ids_for_iou(plan_financing)
+    if not cohort_ids:
+        logger.warning(
+            "sync_cohort_user_finantial_status abort plan_financing_id=%s user_id=%s reason=no_cohort_ids",
+            pf_id,
+            user_id,
+        )
+        return 0
+
+    cohort_users = list(CohortUser.objects.filter(user_id=user_id, cohort_id__in=cohort_ids))
+    if not cohort_users:
+        logger.warning(
+            "sync_cohort_user_finantial_status abort plan_financing_id=%s user_id=%s "
+            "cohort_ids=%s reason=no_cohort_users",
+            pf_id,
+            user_id,
+            sorted(cohort_ids),
+        )
+        return 0
+
+    logger.info(
+        "sync_cohort_user_finantial_status mapping plan_financing_id=%s target=%s "
+        "cohort_ids=%s cohort_user_count=%s",
+        pf_id,
+        target,
+        sorted(cohort_ids),
+        len(cohort_users),
+    )
+
+    covered_cache: dict[int, bool] = {}
+    to_update: list[CohortUser] = []
+
+    for cu in cohort_users:
+        if target == LATE:
+            if cu.cohort_id not in covered_cache:
+                covered_cache[cu.cohort_id] = user_has_active_access_to_cohort(
+                    plan_financing.user,
+                    cu.cohort_id,
+                    exclude_plan_financing_id=plan_financing.id,
+                )
+            if covered_cache[cu.cohort_id]:
+                logger.info(
+                    "sync_cohort_user_finantial_status skip_late plan_financing_id=%s "
+                    "cohort_user_id=%s cohort_id=%s reason=alternative_access",
+                    pf_id,
+                    cu.id,
+                    cu.cohort_id,
+                )
+                continue
+
+        if cu.finantial_status == target:
+            continue
+
+        logger.info(
+            "sync_cohort_user_finantial_status update plan_financing_id=%s cohort_user_id=%s "
+            "cohort_id=%s from=%s to=%s",
+            pf_id,
+            cu.id,
+            cu.cohort_id,
+            cu.finantial_status,
+            target,
+        )
+        cu.finantial_status = target
+        to_update.append(cu)
+
+    if to_update:
+        CohortUser.objects.bulk_update(to_update, ["finantial_status"])
+
+    logger.info(
+        "sync_cohort_user_finantial_status end plan_financing_id=%s user_id=%s "
+        "target=%s updated=%s",
+        pf_id,
+        user_id,
+        target,
+        len(to_update),
+    )
+    return len(to_update)
 
 
 # ------------------------------

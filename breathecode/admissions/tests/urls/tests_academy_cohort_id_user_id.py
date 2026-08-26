@@ -9,12 +9,28 @@ from django.urls.base import reverse_lazy
 from django.utils import timezone
 from rest_framework import status
 
+from breathecode.admissions.models import CohortUser
+from breathecode.admissions.services.completion import evaluate_cohort_user_completion
 from ..mixins import AdmissionsTestCase
 
 UTC_NOW = timezone.now()
 
 
+def _source_macro_payload(cohort_user):
+    if cohort_user is None or cohort_user.source_macro_cohort is None:
+        return None
+    cohort = cohort_user.source_macro_cohort
+    return {"id": cohort.id, "slug": cohort.slug, "name": cohort.name}
+
+
+def _completion_payload(cohort_user):
+    if cohort_user is None:
+        return None
+    return evaluate_cohort_user_completion(cohort_user)
+
+
 def post_serializer(self, cohort, user, profile_academy=None, data={}):
+    cohort_user = CohortUser.objects.filter(id=data.get("id", 1)).first()
     return {
         "cohort": {
             "ending_date": cohort.ending_date,
@@ -27,6 +43,8 @@ def post_serializer(self, cohort, user, profile_academy=None, data={}):
             "stage": cohort.stage,
             "available_as_saas": cohort.available_as_saas,
             "shortcuts": cohort.shortcuts,
+            "micro_cohorts": list(cohort.micro_cohorts.values_list("id", flat=True)),
+            "syllabus_version": None,
         },
         "created_at": self.bc.datetime.to_iso_string(UTC_NOW),
         "updated_at": self.bc.datetime.to_iso_string(UTC_NOW),
@@ -53,6 +71,8 @@ def post_serializer(self, cohort, user, profile_academy=None, data={}):
             "last_login": user.last_login,
         },
         "watching": False,
+        "source_macro_cohort": _source_macro_payload(cohort_user),
+        "completion": _completion_payload(cohort_user),
         **data,
     }
 
@@ -66,6 +86,8 @@ def cohort_user_field(data={}):
         "role": "STUDENT",
         "user_id": 0,
         "watching": False,
+        "history_log": {},
+        "source_macro_cohort_id": None,
         **data,
     }
 
@@ -83,6 +105,8 @@ def put_serializer(self, cohort_user, cohort, user, profile_academy=None, data={
             "stage": cohort.stage,
             "available_as_saas": cohort.available_as_saas,
             "shortcuts": cohort.shortcuts,
+            "micro_cohorts": list(cohort.micro_cohorts.values_list("id", flat=True)),
+            "syllabus_version": None,
         },
         "created_at": self.bc.datetime.to_iso_string(cohort_user.created_at),
         "updated_at": self.bc.datetime.to_iso_string(cohort_user.updated_at),
@@ -109,6 +133,8 @@ def put_serializer(self, cohort_user, cohort, user, profile_academy=None, data={
             "last_login": user.last_login,
         },
         "watching": cohort_user.watching,
+        "source_macro_cohort": _source_macro_payload(cohort_user),
+        "completion": _completion_payload(cohort_user),
         **data,
     }
 
@@ -181,6 +207,7 @@ def check_cohort_user_that_not_have_role_student_can_be_teacher(self, role, upda
                     "role": "TEACHER",
                     "user_id": 1,
                     "watching": False,
+                    "source_macro_cohort_id": None,
                 }
             ],
         )
@@ -259,6 +286,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "user_id": 1,
                     "watching": False,
                     "history_log": {},
+                    "source_macro_cohort_id": None,
                 }
             ],
         )
@@ -330,6 +358,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "user_id": 1,
                     "watching": False,
                     "history_log": {},
+                    "source_macro_cohort_id": None,
                 },
                 {
                     "cohort_id": 2,
@@ -340,6 +369,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "user_id": 1,
                     "watching": False,
                     "history_log": {},
+                    "source_macro_cohort_id": None,
                 },
             ],
         )
@@ -381,6 +411,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     **self.model_to_dict(model, "cohort_user"),
                     "role": "STUDENT",
                     "watching": False,
+                    "source_macro_cohort_id": None,
                 }
             ],
         )
@@ -457,6 +488,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     **self.model_to_dict(model, "cohort_user"),
                     "role": "TEACHER",
                     "watching": False,
+                    "source_macro_cohort_id": None,
                 }
             ],
         )

@@ -1588,6 +1588,29 @@ class ServiceItemUpdateSerializer(serializers.ModelSerializer):
         return instance
 
 
+class DuplicatePlanSerializer(serializers.Serializer):
+    slug = serializers.SlugField(required=False, max_length=60)
+    title = serializers.CharField(required=False, allow_blank=True, max_length=100)
+
+    def __init__(self, *args, **kwargs):
+        self.lang = kwargs.pop("lang", "en")
+        super().__init__(*args, **kwargs)
+
+    def validate_slug(self, value):
+        if Plan.objects.filter(slug=value).exists():
+            raise ValidationException(
+                translation(
+                    self.lang,
+                    en="A plan with this slug already exists",
+                    es="Ya existe un plan con este slug",
+                    slug="slug-already-exists",
+                ),
+                code=400,
+            )
+
+        return value
+
+
 class PlanSerializer(serializers.ModelSerializer):
     status_fields = ["status", "renew_every_unit", "trial_duration_unit", "time_of_life_unit"]
 

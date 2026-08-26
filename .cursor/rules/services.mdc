@@ -7,3 +7,4 @@ alwaysApply: true
 # Services
 
 - breathecode/services/\*\* shared third party services
+- Screenshots: Cloudflare Browser Run (`breathecode/services/cloudflare/browser_run.py`), not Screenshot Machine. Env: `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`.

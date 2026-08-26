@@ -1282,3 +1282,168 @@ class PaymentsTestSuite(PaymentsTestCase):
         charge_tasks = [t for t in scheduled if t["task_name"] == "charge_plan_financing"]
         self.assertEqual(len(charge_tasks), 1)
         self.assertEqual(charge_tasks[0]["status"], "PENDING")
+
+    @patch("logging.Logger.info", MagicMock())
+    @patch("logging.Logger.error", MagicMock())
+    @patch("breathecode.payments.tasks.renew_plan_financing_consumables.delay", MagicMock())
+    @patch("mixer.main.LOGGER.info", MagicMock())
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test_reconcile_active_plan_when_installments_already_paid(self):
+        """ACTIVE + installments_paid >= how_many_installments must reconcile to FULLY_PAID without charging."""
+        plan_financing = {
+            "valid_until": UTC_NOW + relativedelta(months=6),
+            "next_payment_at": UTC_NOW + relativedelta(days=20),
+            "monthly_price": 15000.0,
+            "how_many_installments": 1,
+            "installments_paid": 1,
+            "plan_expires_at": UTC_NOW + relativedelta(months=12),
+        }
+        plan = {"is_renewable": False, "time_of_life": 12, "time_of_life_unit": "MONTH"}
+        bag = {"how_many_installments": 1, "was_delivered": True}
+        invoice = {"paid_at": UTC_NOW - relativedelta(days=5), "amount": 15000.0, "status": "FULFILLED"}
+        model = self.bc.database.create(academy=1, plan_financing=plan_financing, invoice=invoice, plan=plan, bag=bag)
+        model.plan_financing.invoices.add(model.invoice)
+
+        with patch("breathecode.payments.services.stripe.Stripe.pay", MagicMock()) as mock_stripe_pay:
+            charge_plan_financing.delay(1)
+
+        mock_stripe_pay.assert_not_called()
+        pf = self.bc.database.list_of("payments.PlanFinancing")[0]
+        self.assertEqual(pf["status"], "FULLY_PAID")
+        self.assertEqual(pf["installments_paid"], 1)
+        # No schedulers/consumables → treat as needs renew (heal empty stock).
+        tasks.renew_plan_financing_consumables.delay.assert_called_once_with(1)
+
+    @patch("logging.Logger.info", MagicMock())
+    @patch("logging.Logger.error", MagicMock())
+    @patch("breathecode.payments.tasks.renew_plan_financing_consumables.delay", MagicMock())
+    @patch("mixer.main.LOGGER.info", MagicMock())
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test_reconcile_active_plan_skips_renew_when_consumables_still_valid(self):
+        """Do not advance consumable cycle mid-window when reconciling ACTIVE → FULLY_PAID."""
+        plan_financing = {
+            "valid_until": UTC_NOW + relativedelta(months=6),
+            "next_payment_at": UTC_NOW + relativedelta(days=20),
+            "monthly_price": 15000.0,
+            "how_many_installments": 1,
+            "installments_paid": 1,
+            "plan_expires_at": UTC_NOW + relativedelta(months=12),
+        }
+        plan = {"is_renewable": False, "time_of_life": 12, "time_of_life_unit": "MONTH"}
+        bag = {"how_many_installments": 1, "was_delivered": True}
+        invoice = {"paid_at": UTC_NOW - relativedelta(days=5), "amount": 15000.0, "status": "FULFILLED"}
+        consumable = {"how_many": 1, "valid_until": UTC_NOW + relativedelta(days=15)}
+        model = self.bc.database.create(
+            academy=1,
+            plan_financing=plan_financing,
+            invoice=invoice,
+            plan=plan,
+            bag=bag,
+            service_item=1,
+            plan_service_item={"plan_id": 1, "service_item_id": 1},
+            plan_service_item_handler={"handler_id": 1},
+            service_stock_scheduler={"subscription_handler_id": None, "plan_handler_id": 1},
+            consumable=consumable,
+        )
+        model.plan_financing.invoices.add(model.invoice)
+        model.service_stock_scheduler.consumables.add(model.consumable)
+
+        with patch("breathecode.payments.services.stripe.Stripe.pay", MagicMock()) as mock_stripe_pay:
+            charge_plan_financing.delay(1)
+
+        mock_stripe_pay.assert_not_called()
+        pf = self.bc.database.list_of("payments.PlanFinancing")[0]
+        self.assertEqual(pf["status"], "FULLY_PAID")
+        tasks.renew_plan_financing_consumables.delay.assert_not_called()
+
+    @patch("logging.Logger.info", MagicMock())
+    @patch("logging.Logger.error", MagicMock())
+    @patch("breathecode.payments.tasks.renew_plan_financing_consumables.delay", MagicMock())
+    @patch("mixer.main.LOGGER.info", MagicMock())
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test_reconcile_active_plan_renews_when_consumables_near_expiry(self):
+        """Renew immediately when reconciling and last consumable is within the cron window."""
+        plan_financing = {
+            "valid_until": UTC_NOW + relativedelta(months=6),
+            "next_payment_at": UTC_NOW - relativedelta(days=1),
+            "monthly_price": 15000.0,
+            "how_many_installments": 1,
+            "installments_paid": 1,
+            "plan_expires_at": UTC_NOW + relativedelta(months=12),
+        }
+        plan = {"is_renewable": False, "time_of_life": 12, "time_of_life_unit": "MONTH"}
+        bag = {"how_many_installments": 1, "was_delivered": True}
+        invoice = {"paid_at": UTC_NOW - relativedelta(days=5), "amount": 15000.0, "status": "FULFILLED"}
+        consumable = {"how_many": 0, "valid_until": UTC_NOW + timedelta(hours=1)}
+        model = self.bc.database.create(
+            academy=1,
+            plan_financing=plan_financing,
+            invoice=invoice,
+            plan=plan,
+            bag=bag,
+            service_item=1,
+            plan_service_item={"plan_id": 1, "service_item_id": 1},
+            plan_service_item_handler={"handler_id": 1},
+            service_stock_scheduler={"subscription_handler_id": None, "plan_handler_id": 1},
+            consumable=consumable,
+        )
+        model.plan_financing.invoices.add(model.invoice)
+        model.service_stock_scheduler.consumables.add(model.consumable)
+
+        with patch("breathecode.payments.services.stripe.Stripe.pay", MagicMock()) as mock_stripe_pay:
+            charge_plan_financing.delay(1)
+
+        mock_stripe_pay.assert_not_called()
+        pf = self.bc.database.list_of("payments.PlanFinancing")[0]
+        self.assertEqual(pf["status"], "FULLY_PAID")
+        tasks.renew_plan_financing_consumables.delay.assert_called_once_with(1)
+
+    @patch("logging.Logger.info", MagicMock())
+    @patch("logging.Logger.error", MagicMock())
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    @patch("breathecode.payments.signals.revoke_plan_permissions.send_robust")
+    @patch("breathecode.payments.signals.sync_cohort_user_finantial_status.send_robust")
+    def test_cancelled_due_emits_revoke_and_sync(self, mock_sync, mock_revoke):
+        plan_financing = {
+            "status": "CANCELLED",
+            "valid_until": UTC_NOW + relativedelta(months=3),
+            "next_payment_at": UTC_NOW - relativedelta(days=1),
+            "monthly_price": 100.0,
+            "how_many_installments": 3,
+            "plan_expires_at": UTC_NOW + relativedelta(months=12),
+        }
+        self.bc.database.create(
+            plan_financing=plan_financing,
+            plan={"is_renewable": False, "time_of_life": 1, "time_of_life_unit": "MONTH"},
+            user=1,
+        )
+
+        charge_plan_financing.delay(1)
+
+        mock_revoke.assert_called()
+        mock_sync.assert_called()
+
+    @patch("logging.Logger.info", MagicMock())
+    @patch("logging.Logger.error", MagicMock())
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    @patch("breathecode.payments.signals.revoke_plan_permissions.send_robust")
+    @patch("breathecode.payments.signals.sync_cohort_user_finantial_status.send_robust")
+    def test_cancelled_before_next_payment_skips_revoke_and_sync(self, mock_sync, mock_revoke):
+        plan_financing = {
+            "status": "CANCELLED",
+            "valid_until": UTC_NOW + relativedelta(months=3),
+            "next_payment_at": UTC_NOW + relativedelta(months=1),
+            "monthly_price": 100.0,
+            "how_many_installments": 3,
+            "plan_expires_at": UTC_NOW + relativedelta(months=12),
+        }
+        self.bc.database.create(
+            plan_financing=plan_financing,
+            plan={"is_renewable": False, "time_of_life": 1, "time_of_life_unit": "MONTH"},
+            user=1,
+        )
+
+        charge_plan_financing.delay(1)
+
+        mock_revoke.assert_not_called()
+        mock_sync.assert_not_called()

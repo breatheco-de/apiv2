@@ -72,7 +72,7 @@ def patch_get(monkeypatch):
     def handler(expected, code, headers):
 
         reader = StreamReaderMock(expected)
-        monkeypatch.setattr("requests.get", MagicMock(return_value=ResponseMock(expected, code, headers)))
+        monkeypatch.setattr("requests.post", MagicMock(return_value=ResponseMock(expected, code, headers)))
 
     yield handler
 
@@ -91,7 +91,15 @@ def test__without_asset(bc: Breathecode, client: APIClient):
 @patch("logging.Logger.error", MagicMock())
 @patch(
     "os.getenv",
-    MagicMock(side_effect=apply_get_env({"GOOGLE_PROJECT_ID": "labor-day-story", "SCREENSHOT_MACHINE_KEY": "000000"})),
+    MagicMock(
+        side_effect=apply_get_env(
+            {
+                "GOOGLE_PROJECT_ID": "labor-day-story",
+                "CLOUDFLARE_ACCOUNT_ID": "test-account",
+                "CLOUDFLARE_API_TOKEN": "test-token",
+            }
+        )
+    ),
 )
 def test__with_asset__bad_function_response(
     bc: Breathecode,
@@ -110,6 +118,7 @@ def test__with_asset__bad_function_response(
     assert Logger.warning.call_args_list == []
 
     assert Logger.error.call_args_list == [
+        call("Cloudflare Browser Run returned status=%s", 400),
         call(
             "Unhandled error with async_create_asset_thumbnail, the cloud function `screenshots` "
             "returns status code 400",
@@ -143,7 +152,8 @@ def test__with_asset__bad_function_response(
             {
                 "GOOGLE_PROJECT_ID": "labor-day-story",
                 "SCREENSHOTS_BUCKET": "random-bucket",
-                "SCREENSHOT_MACHINE_KEY": "000000",
+                "CLOUDFLARE_ACCOUNT_ID": "test-account",
+                "CLOUDFLARE_API_TOKEN": "test-token",
             }
         )
     ),
@@ -200,7 +210,15 @@ def test__with_asset__good_function_response(
 )
 @patch(
     "os.getenv",
-    MagicMock(side_effect=apply_get_env({"GOOGLE_PROJECT_ID": "labor-day-story", "SCREENSHOT_MACHINE_KEY": "000000"})),
+    MagicMock(
+        side_effect=apply_get_env(
+            {
+                "GOOGLE_PROJECT_ID": "labor-day-story",
+                "CLOUDFLARE_ACCOUNT_ID": "test-account",
+                "CLOUDFLARE_API_TOKEN": "test-token",
+            }
+        )
+    ),
 )
 def test__with_asset__with_media__without_asset_category_with_url(
     bc: Breathecode,
@@ -248,7 +266,8 @@ def test__with_asset__with_media__without_asset_category_with_url(
         side_effect=apply_get_env(
             {
                 "GOOGLE_PROJECT_ID": "labor-day-story",
-                "SCREENSHOT_MACHINE_KEY": "000000",
+                "CLOUDFLARE_ACCOUNT_ID": "test-account",
+                "CLOUDFLARE_API_TOKEN": "test-token",
                 "SCREENSHOTS_BUCKET": "random-bucket",
             }
         )
@@ -297,7 +316,18 @@ def test__with_asset__with_media__with_asset_category_with_url(
     download=MagicMock(return_value=bytes("qwerty", "utf-8")),
     create=True,
 )
-@patch("os.getenv", MagicMock(side_effect=apply_get_env({"GOOGLE_PROJECT_ID": "labor-day-story"})))
+@patch(
+    "os.getenv",
+    MagicMock(
+        side_effect=apply_get_env(
+            {
+                "GOOGLE_PROJECT_ID": "labor-day-story",
+                "CLOUDFLARE_ACCOUNT_ID": "test-account",
+                "CLOUDFLARE_API_TOKEN": "test-token",
+            }
+        )
+    ),
+)
 def test__with_asset__with_media__media_for_another_academy(
     bc: Breathecode,
     patch_get,

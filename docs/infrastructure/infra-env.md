@@ -97,7 +97,7 @@ Minimum workers to be up.
 
 ## CELERY_MAX_WORKERS
 
-Maximum workers to be up.
+Maximum workers to be up. Also caps `@limit_per_dyno(n)` so a task cannot request more concurrent runs than prefork children.
 
 ### Default
 
@@ -110,6 +110,7 @@ Maximum workers to be up.
 ### Where it is used
 
 - `scripts/dyno/celeryworker.sh`
+- `breathecode/utils/decorators/task.py` (`@limit_per_dyno`)
 
 ## CELERY_PREFETCH_MULTIPLIER
 

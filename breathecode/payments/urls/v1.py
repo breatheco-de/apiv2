@@ -32,6 +32,7 @@ from ..views import (
     AcademyPlanSubscriptionView,
     AcademyPlanFeaturesView,
     AcademyPlanFeaturesListView,
+    AcademyPlanDuplicateView,
     AcademyPlanSyncFinancingExpirationView,
     AcademyPlanView,
     AcademyPlanOfferView,
@@ -106,6 +107,16 @@ urlpatterns = [
     path("academy/plan", AcademyPlanView.as_view(), name="academy_plan"),
     path("academy/plan/<int:plan_id>", AcademyPlanView.as_view(), name="academy_plan_id"),
     path("academy/plan/<slug:plan_slug>", AcademyPlanView.as_view(), name="academy_plan_slug"),
+    path(
+        "academy/plan/<int:plan_id>/duplicate",
+        AcademyPlanDuplicateView.as_view(),
+        name="academy_plan_id_duplicate",
+    ),
+    path(
+        "academy/plan/<slug:plan_slug>/duplicate",
+        AcademyPlanDuplicateView.as_view(),
+        name="academy_plan_slug_duplicate",
+    ),
     path(
         "academy/planfeatures",
         AcademyPlanFeaturesListView.as_view(),

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from logging import getLogger
 from typing import Any
 
 from django.core.cache import cache
@@ -15,6 +16,7 @@ PARTIAL_COMPLETION = "PARTIAL_COMPLETION"
 LEGACY_PROJECTS = "LEGACY_PROJECTS"
 NO_COMPLETION_STRATEGY = "NO_COMPLETION_STRATEGY"
 COMPLETION_CACHE_TTL_SECONDS = 60 * 10
+logger = getLogger(__name__)
 
 TASK_TYPES = ("PROJECT", "EXERCISE", "LESSON", "QUIZ")
 SYLLABUS_KEY_BY_TASK_TYPE = {
@@ -45,7 +47,13 @@ def _normalize_percent(value: Any, default: float = 100) -> float:
     return percent
 
 
-def _load_syllabus_json(syllabus_version: SyllabusVersion | int | None) -> dict:
+def _load_syllabus_json(
+    syllabus_version: SyllabusVersion | int | None,
+    *,
+    macro_syllabus_json: dict | str | None = None,
+    syllabus_slug: str | None = None,
+    syllabus_version_number: int | str | None = None,
+) -> dict:
     if syllabus_version is None:
         return {"days": []}
 
@@ -58,7 +66,27 @@ def _load_syllabus_json(syllabus_version: SyllabusVersion | int | None) -> dict:
     if isinstance(syllabus_json, str):
         syllabus_json = json.loads(syllabus_json)
 
-    return resolve_syllabus_json(syllabus_json)
+    return resolve_syllabus_json(
+        syllabus_json,
+        macro_syllabus_json=macro_syllabus_json,
+        syllabus_slug=syllabus_slug,
+        syllabus_version=syllabus_version_number,
+    )
+
+
+def _override_kwargs_from_cohort_user(cohort_user: CohortUser) -> dict | None:
+    source_macro = cohort_user.source_macro_cohort
+    cohort = cohort_user.cohort
+    micro_version = cohort.syllabus_version if cohort else None
+    macro_version = source_macro.syllabus_version if source_macro else None
+    if source_macro is None or micro_version is None or macro_version is None or micro_version.syllabus is None:
+        return None
+
+    return {
+        "macro_syllabus_json": macro_version.json,
+        "syllabus_slug": micro_version.syllabus.slug,
+        "syllabus_version_number": micro_version.version,
+    }
 
 
 def get_syllabus_assets_by_type(
@@ -66,8 +94,16 @@ def get_syllabus_assets_by_type(
     *,
     task_types: list[str] | tuple[str, ...] | None = None,
     only_mandatory: bool = False,
+    macro_syllabus_json: dict | str | None = None,
+    syllabus_slug: str | None = None,
+    syllabus_version_number: int | str | None = None,
 ) -> dict[str, set[str]]:
-    syllabus_json = _load_syllabus_json(syllabus_version)
+    syllabus_json = _load_syllabus_json(
+        syllabus_version,
+        macro_syllabus_json=macro_syllabus_json,
+        syllabus_slug=syllabus_slug,
+        syllabus_version_number=syllabus_version_number,
+    )
     task_types = tuple(task_types or TASK_TYPES)
     assets_by_type: dict[str, set[str]] = {task_type: set() for task_type in task_types}
 
@@ -93,11 +129,17 @@ def get_assets_from_syllabus(
     *,
     task_types: list[str] | tuple[str, ...] | None = None,
     only_mandatory: bool = False,
+    macro_syllabus_json: dict | str | None = None,
+    syllabus_slug: str | None = None,
+    syllabus_version_number: int | str | None = None,
 ) -> list[str]:
     assets_by_type = get_syllabus_assets_by_type(
         syllabus_version,
         task_types=task_types,
         only_mandatory=only_mandatory,
+        macro_syllabus_json=macro_syllabus_json,
+        syllabus_slug=syllabus_slug,
+        syllabus_version_number=syllabus_version_number,
     )
     slugs: list[str] = []
     for task_type in task_types or TASK_TYPES:
@@ -105,8 +147,19 @@ def get_assets_from_syllabus(
     return slugs
 
 
-def get_completion_strategy(syllabus_version: SyllabusVersion | int | None) -> dict:
-    syllabus_json = _load_syllabus_json(syllabus_version)
+def get_completion_strategy(
+    syllabus_version: SyllabusVersion | int | None,
+    *,
+    macro_syllabus_json: dict | str | None = None,
+    syllabus_slug: str | None = None,
+    syllabus_version_number: int | str | None = None,
+) -> dict:
+    syllabus_json = _load_syllabus_json(
+        syllabus_version,
+        macro_syllabus_json=macro_syllabus_json,
+        syllabus_slug=syllabus_slug,
+        syllabus_version_number=syllabus_version_number,
+    )
     grading_strategy = syllabus_json.get("grading_strategy") or {}
     completion = grading_strategy.get("completion") or syllabus_json.get("completion")
 
@@ -144,6 +197,9 @@ def get_completion_strategy(syllabus_version: SyllabusVersion | int | None) -> d
         syllabus_version,
         task_types=["PROJECT"],
         only_mandatory=True,
+        macro_syllabus_json=macro_syllabus_json,
+        syllabus_slug=syllabus_slug,
+        syllabus_version_number=syllabus_version_number,
     )
     if mandatory_projects:
         return {
@@ -191,17 +247,20 @@ def _is_task_complete(task: Task) -> bool:
     return False
 
 
-def evaluate_cohort_user_completion(cohort_user: CohortUser) -> dict:
+def _evaluate_cohort_user_completion(cohort_user: CohortUser, *, apply_macro_override: bool) -> dict:
     cohort = cohort_user.cohort
-    strategy = get_completion_strategy(cohort.syllabus_version if cohort else None)
+    override_kwargs = _override_kwargs_from_cohort_user(cohort_user) if apply_macro_override else None
+    override_kwargs = override_kwargs or {}
+    strategy = get_completion_strategy(cohort.syllabus_version if cohort else None, **override_kwargs)
     requirements = _requirements_from_strategy(strategy)
 
     assets_by_requirement: dict[str, set[str]] = {}
     for requirement in requirements:
         assets_by_requirement[requirement.task_type] = get_syllabus_assets_by_type(
-            cohort.syllabus_version,
+            cohort.syllabus_version if cohort else None,
             task_types=[requirement.task_type],
             only_mandatory=requirement.only_mandatory,
+            **override_kwargs,
         ).get(requirement.task_type, set())
 
     all_required_slugs = set()
@@ -259,6 +318,7 @@ def evaluate_cohort_user_completion(cohort_user: CohortUser) -> dict:
     return {
         "strategy": strategy,
         "is_complete": requirements_met,
+        "used_macro_override": bool(apply_macro_override and override_kwargs),
         "overall": {
             "total": total_required,
             "completed": completed_required,
@@ -268,6 +328,41 @@ def evaluate_cohort_user_completion(cohort_user: CohortUser) -> dict:
         "pending_required_slugs": pending_required_slugs,
         "pending_required_count": sum(len(slugs) for slugs in pending_required_slugs.values()),
     }
+
+
+def evaluate_cohort_user_completion(cohort_user: CohortUser) -> dict:
+    logger.info(
+        "Evaluating completion cohort_user_id=%s user_id=%s cohort_id=%s source_macro_cohort_id=%s",
+        cohort_user.id,
+        cohort_user.user_id,
+        getattr(cohort_user.cohort, "id", None),
+        cohort_user.source_macro_cohort_id,
+    )
+    legacy = _evaluate_cohort_user_completion(cohort_user, apply_macro_override=False)
+    if legacy["is_complete"]:
+        logger.info(
+            "Completion legacy complete=True cohort_user_id=%s pending=%s",
+            cohort_user.id,
+            legacy["pending_required_count"],
+        )
+        return legacy
+
+    if _override_kwargs_from_cohort_user(cohort_user) is None:
+        logger.info(
+            "Completion legacy incomplete and no source_macro override cohort_user_id=%s pending=%s",
+            cohort_user.id,
+            legacy["pending_required_count"],
+        )
+        return legacy
+
+    override = _evaluate_cohort_user_completion(cohort_user, apply_macro_override=True)
+    logger.info(
+        "Completion override pass cohort_user_id=%s complete=%s pending=%s",
+        cohort_user.id,
+        override["is_complete"],
+        override["pending_required_count"],
+    )
+    return override
 
 
 def get_completion_cache_key(cohort_user: CohortUser) -> str | None:
@@ -281,6 +376,7 @@ def get_completion_cache_key(cohort_user: CohortUser) -> str | None:
         f"cohort_user:{cohort_user.id}:"
         f"user:{cohort_user.user_id}:"
         f"cohort:{cohort.id}:"
+        f"source_macro:{cohort_user.source_macro_cohort_id or 0}:"
         f"syllabus_version:{syllabus_version.id}:"
         f"json:{syllabus_version.hashed_json()}"
     )

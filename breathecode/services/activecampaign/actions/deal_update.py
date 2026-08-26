@@ -1,81 +1,42 @@
 import logging
-from django.utils import timezone
+
+from django.db import transaction
+
 from breathecode.marketing.models import AcademyAlias
+from breathecode.services.activecampaign.actions.resolve_formentry import (
+    bind_deal_to_locked_entry,
+    find_formentry_for_deal_payload,
+)
 
 logger = logging.getLogger(__name__)
 
-status = {
-    "Won": "WON",
-    "Lost": "LOST",
-    "0": None,
-    "1": "WON",
-    "2": "LOST",
-}
 
-
-# FIXME: it's unused
 def deal_update(ac_cls, webhook, payload: dict, acp_ids):
-    # prevent circular dependency import between thousand modules previuosly loaded and cached
     from breathecode.marketing.models import FormEntry
 
-    entry = (
-        FormEntry.objects.filter(ac_deal_id=payload["deal[id]"], storage_status="PERSISTED")
-        .order_by("-created_at")
-        .first()
-    )
-    if entry is None and "deal[contactid]" in payload:
-        entry = (
-            FormEntry.objects.filter(ac_contact_id=payload["deal[contactid]"], storage_status="PERSISTED")
-            .order_by("-created_at")
-            .first()
-        )
-    if entry is None and "deal[contact_email]" in payload:
-        entry = (
-            FormEntry.objects.filter(
-                email=payload["deal[contact_email]"], storage_status__in=["PERSISTED", "MANUALLY_PERSISTED"]
-            )
-            .order_by("-created_at")
-            .first()
-        )
+    entry = find_formentry_for_deal_payload(payload, persisted_only=True)
     if entry is None:
         raise Exception(
             f'Impossible to find formentry with deal {payload["deal[id]"]} for webhook {webhook.id} -> '
             f"{webhook.webhook_type} "
         )
 
-    entry.ac_deal_id = payload["deal[id]"]
-
-    if "contact[id]" in payload:
-        entry.ac_contact_id = payload["contact[id]"]
-
-    if "deal[status]" in payload and payload["deal[status]"] in status:
-
-        # check if we just won or lost the deal
-        if entry.deal_status is None and status[payload["deal[status]"]] == "WON":
-            entry.won_at = timezone.now()
-        elif status[payload["deal[status]"]] != "WON":
-            entry.won_at = None
-
-        entry.deal_status = status[payload["deal[status]"]]
-        entry.ac_deal_owner_id = payload["deal[owner]"]
-        entry.ac_deal_owner_full_name = payload["deal[owner_firstname]"] + " " + payload["deal[owner_lastname]"]
-
-        entry.ac_deal_amount = float(payload["deal[value_raw]"])
-        entry.ac_deal_currency_code = payload["deal[currency]"]
-
-    # lets get the custom fields and use them to update some local fields
     logger.debug("looking for deal on activecampaign api")
-    deal_custom_fields = ac_cls.get_deal_customfields(entry.ac_deal_id)
+    deal_custom_fields = ac_cls.get_deal_customfields(payload["deal[id]"])
 
-    # WARNING: Do not update the utm's back to breathecode, we want to keep the original trace
-    entry = update_expected_cohort(ac_cls, entry, acp_ids, deal_custom_fields)
-    entry = update_location(ac_cls, entry, acp_ids, deal_custom_fields)
-    entry = update_course(ac_cls, entry, acp_ids, deal_custom_fields)
+    with transaction.atomic():
+        locked = FormEntry.objects.select_for_update().get(pk=entry.pk)
+        locked = bind_deal_to_locked_entry(locked, payload)
 
-    entry.custom_fields = deal_custom_fields
-    entry.save()
+        # WARNING: Do not update the utm's back to breathecode, we want to keep the original trace
+        locked = update_expected_cohort(ac_cls, locked, acp_ids, deal_custom_fields)
+        locked = update_location(ac_cls, locked, acp_ids, deal_custom_fields)
+        locked = update_course(ac_cls, locked, acp_ids, deal_custom_fields)
 
-    # update entry on the webhook
+        locked.custom_fields = deal_custom_fields
+        locked.save()
+        entry = locked
+
     webhook.form_entry = entry
     webhook.save()
 
