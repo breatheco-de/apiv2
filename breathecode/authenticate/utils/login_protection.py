@@ -67,6 +67,11 @@ def verify_turnstile_if_enabled(request) -> None:
         return
 
     token = request.POST.get("cf-turnstile-response")
+    if not token and hasattr(request, "data"):
+        data = request.data
+        if hasattr(data, "get"):
+            token = data.get("cf-turnstile-response")
+
     secret = os.getenv("CLOUDFLARE_TURNSTILE_SECRET_KEY", "")
     Turnstile().verify_token(secret_key=secret, token=token, remoteip=get_client_ip(request))
 

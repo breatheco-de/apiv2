@@ -286,3 +286,81 @@ class AuthenticateTestSuite(AuthTestCase):
             response = self.client.post(url, data)
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
             self.assertNotEqual(response.json().get("silent_code"), "login-rate-limit-exceeded")
+
+    @patch("breathecode.activity.tasks.add_activity.delay", MagicMock())
+    @patch(
+        "breathecode.authenticate.utils.login_protection.Turnstile.verify_token",
+        MagicMock(side_effect=Exception("should not be called")),
+    )
+    def test_login_captcha_disabled_skips_turnstile(self):
+        """When APPLY_CAPTCHA is off, login succeeds without a Turnstile token"""
+
+        password = "Pain!$%"
+        user = {"email": "Konan@naruto.io", "password": make_password(password)}
+        user_invite = {"email": "Konan@naruto.io", "status": "ACCEPTED", "is_email_validated": True}
+        model = self.bc.database.create(user=user, user_invite=user_invite)
+
+        url = reverse_lazy("authenticate:login")
+        data = {"email": model.user.email.lower(), "password": password}
+        response = self.client.post(url, data)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("token", response.json())
+
+    @patch("breathecode.activity.tasks.add_activity.delay", MagicMock())
+    @patch.dict(
+        "os.environ",
+        {
+            "APPLY_CAPTCHA": "TRUE",
+            "CLOUDFLARE_TURNSTILE_SECRET_KEY": "test-secret",
+        },
+        clear=False,
+    )
+    def test_login_captcha_enabled_missing_token(self):
+        """When APPLY_CAPTCHA is on, missing Turnstile token returns 400"""
+
+        password = "Pain!$%"
+        user = {"email": "Konan@naruto.io", "password": make_password(password)}
+        user_invite = {"email": "Konan@naruto.io", "status": "ACCEPTED", "is_email_validated": True}
+        model = self.bc.database.create(user=user, user_invite=user_invite)
+
+        url = reverse_lazy("authenticate:login")
+        data = {"email": model.user.email.lower(), "password": password}
+        response = self.client.post(url, data)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        detail = str(response.json().get("detail", ""))
+        self.assertTrue("Turnstile" in detail or "turnstile" in detail.lower() or "CAPTCHA" in detail)
+
+    @patch("breathecode.activity.tasks.add_activity.delay", MagicMock())
+    @patch.dict(
+        "os.environ",
+        {
+            "APPLY_CAPTCHA": "TRUE",
+            "CLOUDFLARE_TURNSTILE_SECRET_KEY": "test-secret",
+        },
+        clear=False,
+    )
+    def test_login_captcha_enabled_with_mocked_verify(self):
+        """When APPLY_CAPTCHA is on, valid credentials + Turnstile token succeed"""
+
+        password = "Pain!$%"
+        user = {"email": "Konan@naruto.io", "password": make_password(password)}
+        user_invite = {"email": "Konan@naruto.io", "status": "ACCEPTED", "is_email_validated": True}
+        model = self.bc.database.create(user=user, user_invite=user_invite)
+
+        with patch(
+            "breathecode.authenticate.utils.login_protection.Turnstile.verify_token",
+            MagicMock(return_value={"success": True}),
+        ) as mock_verify:
+            url = reverse_lazy("authenticate:login")
+            data = {
+                "email": model.user.email.lower(),
+                "password": password,
+                "cf-turnstile-response": "fake-token",
+            }
+            response = self.client.post(url, data)
+
+            mock_verify.assert_called_once()
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertIn("token", response.json())

@@ -1661,6 +1661,8 @@ class LoginView(ObtainAuthToken):
                 silent=True,
             )
 
+        verify_turnstile_if_enabled(request)
+
         serializer = AuthSerializer(data=request.data, context={"request": request})
         if not serializer.is_valid():
             # Only count failed authentication when both credentials were provided
