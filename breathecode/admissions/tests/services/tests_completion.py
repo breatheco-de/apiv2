@@ -4,6 +4,7 @@ from django.core.cache import cache
 from breathecode.admissions.services.completion import (
     evaluate_cohort_user_completion,
     get_cached_cohort_user_completion,
+    get_effective_assets_by_type_for_cohort_user,
     graduate_cohort_user_if_complete,
 )
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
@@ -286,3 +287,115 @@ def test_without_source_macro_stays_legacy_incomplete(db, bc: Breathecode):
     assert result["is_complete"] is False
     assert result["used_macro_override"] is False
     assert result["required"]["PROJECT"]["missing"] == ["project-2"]
+
+
+def test_infers_parent_macro_override_without_source_macro_fk(db, bc: Breathecode):
+    micro = bc.database.create(
+        syllabus={"slug": "micro-course"},
+        syllabus_version={
+            "version": 1,
+            "json": {
+                "days": [
+                    {
+                        "assignments": [
+                            {"slug": "project-1", "mandatory": True},
+                            {"slug": "project-2", "mandatory": True},
+                        ]
+                    }
+                ]
+            },
+        },
+        cohort=1,
+        cohort_user=1,
+        task=[
+            {
+                "associated_slug": "project-1",
+                "task_type": "PROJECT",
+                "task_status": "DONE",
+                "revision_status": "APPROVED",
+            }
+        ],
+    )
+    bc.database.create(
+        academy=micro.academy,
+        user=micro.user,
+        syllabus={"slug": "macro-course"},
+        syllabus_version={
+            "version": 1,
+            "json": {
+                "days": [],
+                "micro-course.v1": {
+                    "days": [
+                        {
+                            "assignments": [
+                                {"slug": "project-1", "mandatory": True},
+                                {"status": "DELETED"},
+                            ]
+                        }
+                    ]
+                },
+            },
+        },
+        cohort={"micro_cohorts": [micro.cohort]},
+        cohort_user=1,
+    )
+
+    result = evaluate_cohort_user_completion(micro.cohort_user)
+
+    assert micro.cohort_user.source_macro_cohort_id is None
+    assert result["is_complete"] is True
+    assert result["used_macro_override"] is True
+    assert result["required"]["PROJECT"]["missing"] == []
+
+
+def test_effective_assets_none_without_source_macro(db, bc: Breathecode):
+    model = bc.database.create(
+        syllabus={"slug": "micro-course"},
+        syllabus_version={
+            "version": 1,
+            "json": {"days": [{"assignments": [{"slug": "project-1"}, {"slug": "project-2"}]}]},
+        },
+        cohort=1,
+        cohort_user=1,
+    )
+
+    assert get_effective_assets_by_type_for_cohort_user(model.cohort_user) is None
+
+
+def test_effective_assets_omits_deleted_override(db, bc: Breathecode):
+    micro = bc.database.create(
+        syllabus={"slug": "micro-course"},
+        syllabus_version={
+            "version": 1,
+            "json": {"days": [{"assignments": [{"slug": "project-1"}, {"slug": "project-2"}]}]},
+        },
+        cohort=1,
+        cohort_user=1,
+    )
+    macro = bc.database.create(
+        syllabus={"slug": "macro-course"},
+        syllabus_version={
+            "version": 1,
+            "json": {
+                "days": [],
+                "micro-course.v1": {
+                    "days": [
+                        {
+                            "assignments": [
+                                {"slug": "project-1"},
+                                {"status": "DELETED"},
+                            ]
+                        }
+                    ]
+                },
+            },
+        },
+        cohort={"micro_cohorts": [micro.cohort]},
+    )
+    micro.cohort_user.source_macro_cohort = macro.cohort
+    micro.cohort_user.save()
+
+    assets = get_effective_assets_by_type_for_cohort_user(micro.cohort_user)
+
+    assert assets is not None
+    assert assets["PROJECT"] == {"project-1"}

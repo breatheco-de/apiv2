@@ -15,6 +15,7 @@ from rest_framework import status
 import breathecode.activity.tasks as activity_tasks
 from breathecode.assignments import tasks
 from breathecode.assignments.caches import TaskCache
+from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 
 from ..mixins import AssignmentsTestCase
@@ -814,3 +815,124 @@ def test_post__created(
     assert database.list_of("assignments.Task") == [
         db_item(data),
     ]
+
+
+def test_post__skips_slug_deleted_by_macro_override(client: capy.Client, bc: Breathecode):
+    url = reverse_lazy("assignments:user_me_task")
+    micro = bc.database.create(
+        user=1,
+        syllabus={"slug": "micro-course"},
+        syllabus_version={
+            "version": 1,
+            "json": {
+                "days": [
+                    {
+                        "assignments": [
+                            {"slug": "project-keep", "title": "Keep"},
+                            {"slug": "project-drop", "title": "Drop"},
+                        ]
+                    }
+                ]
+            },
+        },
+        cohort=1,
+        cohort_user=1,
+    )
+    macro = bc.database.create(
+        syllabus={"slug": "macro-course"},
+        syllabus_version={
+            "version": 1,
+            "json": {
+                "days": [],
+                "micro-course.v1": {
+                    "days": [
+                        {
+                            "assignments": [
+                                {"slug": "project-keep", "title": "Keep"},
+                                {"status": "DELETED"},
+                            ]
+                        }
+                    ]
+                },
+            },
+        },
+        cohort={"micro_cohorts": [micro.cohort]},
+    )
+    micro.cohort_user.source_macro_cohort = macro.cohort
+    micro.cohort_user.save()
+    client.force_authenticate(micro.user)
+
+    response = client.post(
+        url,
+        [
+            {
+                "associated_slug": "project-keep",
+                "title": "Keep",
+                "task_type": "PROJECT",
+                "cohort": micro.cohort.id,
+            },
+            {
+                "associated_slug": "project-drop",
+                "title": "Drop",
+                "task_type": "PROJECT",
+                "cohort": micro.cohort.id,
+            },
+        ],
+        format="json",
+    )
+
+    assert response.status_code == status.HTTP_201_CREATED
+    slugs = {task["associated_slug"] for task in bc.database.list_of("assignments.Task")}
+    assert slugs == {"project-keep"}
+    assert len(response.json()) == 1
+    assert response.json()[0]["associated_slug"] == "project-keep"
+
+
+def test_post__creates_base_slugs_without_source_macro(client: capy.Client, database: capy.Database):
+    url = reverse_lazy("assignments:user_me_task")
+    micro = database.create(
+        user=1,
+        city=1,
+        country=1,
+        academy=1,
+        syllabus={"slug": "micro-course"},
+        syllabus_version={
+            "version": 1,
+            "json": {
+                "days": [
+                    {
+                        "assignments": [
+                            {"slug": "project-keep", "title": "Keep"},
+                            {"slug": "project-drop", "title": "Drop"},
+                        ]
+                    }
+                ]
+            },
+        },
+        cohort=1,
+        cohort_user=1,
+    )
+    client.force_authenticate(micro.user)
+
+    response = client.post(
+        url,
+        [
+            {
+                "associated_slug": "project-keep",
+                "title": "Keep",
+                "task_type": "PROJECT",
+                "cohort": micro.cohort.id,
+            },
+            {
+                "associated_slug": "project-drop",
+                "title": "Drop",
+                "task_type": "PROJECT",
+                "cohort": micro.cohort.id,
+            },
+        ],
+        format="json",
+    )
+
+    assert response.status_code == status.HTTP_201_CREATED
+    slugs = {task["associated_slug"] for task in database.list_of("assignments.Task")}
+    assert slugs == {"project-keep", "project-drop"}

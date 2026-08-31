@@ -418,6 +418,7 @@ Macro cohorts can carry a **`SyllabusVersion`** whose JSON is not only the usual
 - **`days`**: merged **by index** (day 0 with day 0, etc.). Changing the order of days in the micro syllabus is not supported via overrides alone; publish a **new micro syllabus version** if the base order must change.
 - **Asset lists** `lessons`, `quizzes`, `replits`, `assignments`: merged **by index** within each day.
 - **Logical deletion**: an asset (or a whole day) can be marked with **`"status": "DELETED"`** so it does not appear after merge.
+- **Task creation**: if the student's `CohortUser.source_macro_cohort` is set, `POST /v1/assignment/task` and `sync_cohort_user_tasks` only create Tasks for slugs that remain in that **effective** syllabus. Deleted override assets are skipped (existing Tasks are not removed). Without that FK, creation still uses the micro syllabus as before.
 - Other day-level fields are merged with the base day where applicable.
 
 #### API: read a micro syllabus version with macro overrides
