@@ -85,6 +85,7 @@ class Command(BaseCommand):
             return
 
         self.stdout.write(f"Summary: {result.get('summary', '')}")
+        self.stdout.write(f"used_macro_override: {result.get('completion', {}).get('used_macro_override')}")
         self.stdout.write("")
         for ch in result.get("checks", []):
             sym = "✓" if ch.get("ok") else ("⚠" if ch.get("severity") == "warning" else "❌")

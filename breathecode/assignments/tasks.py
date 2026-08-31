@@ -282,22 +282,26 @@ def sync_cohort_user_tasks(cohort_user_id: int, **_: Any):
         return
 
     cohort = cohort_user.cohort
-    from breathecode.admissions.actions import resolve_syllabus_json
+    from breathecode.admissions.services.completion import get_effective_syllabus_json_for_cohort_user
 
-    syllabus_json = resolve_syllabus_json(cohort.syllabus_version.json)
+    syllabus_json = get_effective_syllabus_json_for_cohort_user(cohort_user)
 
     all_cohort_tasks = []
 
     def parse_task(type, assignment):
+        if not isinstance(assignment, dict) or not assignment.get("slug"):
+            return None
         return {
             "task_type": type,
             "cohort": cohort.id,
             "user": cohort_user.user.id,
             "associated_slug": assignment["slug"],
-            "title": assignment["title"],
+            "title": assignment.get("title") or assignment["slug"],
         }
 
-    for day in syllabus_json["days"]:
+    for day in syllabus_json.get("days") or []:
+        if not isinstance(day, dict):
+            continue
 
         readings = day["lessons"] if "lessons" in day else []
         replits = day["replits"] if "replits" in day else []
@@ -305,16 +309,24 @@ def sync_cohort_user_tasks(cohort_user_id: int, **_: Any):
         answers = day["quizzes"] if "quizzes" in day else []
 
         for r in readings:
-            all_cohort_tasks.append(parse_task("LESSON", r))
+            parsed = parse_task("LESSON", r)
+            if parsed:
+                all_cohort_tasks.append(parsed)
 
         for r in replits:
-            all_cohort_tasks.append(parse_task("EXERCISE", r))
+            parsed = parse_task("EXERCISE", r)
+            if parsed:
+                all_cohort_tasks.append(parsed)
 
         for r in assignments:
-            all_cohort_tasks.append(parse_task("PROJECT", r))
+            parsed = parse_task("PROJECT", r)
+            if parsed:
+                all_cohort_tasks.append(parsed)
 
         for r in answers:
-            all_cohort_tasks.append(parse_task("QUIZ", r))
+            parsed = parse_task("QUIZ", r)
+            if parsed:
+                all_cohort_tasks.append(parsed)
 
     for cohort_task in all_cohort_tasks:
         user_task = Task.objects.filter(

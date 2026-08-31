@@ -7,6 +7,7 @@ from rest_framework import serializers
 
 import breathecode.activity.tasks as tasks_activity
 from breathecode.admissions.models import CohortUser
+from breathecode.admissions.services.completion import get_effective_assets_by_type_for_cohort_user
 from breathecode.authenticate.models import ProfileAcademy, Token
 from breathecode.utils import serpy
 
@@ -191,6 +192,16 @@ class TaskGETDeliverSerializer(TaskGETSerializer):
         return os.getenv("API_URL") + f"/v1/assignment/task/{str(obj.id)}/deliver/{token}"
 
 
+class PostTaskListSerializer(serializers.ListSerializer):
+    def create(self, validated_data):
+        instances = []
+        for item in validated_data:
+            instance = self.child.create(item)
+            if instance is not None:
+                instances.append(instance)
+        return instances
+
+
 class PostTaskSerializer(serializers.ModelSerializer):
     task_status = serializers.CharField(read_only=True)
     revision_status = serializers.CharField(read_only=True)
@@ -198,6 +209,7 @@ class PostTaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         exclude = ("user",)
+        list_serializer_class = PostTaskListSerializer
 
     def validate(self, data):
 
@@ -236,6 +248,26 @@ class PostTaskSerializer(serializers.ModelSerializer):
         # avoid creating a task twice, if the user already has it it will be re-used.
         if _task is not None:
             return _task
+
+        cohort = validated_data.get("cohort")
+        user = validated_data["user"]
+        if cohort is not None:
+            cohort_user = CohortUser.objects.filter(user=user, cohort=cohort).first()
+            assets_by_type = (
+                get_effective_assets_by_type_for_cohort_user(cohort_user) if cohort_user is not None else None
+            )
+            if assets_by_type is not None:
+                allowed = assets_by_type.get(validated_data["task_type"], set())
+                slug = validated_data["associated_slug"]
+                if slug not in allowed:
+                    logger.info(
+                        "Skipping task create slug=%s task_type=%s cohort_user_id=%s source_macro_cohort_id=%s",
+                        slug,
+                        validated_data["task_type"],
+                        cohort_user.id,
+                        cohort_user.source_macro_cohort_id,
+                    )
+                    return None
 
         instance = Task.objects.create(**validated_data)
 

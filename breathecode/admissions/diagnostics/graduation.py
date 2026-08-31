@@ -5,10 +5,13 @@ Graduation diagnostic: explains why automatic SaaS graduation may not have run f
 from __future__ import annotations
 
 from breathecode.admissions.models import CohortUser
-from breathecode.admissions.services.completion import evaluate_cohort_user_completion
+from breathecode.admissions.services.completion import (
+    evaluate_cohort_user_completion,
+    get_assets_from_syllabus,
+    _override_kwargs_from_cohort_user,
+)
 from breathecode.admissions.utils.academy_features import has_feature_flag
 from breathecode.assignments.models import Task
-from breathecode.certificate.actions import get_assets_from_syllabus
 
 
 def _check(slug: str, ok: bool, message: str, severity: str | None = None) -> dict:
@@ -101,8 +104,30 @@ def build_graduation_diagnostic(cohort_user: CohortUser) -> dict:
         )
     )
 
+    override_kwargs = _override_kwargs_from_cohort_user(cohort_user) or {}
+    checks.append(
+        _check(
+            "macro_override",
+            True,
+            (
+                f"source_macro_cohort_id={cohort_user.source_macro_cohort_id} "
+                f"used_macro_override={completion.get('used_macro_override')} "
+                f"inferred={'yes' if override_kwargs and not cohort_user.source_macro_cohort_id else 'no'}"
+            ),
+            "ok" if completion.get("used_macro_override") or cohort_user.source_macro_cohort_id else "warning",
+        )
+    )
+    if not override_kwargs:
+        warnings.append(
+            "No macro override applied: source_macro_cohort is empty and no enrolled parent "
+            "macro has an override key for this micro syllabus version."
+        )
+
     mandatory_projects = get_assets_from_syllabus(
-        cohort.syllabus_version, task_types=["PROJECT"], only_mandatory=True
+        cohort.syllabus_version,
+        task_types=["PROJECT"],
+        only_mandatory=True,
+        **override_kwargs,
     )
     checks.append(
         _check(
