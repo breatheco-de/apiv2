@@ -198,3 +198,52 @@ class MediaTestSuite(AssignmentsTestCase):
             call(instance=task, sender=task.__class__)
             for task in self.bc.database.list_of("assignments.Task", dict=False)
         ]
+
+    @patch("logging.Logger.info", MagicMock())
+    def test__sync_cohort_user_skips_deleted_macro_override(self):
+        micro_json = {
+            "days": [
+                {
+                    "lessons": [],
+                    "replits": [],
+                    "quizzes": [],
+                    "assignments": [
+                        {"slug": "project-keep", "title": "Keep"},
+                        {"slug": "project-drop", "title": "Drop"},
+                    ],
+                }
+            ],
+        }
+        micro = self.bc.database.create(
+            syllabus={"slug": "micro-course"},
+            syllabus_version={"version": 1, "json": micro_json},
+            cohort=1,
+            cohort_user=1,
+        )
+        macro = self.bc.database.create(
+            syllabus={"slug": "macro-course"},
+            syllabus_version={
+                "version": 1,
+                "json": {
+                    "days": [],
+                    "micro-course.v1": {
+                        "days": [
+                            {
+                                "assignments": [
+                                    {"slug": "project-keep", "title": "Keep"},
+                                    {"status": "DELETED"},
+                                ]
+                            }
+                        ]
+                    },
+                },
+            },
+            cohort={"micro_cohorts": [micro.cohort]},
+        )
+        micro.cohort_user.source_macro_cohort = macro.cohort
+        micro.cohort_user.save()
+
+        sync_cohort_user_tasks.delay(micro.cohort_user.id)
+
+        slugs = {task["associated_slug"] for task in self.bc.database.list_of("assignments.Task")}
+        assert slugs == {"project-keep"}

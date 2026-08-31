@@ -74,8 +74,48 @@ def _load_syllabus_json(
     )
 
 
+def pick_parent_macro_cohort(cohort_user: CohortUser):
+    """Enrolled parent macro whose syllabus overrides this micro (FK fallback)."""
+    from breathecode.admissions.actions import build_reference_key, get_reference_payload
+
+    cohort = cohort_user.cohort
+    micro_version = cohort.syllabus_version if cohort else None
+    if cohort is None or micro_version is None or micro_version.syllabus is None:
+        return None
+
+    parents = list(cohort.main_cohorts.all())
+    if not parents:
+        return None
+
+    enrolled_ids = set(
+        CohortUser.objects.filter(user_id=cohort_user.user_id, cohort_id__in=[parent.id for parent in parents]).values_list(
+            "cohort_id", flat=True
+        )
+    )
+    reference_key = build_reference_key(micro_version.syllabus.slug, micro_version.version)
+    with_override = []
+    for parent in parents:
+        if parent.id not in enrolled_ids or parent.syllabus_version is None:
+            continue
+        if get_reference_payload(parent.syllabus_version.json, reference_key):
+            with_override.append(parent)
+
+    if not with_override:
+        return None
+
+    chosen = sorted(with_override, key=lambda item: item.id)[0]
+    logger.info(
+        "Inferred parent macro cohort_user_id=%s micro_cohort_id=%s macro_cohort_id=%s candidates=%s",
+        cohort_user.id,
+        cohort.id,
+        chosen.id,
+        [parent.id for parent in with_override],
+    )
+    return chosen
+
+
 def _override_kwargs_from_cohort_user(cohort_user: CohortUser) -> dict | None:
-    source_macro = cohort_user.source_macro_cohort
+    source_macro = cohort_user.source_macro_cohort or pick_parent_macro_cohort(cohort_user)
     cohort = cohort_user.cohort
     micro_version = cohort.syllabus_version if cohort else None
     macro_version = source_macro.syllabus_version if source_macro else None
@@ -87,6 +127,29 @@ def _override_kwargs_from_cohort_user(cohort_user: CohortUser) -> dict | None:
         "syllabus_slug": micro_version.syllabus.slug,
         "syllabus_version_number": micro_version.version,
     }
+
+
+def get_effective_assets_by_type_for_cohort_user(cohort_user: CohortUser) -> dict[str, set[str]] | None:
+    """Assets in the effective syllabus when a source_macro override applies.
+
+    Returns None when there is no override so callers keep legacy task-create behavior.
+    """
+    override_kwargs = _override_kwargs_from_cohort_user(cohort_user)
+    if override_kwargs is None:
+        return None
+
+    cohort = cohort_user.cohort
+    return get_syllabus_assets_by_type(
+        cohort.syllabus_version if cohort else None,
+        **override_kwargs,
+    )
+
+
+def get_effective_syllabus_json_for_cohort_user(cohort_user: CohortUser) -> dict:
+    """Normalized syllabus JSON, merged with the source_macro override when present."""
+    cohort = cohort_user.cohort
+    override_kwargs = _override_kwargs_from_cohort_user(cohort_user) or {}
+    return _load_syllabus_json(cohort.syllabus_version if cohort else None, **override_kwargs)
 
 
 def get_syllabus_assets_by_type(
@@ -349,7 +412,7 @@ def evaluate_cohort_user_completion(cohort_user: CohortUser) -> dict:
 
     if _override_kwargs_from_cohort_user(cohort_user) is None:
         logger.info(
-            "Completion legacy incomplete and no source_macro override cohort_user_id=%s pending=%s",
+            "Completion legacy incomplete and no macro override cohort_user_id=%s pending=%s",
             cohort_user.id,
             legacy["pending_required_count"],
         )
