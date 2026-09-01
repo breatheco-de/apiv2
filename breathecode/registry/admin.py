@@ -827,11 +827,11 @@ class AssetTechnologyAdmin(admin.ModelAdmin):
     list_filter = ("lang", ParentFilter, VisibilityFilter, IsDeprecatedFilter, SortPriorityFilter)
     raw_id_fields = ["parent", "featured_asset"]
 
-    actions = (
+    actions = [
         merge_technologies,
         slug_to_lower_case,
         mark_technologies_as_unlisted,
-    ) + change_field(["us", "es"], name="lang")
+    ] + change_field(["us", "es"], name="lang")
 
     def main(self, obj):
         parent = "🤰🏻 " if obj.parent is None else ""
