@@ -15,8 +15,9 @@ class Migration(migrations.Migration):
                 db_index=True,
                 default=False,
                 help_text=(
-                    "True when staff created this financing through the academy endpoint (or an equivalent "
-                    "staff invite). Do not infer this from proof of payment on invoices."
+                    "True when staff created this financing (academy POST, invite, or backfill of "
+                    "plans that had at least one invoice with proof of payment). Runtime logic must "
+                    "not infer this from invoice proofs."
                 ),
             ),
         ),
