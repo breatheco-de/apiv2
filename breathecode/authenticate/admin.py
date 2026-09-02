@@ -156,7 +156,16 @@ class UserInviteAdmin(admin.ModelAdmin):
     form = UserInviteForm
     search_fields = ["email", "first_name", "last_name", "user__email"]
     raw_id_fields = ["user", "author", "cohort", "course", "subscription_seat", "payment_method"]
-    list_filter = ["academy", "status", "is_email_validated", "process_status", "role", "country", "payment_method"]
+    list_filter = [
+        "academy",
+        "status",
+        "is_email_validated",
+        "process_status",
+        "role",
+        "country",
+        "payment_method",
+        "created_by_admin",
+    ]
     list_display = (
         "email",
         "is_email_validated",

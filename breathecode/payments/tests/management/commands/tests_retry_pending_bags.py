@@ -196,3 +196,49 @@ def test_rescheduling_bags(bc: Breathecode, bags, invoices, type, utc_now, set_d
 
     else:
         assert 0, "type value is mandatory"
+
+
+def test_invited_financing_retry_defaults_created_by_admin_false_without_invite(
+    bc: Breathecode, utc_now, set_datetime
+):
+    bc.database.create(
+        bag={
+            "was_delivered": False,
+            "status": "PAID",
+            "how_many_installments": 2,
+            "type": "INVITED",
+        },
+        invoice={"amount": 1},
+    )
+    set_datetime(utc_now + timedelta(minutes=11))
+
+    Command().handle()
+
+    assert tasks.build_plan_financing.delay.call_args_list == [call(1, 1, created_by_admin=False)]
+    assert tasks.build_subscription.delay.call_args_list == []
+    assert tasks.build_free_subscription.delay.call_args_list == []
+
+
+def test_invited_financing_retry_reads_created_by_admin_from_invite(bc: Breathecode, utc_now, set_datetime):
+    model = bc.database.create(
+        bag={
+            "was_delivered": False,
+            "status": "PAID",
+            "how_many_installments": 2,
+            "type": "INVITED",
+        },
+        invoice={"amount": 1},
+        user_invite={"created_by_admin": True},
+    )
+    invite = model.user_invite
+    invite.user = model.user
+    invite.academy = model.academy
+    invite.email = model.user.email
+    invite.save()
+    set_datetime(utc_now + timedelta(minutes=11))
+
+    Command().handle()
+
+    assert tasks.build_plan_financing.delay.call_args_list == [call(1, 1, created_by_admin=True)]
+    assert tasks.build_subscription.delay.call_args_list == []
+    assert tasks.build_free_subscription.delay.call_args_list == []

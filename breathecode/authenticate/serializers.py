@@ -1311,12 +1311,26 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
         if student_plan_access is not None:
             data["_student_plan_access_payload"] = student_plan_access
 
+        from breathecode.payments.actions import parse_optional_bool
+
+        raw_created_by_admin = None
+        if hasattr(self, "initial_data"):
+            raw_created_by_admin = self.initial_data.get("created_by_admin")
+        data.pop("created_by_admin", None)
+        data["_created_by_admin"] = parse_optional_bool(
+            raw_created_by_admin,
+            default=True,
+            lang=lang,
+            field_name="created_by_admin",
+        )
+
         return data
 
     def create(self, validated_data):
         from breathecode.payments.models import Plan
 
         student_plan_access = validated_data.pop("_student_plan_access_payload", None)
+        created_by_admin = validated_data.pop("_created_by_admin", True)
         existing_profile_academy_id = validated_data.pop("_existing_profile_academy_id", None)
 
         academy = Academy.objects.filter(id=self.context.get("academy_id")).first()
@@ -1420,6 +1434,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                 financing_kwargs = {}
                 if student_plan_access:
                     financing_kwargs.update(student_plan_access)
+                financing_kwargs.pop("created_by_admin", None)
                 for plan in plans_for_user:
                     create_invited_plan_financing_for_user(
                         user=user,
@@ -1431,6 +1446,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                         lang=lang,
                         conversion_info=conversion_info,
                         joined_cohorts=extra_cohorts,
+                        created_by_admin=created_by_admin,
                         **financing_kwargs,
                     )
 
@@ -1531,6 +1547,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                     city=city,
                     syllabus=syllabus,
                     student_plan_access=(student_plan_access if plans else None),
+                    created_by_admin=created_by_admin,
                 )
                 invite.save()
                 invites_created.append(invite)

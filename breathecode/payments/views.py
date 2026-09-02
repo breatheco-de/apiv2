@@ -7360,6 +7360,11 @@ class RenewPlanFinancingView(APIView):
 
 
 class AcademyPlanSubscriptionView(APIView):
+    """
+    Staff POST to assign a plan financing. Optional body field ``created_by_admin``
+    (boolean, default true) is stored on the PlanFinancing and is the only runtime
+    signal that staff created it. Proof of payment is not used to infer this.
+    """
 
     extensions = APIViewExtensions(sort="-id", paginate=True)
 

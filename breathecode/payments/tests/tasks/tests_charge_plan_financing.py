@@ -1242,6 +1242,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             "how_many_installments": 3,
             "installments_paid": 1,
             "plan_expires_at": UTC_NOW + relativedelta(months=12),
+            "created_by_admin": True,
         }
         plan = {"is_renewable": False}
         bag = {"how_many_installments": 3, "was_delivered": True, "type": "BAG"}

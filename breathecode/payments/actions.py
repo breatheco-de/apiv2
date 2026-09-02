@@ -3147,6 +3147,31 @@ def create_externally_managed_bag_and_invoice(
     return bag, invoice
 
 
+def parse_optional_bool(value: Any, *, default: bool, lang: str, field_name: str) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)) and value in (0, 1):
+        return bool(value)
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in ("true", "1", "yes"):
+            return True
+        if normalized in ("false", "0", "no"):
+            return False
+
+    raise ValidationException(
+        translation(
+            lang,
+            en=f"{field_name} must be a boolean",
+            es=f"{field_name} debe ser un booleano",
+            slug=f"invalid-{field_name.replace('_', '-')}",
+        ),
+        code=400,
+    )
+
+
 def validate_and_create_subscriptions(
     request: dict | WSGIRequest | AsyncRequest | HttpRequest | Request,
     staff_user: User,
@@ -3163,6 +3188,13 @@ def validate_and_create_subscriptions(
     if lang is None:
         settings = get_user_settings(staff_user.id)
         lang = settings.lang
+
+    created_by_admin = parse_optional_bool(
+        data.get("created_by_admin"),
+        default=True,
+        lang=lang,
+        field_name="created_by_admin",
+    )
 
     allowed_grace_period_units = {DAY, WEEK, MONTH, YEAR}
 
@@ -3497,6 +3529,7 @@ def validate_and_create_subscriptions(
     build_kwargs: dict[str, Any] = {
         "conversion_info": conversion_info,
         "cohorts": cohort,
+        "created_by_admin": created_by_admin,
     }
 
     if grace_period_duration > 0:
@@ -3512,6 +3545,12 @@ def validate_and_create_subscriptions(
     elif unique_payment_negotiated_amount is not None:
         build_kwargs["principal_amount"] = unique_payment_negotiated_amount
 
+    logger.info(
+        "Scheduling build_plan_financing bag_id=%s invoice_id=%s created_by_admin=%s",
+        bag.id,
+        invoice.id,
+        created_by_admin,
+    )
     tasks.build_plan_financing.delay(bag.id, invoice.id, **build_kwargs)
 
     return invoice, coupons
@@ -3767,27 +3806,39 @@ def get_remaining_installments(plan_financing: PlanFinancing) -> int:
     return max(plan_financing.how_many_installments - int(plan_financing.installments_paid or 0), 0)
 
 
-def plan_financing_was_staff_assigned(
+def plan_financing_can_auto_charge(
     plan_financing: PlanFinancing,
     first_invoice: Invoice | None = None,
 ) -> bool:
     """
-    True when the financing was created by staff (academy subscription or student invite),
-    not by self-checkout (PayView / Stripe / Coinbase webhooks).
-    """
-    if first_invoice is None:
-        first_invoice = (
-            plan_financing.invoices.select_related("bag", "proof").order_by("paid_at", "id").first()
-        )
+    True when later installments should be charged with Stripe.pay() (card on file).
 
-    if not first_invoice:
+    Klarna/Affirm hosted checkout and BNPL (``is_financing_managed_by_provider``) are not
+    reusable cards: their invoices often have a Stripe Checkout ``stripe_id`` (``cs_…``),
+    but that must not start off-session card charges.
+
+    Admin-created plans keep ``PlanFinancing.externally_managed=False`` so a credit card
+    on file can be charged after the first staff invoice. A previous Stripe invoice (no
+    proof) is the strongest signal that automatic charging already started and must continue.
+    """
+    invoice = first_invoice
+    if invoice is None or getattr(invoice, "payment_method", None) is None:
+        invoice = plan_financing.invoices.select_related("payment_method").order_by("paid_at", "id").first() or invoice
+
+    payment_method = getattr(invoice, "payment_method", None) if invoice else None
+    if payment_method and (
+        payment_method.is_financing_managed_by_provider or payment_method.get_stripe_payment_method_types()
+    ):
         return False
 
-    if first_invoice.proof_id is not None:
+    has_stripe_invoice = plan_financing.invoices.exclude(stripe_id__isnull=True).exclude(stripe_id="").exists()
+    if has_stripe_invoice:
         return True
 
-    bag = first_invoice.bag
-    return bag is not None and bag.type == Bag.Type.INVITED
+    if plan_financing.externally_managed:
+        return False
+
+    return bool(payment_method and payment_method.is_credit_card)
 
 
 def get_credit_balance(plan_financing: PlanFinancing) -> float:
@@ -4503,6 +4554,37 @@ def is_stripe_checkout_already_fulfilled(
     return False
 
 
+def created_by_admin_from_invited_bag(bag: Bag) -> bool:
+    """Resolve created_by_admin from the UserInvite that originated this INVITED bag."""
+    if bag.type != Bag.Type.INVITED:
+        return False
+    if not bag.academy_id or not bag.user_id:
+        logger.info(
+            "created_by_admin_from_invited_bag bag_id=%s missing academy/user, defaulting False",
+            bag.id,
+        )
+        return False
+
+    qs = UserInvite.objects.filter(academy_id=bag.academy_id).filter(
+        Q(user_id=bag.user_id) | Q(email__iexact=bag.user.email or "")
+    )
+    plan_ids = list(bag.plans.values_list("id", flat=True))
+    invite = None
+    if plan_ids:
+        invite = qs.filter(plans__id__in=plan_ids).distinct().order_by("-id").first()
+    if invite is None:
+        invite = qs.order_by("-id").first()
+
+    flag = bool(invite and invite.created_by_admin)
+    logger.info(
+        "created_by_admin_from_invited_bag bag_id=%s invite_id=%s created_by_admin=%s",
+        bag.id,
+        invite.id if invite else None,
+        flag,
+    )
+    return flag
+
+
 def retry_pending_bag(bag: Bag):
     """
     This function retries the delivery of bags that are paid but not delivered.
@@ -4520,7 +4602,10 @@ def retry_pending_bag(bag: Bag):
         return "no-invoice"
 
     if bag.how_many_installments > 0:
-        tasks.build_plan_financing.delay(bag.id, invoice.id)
+        financing_kwargs: dict[str, Any] = {}
+        if bag.type == Bag.Type.INVITED:
+            financing_kwargs["created_by_admin"] = created_by_admin_from_invited_bag(bag)
+        tasks.build_plan_financing.delay(bag.id, invoice.id, **financing_kwargs)
 
     elif invoice.amount > 0:
         tasks.build_subscription.delay(bag.id, invoice.id)
@@ -6786,11 +6871,13 @@ def create_invited_plan_financing_for_user(
     grace_period_duration_unit: str = MONTH,
     financing_option_id: int | None = None,
     conversion_info: Any = None,
+    created_by_admin: bool = False,
 ) -> None:
     """
     Create PlanFinancing for an existing user (staff-assigned / bulk upload / invite acceptance).
     Mirrors staff subscription financing: optional installments, initial payment, grace period.
     ``cohort`` / ``joined_cohorts``: optional; when omitted, financing is created without ``joined_cohorts``.
+    ``created_by_admin`` must come from the caller (invite field or academy POST); do not assume True.
     """
     ensure_user_can_buy_plan_financing(user, plan, lang=lang)
 
@@ -6996,14 +7083,17 @@ def create_invited_plan_financing_for_user(
     )
 
     cohort_slugs = [c.slug for c in all_cohorts]
+    build_kwargs: dict[str, Any] = {"created_by_admin": created_by_admin}
 
     if use_extended:
-        build_kwargs: dict[str, Any] = {
-            "conversion_info": conv_str,
-            "cohorts": cohort_slugs,
-            "grace_period_duration": grace_period_duration,
-            "grace_period_duration_unit": grace_period_duration_unit,
-        }
+        build_kwargs.update(
+            {
+                "conversion_info": conv_str,
+                "cohorts": cohort_slugs,
+                "grace_period_duration": grace_period_duration,
+                "grace_period_duration_unit": grace_period_duration_unit,
+            }
+        )
         if initial_payment_notes is not None:
             build_kwargs["initial_payment_notes"] = initial_payment_notes
         if initial_payment_amount is not None:
@@ -7011,11 +7101,16 @@ def create_invited_plan_financing_for_user(
             build_kwargs["initial_payment_amount"] = amount
         else:
             build_kwargs["principal_amount"] = installment_amount
-        tasks.build_plan_financing.delay(bag.id, invoice.id, is_free=is_free, **build_kwargs)
     elif cohort_slugs:
-        tasks.build_plan_financing.delay(bag.id, invoice.id, is_free=is_free, cohorts=cohort_slugs)
-    else:
-        tasks.build_plan_financing.delay(bag.id, invoice.id, is_free=is_free)
+        build_kwargs["cohorts"] = cohort_slugs
+
+    logger.info(
+        "Scheduling invited build_plan_financing bag_id=%s invoice_id=%s created_by_admin=%s",
+        bag.id,
+        invoice.id,
+        created_by_admin,
+    )
+    tasks.build_plan_financing.delay(bag.id, invoice.id, is_free=is_free, **build_kwargs)
 
 
 def create_plan_financing_seat(

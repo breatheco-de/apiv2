@@ -97,6 +97,8 @@ def generate_user_invite(data: dict) -> dict:
         "email_quality": None,
         "email_status": None,
         "expires_at": None,
+        "student_plan_access": None,
+        "created_by_admin": False,
         **data,
     }
 

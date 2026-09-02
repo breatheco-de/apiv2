@@ -1861,6 +1861,7 @@ def accept_invite_action(data=None, token=None, lang="en"):
             grace_period_duration=access["grace_period_duration"],
             grace_period_duration_unit=access["grace_period_duration_unit"],
             financing_option_id=access.get("financing_option_id"),
+            created_by_admin=ui.created_by_admin,
         )
 
     for user_invite in pending_invites:
