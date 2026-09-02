@@ -12,6 +12,20 @@ UTC_NOW = timezone.now()
 # enable this file to use the database
 pytestmark = pytest.mark.usefixtures("db")
 
+LISTED_TECHNOLOGY = {"sort_priority": 1, "visibility": "PUBLIC"}
+
+
+def _listed_technology_slugs(asset):
+    return list(
+        asset.technologies.filter(
+            parent__isnull=True,
+            sort_priority__in=[1, 2],
+            visibility="PUBLIC",
+        )
+        .order_by("sort_priority")
+        .values_list("slug", flat=True)
+    )
+
 
 def get_serializer(asset, data={}):
     asset_translations = {}
@@ -80,7 +94,7 @@ def get_serializer(asset, data={}):
         "status": asset.status,
         "url": asset.url,
         "translations": asset_translations,
-        "technologies": [tech.slug for tech in asset.technologies.all()] if asset.technologies else [],
+        "technologies": _listed_technology_slugs(asset),
         "seo_keywords": [seo_keyword.slug for seo_keyword in asset.seo_keywords.all()] if asset.seo_keywords else [],
         "visibility": asset.visibility,
         "enable_table_of_content": asset.enable_table_of_content,
@@ -172,9 +186,28 @@ def test_many_assets(bc: Breathecode, client):
     assert bc.database.list_of("registry.Asset") == bc.format.to_dict(model.asset)
 
 
+def test_asset_list_only_includes_public_priority_one_or_two_technologies(bc: Breathecode, client):
+    model = bc.database.create(
+        asset_technology=[
+            {"slug": "python", "title": "Python", "sort_priority": 1, "visibility": "PUBLIC"},
+            {"slug": "react", "title": "React", "sort_priority": 2, "visibility": "PUBLIC"},
+            {"slug": "hidden", "title": "Hidden", "sort_priority": 3, "visibility": "PUBLIC"},
+            {"slug": "unlisted", "title": "Unlisted", "sort_priority": 1, "visibility": "UNLISTED"},
+        ],
+        asset={"status": "PUBLISHED", "technologies": [1, 2, 3, 4]},
+    )
+
+    url = reverse_lazy("registry:asset")
+    response = client.get(url)
+    json = response.json()
+
+    assert response.status_code == 200
+    assert json[0]["technologies"] == ["python", "react"]
+
+
 def test_assets_expand_technologies(bc: Breathecode, client):
 
-    technology = {"slug": "learn-react", "title": "Learn React"}
+    technology = {"slug": "learn-react", "title": "Learn React", **LISTED_TECHNOLOGY}
     model = bc.database.create(
         asset_technology=(1, technology),
         asset=(
@@ -207,7 +240,7 @@ def test_assets_expand_technologies(bc: Breathecode, client):
 
 def test_assets_expand_readme_no_readme_url(bc: Breathecode, client, utc_now):
 
-    technology = {"slug": "learn-react", "title": "Learn React"}
+    technology = {"slug": "learn-react", "title": "Learn React", **LISTED_TECHNOLOGY}
 
     model = bc.database.create(
         asset_technology=(1, technology),
@@ -239,7 +272,7 @@ def test_assets_expand_readme_no_readme_url(bc: Breathecode, client, utc_now):
 
 def test_assets_expand_readme(bc: Breathecode, client):
 
-    technology = {"slug": "learn-react", "title": "Learn React"}
+    technology = {"slug": "learn-react", "title": "Learn React", **LISTED_TECHNOLOGY}
     readme_url = "https://github.com/4GeeksAcademy/03-probability-binomial-with-python.md"
 
     model = bc.database.create(
@@ -272,7 +305,7 @@ def test_assets_expand_readme(bc: Breathecode, client):
 
 def test_assets_expand_readme_ipynb(bc: Breathecode, client):
 
-    technology = {"slug": "learn-react", "title": "Learn React"}
+    technology = {"slug": "learn-react", "title": "Learn React", **LISTED_TECHNOLOGY}
     readme_url_ipynb = "https://github.com/4GeeksAcademy/03-probability-binomial-with-python.ipynb"
     html = "<h1>hello</h1>"
 
@@ -306,7 +339,7 @@ def test_assets_expand_readme_ipynb(bc: Breathecode, client):
 
 def test_assets_expand_readme_and_technologies(bc: Breathecode, client):
 
-    technology = {"slug": "learn-react", "title": "Learn React"}
+    technology = {"slug": "learn-react", "title": "Learn React", **LISTED_TECHNOLOGY}
     readme_url = "https://github.com/4GeeksAcademy/03-probability-binomial-with-python.md"
     model = bc.database.create(
         asset_technology=(1, technology),

@@ -55,6 +55,8 @@ def generate_user_invite(data: dict) -> dict:
         "email_quality": None,
         "email_status": None,
         "expires_at": None,
+        "student_plan_access": None,
+        "created_by_admin": False,
         **data,
     }
 
@@ -1284,7 +1286,134 @@ class StudentPostTestSuite(AuthTestCase):
             initial_payment_notes="Note made by user 1: Prework paid at course start",
             principal_amount=1200,
             initial_payment_amount=0,
+            created_by_admin=True,
         )
+
+    @patch("breathecode.payments.tasks.build_plan_financing.delay", MagicMock())
+    @patch("breathecode.notify.actions.send_email_message", MagicMock())
+    @patch("random.getrandbits", MagicMock(side_effect=getrandbits))
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test_academy_student__post__created_by_admin_false_is_passed(self):
+        roles = [{"name": "konan", "slug": "konan"}, {"name": "student", "slug": "student"}]
+
+        model = self.bc.database.create(
+            role=roles,
+            user=2,
+            cohort={"available_as_saas": True},
+            capability="crud_student",
+            profile_academy=1,
+            currency=1,
+            cohort_set=1,
+            cohort_set_cohort=1,
+            financing_option={"how_many_months": 1, "monthly_price": 1},
+            plan={"is_renewable": False, "time_of_life": 1, "time_of_life_unit": "MONTH", "status": "ACTIVE"},
+        )
+        self.bc.request.authenticate(model.user[0])
+
+        url = reverse_lazy("authenticate:academy_student")
+        data = {
+            "first_name": "Kenny",
+            "last_name": "McKornick",
+            "invite": True,
+            "email": model.user[1].email,
+            "user": model.user[1].id,
+            "cohort": [model.cohort.id],
+            "plans": [model.plan.id],
+            "created_by_admin": False,
+        }
+
+        response = self.client.post(url, data, format="json", headers={"academy": 1})
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        from breathecode.payments import tasks
+        from breathecode.payments.models import Bag, Invoice
+
+        bag = Bag.objects.filter(user=model.user[1], type="INVITED").first()
+        invoice = Invoice.objects.filter(bag=bag).first()
+        tasks.build_plan_financing.delay.assert_called_once_with(
+            bag.id,
+            invoice.id,
+            is_free=False,
+            created_by_admin=False,
+            cohorts=[model.cohort.slug],
+        )
+
+    @patch("breathecode.notify.actions.send_email_message", MagicMock())
+    @patch("random.getrandbits", MagicMock(side_effect=getrandbits))
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test_academy_student__post__created_by_admin_invalid_value(self):
+        roles = [{"name": "konan", "slug": "konan"}, {"name": "student", "slug": "student"}]
+        model = self.bc.database.create(
+            role=roles,
+            user=2,
+            capability="crud_student",
+            profile_academy=1,
+        )
+        self.bc.request.authenticate(model.user[0])
+
+        url = reverse_lazy("authenticate:academy_student")
+        data = {
+            "first_name": "Kenny",
+            "last_name": "McKornick",
+            "invite": True,
+            "email": model.user[1].email,
+            "user": model.user[1].id,
+            "created_by_admin": "maybe",
+        }
+
+        response = self.client.post(url, data, format="json", headers={"academy": 1})
+        json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(json["detail"], "invalid-created-by-admin")
+
+    @patch("breathecode.notify.actions.send_email_message", MagicMock())
+    @patch("random.getrandbits", MagicMock(side_effect=getrandbits))
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_PAST_DATE))
+    def test_academy_student__post__without_user_persists_created_by_admin_on_invite(self):
+        role = "student"
+        model = self.bc.database.create(authenticate=True, role=role, capability="crud_student", profile_academy=1)
+
+        url = reverse_lazy("authenticate:academy_student")
+        data = {
+            "first_name": "Kenny",
+            "last_name": "McKornick",
+            "invite": True,
+            "email": "dude@dude.dude",
+        }
+
+        response = self.client.post(url, data, format="json", headers={"academy": 1})
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        from breathecode.authenticate.models import UserInvite
+
+        invite = UserInvite.objects.filter(email="dude@dude.dude").first()
+        self.assertIsNotNone(invite)
+        self.assertTrue(invite.created_by_admin)
+
+    @patch("breathecode.notify.actions.send_email_message", MagicMock())
+    @patch("random.getrandbits", MagicMock(side_effect=getrandbits))
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_PAST_DATE))
+    def test_academy_student__post__without_user_created_by_admin_false_on_invite(self):
+        role = "student"
+        model = self.bc.database.create(authenticate=True, role=role, capability="crud_student", profile_academy=1)
+
+        url = reverse_lazy("authenticate:academy_student")
+        data = {
+            "first_name": "Kenny",
+            "last_name": "McKornick",
+            "invite": True,
+            "email": "dude@dude.dude",
+            "created_by_admin": False,
+        }
+
+        response = self.client.post(url, data, format="json", headers={"academy": 1})
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        from breathecode.authenticate.models import UserInvite
+
+        invite = UserInvite.objects.filter(email="dude@dude.dude").first()
+        self.assertIsNotNone(invite)
+        self.assertFalse(invite.created_by_admin)
 
     @patch("breathecode.payments.tasks.build_plan_financing.delay", MagicMock())
     @patch("breathecode.notify.actions.send_email_message", MagicMock())
@@ -1441,6 +1570,7 @@ class StudentPostTestSuite(AuthTestCase):
                         "syllabus_id": None,
                         "expires_at": UTC_PAST_DATE + relativedelta(months=6),
                         "user_id": 2,
+                        "created_by_admin": True,
                     }
                 ),
             ],
@@ -1608,6 +1738,7 @@ class StudentPostTestSuite(AuthTestCase):
                         "latitude": None,
                         "longitude": None,
                         "expires_at": UTC_PAST_DATE + relativedelta(months=6),
+                        "created_by_admin": True,
                     }
                 ),
             ],
@@ -1802,6 +1933,7 @@ class StudentPostTestSuite(AuthTestCase):
                         "syllabus_id": None,
                         "expires_at": UTC_PAST_DATE + relativedelta(months=6),
                         "user_id": 2,
+                        "created_by_admin": True,
                     }
                 ),
             ],

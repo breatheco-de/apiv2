@@ -684,6 +684,7 @@ class PlanFinancingAdmin(admin.ModelAdmin):
         "user",
         "academy",
         "status",
+        "created_by_admin",
         "monthly_price",
         "initial_payment_amount",
         "how_many_installments",
@@ -692,7 +693,14 @@ class PlanFinancingAdmin(admin.ModelAdmin):
         "next_payment_at",
         "valid_until",
     )
-    list_filter = ["status", "academy", "externally_managed", "grace_period_duration_unit", "next_payment_at"]
+    list_filter = [
+        "status",
+        "academy",
+        "externally_managed",
+        "created_by_admin",
+        "grace_period_duration_unit",
+        "next_payment_at",
+    ]
     search_fields = ["user__email", "user__first_name", "user__last_name"]
     raw_id_fields = [
         "user",
@@ -716,6 +724,7 @@ class PlanFinancingAdmin(admin.ModelAdmin):
                     "status",
                     "status_message",
                     "externally_managed",
+                    "created_by_admin",
                     "monthly_price",
                     "initial_payment_amount",
                     "how_many_installments",

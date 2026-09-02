@@ -57,7 +57,7 @@ def test_password_reset__post__without_email(
     call_args, call_kwargs = mock_django_render.call_args
     context = call_kwargs.get("context") or (call_args[2] if len(call_args) > 2 else None)
 
-    assert call_args[1] == "form.html"
+    assert call_args[1] == "reset_password.html"
     assert context["form"].errors
     mock_django_messages.error.assert_called_once_with(call_args[0], "Email is required")  # Check request and message
 
@@ -77,7 +77,7 @@ def test_password_reset__post__with_invalid_email_format(
     call_args, call_kwargs = mock_django_render.call_args
     context = call_kwargs.get("context") or (call_args[2] if len(call_args) > 2 else None)
 
-    assert call_args[1] == "form.html"
+    assert call_args[1] == "reset_password.html"
     assert context["form"].errors
     mock_django_messages.error.assert_called_once_with(call_args[0], "Invalid email format.")
 

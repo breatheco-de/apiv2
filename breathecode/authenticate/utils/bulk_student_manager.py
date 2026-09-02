@@ -333,6 +333,7 @@ class BulkStudentManager:
                             payment_method=pm,
                             author=author,
                             lang="en",
+                            created_by_admin=True,
                         )
                     except ValidationException as e:
                         return BulkStudentManager._row_result(

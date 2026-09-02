@@ -324,7 +324,12 @@ class Command(BaseCommand):
                     invoice.save()
 
                     # Ejecutar task para crear PlanFinancing
-                    payments_tasks.build_plan_financing.delay(bag.id, invoice.id, is_free=is_free)
+                    payments_tasks.build_plan_financing.delay(
+                        bag.id,
+                        invoice.id,
+                        is_free=is_free,
+                        created_by_admin=bool(invite.created_by_admin),
+                    )
 
                     self.stdout.write(
                         self.style.SUCCESS(

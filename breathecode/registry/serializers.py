@@ -177,6 +177,18 @@ class AssetTinySerializer(serpy.Serializer):
     title = serpy.Field()
 
 
+def _listed_asset_technologies(asset, *, require_not_deprecated=False):
+    technologies = asset.technologies.filter(
+        parent__isnull=True,
+        sort_priority__in=[1, 2],
+        visibility="PUBLIC",
+    )
+    if require_not_deprecated:
+        technologies = technologies.filter(is_deprecated=False)
+
+    return technologies.order_by("sort_priority")
+
+
 class AssetSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
@@ -344,8 +356,7 @@ class AssetSerializer(serpy.Serializer):
         return result
 
     def get_technologies(self, obj):
-        _s = list(map(lambda t: t.slug, obj.technologies.filter(parent__isnull=True).order_by("sort_priority")))
-        return _s
+        return list(_listed_asset_technologies(obj).values_list("slug", flat=True))
 
     def get_seo_keywords(self, obj):
         _s = list(map(lambda t: t.slug, obj.seo_keywords.all()))
@@ -542,9 +553,7 @@ class AssetExpandableSerializer(AssetMidSerializer):
         return _serialize_github_activity_logs(obj)
 
     def format_technologies(self, obj):
-        techs = AssetTechnology.objects.filter(
-            id__in=obj.technologies.filter(visibility__in=["PUBLIC", "UNLISTED"], is_deprecated=False)
-        )
+        techs = _listed_asset_technologies(obj, require_not_deprecated=True)
         return ParentAssetTechnologySerializer(techs, many=True).data
 
     def __init__(self, *args, expand="", **kwargs):

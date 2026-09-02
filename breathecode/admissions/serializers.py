@@ -1615,18 +1615,22 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
         if is_trying_to_graduate and is_late:
             raise ValidationException("Cannot be marked as `GRADUATED` if its financial " "status is `LATE`")
 
-        if is_graduated and cohort_user:
-            completion = evaluate_cohort_user_completion(cohort_user)
-        else:
-            completion = None
+        skip_pending_tasks_on_graduation = self.context.get("skip_pending_tasks_on_graduation", False)
+        if not skip_pending_tasks_on_graduation:
+            if is_graduated and cohort_user:
+                completion = evaluate_cohort_user_completion(cohort_user)
+            else:
+                completion = None
 
-        if (
-            is_graduated
-            and completion
-            and completion["strategy"]["type"] != "NO_COMPLETION_STRATEGY"
-            and not completion["is_complete"]
-        ):
-            raise ValidationException("User has tasks with status pending the educational status cannot be GRADUATED")
+            if (
+                is_graduated
+                and completion
+                and completion["strategy"]["type"] != "NO_COMPLETION_STRATEGY"
+                and not completion["is_complete"]
+            ):
+                raise ValidationException(
+                    "User has tasks with status pending the educational status cannot be GRADUATED"
+                )
 
         return {**data, "cohort": cohort, "user": user, "id": id}
 
