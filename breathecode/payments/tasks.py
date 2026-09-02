@@ -1153,8 +1153,10 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                     plan_financing.save()
                     raise AbortTask(f"PlanFinancing {plan_financing_id} cancelled after 5 days of payment failure")
 
-            if plan_financing.status in statuses and (
-                plan_financing.plan_expires_at < utc_now and plan_financing.valid_until < utc_now
+            if (
+                not plan_financing.created_by_admin
+                and plan_financing.status in statuses
+                and (plan_financing.plan_expires_at < utc_now and plan_financing.valid_until < utc_now)
             ):
                 plan_financing.status = PlanFinancing.Status.EXPIRED
                 plan_financing.status_message = "Plan financing has reached its expiration date"
@@ -1284,12 +1286,13 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                         str(e),
                         exc_info=True,
                     )
-                raise AbortTask(f"PlanFinancing with id {plan_financing.id} has deleted plans")
+                if not plan_financing.created_by_admin:
+                    raise AbortTask(f"PlanFinancing with id {plan_financing.id} has deleted plans")
 
             invoices = plan_financing.invoices.filter(bag__was_delivered=True).order_by("created_at")
             first_invoice = invoices.first()
 
-            if first_invoice is None:
+            if first_invoice is None and not plan_financing.created_by_admin:
                 msg = f"No invoices found for PlanFinancing with id {plan_financing_id}"
                 plan_financing.status = "ERROR"
                 plan_financing.status_message = msg
@@ -1299,7 +1302,7 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
             # Contract source of truth: monthly_price.
             amount = float(plan_financing.monthly_price or 0)
-            if amount <= 0:
+            if amount <= 0 and first_invoice is not None:
                 # Legacy fallback for old records where monthly_price was not reliably populated.
                 # Derive the display price per installment from the first invoice amount, but exclude reward coupons.
                 amount = first_invoice.amount
@@ -1328,7 +1331,7 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
             # installments_paid is the authoritative counter of closed billing cycles.
             remaining_installments = installments - plan_financing.installments_paid
             can_auto_charge = actions.plan_financing_can_auto_charge(plan_financing, first_invoice)
-            skip_stripe = plan_financing.created_by_admin and not can_auto_charge
+            skip_stripe = plan_financing.created_by_admin
             installment_closed = False
 
             if remaining_installments > 0:
@@ -1374,12 +1377,14 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
                     else:
                         if skip_stripe:
-                            # Cash/transfer staff financing: no Stripe charge, no PAYMENT_ISSUE.
-                            # Billing cycle advances below; admins register deposits manually.
+                            # Admin-managed financing: close the installment without a card charge.
+                            # Status stays ACTIVE unless this was the last installment.
                             logger.info(
-                                "Staff-assigned plan financing %s has no Stripe auto-charge history; skipping card charge",
+                                "Admin-managed plan financing %s: closing installment without card charge",
                                 plan_financing_id,
                             )
+                            plan_financing.installments_paid += 1
+                            installment_closed = True
                         elif plan_financing.externally_managed and not can_auto_charge:
                             message = translation(
                                 settings.lang,
@@ -1401,11 +1406,6 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
                             raise AbortTask(f"Payment to PlanFinancing {plan_financing_id} failed")
                         else:
-                            if plan_financing.created_by_admin and can_auto_charge:
-                                logger.info(
-                                    "Staff-assigned plan financing %s will auto-charge via Stripe without a new proof of payment",
-                                    plan_financing_id,
-                                )
                             try:
                                 bag = actions.get_bag_from_plan_financing(plan_financing, settings)
                             except Exception as e:
@@ -1499,9 +1499,7 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                 if installment_closed and utc_now > plan_financing.valid_until:
                     plan_financing.valid_until = utc_now + relativedelta(months=remaining_installments)
 
-            unpaid_staff_cycle = skip_stripe and remaining_installments > 0 and not installment_closed
-
-            if installment_closed or unpaid_staff_cycle:
+            if installment_closed:
                 delta = relativedelta(months=1)
 
                 while utc_now >= plan_financing.next_payment_at + delta:
@@ -1513,15 +1511,16 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                 plan_financing.status_message = None
                 plan_financing.save()
 
-                if unpaid_staff_cycle:
-                    logger.info(
-                        "Staff-assigned plan financing %s: installment unpaid; "
-                        "advanced next_payment_at without PAYMENT_ISSUE",
-                        plan_financing_id,
-                    )
+                logger.info(
+                    "Closed installment plan_financing_id=%s created_by_admin=%s installments_paid=%s next_payment_at=%s status=%s",
+                    plan_financing_id,
+                    plan_financing.created_by_admin,
+                    plan_financing.installments_paid,
+                    plan_financing.next_payment_at,
+                    plan_financing.status,
+                )
 
-                if installment_closed:
-                    renew_plan_financing_consumables.delay(plan_financing.id)
+                renew_plan_financing_consumables.delay(plan_financing.id)
 
                 # Schedule next charge if plan is still active and has remaining installments
                 days_until_next_payment = (plan_financing.next_payment_at - utc_now).days

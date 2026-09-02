@@ -349,8 +349,34 @@ def test_plans_flag_dry_run_does_not_mark_or_charge(bc: Breathecode, patch_charg
     patch_charge["apply"].assert_not_called()
     patch_charge["run_now"].assert_not_called()
     output = capsys.readouterr().out
+    assert "Would mark 1 plan financing(s) as created_by_admin; would charge 1." in output
     assert "Emails to charge (1):" in output
     assert f"id={model.plan_financing.id} {model.user.email}" in output
+    assert "mark=yes" in output
+
+
+def test_plans_flag_dry_run_skips_already_marked_when_not_charging(bc: Breathecode, patch_charge, capsys):
+    model = _create_financing_for_plan(bc, slug="ai-engineering", overdue=False, created_by_admin=True)
+
+    Command().handle(dry_run=True, email=None, plan_financing_id=None, plans="ai-engineering")
+
+    output = capsys.readouterr().out
+    assert f"id={model.plan_financing.id}" not in output
+    assert "Would mark 0 plan financing(s) as created_by_admin; would charge 0." in output
+    assert "Emails to charge" not in output
+
+
+def test_plans_flag_dry_run_lists_already_marked_only_when_charging(bc: Breathecode, patch_charge, capsys):
+    model = _create_financing_for_plan(bc, slug="ai-engineering", created_by_admin=True)
+
+    Command().handle(dry_run=True, email=None, plan_financing_id=None, plans="ai-engineering")
+
+    output = capsys.readouterr().out
+    assert f"id={model.plan_financing.id} {model.user.email}" in output
+    assert "mark=no" in output
+    assert "charge=yes" in output
+    assert "Would mark 0 plan financing(s) as created_by_admin; would charge 1." in output
+    assert "Emails to charge (1):" in output
 
 
 def test_run_task_now_calls_run_with_task_manager_id(db):

@@ -3813,13 +3813,13 @@ def plan_financing_can_auto_charge(
     """
     True when later installments should be charged with Stripe.pay() (card on file).
 
+    Admin-managed financings (``created_by_admin``) never auto-charge the card: the
+    charge task closes the installment without Stripe. This helper is only for
+    self-serve Stripe/Klarna/Affirm contracts.
+
     Klarna/Affirm hosted checkout and BNPL (``is_financing_managed_by_provider``) are not
     reusable cards: their invoices often have a Stripe Checkout ``stripe_id`` (``cs_…``),
     but that must not start off-session card charges.
-
-    Admin-created plans keep ``PlanFinancing.externally_managed=False`` so a credit card
-    on file can be charged after the first staff invoice. A previous Stripe invoice (no
-    proof) is the strongest signal that automatic charging already started and must continue.
     """
     invoice = first_invoice
     if invoice is None or getattr(invoice, "payment_method", None) is None:
