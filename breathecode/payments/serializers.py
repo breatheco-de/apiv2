@@ -1466,6 +1466,7 @@ class GetPlanFinancingSerializer(GetAbstractIOweYouSerializer):
     initial_payment_amount = serpy.Field()
     grace_period_duration = serpy.Field()
     grace_period_duration_unit = serpy.Field()
+    created_by_admin = serpy.Field()
     credit_balance = serpy.MethodField()
     remaining_installments = serpy.MethodField()
     credit_entries = serpy.MethodField()

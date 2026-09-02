@@ -265,6 +265,14 @@ class UserInvite(models.Model):
             "grace_period_duration, grace_period_duration_unit."
         ),
     )
+    created_by_admin = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text=(
+            "When True, accepting this invite creates the PlanFinancing with created_by_admin=True. "
+            "Set it on academy/staff invites; leave False for self-serve or other invite sources."
+        ),
+    )
 
     # link to team membership (optional)
     subscription_seat = models.ForeignKey(

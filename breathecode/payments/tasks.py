@@ -1143,7 +1143,7 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                 raise AbortTask(f"PlanFinancing {plan_financing_id} reconciled to FULLY_PAID")
 
             if plan_financing.status == PlanFinancing.Status.PAYMENT_ISSUE:
-                if actions.plan_financing_was_staff_assigned(plan_financing):
+                if plan_financing.created_by_admin:
                     plan_financing.status = PlanFinancing.Status.ACTIVE
                     plan_financing.status_message = None
                     plan_financing.save(update_fields=["status", "status_message"])
@@ -1327,7 +1327,8 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
             # installments_paid is the authoritative counter of closed billing cycles.
             remaining_installments = installments - plan_financing.installments_paid
-            staff_assigned = actions.plan_financing_was_staff_assigned(plan_financing, first_invoice)
+            can_auto_charge = actions.plan_financing_can_auto_charge(plan_financing, first_invoice)
+            skip_stripe = plan_financing.created_by_admin and not can_auto_charge
             installment_closed = False
 
             if remaining_installments > 0:
@@ -1372,11 +1373,14 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                         bag = invoice.bag
 
                     else:
-                        if staff_assigned:
-                            # Staff-managed financing: no Stripe charge, no PAYMENT_ISSUE.
+                        if skip_stripe:
+                            # Cash/transfer staff financing: no Stripe charge, no PAYMENT_ISSUE.
                             # Billing cycle advances below; admins register deposits manually.
-                            pass
-                        elif plan_financing.externally_managed:
+                            logger.info(
+                                "Staff-assigned plan financing %s has no Stripe auto-charge history; skipping card charge",
+                                plan_financing_id,
+                            )
+                        elif plan_financing.externally_managed and not can_auto_charge:
                             message = translation(
                                 settings.lang,
                                 en="Please make your payment in your academy or use another payment method",
@@ -1397,6 +1401,11 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
                             raise AbortTask(f"Payment to PlanFinancing {plan_financing_id} failed")
                         else:
+                            if plan_financing.created_by_admin and can_auto_charge:
+                                logger.info(
+                                    "Staff-assigned plan financing %s will auto-charge via Stripe without a new proof of payment",
+                                    plan_financing_id,
+                                )
                             try:
                                 bag = actions.get_bag_from_plan_financing(plan_financing, settings)
                             except Exception as e:
@@ -1490,7 +1499,7 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                 if installment_closed and utc_now > plan_financing.valid_until:
                     plan_financing.valid_until = utc_now + relativedelta(months=remaining_installments)
 
-            unpaid_staff_cycle = staff_assigned and remaining_installments > 0 and not installment_closed
+            unpaid_staff_cycle = skip_stripe and remaining_installments > 0 and not installment_closed
 
             if installment_closed or unpaid_staff_cycle:
                 delta = relativedelta(months=1)
@@ -1995,6 +2004,7 @@ def build_plan_financing(
     initial_payment_notes: Optional[str] = None,
     grace_period_duration: int = 0,
     grace_period_duration_unit: str = "MONTH",
+    created_by_admin: bool = False,
     **_: Any,
 ):
     logger.info(f"Starting build_plan_financing for bag {bag_id}")
@@ -2111,6 +2121,7 @@ def build_plan_financing(
         currency=bag.currency or bag.academy.main_currency,  # Ensure currency is passed from bag
         seat_service_item=bag.seat_service_item,
         externally_managed=externally_managed,
+        created_by_admin=created_by_admin,
     )
 
     if bag.seat_service_item and bag.seat_service_item.how_many > 0:
@@ -2529,7 +2540,10 @@ def retry_pending_bag_delivery(self, bag_id: int, **_: Any):
     if bag.how_many_installments > 1:
         # This is a plan financing
         logger.info(f"Attempting to build plan financing for bag {bag_id}")
-        build_plan_financing.delay(bag_id=bag.id, invoice_id=invoice.id, is_free=is_free)
+        financing_kwargs: dict[str, Any] = {"bag_id": bag.id, "invoice_id": invoice.id, "is_free": is_free}
+        if bag.type == Bag.Type.INVITED:
+            financing_kwargs["created_by_admin"] = actions.created_by_admin_from_invited_bag(bag)
+        build_plan_financing.delay(**financing_kwargs)
     elif is_free:
         # This is a free subscription
         logger.info(f"Attempting to build free subscription for bag {bag_id}")

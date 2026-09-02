@@ -48,6 +48,7 @@ def plan_financing_item(data={}):
         "initial_payment_amount": None,
         "grace_period_duration": 0,
         "grace_period_duration_unit": "MONTH",
+        "created_by_admin": False,
         "auto_recharge_enabled": False,
         "recharge_threshold_amount": Decimal("10.00"),
         "recharge_amount": Decimal("10.00"),
@@ -920,3 +921,25 @@ class PaymentsTestSuite(PaymentsTestCase):
         assert financing["installments_paid"] == 0
         assert financing["how_many_installments"] == 1
         assert financing["initial_payment_amount"] == 5000
+        assert financing["created_by_admin"] is False
+
+    @patch("logging.Logger.info", MagicMock())
+    @patch("logging.Logger.error", MagicMock())
+    @patch.object(timezone, "now", MagicMock(return_value=UTC_NOW))
+    @patch("breathecode.payments.tasks.build_service_stock_scheduler_from_plan_financing.delay", MagicMock())
+    def test_created_by_admin_is_persisted(self):
+        bag = {
+            "status": "PAID",
+            "was_delivered": False,
+            "chosen_period": "NO_SET",
+            "how_many_installments": 3,
+        }
+        invoice = {"status": "FULFILLED", "amount": 100}
+        plan = {"is_renewable": False}
+
+        self.bc.database.create(bag=bag, invoice=invoice, plan=plan)
+
+        build_plan_financing.delay(1, 1, created_by_admin=True)
+
+        financing = self.bc.database.list_of("payments.PlanFinancing")[0]
+        assert financing["created_by_admin"] is True

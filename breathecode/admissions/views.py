@@ -1159,6 +1159,7 @@ class AcademyCohortUserView(APIView, GenerateLookupsMixin):
         context = {
             "request": request,
             "index": -1,
+            "skip_pending_tasks_on_graduation": True,
         }
 
         data = [validate_data(data) for data in request.data] if many else validate_data(request.data)
@@ -1231,6 +1232,7 @@ class AcademyCohortUserView(APIView, GenerateLookupsMixin):
         context = {
             "request": request,
             "index": -1,
+            "skip_pending_tasks_on_graduation": True,
         }
 
         if many:

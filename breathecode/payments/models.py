@@ -2023,6 +2023,7 @@ class Invoice(models.Model):
             and self.proof is None
             and self.status == self.Status.FULFILLED
             and not self.payment_method.is_crypto
+            and not self.payment_method.is_credit_card
             and not self.payment_method.get_stripe_payment_method_types()
         ):
             raise forms.ValidationError(
@@ -2477,6 +2478,15 @@ class PlanFinancing(AbstractIOweYou):
         choices=PAY_EVERY_UNIT,
         default=MONTH,
         help_text="Unit used by grace_period_duration.",
+    )
+    created_by_admin = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text=(
+            "True when staff created this financing (academy POST, invite, or backfill of "
+            "plans that had at least one invoice with proof of payment). Runtime logic must "
+            "not infer this from invoice proofs."
+        ),
     )
 
     def __str__(self) -> str:

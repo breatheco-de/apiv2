@@ -416,6 +416,75 @@ class CohortUserTestSuite(AdmissionsTestCase):
             ],
         )
 
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
+    def test_academy_cohort_user__put__graduated_with_pending_tasks(self):
+        """Academy staff can mark GRADUATED even if required projects are still pending."""
+        self.headers(academy=1)
+        task = {"task_status": "PENDING", "task_type": "PROJECT", "associated_slug": "testing-slug"}
+        model = self.generate_models(
+            authenticate=True,
+            cohort_user=True,
+            profile_academy=True,
+            capability="crud_cohort",
+            role="potato",
+            task=task,
+            syllabus_version={
+                "id": 1,
+                "json": {
+                    "days": [
+                        {
+                            "assignments": [
+                                {
+                                    "slug": "testing-slug",
+                                }
+                            ]
+                        }
+                    ]
+                },
+            },
+        )
+        url = reverse_lazy("admissions:academy_cohort_id_user_id", kwargs={"cohort_id": 1, "user_id": 1})
+        data = {
+            "educational_status": "GRADUATED",
+        }
+        response = self.client.put(url, data, format="json")
+        json = response.json()
+
+        model["cohort_user"].refresh_from_db()
+        model["cohort"].refresh_from_db()
+
+        syllabus_version = model.cohort.syllabus_version
+        expected = put_serializer(
+            self,
+            model.cohort_user,
+            model.cohort,
+            model.user,
+            model.profile_academy,
+            data={"educational_status": "GRADUATED"},
+        )
+        expected["cohort"]["syllabus_version"] = {
+            "id": syllabus_version.id,
+            "version": syllabus_version.version,
+            "slug": syllabus_version.syllabus.slug if syllabus_version.syllabus else None,
+            "name": syllabus_version.syllabus.name if syllabus_version.syllabus else None,
+            "syllabus": syllabus_version.syllabus.id if syllabus_version.syllabus else None,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            self.bc.database.list_of("admissions.CohortUser"),
+            [
+                {
+                    **self.model_to_dict(model, "cohort_user"),
+                    "educational_status": "GRADUATED",
+                    "watching": False,
+                    "source_macro_cohort_id": None,
+                }
+            ],
+        )
+
     """
     🔽🔽🔽 Put teacher
     """
