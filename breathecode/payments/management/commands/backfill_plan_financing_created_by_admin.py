@@ -2,6 +2,7 @@ from logging import getLogger
 
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
+from task_manager.django.models import TaskManager
 
 from breathecode.payments import tasks
 from breathecode.payments.models import Plan, PlanFinancing
@@ -26,19 +27,62 @@ def parse_plan_slugs(raw: str | None) -> list[str] | None:
     return slugs
 
 
+def run_task_now(celery_task, *args):
+    """Run a task_manager @task in-process.
+
+    ``.apply()`` / first ``delay()`` hop only creates a TaskManager row and
+    ``apply_async``; it does not execute the charge on a Heroku one-off dyno.
+    Passing ``task_manager_id`` skips that schedule-only path.
+
+    Callers must be ``bind=True`` tasks: the wrapper treats ``args[0]`` as
+    the Celery task instance.
+    """
+    wrapper = getattr(celery_task, "__wrapped__", None)
+    if wrapper is None:
+        logger.warning(
+            "Task %s has no __wrapped__; falling back to delay() and will not wait for the charge",
+            getattr(celery_task, "__name__", celery_task),
+        )
+        celery_task.delay(*args)
+        return None
+
+    task_manager = TaskManager.objects.create(
+        task_module=celery_task.__module__,
+        task_name=celery_task.__name__,
+        arguments={"args": list(args), "kwargs": {}},
+        status="SCHEDULED",
+        last_run=timezone.now(),
+        current_page=0,
+        total_pages=1,
+        attempts=1,
+    )
+    wrapper(celery_task, *args, task_manager_id=task_manager.id)
+    task_manager.refresh_from_db()
+    logger.info(
+        "Ran %s in-process args=%s task_manager_id=%s status=%s message=%s",
+        celery_task.__name__,
+        args,
+        task_manager.id,
+        task_manager.status,
+        task_manager.status_message,
+    )
+    return task_manager
+
+
 class Command(BaseCommand):
     help = (
         "Set created_by_admin=True on plan financings that have at least one invoice "
-        "with proof of payment, and enqueue charge_plan_financing for overdue chargeable ones. "
-        "With --plans, mark every financing of those plan slugs and catch up ACTIVE overdue "
-        "charges plus consumables until next_payment_at is in the future."
+        "with proof of payment, and run charge_plan_financing in-process for overdue "
+        "chargeable ones. With --plans, mark every financing of those plan slugs and "
+        "catch up ACTIVE overdue charges plus consumables until next_payment_at is in "
+        "the future."
     )
 
     def add_arguments(self, parser):
         parser.add_argument(
             "--dry-run",
             action="store_true",
-            help="List affected plan financings without updating or enqueueing charges",
+            help="List affected plan financings without updating or running charges",
         )
         parser.add_argument("--email", type=str, default=None, help="Limit to a user email")
         parser.add_argument(
@@ -117,8 +161,12 @@ class Command(BaseCommand):
                     if plan_slugs:
                         self._catch_up_overdue(plan_financing, utc_now)
                     else:
-                        tasks.charge_plan_financing.delay(plan_financing.id)
-                        logger.info("Queued charge_plan_financing plan_financing_id=%s", plan_financing.id)
+                        task_manager = run_task_now(tasks.charge_plan_financing, plan_financing.id)
+                        logger.info(
+                            "Ran charge_plan_financing plan_financing_id=%s task_status=%s",
+                            plan_financing.id,
+                            getattr(task_manager, "status", None),
+                        )
 
             marked += 1
             if should_charge:
@@ -126,7 +174,7 @@ class Command(BaseCommand):
                 charge_targets.append((plan_financing.id, plan_financing.user.email))
 
         action = "Would mark" if dry_run else "Marked"
-        charge_action = "would charge" if dry_run else "queued charge for"
+        charge_action = "would charge" if dry_run else "ran charge for"
         self.stdout.write(
             self.style.SUCCESS(
                 f"{action} {marked} plan financing(s) as created_by_admin; {charge_action} {charged}."
@@ -196,9 +244,10 @@ class Command(BaseCommand):
                 plan_financing.installments_paid,
             )
             try:
-                tasks.charge_plan_financing.apply(args=(plan_financing.id,))
+                task_manager = run_task_now(tasks.charge_plan_financing, plan_financing.id)
             except Exception:
                 logger.exception("Catch-up charge failed plan_financing_id=%s", plan_financing.id)
+                self.stdout.write(self.style.ERROR(f"charge failed plan_financing_id={plan_financing.id}"))
                 break
 
             plan_financing.refresh_from_db()
@@ -209,17 +258,26 @@ class Command(BaseCommand):
             )
             cycles += 1
             if after == before:
+                message = task_manager.status_message if task_manager else "unknown"
                 logger.warning(
-                    "Catch-up made no progress plan_financing_id=%s, stopping",
+                    "Catch-up made no progress plan_financing_id=%s task_manager_status=%s message=%s",
                     plan_financing.id,
+                    getattr(task_manager, "status", None),
+                    message,
+                )
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"charge made no progress id={plan_financing.id} "
+                        f"task_status={getattr(task_manager, 'status', None)} {message}"
+                    )
                 )
                 break
 
         plan_financing.refresh_from_db()
         if plan_financing.next_payment_at is not None and plan_financing.next_payment_at > utc_now:
-            tasks.renew_plan_financing_consumables.delay(plan_financing.id)
+            run_task_now(tasks.renew_plan_financing_consumables, plan_financing.id)
             logger.info(
-                "Queued renew_plan_financing_consumables plan_financing_id=%s after %s catch-up cycle(s)",
+                "Renewed consumables in-process plan_financing_id=%s after %s catch-up cycle(s)",
                 plan_financing.id,
                 cycles,
             )

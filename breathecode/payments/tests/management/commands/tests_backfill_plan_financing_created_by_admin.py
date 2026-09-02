@@ -7,6 +7,7 @@ from django.core.management.base import CommandError
 from django.utils import timezone
 
 from breathecode.payments import tasks
+from breathecode.payments.management.commands import backfill_plan_financing_created_by_admin as backfill_command
 from breathecode.payments.management.commands.backfill_plan_financing_created_by_admin import Command
 from breathecode.payments.models import Invoice, PlanFinancing
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
@@ -17,15 +18,18 @@ pytestmark = pytest.mark.usefixtures("db")
 
 
 @pytest.fixture(autouse=True)
-def patch_charge(monkeypatch: pytest.MonkeyPatch):
+def patch_charge(request, monkeypatch: pytest.MonkeyPatch):
     delay = MagicMock()
     apply = MagicMock()
     renew = MagicMock()
+    run_now = MagicMock()
     monkeypatch.setattr(tasks.charge_plan_financing, "delay", delay)
     monkeypatch.setattr(tasks.charge_plan_financing, "apply", apply)
     monkeypatch.setattr(tasks.renew_plan_financing_consumables, "delay", renew)
+    if request.node.name != "test_run_task_now_calls_wrapped_with_existing_task_manager":
+        monkeypatch.setattr(backfill_command, "run_task_now", run_now)
     monkeypatch.setattr("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
-    return {"delay": delay, "apply": apply, "renew": renew}
+    return {"delay": delay, "apply": apply, "renew": renew, "run_now": run_now}
 
 
 def _create_plan_with_proof(database: capy.Database, *, overdue=True, email="staff@example.com", status="ACTIVE"):
@@ -65,7 +69,8 @@ def test_marks_plan_with_proof_and_queues_overdue_charge(database: capy.Database
 
     model.plan_financing.refresh_from_db()
     assert model.plan_financing.created_by_admin is True
-    patch_charge["delay"].assert_called_once_with(model.plan_financing.id)
+    patch_charge["run_now"].assert_called_once_with(tasks.charge_plan_financing, model.plan_financing.id)
+    patch_charge["delay"].assert_not_called()
 
 
 def test_marks_when_only_a_later_invoice_has_proof(database: capy.Database, patch_charge):
@@ -115,6 +120,7 @@ def test_marks_when_only_a_later_invoice_has_proof(database: capy.Database, patc
     assert model.plan_financing.created_by_admin is True
     patch_charge["delay"].assert_not_called()
     patch_charge["apply"].assert_not_called()
+    patch_charge["run_now"].assert_not_called()
 
 
 def test_dry_run_does_not_mark_or_charge(database: capy.Database, patch_charge):
@@ -126,6 +132,7 @@ def test_dry_run_does_not_mark_or_charge(database: capy.Database, patch_charge):
     assert model.plan_financing.created_by_admin is False
     patch_charge["delay"].assert_not_called()
     patch_charge["apply"].assert_not_called()
+    patch_charge["run_now"].assert_not_called()
 
 
 def test_marks_but_does_not_charge_when_next_payment_is_in_the_future(database: capy.Database, patch_charge):
@@ -137,6 +144,7 @@ def test_marks_but_does_not_charge_when_next_payment_is_in_the_future(database: 
     assert model.plan_financing.created_by_admin is True
     patch_charge["delay"].assert_not_called()
     patch_charge["apply"].assert_not_called()
+    patch_charge["run_now"].assert_not_called()
 
 
 def test_skips_checkout_plan_without_proof(database: capy.Database, patch_charge):
@@ -170,6 +178,7 @@ def test_skips_checkout_plan_without_proof(database: capy.Database, patch_charge
     assert model.plan_financing.created_by_admin is False
     patch_charge["delay"].assert_not_called()
     patch_charge["apply"].assert_not_called()
+    patch_charge["run_now"].assert_not_called()
 
 
 def test_email_filter_skips_other_users(database: capy.Database, patch_charge):
@@ -181,6 +190,7 @@ def test_email_filter_skips_other_users(database: capy.Database, patch_charge):
     assert model.plan_financing.created_by_admin is False
     patch_charge["delay"].assert_not_called()
     patch_charge["apply"].assert_not_called()
+    patch_charge["run_now"].assert_not_called()
 
 
 def test_marks_expired_plan_but_does_not_charge(database: capy.Database, patch_charge):
@@ -192,6 +202,7 @@ def test_marks_expired_plan_but_does_not_charge(database: capy.Database, patch_c
     assert model.plan_financing.created_by_admin is True
     patch_charge["delay"].assert_not_called()
     patch_charge["apply"].assert_not_called()
+    patch_charge["run_now"].assert_not_called()
 
 
 def test_marks_payment_issue_and_queues_overdue_charge(database: capy.Database, patch_charge):
@@ -201,7 +212,8 @@ def test_marks_payment_issue_and_queues_overdue_charge(database: capy.Database, 
 
     model.plan_financing.refresh_from_db()
     assert model.plan_financing.created_by_admin is True
-    patch_charge["delay"].assert_called_once_with(model.plan_financing.id)
+    patch_charge["run_now"].assert_called_once_with(tasks.charge_plan_financing, model.plan_financing.id)
+    patch_charge["delay"].assert_not_called()
 
 
 def _create_financing_for_plan(
@@ -264,6 +276,7 @@ def test_plans_flag_marks_financings_without_proof(bc: Breathecode, patch_charge
     patch_charge["delay"].assert_not_called()
     patch_charge["apply"].assert_not_called()
     patch_charge["renew"].assert_not_called()
+    patch_charge["run_now"].assert_not_called()
 
 
 def test_plans_flag_marks_comma_separated_slugs(bc: Breathecode, patch_charge):
@@ -291,27 +304,39 @@ def test_plans_flag_does_not_charge_payment_issue(bc: Breathecode, patch_charge)
     assert model.plan_financing.created_by_admin is True
     patch_charge["apply"].assert_not_called()
     patch_charge["delay"].assert_not_called()
+    patch_charge["run_now"].assert_not_called()
 
 
 def test_plans_flag_catches_up_active_overdue_until_next_payment_in_future(bc: Breathecode, patch_charge):
     model = _create_financing_for_plan(bc, slug="ai-engineering", months_overdue=2)
 
-    def advance(args=(), **kwargs):
-        plan_financing = PlanFinancing.objects.get(id=args[0])
+    def advance(celery_task, plan_financing_id):
+        if celery_task is not tasks.charge_plan_financing:
+            return
+        plan_financing = PlanFinancing.objects.get(id=plan_financing_id)
         plan_financing.next_payment_at = plan_financing.next_payment_at + relativedelta(months=1)
         plan_financing.installments_paid = (plan_financing.installments_paid or 0) + 1
         plan_financing.save(update_fields=["next_payment_at", "installments_paid"])
 
-    patch_charge["apply"].side_effect = advance
+    patch_charge["run_now"].side_effect = advance
 
     Command().handle(dry_run=False, email=None, plan_financing_id=None, plans="ai-engineering")
 
     model.plan_financing.refresh_from_db()
     assert model.plan_financing.created_by_admin is True
     assert model.plan_financing.next_payment_at > UTC_NOW
-    assert patch_charge["apply"].call_count == 3
+    charge_calls = [
+        call for call in patch_charge["run_now"].call_args_list if call.args[0] is tasks.charge_plan_financing
+    ]
+    renew_calls = [
+        call
+        for call in patch_charge["run_now"].call_args_list
+        if call.args[0] is tasks.renew_plan_financing_consumables
+    ]
+    assert len(charge_calls) == 3
+    assert len(renew_calls) == 1
+    patch_charge["apply"].assert_not_called()
     patch_charge["delay"].assert_not_called()
-    patch_charge["renew"].assert_called_once_with(model.plan_financing.id)
 
 
 def test_plans_flag_dry_run_does_not_mark_or_charge(bc: Breathecode, patch_charge, capsys):
@@ -322,7 +347,27 @@ def test_plans_flag_dry_run_does_not_mark_or_charge(bc: Breathecode, patch_charg
     model.plan_financing.refresh_from_db()
     assert model.plan_financing.created_by_admin is False
     patch_charge["apply"].assert_not_called()
-    patch_charge["renew"].assert_not_called()
+    patch_charge["run_now"].assert_not_called()
     output = capsys.readouterr().out
     assert "Emails to charge (1):" in output
     assert f"id={model.plan_financing.id} {model.user.email}" in output
+
+
+def test_run_task_now_calls_wrapped_with_existing_task_manager(db):
+    wrapped = MagicMock()
+
+    class FakeTask:
+        bind = True
+        __module__ = "breathecode.payments.tasks"
+        __name__ = "charge_plan_financing"
+
+        def __init__(self):
+            self.__wrapped__ = wrapped
+
+    celery_task = FakeTask()
+    task_manager = backfill_command.run_task_now(celery_task, 42)
+
+    wrapped.assert_called_once_with(celery_task, 42, task_manager_id=task_manager.id)
+    task_manager.refresh_from_db()
+    assert task_manager.task_name == "charge_plan_financing"
+    assert task_manager.arguments["args"] == [42]
