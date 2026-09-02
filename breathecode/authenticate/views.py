@@ -83,6 +83,14 @@ from .actions import (
     sync_organization_members,
     update_gitpod_users,
 )
+from .utils.login_protection import (
+    LoginRateLimitExceeded,
+    check_login_rate_limit,
+    clear_login_rate_limit,
+    get_login_captcha_context,
+    record_login_failure,
+    verify_turnstile_if_enabled,
+)
 from .authentication import ExpiringTokenAuthentication
 from .forms import (
     InviteForm,
@@ -1636,10 +1644,39 @@ class LoginView(ObtainAuthToken):
     def post(self, request, *args, **kwargs):
         from breathecode.utils.request import get_current_academy
 
+        email = request.data.get("email") if hasattr(request.data, "get") else None
+        lang = get_user_language(request)
+
+        try:
+            check_login_rate_limit(request, email)
+        except LoginRateLimitExceeded as e:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=e.message,
+                    es="Demasiados intentos de inicio de sesión. Por favor, inténtalo más tarde.",
+                ),
+                slug="login-rate-limit-exceeded",
+                code=429,
+                silent=True,
+            )
+
+        verify_turnstile_if_enabled(request)
+
         serializer = AuthSerializer(data=request.data, context={"request": request})
-        serializer.is_valid(raise_exception=True)
+        if not serializer.is_valid():
+            # Only count failed authentication when both credentials were provided
+            password = request.data.get("password") if hasattr(request.data, "get") else None
+            if email and password:
+                errors = serializer.errors
+                non_field = errors.get("non_field_errors") or []
+                if any("Unable to log in with provided credentials." in str(err) for err in non_field):
+                    record_login_failure(request, email)
+            serializer.is_valid(raise_exception=True)
+
         user = serializer.validated_data["user"]
         token, created = Token.get_or_create(user=user, token_type="login")
+        clear_login_rate_limit(request, email)
 
         # Get academy_id using the utility function
         academy_id = get_current_academy(request, return_id=True)
@@ -2979,6 +3016,16 @@ def sync_gitpod_users_view(request):
 
 def reset_password_view(request):
 
+    def render_reset_password(form, redirect_url=None):
+        return shortcuts.render(
+            request,
+            "reset_password.html",
+            {
+                "form": form,
+                "redirect_url": redirect_url if redirect_url is not None else request.GET.get("url", None),
+            },
+        )
+
     if request.method == "POST":
         _dict = request.POST.copy()
         # Use ResetPasswordForm for POST to only handle email submission
@@ -2986,13 +3033,12 @@ def reset_password_view(request):
 
         if "email" not in _dict or _dict["email"] == "":
             messages.error(request, "Email is required")
-            # Pass the correct form instance to the template
-            return shortcuts.render(request, "form.html", {"form": form})
+            return render_reset_password(form, request.POST.get("callback", None) or request.POST.get("url", None))
 
         # If ResetPasswordForm has validation (e.g., email format)
         if not form.is_valid():
             messages.error(request, "Invalid email format.")
-            return shortcuts.render(request, "form.html", {"form": form})
+            return render_reset_password(form, request.POST.get("callback", None) or request.POST.get("url", None))
 
         users = User.objects.filter(email__iexact=_dict["email"])
         if users.exists():
@@ -3006,9 +3052,9 @@ def reset_password_view(request):
             return shortcuts.render(request, "message.html", {"MESSAGE": "Check your email for a password reset!"})
     else:  # GET request
         _dict = request.GET.copy()
-        _dict["callback"] = request.GET.get("callback", "")
+        _dict["callback"] = request.GET.get("callback", "") or request.GET.get("url", "")
         form = ResetPasswordForm(_dict)
-        return shortcuts.render(request, "form.html", {"form": form})
+        return render_reset_password(form)
 
 
 def pick_password(request, token):
@@ -3463,10 +3509,25 @@ def login_html_view(request):
 
     _dict = request.GET.copy()
     form = LoginForm(_dict)
+    captcha_context = get_login_captcha_context()
+
+    def render_login(redirect_url=None):
+        return shortcuts.render(
+            request,
+            "login.html",
+            {
+                "form": form,
+                "redirect_url": redirect_url if redirect_url is not None else request.GET.get("url", None),
+                **captcha_context,
+            },
+        )
 
     if request.method == "POST":
 
         try:
+            email = request.POST.get("email", None)
+            check_login_rate_limit(request, email)
+            verify_turnstile_if_enabled(request)
 
             url = request.POST.get("url", None)
             if url is None or url == "":
@@ -3478,16 +3539,17 @@ def login_html_view(request):
             except Exception:
                 pass
 
-            email = request.POST.get("email", None)
             password = request.POST.get("password", None)
 
             user = None
             if email and password:
                 user = User.objects.filter(Q(email=email.lower()) | Q(username=email)).first()
                 if not user:
+                    record_login_failure(request, email)
                     msg = "Unable to log in with provided credentials."
                     raise Exception(msg)
                 if user.check_password(password) != True:
+                    record_login_failure(request, email)
                     msg = "Unable to log in with provided credentials."
                     raise Exception(msg)
                 # The authenticate call simply returns None for is_active=False
@@ -3506,21 +3568,28 @@ def login_html_view(request):
                 raise Exception("You need to validate your email first")
 
             token, _ = Token.get_or_create(user=user, token_type="login")
+            clear_login_rate_limit(request, email)
 
             request.session["token"] = token.key
             return HttpResponseRedirect(
                 set_query_parameter(set_query_parameter(url, "attempt", "1"), "token", str(token))
             )
 
+        except LoginRateLimitExceeded as e:
+            messages.error(request, e.message)
+            return render_login(request.POST.get("url", None))
+        except ValidationException as e:
+            messages.error(request, e.detail if hasattr(e, "detail") else e)
+            return render_login(request.POST.get("url", None))
         except Exception as e:
             messages.error(request, e.message if hasattr(e, "message") else e)
-            return shortcuts.render(request, "login.html", {"form": form})
+            return render_login(request.POST.get("url", None))
     else:
         url = request.GET.get("url", None)
         if url is None or url == "":
             messages.error(request, "You must specify a 'url' (querystring) to redirect to after successful login")
 
-    return shortcuts.render(request, "login.html", {"form": form, "redirect_url": request.GET.get("url", None)})
+    return render_login()
 
 
 @api_view(["GET"])

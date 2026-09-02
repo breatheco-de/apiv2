@@ -823,18 +823,34 @@ def mark_technologies_as_unlisted(modeladmin, request, queryset):
 @admin.register(AssetTechnology)
 class AssetTechnologyAdmin(admin.ModelAdmin):
     search_fields = ["title", "slug"]
-    list_display = ("id", "get_slug", "title", "parent", "featured_asset", "description", "visibility", "is_deprecated")
-    list_filter = (ParentFilter, VisibilityFilter, IsDeprecatedFilter, SortPriorityFilter)
+    list_display = ("id", "main", "sort_priority", "parent", "featured_asset", "description", "visibility", "is_deprecated")
+    list_filter = ("lang", ParentFilter, VisibilityFilter, IsDeprecatedFilter, SortPriorityFilter)
     raw_id_fields = ["parent", "featured_asset"]
 
-    actions = (merge_technologies, slug_to_lower_case, mark_technologies_as_unlisted)
+    actions = [
+        merge_technologies,
+        slug_to_lower_case,
+        mark_technologies_as_unlisted,
+    ] + change_field(["us", "es"], name="lang")
 
-    def get_slug(self, obj):
-        parent = ""
-        if obj.parent is None:
-            parent = "🤰🏻"
-
-        return format_html(parent + " " + f'<a href="/admin/registry/assettechnology/{obj.id}/change/">{obj.slug}</a>')
+    def main(self, obj):
+        parent = "🤰🏻 " if obj.parent is None else ""
+        title = obj.title or ""
+        lang = obj.lang.lower() if isinstance(obj.lang, str) and obj.lang else None
+        flag = lang_flags.get(lang, "")
+        lang_line = ""
+        if lang:
+            lang_line = (
+                f'<p style="border: 1px solid #BDBDBD; border-radius: 3px; '
+                f'font-size: 10px; padding: 3px; margin: 0;">{flag}</p>'
+            )
+        return format_html(
+            f"""
+                {lang_line}
+                <p style="margin: 0; padding: 0;">{title}</p>
+                <p style="margin: 0; padding: 0;">{parent}<a href="/admin/registry/assettechnology/{obj.id}/change/">{obj.slug}</a></p>
+            """
+        )
 
 
 @admin.register(AssetAlias)

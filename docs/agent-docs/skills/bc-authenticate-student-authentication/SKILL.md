@@ -23,7 +23,7 @@ Students use **two parallel authorization layers**. Both may appear on `GET /v1/
 | **Dynamic?** | Changes when role/capability assignment changes per academy | Groups change via enrollment, plan, seat, mentor signals — not directly assignable via auth API |
 
 - **Login token**: Main API token returned by login flows; send it as `Authorization: Token <token>`.
-- **Universal hosted login**: API-hosted HTML login for **cross-app browser authentication**. Other BreatheCode apps redirect users to `GET /v1/auth/view/login?url=<callback>` instead of building their own login UI. The `url` query param is the callback where the user returns after success (plain HTTPS or Base64-encoded — API auto-detects). Returns the same `login` token as `POST /v1/auth/login/`; successful auth redirects to `<callback>?token=<login_token>&attempt=1`.
+- **Universal hosted login**: API-hosted HTML login for **cross-app browser authentication**. Other BreatheCode apps redirect users to `GET /v1/auth/view/login?url=<callback>` instead of building their own login UI. The `url` query param is the callback where the user returns after success (plain HTTPS or Base64-encoded — API auto-detects). Returns the same `login` token as `POST /v1/auth/login/`; successful auth redirects to `<callback>?token=<login_token>&attempt=1`. When `APPLY_CAPTCHA=true`, **both** hosted login and `POST /v1/auth/login/` require Cloudflare Turnstile (`cf-turnstile-response`). Clients that build their own login UI need `CLOUDFLARE_TURNSTILE_SITE_KEY` for the widget; the secret stays on the API. Both entrypoints share **failed-attempt rate limiting** when `LOGIN_RATE_LIMIT_ENABLED=true` (429 / form error after too many bad credentials).
 - **ProfileAcademy**: Anchor for capabilities — every capability check resolves user + academy + role.
 - **Groups** (`Default`, `Student`, `Paid Student`, `Events`, `Classes`, `Mentorships`, `Legacy`, etc.): grant permission codenames independent of which academy the student belongs to. Membership changes as side effects of admissions, payments, and enrollment flows.
 - **Staff**: non-student academy roles use **capabilities only** — see [`bc-authenticate-staff-authentication`](../bc-authenticate-staff-authentication/SKILL.md).
@@ -31,7 +31,7 @@ Students use **two parallel authorization layers**. Both may appear on `GET /v1/
 ## Workflow
 
 1. **Choose auth flow.**
-   - Use `POST /v1/auth/login/` for direct API login (backend/SPA that handles credentials).
+   - Use `POST /v1/auth/login/` for direct API login (backend/SPA that handles credentials). When `APPLY_CAPTCHA=true`, include `cf-turnstile-response` from the Turnstile widget in the JSON body.
    - Use `GET /v1/auth/view/login?url=<callback>` for third-party browser redirect login (see subsection below).
 
 ### Universal hosted login (cross-app browser auth)
@@ -39,7 +39,7 @@ Students use **two parallel authorization layers**. Both may appear on `GET /v1/
 Other BreatheCode apps authenticate users by redirecting the browser to the API login page instead of building their own login UI. OAuth (`/github`, `/google`) uses a different entrypoint but the same `url` callback pattern — see steps 8–9 below.
 
 1. App redirects user to `GET /v1/auth/view/login?url=<callback>` (`url` required; plain HTTPS or Base64-encoded).
-2. User submits email/password on the API HTML form.
+2. User submits email/password on the API HTML form (Turnstile widget present when `APPLY_CAPTCHA=true`).
 3. API redirects to `<callback>?token=<login_token>&attempt=1`.
 4. App reads `token` from the query string, stores it, and sends `Authorization: Token <token>` on API calls.
 5. Optionally validate with `GET /v1/auth/user/me`.
@@ -91,7 +91,7 @@ Send `Accept-Language` (`en`, `es`) for translated errors where applicable.
 
 | Action | Method | Path | Required headers | Body | Important response |
 |---|---|---|---|---|---|
-| API login | POST | `/v1/auth/login/` | `Content-Type: application/json` | `email`, `password` | `token`, `user_id`, `email`, `expires_at` |
+| API login | POST | `/v1/auth/login/` | `Content-Type: application/json` | `email`, `password`; when `APPLY_CAPTCHA=true` also `cf-turnstile-response` | `token`, `user_id`, `email`, `expires_at` |
 | Hosted universal login page | GET | `/v1/auth/view/login?url=<callback>` | None | None | HTML form, then redirect to callback with `?token=<login_token>&attempt=1` |
 | Token info | GET | `/v1/auth/token/<token>` | None | None | `token`, `token_type`, `expires_at`, `user_id` |
 | Create temporal token from current token | POST | `/v1/auth/token/me` | `Authorization` | optional `token_type` | new token metadata |
@@ -106,10 +106,13 @@ Send `Accept-Language` (`en`, `es`) for translated errors where applicable.
 
 ### API login request sample
 
+When `APPLY_CAPTCHA=true`, include `cf-turnstile-response` (token from the Cloudflare Turnstile widget using `CLOUDFLARE_TURNSTILE_SITE_KEY`). Omit it when captcha is disabled.
+
 ```json
 {
   "email": "student@example.com",
-  "password": "StrongPassword123!"
+  "password": "StrongPassword123!",
+  "cf-turnstile-response": "<turnstile-token>"
 }
 ```
 

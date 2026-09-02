@@ -14,7 +14,7 @@ Use this skill when the user needs to authenticate a **staff member** (teacher, 
 ## Concepts
 
 - **Login token**: Same as students — `Authorization: Token <token>` on all authenticated calls.
-- **Universal hosted login**: API-hosted HTML login for **cross-app browser authentication**. Staff admin UIs and external 4Geeks apps redirect users to `GET /v1/auth/view/login?url=<callback>` instead of building their own login UI. The `url` query param is the callback where the user returns after success (plain HTTPS or Base64-encoded — API auto-detects). Returns the same `login` token as `POST /v1/auth/login/`; successful auth redirects to `<callback>?token=<login_token>&attempt=1`.
+- **Universal hosted login**: API-hosted HTML login for **cross-app browser authentication**. Staff admin UIs and external 4Geeks apps redirect users to `GET /v1/auth/view/login?url=<callback>` instead of building their own login UI. The `url` query param is the callback where the user returns after success (plain HTTPS or Base64-encoded — API auto-detects). Returns the same `login` token as `POST /v1/auth/login/`; successful auth redirects to `<callback>?token=<login_token>&attempt=1`. When `APPLY_CAPTCHA=true`, **both** hosted login and `POST /v1/auth/login/` require Cloudflare Turnstile (`cf-turnstile-response`). Clients that build their own login UI need `CLOUDFLARE_TURNSTILE_SITE_KEY` for the widget; the secret stays on the API. Failed attempts on hosted + API login are rate-limited when `LOGIN_RATE_LIMIT_ENABLED=true`.
 - **ProfileAcademy**: Links user ↔ academy ↔ role. Every staff capability check resolves through this relationship for a **specific academy**.
 - **Capabilities (staff-only authorization layer)**: Fine-grained slugs on the role (e.g. `crud_cohort`, `read_member`). Staff access to `/academy/*` routes is gated by capabilities plus the `Academy` header. Staff do **not** use the academy-less permissions layer for staff work.
 - **`permissions[]` on `user/me`**: Django group permissions may appear in the response; **ignore them for staff workflows** — they apply to learner routes, not academy admin.
@@ -26,7 +26,7 @@ Use this skill when the user needs to authenticate a **staff member** (teacher, 
 Staff use the **same login entrypoints as students**. OAuth/GitHub callback details live in the student skill; this track covers the staff login path end-to-end.
 
 1. **Choose auth flow.**
-   - `POST /v1/auth/login/` — API/SPA with email + password.
+   - `POST /v1/auth/login/` — API/SPA with email + password. When `APPLY_CAPTCHA=true`, include `cf-turnstile-response` from the Turnstile widget in the JSON body.
    - `GET /v1/auth/view/login?url=<callback>` — browser hosted login; successful auth redirects to callback with `?token=` (see subsection below).
    - OAuth (`/github`, `/google`, etc.) — see [`bc-authenticate-student-authentication`](../bc-authenticate-student-authentication/SKILL.md) for callback URL handling.
 
@@ -105,7 +105,7 @@ All paths below are under `/v1/auth`. Unless noted, responses are not paginated.
 
 | Action | Method | Path | Required headers | Body | Important response |
 |--------|--------|------|------------------|------|-------------------|
-| API login | POST | `/v1/auth/login/` | `Content-Type: application/json` | `email`, `password` | `token`, `user_id`, `email`, `expires_at` |
+| API login | POST | `/v1/auth/login/` | `Content-Type: application/json` | `email`, `password`; when `APPLY_CAPTCHA=true` also `cf-turnstile-response` | `token`, `user_id`, `email`, `expires_at` |
 | Hosted login page | GET | `/v1/auth/view/login?url=<callback>` | None | None | HTML form, then redirect to callback with `?token=<login_token>&attempt=1` |
 | Token info | GET | `/v1/auth/token/<token>` | None | None | `token`, `token_type`, `expires_at`, `user_id` |
 | Current user | GET | `/v1/auth/user/me` | `Authorization` | None | `roles[]` (staff academies); ignore `permissions[]` for staff |
@@ -136,10 +136,13 @@ All paths below are under `/v1/auth`. Unless noted, responses are not paginated.
 
 ### API login request sample
 
+When `APPLY_CAPTCHA=true`, include `cf-turnstile-response` (token from the Cloudflare Turnstile widget using `CLOUDFLARE_TURNSTILE_SITE_KEY`). Omit it when captcha is disabled.
+
 ```json
 {
   "email": "teacher@example.com",
-  "password": "StrongPassword123!"
+  "password": "StrongPassword123!",
+  "cf-turnstile-response": "<turnstile-token>"
 }
 ```
 

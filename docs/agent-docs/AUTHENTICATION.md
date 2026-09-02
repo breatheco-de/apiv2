@@ -134,9 +134,12 @@ Content-Type: application/json
 ```json
 {
   "email": "user@example.com",
-  "password": "securePassword123"
+  "password": "securePassword123",
+  "cf-turnstile-response": "<turnstile-token>"
 }
 ```
+
+When `APPLY_CAPTCHA=true`, `cf-turnstile-response` is required (token from the Cloudflare Turnstile widget). Clients that build their own login UI need `CLOUDFLARE_TURNSTILE_SITE_KEY`; the secret (`CLOUDFLARE_TURNSTILE_SECRET_KEY`) stays on the API. Omit the field when captcha is disabled.
 
 **Success Response (200 OK):**
 ```json
@@ -149,6 +152,14 @@ Content-Type: application/json
 ```
 
 **Error Responses:**
+
+**400 Bad Request - Missing/Invalid Turnstile (when `APPLY_CAPTCHA=true`):**
+```json
+{
+  "detail": "Missing Turnstile token",
+  "status_code": 400
+}
+```
 
 **403 Forbidden - Invalid Credentials:**
 ```json
@@ -272,8 +283,12 @@ https://breathecode.herokuapp.com/v1/auth/view/login?url=https://yourapp.com/aut
 
 **User Flow:**
 1. User is redirected to the login form
-2. User enters email and password
+2. User enters email and password (and completes Cloudflare Turnstile when `APPLY_CAPTCHA=true`)
 3. After successful authentication, user is redirected to your callback URL with token appended
+
+**Bot protection:**
+- When `APPLY_CAPTCHA=true`, **both** the hosted login page and `POST /v1/auth/login/` require Cloudflare Turnstile (`cf-turnstile-response`). Hosted login renders the widget; API/SPA clients must embed it using `CLOUDFLARE_TURNSTILE_SITE_KEY` and send the token in the JSON body. Verification uses `CLOUDFLARE_TURNSTILE_SECRET_KEY` on the API.
+- Failed login attempts on both `POST /v1/auth/view/login` and `POST /v1/auth/login/` can be rate-limited when `LOGIN_RATE_LIMIT_ENABLED=true` (defaults: 5 failures / 15 minutes per IP or email). Over-limit API login returns **429** with `silent_code: login-rate-limit-exceeded`.
 
 **Redirect After Success:**
 ```
@@ -1108,7 +1123,13 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const login = async (email, password) => {
+  const login = async (email, password, turnstileToken) => {
+    const body = { email, password };
+    // When APPLY_CAPTCHA=true, include the Turnstile widget token
+    if (turnstileToken) {
+      body['cf-turnstile-response'] = turnstileToken;
+    }
+
     const response = await fetch(
       'https://breathecode.herokuapp.com/v1/auth/login/',
       {
@@ -1116,7 +1137,7 @@ export const AuthProvider = ({ children }) => {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify(body)
       }
     );
 
