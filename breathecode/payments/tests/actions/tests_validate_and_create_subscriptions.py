@@ -360,7 +360,7 @@ def test_schedule_plan_financing(
         ),
     ]
 
-    assert build_plan_financing.delay.call_args_list == [call(1, 1, conversion_info=None, cohorts=[])]
+    assert build_plan_financing.delay.call_args_list == [call(1, 1, conversion_info=None, cohorts=[], created_by_admin=True)]
 
     assert len(result) == 2
 
@@ -429,6 +429,7 @@ def test_schedule_plan_financing_with_initial_payment_and_grace_period(
             1,
             conversion_info=None,
             cohorts=[],
+            created_by_admin=True,
             grace_period_duration=4,
             grace_period_duration_unit="MONTH",
             initial_payment_notes="Note made by user 1: Staff discount approved",
@@ -492,6 +493,7 @@ def test_schedule_plan_financing_with_unique_payment_negotiated_amount(
             1,
             conversion_info=None,
             cohorts=[],
+            created_by_admin=True,
             initial_payment_notes="Note made by user 1: One-payment negotiated by staff",
             principal_amount=8500.0,
         ),
@@ -625,7 +627,7 @@ def test_schedule_plan_financing_multi_installment_without_staff_initial_uses_no
     validate_and_create_subscriptions(data, model.user, model.proof_of_payment, academy, "en")
 
     assert build_plan_financing.delay.call_args_list == [
-        call(1, 1, conversion_info=None, cohorts=[]),
+        call(1, 1, conversion_info=None, cohorts=[], created_by_admin=True),
     ]
 
 
@@ -693,7 +695,7 @@ def test_currency_from_payment_method_takes_priority(
     assert result[0].currency_id == preferred_id
     assert result[0].currency_id != academy_currency_id
 
-    assert build_plan_financing.delay.call_args_list == [call(1, 1, conversion_info=None, cohorts=[])]
+    assert build_plan_financing.delay.call_args_list == [call(1, 1, conversion_info=None, cohorts=[], created_by_admin=True)]
 
 
 @pytest.mark.parametrize("is_request", [True, False])
@@ -742,7 +744,7 @@ def test_currency_fallback_to_academy_when_payment_method_has_no_currency(
         ),
     ]
 
-    assert build_plan_financing.delay.call_args_list == [call(1, 1, conversion_info=None, cohorts=[])]
+    assert build_plan_financing.delay.call_args_list == [call(1, 1, conversion_info=None, cohorts=[], created_by_admin=True)]
 
     assert len(result) == 2
     assert result[0].__module__ == "breathecode.payments.models"
@@ -787,4 +789,63 @@ def test_no_currency_from_payment_method_or_academy(
         ),
     ]
 
+    assert build_plan_financing.delay.call_args_list == []
+
+
+@pytest.mark.parametrize("is_request", [True, False])
+@pytest.mark.parametrize("raw_value", [False, "false", "0", "no"])
+def test_created_by_admin_false_is_passed_to_build_plan_financing(
+    database: capy.Database, is_request: bool, raw_value
+) -> None:
+    model = database.create(
+        user=1,
+        proof_of_payment=1,
+        plan={"time_of_life": None, "time_of_life_unit": None},
+        financing_option={"how_many_months": 1},
+        academy=1,
+        city=1,
+        country=1,
+        payment_method=1,
+    )
+    data = {
+        "plans": [model.plan.slug],
+        "user": model.user.id,
+        "payment_method": 1,
+        "created_by_admin": raw_value,
+    }
+    if is_request:
+        data = get_request(data, user=model.user)
+
+    validate_and_create_subscriptions(data, model.user, model.proof_of_payment, 1, "en")
+
+    assert build_plan_financing.delay.call_args_list == [
+        call(1, 1, conversion_info=None, cohorts=[], created_by_admin=False)
+    ]
+
+
+@pytest.mark.parametrize("is_request", [True, False])
+def test_created_by_admin_invalid_value_raises(database: capy.Database, is_request: bool) -> None:
+    model = database.create(
+        user=1,
+        proof_of_payment=1,
+        plan={"time_of_life": None, "time_of_life_unit": None},
+        financing_option={"how_many_months": 1},
+        academy=1,
+        city=1,
+        country=1,
+        payment_method=1,
+    )
+    data = {
+        "plans": [model.plan.slug],
+        "user": model.user.id,
+        "payment_method": 1,
+        "created_by_admin": "maybe",
+    }
+    if is_request:
+        data = get_request(data, user=model.user)
+
+    with pytest.raises(ValidationException) as exc:
+        validate_and_create_subscriptions(data, model.user, model.proof_of_payment, 1, "en")
+
+    assert exc.value.detail == "invalid-created-by-admin"
     assert build_plan_financing.delay.call_args_list == []

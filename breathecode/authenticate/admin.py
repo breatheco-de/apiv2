@@ -332,6 +332,7 @@ class UserInviteAdmin(admin.ModelAdmin):
         "role",
         "country",
         "payment_method",
+        "created_by_admin",
     ]
     list_display = (
         "user_info",
@@ -341,6 +342,7 @@ class UserInviteAdmin(admin.ModelAdmin):
         "status_info",
         "payment_info",
         "token_info",
+        "created_by_admin",
     )
     actions = [accept_selected_users_from_waiting_list, accept_all_users_from_waiting_list, validate_email]
 

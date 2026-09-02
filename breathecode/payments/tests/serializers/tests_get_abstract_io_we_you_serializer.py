@@ -87,6 +87,7 @@ def test_plan_financing_serializer_billing_team_fields():
 
     data = GetPlanFinancingSerializer(financing).data
 
+    assert data["created_by_admin"] is False
     assert data["has_billing_team"] is True
     assert data["seats_count"] == 2
     assert data["seats_limit"] == 3

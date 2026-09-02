@@ -57,6 +57,7 @@ class CreateInvitedPlanFinancingForUserTestSuite(PaymentsTestCase):
             invoice.id,
             is_free=False,
             cohorts=[model.cohort.slug],
+            created_by_admin=False,
         )
 
     @patch("breathecode.payments.tasks.build_plan_financing.delay", MagicMock())
@@ -92,6 +93,7 @@ class CreateInvitedPlanFinancingForUserTestSuite(PaymentsTestCase):
             invoice.id,
             is_free=False,
             cohorts=[c0.slug, c1.slug],
+            created_by_admin=False,
         )
 
     @patch("breathecode.payments.tasks.build_plan_financing.delay", MagicMock())
@@ -120,7 +122,9 @@ class CreateInvitedPlanFinancingForUserTestSuite(PaymentsTestCase):
 
         bag = Bag.objects.filter(user=model.user, type="INVITED").first()
         invoice = Invoice.objects.filter(bag=bag).first()
-        tasks.build_plan_financing.delay.assert_called_once_with(bag.id, invoice.id, is_free=False)
+        tasks.build_plan_financing.delay.assert_called_once_with(
+            bag.id, invoice.id, is_free=False, created_by_admin=False
+        )
 
     @patch("breathecode.payments.tasks.build_plan_financing.delay", MagicMock())
     def test_unique_payment_negotiated_amount_sets_invoice_without_initial_payment_kwarg(self):
@@ -159,6 +163,7 @@ class CreateInvitedPlanFinancingForUserTestSuite(PaymentsTestCase):
         self.assertEqual(kw.get("principal_amount"), 8500)
         self.assertEqual(kw.get("initial_payment_notes"), "Note made by user 1: One-payment negotiated by staff")
         self.assertNotIn("initial_payment_amount", kw)
+        self.assertFalse(kw.get("created_by_admin"))
 
     @patch("breathecode.payments.tasks.build_plan_financing.delay", MagicMock())
     def test_zero_initial_payment_schedules_build_with_initial_payment_kwarg(self):
@@ -205,6 +210,41 @@ class CreateInvitedPlanFinancingForUserTestSuite(PaymentsTestCase):
             initial_payment_notes="Note made by user 1: Prework paid at course start",
             principal_amount=1200,
             initial_payment_amount=0,
+            created_by_admin=False,
+        )
+
+    @patch("breathecode.payments.tasks.build_plan_financing.delay", MagicMock())
+    def test_created_by_admin_true_is_passed_to_build(self):
+        model = self.bc.database.create(
+            user=1,
+            academy=1,
+            currency=1,
+            cohort={"available_as_saas": True},
+            cohort_set=1,
+            cohort_set_cohort=1,
+            financing_option={"how_many_months": 1, "monthly_price": 1},
+            plan={"is_renewable": False, "time_of_life": 1, "time_of_life_unit": "MONTH", "status": "ACTIVE"},
+        )
+        create_invited_plan_financing_for_user(
+            user=model.user,
+            plan=model.plan,
+            academy=model.academy,
+            cohort=model.cohort,
+            payment_method=None,
+            author=None,
+            lang="en",
+            created_by_admin=True,
+        )
+        from breathecode.payments import tasks
+
+        bag = Bag.objects.filter(user=model.user, type="INVITED").first()
+        invoice = Invoice.objects.filter(bag=bag).first()
+        tasks.build_plan_financing.delay.assert_called_once_with(
+            bag.id,
+            invoice.id,
+            is_free=False,
+            cohorts=[model.cohort.slug],
+            created_by_admin=True,
         )
 
     def test_initial_payment_amount_requires_notes(self):

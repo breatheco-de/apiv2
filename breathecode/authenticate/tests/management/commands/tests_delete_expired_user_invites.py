@@ -69,6 +69,8 @@ def user_invite_serializer(invite, data={}):
         "conversion_info": None,
         "email_quality": None,
         "email_status": None,
+        "student_plan_access": None,
+        "created_by_admin": False,
         **data,
     }
 
