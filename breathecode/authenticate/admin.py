@@ -151,34 +151,301 @@ class UserInviteForm(forms.ModelForm):
         }
 
 
+class InviteSourceFilter(SimpleListFilter):
+    title = "invite source"
+    parameter_name = "invite_source"
+
+    def lookups(self, request, model_admin):
+        return [
+            ("event", "Event"),
+            ("asset", "Asset"),
+            ("course", "Course"),
+            ("cohort", "Cohort"),
+            ("syllabus", "Syllabus"),
+            ("team_seat", "Team seat"),
+            ("staff_role", "Staff role"),
+            ("plan", "Plan"),
+            ("utm", "UTM only"),
+            ("generic", "Generic"),
+        ]
+
+    def queryset(self, request, queryset):
+        value = self.value()
+        if not value:
+            return queryset
+
+        has_event = Q(event_slug__isnull=False) & ~Q(event_slug="")
+        has_asset = Q(asset_slug__isnull=False) & ~Q(asset_slug="")
+        has_course = Q(course__isnull=False)
+        has_cohort = Q(cohort__isnull=False)
+        has_syllabus = Q(syllabus__isnull=False)
+        has_seat = Q(subscription_seat__isnull=False) | Q(plan_financing_seat__isnull=False)
+        has_staff_role = Q(role__isnull=False) & ~Q(role__slug="student")
+        has_plan = Q(plans__isnull=False)
+        has_utm = (
+            Q(conversion_info__utm_source__isnull=False)
+            | Q(conversion_info__utm_medium__isnull=False)
+            | Q(conversion_info__utm_campaign__isnull=False)
+        )
+
+        if value == "event":
+            return queryset.filter(has_event)
+        if value == "asset":
+            return queryset.filter(has_asset).exclude(has_event)
+        if value == "course":
+            return queryset.filter(has_course).exclude(has_event).exclude(has_asset)
+        if value == "cohort":
+            return queryset.filter(has_cohort).exclude(has_event).exclude(has_asset).exclude(has_course)
+        if value == "syllabus":
+            return (
+                queryset.filter(has_syllabus)
+                .exclude(has_event)
+                .exclude(has_asset)
+                .exclude(has_course)
+                .exclude(has_cohort)
+            )
+        if value == "team_seat":
+            return (
+                queryset.filter(has_seat)
+                .exclude(has_event)
+                .exclude(has_asset)
+                .exclude(has_course)
+                .exclude(has_cohort)
+                .exclude(has_syllabus)
+            )
+        if value == "staff_role":
+            return (
+                queryset.filter(has_staff_role)
+                .exclude(has_event)
+                .exclude(has_asset)
+                .exclude(has_course)
+                .exclude(has_cohort)
+                .exclude(has_syllabus)
+                .exclude(has_seat)
+            )
+        if value == "plan":
+            return (
+                queryset.filter(has_plan)
+                .exclude(has_event)
+                .exclude(has_asset)
+                .exclude(has_course)
+                .exclude(has_cohort)
+                .exclude(has_syllabus)
+                .exclude(has_seat)
+                .exclude(has_staff_role)
+                .distinct()
+            )
+        if value == "utm":
+            return (
+                queryset.filter(has_utm)
+                .exclude(has_event)
+                .exclude(has_asset)
+                .exclude(has_course)
+                .exclude(has_cohort)
+                .exclude(has_syllabus)
+                .exclude(has_seat)
+                .exclude(has_staff_role)
+                .exclude(has_plan)
+                .distinct()
+            )
+        if value == "generic":
+            return (
+                queryset.exclude(has_event)
+                .exclude(has_asset)
+                .exclude(has_course)
+                .exclude(has_cohort)
+                .exclude(has_syllabus)
+                .exclude(has_seat)
+                .exclude(has_staff_role)
+                .exclude(has_plan)
+                .exclude(has_utm)
+                .distinct()
+            )
+        return queryset
+
+
+class HasPlanFilter(SimpleListFilter):
+    title = "has plan"
+    parameter_name = "has_plan"
+
+    def lookups(self, request, model_admin):
+        return [("yes", "Has plan"), ("no", "No plan")]
+
+    def queryset(self, request, queryset):
+        if self.value() == "yes":
+            return queryset.filter(plans__isnull=False).distinct()
+        if self.value() == "no":
+            return queryset.filter(plans__isnull=True)
+        return queryset
+
+
+class HasSubscriptionSeatFilter(SimpleListFilter):
+    title = "has subscription seat"
+    parameter_name = "has_subscription_seat"
+
+    def lookups(self, request, model_admin):
+        return [("yes", "Has seat"), ("no", "No seat")]
+
+    def queryset(self, request, queryset):
+        if self.value() == "yes":
+            return queryset.filter(subscription_seat__isnull=False)
+        if self.value() == "no":
+            return queryset.filter(subscription_seat__isnull=True)
+        return queryset
+
+
+class HasLandingUrlFilter(SimpleListFilter):
+    title = "has landing url"
+    parameter_name = "has_landing_url"
+
+    def lookups(self, request, model_admin):
+        return [("yes", "Has landing URL"), ("no", "No landing URL")]
+
+    def queryset(self, request, queryset):
+        if self.value() == "yes":
+            return queryset.exclude(conversion_info__landing_url__isnull=True).exclude(
+                conversion_info__landing_url=""
+            )
+        if self.value() == "no":
+            return queryset.filter(
+                Q(conversion_info__isnull=True)
+                | Q(conversion_info__landing_url__isnull=True)
+                | Q(conversion_info__landing_url="")
+            )
+        return queryset
+
+
 @admin.register(UserInvite)
 class UserInviteAdmin(admin.ModelAdmin):
     form = UserInviteForm
-    search_fields = ["email", "first_name", "last_name", "user__email"]
+    search_fields = ["email", "first_name", "last_name", "user__email", "event_slug", "asset_slug"]
     raw_id_fields = ["user", "author", "cohort", "course", "subscription_seat", "payment_method"]
-    list_filter = ["academy", "status", "is_email_validated", "process_status", "role", "country", "payment_method"]
-    list_display = (
-        "email",
-        "is_email_validated",
-        "first_name",
-        "last_name",
-        "status",
+    list_filter = [
+        InviteSourceFilter,
+        HasPlanFilter,
+        HasSubscriptionSeatFilter,
+        HasLandingUrlFilter,
         "academy",
-        "token",
-        "created_at",
-        "invite_url",
+        "status",
+        "is_email_validated",
+        "process_status",
+        "role",
         "country",
-        "subscription_seat",
         "payment_method",
-        "welcome_video",
+    ]
+    list_display = (
+        "user_info",
+        "created_at",
+        "forensics",
+        "academy_info",
+        "status_info",
+        "payment_info",
+        "token_info",
     )
     actions = [accept_selected_users_from_waiting_list, accept_all_users_from_waiting_list, validate_email]
 
-    def invite_url(self, obj):
+    def get_queryset(self, request):
+        return (
+            super()
+            .get_queryset(request)
+            .select_related(
+                "academy",
+                "author",
+                "cohort",
+                "course",
+                "syllabus",
+                "role",
+                "subscription_seat",
+                "plan_financing_seat",
+                "payment_method",
+            )
+            .prefetch_related("plans")
+        )
+
+    @admin.display(description="User")
+    def user_info(self, obj):
+        name = f"{obj.first_name or ''} {obj.last_name or ''}".strip() or "—"
+        return format_html("{}<br><small>{}</small>", name, obj.email or "—")
+
+    @admin.display(description="Forensics")
+    def forensics(self, obj):
+        primary = self._forensic_reason(obj)
+        conversion_info = obj.conversion_info if isinstance(obj.conversion_info, dict) else {}
+        landing = conversion_info.get("landing_url") or "—"
+        return format_html(
+            "{}<br><small style='font-size:10px;opacity:.7'>{}</small>",
+            primary,
+            landing,
+        )
+
+    def _forensic_reason(self, obj):
+        if obj.event_slug:
+            return f"Event: {obj.event_slug}"
+        if obj.asset_slug:
+            return f"Asset: {obj.asset_slug}"
+        if obj.course_id and obj.course:
+            return f"Course: {obj.course.slug}"
+        if obj.cohort_id and obj.cohort:
+            return f"Cohort: {obj.cohort.slug}"
+        if obj.syllabus_id and obj.syllabus:
+            return f"Syllabus: {obj.syllabus.slug}"
+        if obj.subscription_seat_id or obj.plan_financing_seat_id:
+            return "Team seat"
+        if obj.role_id and obj.role and obj.role.slug != "student":
+            return f"Role: {obj.role.slug}"
+        plans = list(obj.plans.all())
+        if plans:
+            return f"Plan: {', '.join(p.slug for p in plans)}"
+        conversion_info = obj.conversion_info if isinstance(obj.conversion_info, dict) else {}
+        utm_source = conversion_info.get("utm_source") or ""
+        utm_medium = conversion_info.get("utm_medium") or ""
+        utm_campaign = conversion_info.get("utm_campaign") or ""
+        if utm_source or utm_medium or utm_campaign:
+            return f"UTM: {utm_source}/{utm_medium}/{utm_campaign}"
+        return "Generic signup"
+
+    @admin.display(description="Academy")
+    def academy_info(self, obj):
+        academy = obj.academy.name if obj.academy else "—"
+        author = obj.author.email if obj.author else "—"
+        return format_html("{}<br><small>{}</small>", academy, author)
+
+    @admin.display(description="Status")
+    def status_info(self, obj):
+        badge = "bg-success" if obj.is_email_validated else "bg-error"
+        label = "email validated" if obj.is_email_validated else "email not validated"
+        return format_html(
+            "{}<br><span class='badge {}'>{}</span>",
+            obj.status,
+            badge,
+            label,
+        )
+
+    @admin.display(description="Payment Info")
+    def payment_info(self, obj):
+        plans = list(obj.plans.all())
+        plan_label = ", ".join(p.slug for p in plans) if plans else "No specific plan"
+        seat = str(obj.subscription_seat) if obj.subscription_seat_id else "—"
+        return format_html("{}<br><small>{}</small>", plan_label, seat)
+
+    @admin.display(description="Token")
+    def token_info(self, obj):
         academy = getattr(obj, "academy", None)
         callback_url = get_app_url(academy=academy) if academy else "https://4geeks.com"
-        url = get_invite_url(obj.token, academy=academy, callback_url=callback_url)
-        return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{url}'>invite url</a>")
+        invite_url = get_invite_url(obj.token, academy=academy, callback_url=callback_url)
+        links = format_html(
+            "<a rel='noopener noreferrer' target='_blank' href='{}'>invite url</a>",
+            invite_url,
+        )
+        welcome_video = obj.welcome_video if isinstance(obj.welcome_video, dict) else {}
+        video_url = welcome_video.get("url") if welcome_video else None
+        if video_url:
+            links = format_html(
+                "{} | <a rel='noopener noreferrer' target='_blank' href='{}'>welcome video</a>",
+                links,
+                video_url,
+            )
+        return format_html("{}<br><small>{}</small>", obj.token, links)
 
 
 @admin.display(description="Clear user password")
