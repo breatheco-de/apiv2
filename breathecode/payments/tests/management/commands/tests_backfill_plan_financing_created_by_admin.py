@@ -314,7 +314,7 @@ def test_plans_flag_catches_up_active_overdue_until_next_payment_in_future(bc: B
     patch_charge["renew"].assert_called_once_with(model.plan_financing.id)
 
 
-def test_plans_flag_dry_run_does_not_mark_or_charge(bc: Breathecode, patch_charge):
+def test_plans_flag_dry_run_does_not_mark_or_charge(bc: Breathecode, patch_charge, capsys):
     model = _create_financing_for_plan(bc, slug="ai-engineering")
 
     Command().handle(dry_run=True, email=None, plan_financing_id=None, plans="ai-engineering")
@@ -323,3 +323,6 @@ def test_plans_flag_dry_run_does_not_mark_or_charge(bc: Breathecode, patch_charg
     assert model.plan_financing.created_by_admin is False
     patch_charge["apply"].assert_not_called()
     patch_charge["renew"].assert_not_called()
+    output = capsys.readouterr().out
+    assert "Emails to charge (1):" in output
+    assert f"id={model.plan_financing.id} {model.user.email}" in output

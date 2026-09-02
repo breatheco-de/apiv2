@@ -89,6 +89,7 @@ class Command(BaseCommand):
 
         marked = 0
         charged = 0
+        charge_targets = []
         for plan_financing in qs:
             overdue = plan_financing.next_payment_at is not None and plan_financing.next_payment_at <= utc_now
             remaining = plan_financing.how_many_installments > (plan_financing.installments_paid or 0)
@@ -122,6 +123,7 @@ class Command(BaseCommand):
             marked += 1
             if should_charge:
                 charged += 1
+                charge_targets.append((plan_financing.id, plan_financing.user.email))
 
         action = "Would mark" if dry_run else "Marked"
         charge_action = "would charge" if dry_run else "queued charge for"
@@ -130,11 +132,17 @@ class Command(BaseCommand):
                 f"{action} {marked} plan financing(s) as created_by_admin; {charge_action} {charged}."
             )
         )
+        if charge_targets:
+            self.stdout.write("")
+            self.stdout.write(f"Emails to charge ({len(charge_targets)}):")
+            for financing_id, email in charge_targets:
+                self.stdout.write(f"  id={financing_id} {email}")
         logger.info(
-            "Finished backfill_plan_financing_created_by_admin dry_run=%s marked=%s charged=%s",
+            "Finished backfill_plan_financing_created_by_admin dry_run=%s marked=%s charged=%s emails=%s",
             dry_run,
             marked,
             charged,
+            [email for _, email in charge_targets],
         )
 
     def _queryset_for_plans(self, plan_slugs: list[str]):
