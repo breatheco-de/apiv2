@@ -684,7 +684,7 @@ class PlanFinancingAdmin(admin.ModelAdmin):
         "user",
         "academy",
         "status",
-        "created_by_admin",
+        "managed_by_admin",
         "monthly_price",
         "initial_payment_amount",
         "how_many_installments",
@@ -779,6 +779,10 @@ class PlanFinancingAdmin(admin.ModelAdmin):
     )
     inlines = [PlanFinancingInvoiceInline, PlanFinancingCreditLedgerInline]
     actions = [renew_plan_financing_consumables, charge_plan_financing, regenerate_service_stock_schedulers]
+
+    @admin.display(description="Managed by admin", boolean=True, ordering="created_by_admin")
+    def managed_by_admin(self, obj):
+        return obj.created_by_admin
 
     def grace_period(self, obj):
         return f"{obj.grace_period_duration} {obj.grace_period_duration_unit}"
