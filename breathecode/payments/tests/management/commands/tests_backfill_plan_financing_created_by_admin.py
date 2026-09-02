@@ -26,7 +26,7 @@ def patch_charge(request, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(tasks.charge_plan_financing, "delay", delay)
     monkeypatch.setattr(tasks.charge_plan_financing, "apply", apply)
     monkeypatch.setattr(tasks.renew_plan_financing_consumables, "delay", renew)
-    if request.node.name != "test_run_task_now_calls_wrapped_with_existing_task_manager":
+    if request.node.name != "test_run_task_now_calls_run_with_task_manager_id":
         monkeypatch.setattr(backfill_command, "run_task_now", run_now)
     monkeypatch.setattr("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
     return {"delay": delay, "apply": apply, "renew": renew, "run_now": run_now}
@@ -353,21 +353,18 @@ def test_plans_flag_dry_run_does_not_mark_or_charge(bc: Breathecode, patch_charg
     assert f"id={model.plan_financing.id} {model.user.email}" in output
 
 
-def test_run_task_now_calls_wrapped_with_existing_task_manager(db):
-    wrapped = MagicMock()
+def test_run_task_now_calls_run_with_task_manager_id(db):
+    run = MagicMock()
 
     class FakeTask:
-        bind = True
         __module__ = "breathecode.payments.tasks"
         __name__ = "charge_plan_financing"
 
-        def __init__(self):
-            self.__wrapped__ = wrapped
-
     celery_task = FakeTask()
+    celery_task.run = run
     task_manager = backfill_command.run_task_now(celery_task, 42)
 
-    wrapped.assert_called_once_with(celery_task, 42, task_manager_id=task_manager.id)
+    run.assert_called_once_with(42, task_manager_id=task_manager.id)
     task_manager.refresh_from_db()
     assert task_manager.task_name == "charge_plan_financing"
     assert task_manager.arguments["args"] == [42]

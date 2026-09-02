@@ -34,13 +34,15 @@ def run_task_now(celery_task, *args):
     ``apply_async``; it does not execute the charge on a Heroku one-off dyno.
     Passing ``task_manager_id`` skips that schedule-only path.
 
-    Callers must be ``bind=True`` tasks: the wrapper treats ``args[0]`` as
-    the Celery task instance.
+    Call ``run`` on the Celery task instance (not ``__wrapped__(task, …)``).
+    For ``bind=True``, Celery stores the wrapper as a class attribute, so
+    ``task.__wrapped__(task, id)`` would pass the task twice and raise
+    ``takes 2 positional arguments but 3 were given``.
     """
-    wrapper = getattr(celery_task, "__wrapped__", None)
-    if wrapper is None:
+    runner = getattr(celery_task, "run", None)
+    if not callable(runner):
         logger.warning(
-            "Task %s has no __wrapped__; falling back to delay() and will not wait for the charge",
+            "Task %s has no run(); falling back to delay() and will not wait for the charge",
             getattr(celery_task, "__name__", celery_task),
         )
         celery_task.delay(*args)
@@ -56,7 +58,7 @@ def run_task_now(celery_task, *args):
         total_pages=1,
         attempts=1,
     )
-    wrapper(celery_task, *args, task_manager_id=task_manager.id)
+    runner(*args, task_manager_id=task_manager.id)
     task_manager.refresh_from_db()
     logger.info(
         "Ran %s in-process args=%s task_manager_id=%s status=%s message=%s",
