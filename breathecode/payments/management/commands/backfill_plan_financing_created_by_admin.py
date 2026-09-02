@@ -139,10 +139,14 @@ class Command(BaseCommand):
         for plan_financing in qs:
             overdue = plan_financing.next_payment_at is not None and plan_financing.next_payment_at <= utc_now
             remaining = plan_financing.how_many_installments > (plan_financing.installments_paid or 0)
+            will_mark = not plan_financing.created_by_admin
             if plan_slugs:
                 should_charge = plan_financing.status == PlanFinancing.Status.ACTIVE and overdue and remaining
             else:
                 should_charge = plan_financing.status in CHARGEABLE_STATUSES and overdue and remaining
+
+            if not will_mark and not should_charge:
+                continue
 
             plan_slugs_label = ",".join(plan_financing.plans.values_list("slug", flat=True))
             self.stdout.write(
@@ -151,11 +155,12 @@ class Command(BaseCommand):
                 f"next_payment_at={plan_financing.next_payment_at} "
                 f"installments_paid={plan_financing.installments_paid}/"
                 f"{plan_financing.how_many_installments} "
+                f"mark={'yes' if will_mark else 'no'} "
                 f"charge={'yes' if should_charge else 'no'}"
             )
 
             if not dry_run:
-                if not plan_financing.created_by_admin:
+                if will_mark:
                     plan_financing.created_by_admin = True
                     plan_financing.save(update_fields=["created_by_admin"])
                     logger.info("Marked plan_financing_id=%s created_by_admin=True", plan_financing.id)
@@ -170,7 +175,8 @@ class Command(BaseCommand):
                             getattr(task_manager, "status", None),
                         )
 
-            marked += 1
+            if will_mark:
+                marked += 1
             if should_charge:
                 charged += 1
                 charge_targets.append((plan_financing.id, plan_financing.user.email))

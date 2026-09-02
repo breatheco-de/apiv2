@@ -1234,7 +1234,7 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch("breathecode.payments.tasks.renew_plan_financing_consumables.delay", MagicMock())
     @patch("mixer.main.LOGGER.info", MagicMock())
     @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
-    def test_staff_assigned_plan_financing_unpaid_advances_billing_cycle(self):
+    def test_admin_managed_plan_financing_closes_installment_without_card_charge(self):
         plan_financing = {
             "valid_until": UTC_NOW + relativedelta(months=6),
             "next_payment_at": UTC_NOW - relativedelta(days=5),
@@ -1273,11 +1273,12 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         pf = self.bc.database.list_of("payments.PlanFinancing")[0]
         self.assertEqual(pf["status"], "ACTIVE")
-        self.assertEqual(pf["installments_paid"], 1)
+        self.assertEqual(pf["installments_paid"], 2)
         self.assertEqual(pf["next_payment_at"], model.plan_financing.next_payment_at + relativedelta(months=1))
 
         self.assertEqual(notify_actions.send_email_message.call_args_list, [])
         self.assertEqual(len(self.bc.database.list_of("payments.Invoice")), 1)
+        tasks.renew_plan_financing_consumables.delay.assert_called_once_with(1)
 
         scheduled = self.bc.database.list_of("task_manager.ScheduledTask")
         charge_tasks = [t for t in scheduled if t["task_name"] == "charge_plan_financing"]
