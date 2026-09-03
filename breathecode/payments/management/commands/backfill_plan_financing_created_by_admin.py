@@ -282,16 +282,18 @@ class Command(BaseCommand):
                 break
 
         plan_financing.refresh_from_db()
-        if plan_financing.next_payment_at is not None and plan_financing.next_payment_at > utc_now:
-            run_task_now(tasks.renew_plan_financing_consumables, plan_financing.id)
-            logger.info(
-                "Renewed consumables in-process plan_financing_id=%s after %s catch-up cycle(s)",
+        if plan_financing.next_payment_at is None or plan_financing.next_payment_at <= utc_now:
+            logger.warning(
+                "Catch-up finished still overdue plan_financing_id=%s next_payment_at=%s status=%s cycles=%s",
                 plan_financing.id,
+                plan_financing.next_payment_at,
+                plan_financing.status,
                 cycles,
             )
         else:
-            logger.warning(
-                "Catch-up finished still overdue plan_financing_id=%s next_payment_at=%s status=%s cycles=%s",
+            logger.info(
+                "Catch-up finished plan_financing_id=%s next_payment_at=%s status=%s cycles=%s "
+                "(consumables renewed by charge_plan_financing)",
                 plan_financing.id,
                 plan_financing.next_payment_at,
                 plan_financing.status,

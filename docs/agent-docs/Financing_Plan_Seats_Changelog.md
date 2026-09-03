@@ -59,6 +59,10 @@ Owner authentication mirrors subscriptions: only the financing owner can manage 
 
 - `docs/LLM-DOCS/SEATS_AND_TEAMS.md`
   - Added “Plan Financing Seats” section describing endpoints, strategies, and auto-recharge behavior.
+- [`PLAN_FINANCING_CONSUMABLES_PRUNE.md`](PLAN_FINANCING_CONSUMABLES_PRUNE.md)
+  - Operational command `prune_plan_consumables` for cleaning duplicate/ahead-of-schedule consumables; baseline for future consumable cleanup in the DB.
+- `breathecode/payments/docs/prune_plan_consumables.md`
+  - Short pointer from the payments app docs folder.
 
 ## Testing
 

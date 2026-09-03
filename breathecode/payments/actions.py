@@ -4,7 +4,7 @@ import re
 import uuid
 from collections.abc import Iterable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from decimal import ROUND_FLOOR, Decimal
 from functools import lru_cache
 from typing import Any, Literal, Optional, Tuple, Type, TypedDict, Union
@@ -3804,6 +3804,66 @@ class DepositResult:
 def get_remaining_installments(plan_financing: PlanFinancing) -> int:
     """Return the number of installments still pending on a PlanFinancing."""
     return max(plan_financing.how_many_installments - int(plan_financing.installments_paid or 0), 0)
+
+
+def plan_financing_caps_consumables_at_next_payment(plan_financing: PlanFinancing) -> bool:
+    """True while the financing still has unpaid installments.
+
+    Consumables must not extend past ``next_payment_at`` until the contract is
+    FULLY_PAID. Extra renews (catch-up + charge.delay) would otherwise grant
+    the next month early.
+    """
+    if plan_financing.status == PlanFinancing.Status.FULLY_PAID:
+        return False
+    return get_remaining_installments(plan_financing) > 0
+
+
+def consumable_valid_until_exceeds_next_payment(
+    valid_until: datetime | None,
+    next_payment_at: datetime | None,
+    grace_days: int = 1,
+) -> bool:
+    """True when ``valid_until`` is past ``next_payment_at`` plus ``grace_days`` (calendar days).
+
+    Same day as ``next_payment_at`` and the grace day after count as within the period
+    (e.g. next_payment_at 2026-09-26 keeps valid_until through 2026-09-27).
+    """
+    if not valid_until or not next_payment_at:
+        return False
+    cutoff = plan_financing_consumable_prune_cutoff_date(next_payment_at, grace_days=grace_days)
+    return valid_until.date() > cutoff
+
+
+def plan_financing_consumable_prune_cutoff_date(
+    next_payment_at: datetime,
+    grace_days: int = 1,
+) -> date:
+    """Last calendar day kept by ``prune_plan_consumables`` (next_payment_at date + grace)."""
+    return next_payment_at.date() + timedelta(days=grace_days)
+
+
+def cap_plan_financing_valid_until_at_next_payment(
+    valid_until: datetime,
+    next_payment_at: datetime,
+    *,
+    caps_at_next_payment: bool,
+) -> datetime:
+    """Clamp ``valid_until`` to ``next_payment_at`` only when its date is later."""
+    if not caps_at_next_payment or valid_until.date() <= next_payment_at.date():
+        return valid_until
+    return next_payment_at
+
+
+def consumable_valid_until_is_expired(
+    valid_until: datetime | None,
+    utc_now: datetime | None = None,
+) -> bool:
+    """True when ``valid_until`` is on a calendar day before today (vencido)."""
+    if valid_until is None:
+        return False
+    if utc_now is None:
+        utc_now = timezone.now()
+    return valid_until.date() < utc_now.date()
 
 
 def plan_financing_can_auto_charge(

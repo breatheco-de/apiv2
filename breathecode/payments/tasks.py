@@ -249,6 +249,20 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
     ):
         scheduler.valid_until = resource_next_payment_at
 
+    # Unpaid plan financings: never issue stock past the current billed period.
+    # A second renew (charge.delay + catch-up) would otherwise jump another month.
+    if (
+        plan_financing
+        and actions.plan_financing_caps_consumables_at_next_payment(plan_financing)
+        and resource_next_payment_at
+        and scheduler.valid_until
+    ):
+        scheduler.valid_until = actions.cap_plan_financing_valid_until_at_next_payment(
+            scheduler.valid_until,
+            resource_next_payment_at,
+            caps_at_next_payment=True,
+        )
+
     scheduler.save()
 
     if not selected_lookup and service_item.service.type != "VOID":
@@ -258,7 +272,11 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
     if "user" not in extras:
         extras["user"] = user
 
-    if scheduler.consumables.filter(valid_until=scheduler.valid_until).exists():
+    duplicate_filters = {"valid_until": scheduler.valid_until}
+    if plan_financing and actions.plan_financing_caps_consumables_at_next_payment(plan_financing):
+        duplicate_filters = {"valid_until__date": scheduler.valid_until.date()}
+
+    if scheduler.consumables.filter(**duplicate_filters).exists():
         raise AbortTask(
             f"Consumable with valid_until {scheduler.valid_until} already exists for scheduler {scheduler.id}, skipping to avoid duplicate"
         )
