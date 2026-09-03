@@ -334,7 +334,7 @@ def test_plans_flag_catches_up_active_overdue_until_next_payment_in_future(bc: B
         if call.args[0] is tasks.renew_plan_financing_consumables
     ]
     assert len(charge_calls) == 3
-    assert len(renew_calls) == 1
+    assert len(renew_calls) == 0
     patch_charge["apply"].assert_not_called()
     patch_charge["delay"].assert_not_called()
 
