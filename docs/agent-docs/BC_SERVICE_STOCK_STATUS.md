@@ -177,5 +177,5 @@ to copy the resource and then (if the scheduler is due) renewal can create the c
 ## Related
 
 - **Consumable balance (student view):** `GET /v1/payments/me/service/consumable`  
-- **Academy consumables (staff):** `GET /v1/payments/academy/service/consumable?users=<user_id>` (includes staff-granted and subscription/plan consumables for that academy).  
+- **Academy consumables (staff):** `GET /v1/payments/academy/service/consumable?users=<user_id>` (includes staff-granted and subscription/plan consumables for that academy, including `how_many=0` while still within `valid_until`).  
 - **CLI:** `python manage.py diagnose_scheduler --scheduler-id <id>` with optional `--fix-resource` and `--force-renew`.
