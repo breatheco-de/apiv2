@@ -363,9 +363,10 @@ def generate_certificate(user, cohort=None, layout=None):
 
 def generate_certificate_ignoring_tasks(user, cohort=None, layout=None):
     """
-    Generate certificate ignoring pending tasks validation.
-    This is used for admin bulk actions when certificates need to be generated
-    even if students have pending tasks.
+    Generate certificate for admin override flows (academy EP with ignore_tasks / Django admin).
+
+    Skips pending-tasks validation and cohort current_day vs syllabus duration.
+    Automatic / non-admin generation must keep using generate_certificate.
     """
     query = {"user__id": user.id}
 
@@ -446,7 +447,7 @@ def generate_certificate_ignoring_tasks(user, cohort=None, layout=None):
         completion = get_cached_or_evaluate_cohort_user_completion(cohort_user)
         pending_tasks = completion["pending_required_count"]
 
-        # Skip pending tasks validation - this is the key difference from generate_certificate
+        # Skip pending tasks and current_day validation (admin override only)
 
         if not (cohort_user.finantial_status == FULLY_PAID or cohort_user.finantial_status == UP_TO_DATE):
             message = "The student must have finantial status FULLY_PAID or UP_TO_DATE"
@@ -455,12 +456,6 @@ def generate_certificate_ignoring_tasks(user, cohort=None, layout=None):
         if cohort_user.educational_status != "GRADUATED":
             raise ValidationException(
                 "The student must have educational " "status GRADUATED", slug="bad-educational-status"
-            )
-
-        if not cohort.never_ends and cohort.current_day != cohort.syllabus_version.syllabus.duration_in_days:
-            raise ValidationException(
-                "Cohort current day should be " f"{cohort.syllabus_version.syllabus.duration_in_days}",
-                slug="cohort-not-finished",
             )
 
         if not cohort.never_ends and cohort.stage != "ENDED":
