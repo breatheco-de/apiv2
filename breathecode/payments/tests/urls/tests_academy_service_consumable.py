@@ -130,6 +130,40 @@ class AcademyServiceConsumableTestCase(PaymentsTestCase):
         self.assertEqual(item["subscription"], model.subscription.id)
         self.assertEqual(item["how_many"], 10)
 
+    def test_includes_consumables_with_zero_balance(self):
+        """Zero-balance consumables still count while valid_until has not passed."""
+        subscription = {
+            "valid_until": UTC_NOW + timezone.timedelta(days=30),
+        }
+        consumable = {
+            "how_many": 0,
+            "unit_type": "UNIT",
+            "valid_until": UTC_NOW + timezone.timedelta(days=30),
+        }
+        service = {"type": "VOID"}
+        model = self.bc.database.create(
+            user=1,
+            role=1,
+            capability="read_consumable",
+            profile_academy=1,
+            subscription=subscription,
+            consumable=consumable,
+            service=service,
+            service_item=1,
+        )
+        self.bc.request.authenticate(model.user)
+
+        response = self.client.get(self.url)
+        json = response.json()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(json["voids"]), 1)
+        void_item = json["voids"][0]
+        self.assertEqual(void_item["balance"]["unit"], 0)
+        self.assertEqual(len(void_item["items"]), 1)
+        self.assertEqual(void_item["items"][0]["how_many"], 0)
+        self.assertEqual(void_item["items"][0]["subscription"], model.subscription.id)
+
     def test_with_consumables_from_plan_financing(self):
         """Test retrieving consumables from a plan financing."""
         plan_financing = {
