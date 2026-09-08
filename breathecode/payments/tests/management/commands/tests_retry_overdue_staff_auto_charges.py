@@ -104,7 +104,7 @@ def test_email_filter_skips_other_users(database: capy.Database, patch_charge):
     patch_charge.assert_not_called()
 
 
-def test_skips_staff_plans_without_auto_charge_history(database: capy.Database, patch_charge):
+def test_queues_overdue_admin_plan_without_stripe_history(database: capy.Database, patch_charge):
     model = database.create(
         academy=1,
         proof_of_payment=1,
@@ -132,4 +132,4 @@ def test_skips_staff_plans_without_auto_charge_history(database: capy.Database, 
 
     Command().handle(dry_run=False, email=None, plan_financing_id=None)
 
-    patch_charge.assert_not_called()
+    patch_charge.assert_called_once_with(model.plan_financing.id)

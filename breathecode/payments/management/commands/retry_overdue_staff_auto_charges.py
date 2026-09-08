@@ -3,14 +3,13 @@ from django.db.models import F
 from django.utils import timezone
 
 from breathecode.payments import tasks
-from breathecode.payments.actions import plan_financing_can_auto_charge
 from breathecode.payments.models import PlanFinancing
 
 
 class Command(BaseCommand):
     help = (
-        "Re-queue Stripe auto-charge for staff-assigned plan financings that already had an "
-        "automatic invoice (no proof of payment) and are overdue."
+        "Re-queue charge_plan_financing for overdue admin-managed plan financings. "
+        "Those charges close the installment without Stripe."
     )
 
     def add_arguments(self, parser):
@@ -47,12 +46,7 @@ class Command(BaseCommand):
             qs = qs.filter(pk=options["plan_financing_id"])
 
         queued = 0
-        skipped = 0
         for plan_financing in qs:
-            if not plan_financing_can_auto_charge(plan_financing):
-                skipped += 1
-                continue
-
             self.stdout.write(
                 f"id={plan_financing.id} user={plan_financing.user.email} "
                 f"status={plan_financing.status} next_payment_at={plan_financing.next_payment_at} "
@@ -64,4 +58,4 @@ class Command(BaseCommand):
             queued += 1
 
         action = "Would queue" if dry_run else "Queued"
-        self.stdout.write(self.style.SUCCESS(f"{action} {queued} plan financing charge(s); skipped {skipped}."))
+        self.stdout.write(self.style.SUCCESS(f"{action} {queued} plan financing charge(s)."))

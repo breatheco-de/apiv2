@@ -2026,13 +2026,13 @@ class AcademyConsumableView(APIView):
         lang = get_user_language(request)
         utc_now = timezone.now()
 
-        # Start with consumables that belong to the academy through subscriptions, plan_financings, or staff grant
+        # Include how_many=0: user still holds the consumable during its valid period
         items = Consumable.objects.filter(
             Q(valid_until__gte=utc_now) | Q(valid_until=None),
             Q(subscription__academy_id=academy_id)
             | Q(plan_financing__academy_id=academy_id)
             | Q(standalone_invoice__bag__academy_id=academy_id),
-        ).exclude(how_many=0)
+        )
 
         # Filter by users if provided (comma-separated list of user IDs)
         if users := request.GET.get("users"):
