@@ -40,6 +40,15 @@ def get_serializer(asset, data={}):
         "enable_table_of_content": asset.enable_table_of_content,
         "interactive": asset.interactive,
         "feature": asset.feature,
+        "assessment": (
+            {
+                "id": asset.assessment.id,
+                "slug": asset.assessment.slug,
+                "title": asset.assessment.title,
+            }
+            if asset.assessment
+            else None
+        ),
         "category": (
             {
                 "id": asset.category.id,
@@ -103,6 +112,7 @@ def get_serializer(asset, data={}):
         "allow_contributions": asset.allow_contributions,
         "learnpack_id": asset.learnpack_id,
         "manifest": asset.manifest,
+        "is_seo_tracked": asset.is_seo_tracked,
         **data,
     }
 
@@ -118,6 +128,7 @@ def get_expanded_serializer(asset, data={}):
         "updated_at": asset.updated_at,
         "template_url": asset.template_url,
         "dependencies": asset.dependencies,
+        "github_activity_logs": asset.github_activity_log or [],
         **data,
     }
 

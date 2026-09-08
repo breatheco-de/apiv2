@@ -1027,7 +1027,13 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         if request.GET.get("academy") == "null":
             invites = UserInvite.objects.filter(academy__isnull=True)
         else:
-            invites = UserInvite.objects.filter(academy__id=academy_id)
+            academy_slug = (
+                Academy.objects.filter(id=academy_id).values_list("slug", flat=True).first()
+            )
+            if academy_slug == "4geeks-com":
+                invites = UserInvite.objects.filter(Q(academy_id=academy_id) | Q(academy__isnull=True))
+            else:
+                invites = UserInvite.objects.filter(academy__id=academy_id)
 
         status = request.GET.get("status", "")
         if status != "":
@@ -1209,6 +1215,119 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
                 invite.sent_at = None  # Reset sent_at so it can be resent
 
         invite.save()
+
+        serializer = UserInviteSerializer(invite, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AcademyInviteClaimView(APIView):
+    """
+    PUT /v1/auth/academy/invite/<invite_id>/claim
+
+    Allows the 4geeks-com academy to claim ownership of an unowned (academy=null) UserInvite.
+    Only the 4geeks-com academy can call this endpoint. The invite must not imply ownership
+    by another academy via its cohort or course FKs.
+    """
+
+    @capable_of("crud_invite")
+    def put(self, request, invite_id=None, academy_id=None):
+        from django.db import transaction
+
+        academy = Academy.objects.filter(id=academy_id).first()
+        if academy is None or academy.slug != "4geeks-com":
+            raise ValidationException(
+                translation(
+                    en="Only the 4geeks-com academy is allowed to claim unowned invites",
+                    es="Solo la academia 4geeks-com puede reclamar invitaciones sin academia",
+                ),
+                slug="claim-not-allowed",
+                code=403,
+            )
+
+        with transaction.atomic():
+            invite = UserInvite.objects.select_for_update().filter(id=invite_id).first()
+            if invite is None:
+                raise ValidationException(
+                    translation(
+                        en="Invite not found",
+                        es="Invitación no encontrada",
+                    ),
+                    slug="user-invite-not-found",
+                    code=404,
+                )
+
+            # Resolve implied academy from cohort and course FKs
+            cohort_academy = invite.cohort.academy if invite.cohort_id else None
+            course_academy = invite.course.academy if invite.course_id else None
+
+            # Detect a FK-implied conflict between cohort and course
+            if (
+                cohort_academy is not None
+                and course_academy is not None
+                and cohort_academy.id != course_academy.id
+            ):
+                raise ValidationException(
+                    translation(
+                        en=(
+                            f"This invite's cohort implies academy '{cohort_academy.slug}' "
+                            f"and its course implies academy '{course_academy.slug}'. "
+                            "Resolve the conflict before claiming."
+                        ),
+                        es=(
+                            f"El cohort de esta invitación implica la academia '{cohort_academy.slug}' "
+                            f"y su curso implica la academia '{course_academy.slug}'. "
+                            "Resuelva el conflicto antes de reclamar."
+                        ),
+                    ),
+                    slug="invite-academy-conflict",
+                    code=409,
+                )
+
+            implied_academy = cohort_academy or course_academy
+
+            # If already owned by this academy (or implicitly) — idempotent 200
+            if invite.academy_id == academy.id or (invite.academy_id is None and implied_academy and implied_academy.id == academy.id):
+                if invite.academy_id is None:
+                    invite.academy = academy
+                    invite.save()
+                serializer = UserInviteSerializer(invite, many=False)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+
+            # Explicit FK implies a different academy
+            if invite.academy_id is not None and invite.academy_id != academy.id:
+                raise ValidationException(
+                    translation(
+                        en=f"This invite already belongs to academy '{invite.academy.slug}'",
+                        es=f"Esta invitación ya pertenece a la academia '{invite.academy.slug}'",
+                    ),
+                    slug="invite-belongs-to-academy",
+                    code=409,
+                )
+
+            # Cohort/course implies a different academy
+            if implied_academy is not None and implied_academy.id != academy.id:
+                source = "cohort" if cohort_academy else "course"
+                raise ValidationException(
+                    translation(
+                        en=f"This invite's {source} belongs to academy '{implied_academy.slug}' and cannot be claimed",
+                        es=f"El {source} de esta invitación pertenece a la academia '{implied_academy.slug}' y no puede ser reclamada",
+                    ),
+                    slug="invite-belongs-to-academy",
+                    code=409,
+                )
+
+            if invite.status != "PENDING":
+                raise ValidationException(
+                    translation(
+                        en="Only PENDING invites can be claimed",
+                        es="Solo las invitaciones PENDING pueden ser reclamadas",
+                    ),
+                    slug="invite-not-pending",
+                    code=400,
+                )
+
+            invite.academy = academy
+            invite.save()
 
         serializer = UserInviteSerializer(invite, many=False)
         return Response(serializer.data, status=status.HTTP_200_OK)
