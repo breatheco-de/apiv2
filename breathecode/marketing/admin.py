@@ -138,10 +138,21 @@ class CrmRoutingAdmin(admin.ModelAdmin):
         "academy",
         "connection",
         "is_active",
+        "last_form_entry",
         "updated_at",
     )
     list_filter = ["is_active", "action", "connection__crm_vendor"]
     raw_id_fields = ["academy"]
+    readonly_fields = ["last_form_entry", "created_at", "updated_at"]
+
+    @admin.display(description="Last form entry")
+    def last_form_entry(self, obj):
+        # Use values() — FormEntry.__init__ + QuerySet.only() causes RecursionError.
+        latest = obj.form_entries.order_by("-crm_routed_at").values("id", "email", "crm_routed_at").first()
+        if latest is None:
+            return "-"
+        when = latest["crm_routed_at"].strftime("%Y-%m-%d %H:%M") if latest["crm_routed_at"] else "?"
+        return f"#{latest['id']} {latest['email'] or '(no email)'} @ {when}"
 
 
 class CustomForm(forms.ModelForm):
@@ -295,7 +306,9 @@ class FormEntryAdmin(admin.ModelAdmin, AdminExportCsvMixin):
         "utm_medium",
         "utm_campaign",
         "utm_source",
+        "crm_routing",
     ]
+    readonly_fields = ["crm_routing", "crm_routed_at"]
     actions = (
         [
             send_to_active_campaign,

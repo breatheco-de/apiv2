@@ -838,6 +838,9 @@ def register_new_lead(form_entry=None):
             skip_crm,
             custom_destination,
         )
+        entry.crm_routing = routing
+        entry.crm_routed_at = timezone.now()
+        entry.save(update_fields=["crm_routing", "crm_routed_at", "updated_at"])
 
     send_academy = ac_academy
     if custom_destination:
@@ -1019,7 +1022,15 @@ def register_new_lead(form_entry=None):
         return entry
 
     entry.storage_status = "PERSISTED"
-    entry.storage_status_text = ""
+    if custom_destination:
+        connection = routing.connection
+        entry.storage_status_text = (
+            f"CrmRouting ROUTE matched "
+            f"(id={routing.id} condition={routing.condition or 'true'} "
+            f"connection={connection.name}/{connection.crm_vendor})"
+        )
+    else:
+        entry.storage_status_text = ""
     entry.save()
 
     form_entry["storage_status"] = "PERSISTED"

@@ -588,6 +588,22 @@ class FormEntry(models.Model):
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, default=None)
 
+    crm_routing = models.ForeignKey(
+        CrmRouting,
+        on_delete=models.SET_NULL,
+        null=True,
+        default=None,
+        blank=True,
+        related_name="form_entries",
+        help_text="CrmRouting rule applied when this lead was persisted (DROP or ROUTE)",
+    )
+    crm_routed_at = models.DateTimeField(
+        null=True,
+        default=None,
+        blank=True,
+        help_text="When CrmRouting was applied to this lead",
+    )
+
     lead_generation_app = models.ForeignKey(
         LeadGenerationApp,
         on_delete=models.CASCADE,

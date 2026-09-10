@@ -78,18 +78,22 @@ class CrmRoutingTestSuite(MarketingTestCase):
         self.assertEqual(result.storage_status, "PERSISTED")
         mock_send.assert_called_once()
         self.assertEqual(mock_send.call_args.args[1], model.active_campaign_academy)
+        self.assertIsNone(result.crm_routing_id)
+        self.assertIsNone(result.crm_routed_at)
 
     @patch("breathecode.marketing.actions.get_save_leads", return_value="TRUE")
     @patch("breathecode.marketing.actions.send_to_active_campaign")
     def test_drop_matching_condition_does_not_send(self, mock_send, _mock_save_leads):
         model = self._models(course="ai-flex")
-        CrmRouting.objects.create(action="DROP", condition='lead.course == "ai-flex"')
+        routing = CrmRouting.objects.create(action="DROP", condition='lead.course == "ai-flex"')
 
         result = register_new_lead(self._payload(model))
 
         mock_send.assert_not_called()
         self.assertEqual(result.storage_status, "PERSISTED")
         self.assertIn("CrmRouting DROP", result.storage_status_text)
+        self.assertEqual(result.crm_routing_id, routing.id)
+        self.assertIsNotNone(result.crm_routed_at)
 
     @patch("breathecode.marketing.actions.get_save_leads", return_value="TRUE")
     @patch("breathecode.marketing.actions.send_to_active_campaign")
@@ -97,7 +101,7 @@ class CrmRoutingTestSuite(MarketingTestCase):
         mock_send.side_effect = lambda form_entry, *args, **kwargs: form_entry
         model = self._models(course="ai-flex")
         connection = self._connection()
-        CrmRouting.objects.create(
+        routing = CrmRouting.objects.create(
             action="ROUTE",
             condition='lead.course == "ai-flex"',
             connection=connection,
@@ -110,6 +114,10 @@ class CrmRoutingTestSuite(MarketingTestCase):
         self.assertEqual(destination.ac_url, connection.api_url)
         self.assertEqual(destination.ac_key, connection.api_key)
         self.assertEqual(destination.crm_vendor, "ACTIVE_CAMPAIGN")
+        self.assertEqual(result.crm_routing_id, routing.id)
+        self.assertIsNotNone(result.crm_routed_at)
+        self.assertIn("CrmRouting ROUTE", result.storage_status_text)
+        self.assertIn(connection.name, result.storage_status_text)
 
     @patch("breathecode.marketing.actions.get_save_leads", return_value="TRUE")
     @patch("breathecode.marketing.actions.send_to_active_campaign")
@@ -189,7 +197,7 @@ class CrmRoutingTestSuite(MarketingTestCase):
         mock_contact.side_effect = lambda form_entry, *args, **kwargs: form_entry
         model = self._models(course="ai-flex")
         connection = self._connection(vendor="BREVO")
-        CrmRouting.objects.create(
+        routing = CrmRouting.objects.create(
             action="ROUTE",
             condition='lead.course == "ai-flex"',
             connection=connection,
@@ -200,6 +208,10 @@ class CrmRoutingTestSuite(MarketingTestCase):
         self.assertEqual(result.storage_status, "PERSISTED")
         mock_contact.assert_called_once()
         mock_legacy_event.assert_not_called()
+        self.assertEqual(result.crm_routing_id, routing.id)
+        self.assertIsNotNone(result.crm_routed_at)
+        self.assertIn("CrmRouting ROUTE", result.storage_status_text)
+        self.assertIn("BREVO", result.storage_status_text)
 
     @patch("breathecode.marketing.actions.Brevo.test_connection")
     def test_brevo_connection_does_not_require_url(self, mock_test):
