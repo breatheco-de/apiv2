@@ -91,7 +91,7 @@ class CrmRoutingTestSuite(MarketingTestCase):
 
         mock_send.assert_not_called()
         self.assertEqual(result.storage_status, "PERSISTED")
-        self.assertIn("CrmRouting DROP", result.storage_status_text)
+        self.assertEqual(result.storage_status_text, f"CrmRouting DROP (id={routing.id})")
         self.assertEqual(result.crm_routing_id, routing.id)
         self.assertIsNotNone(result.crm_routed_at)
 
@@ -116,8 +116,7 @@ class CrmRoutingTestSuite(MarketingTestCase):
         self.assertEqual(destination.crm_vendor, "ACTIVE_CAMPAIGN")
         self.assertEqual(result.crm_routing_id, routing.id)
         self.assertIsNotNone(result.crm_routed_at)
-        self.assertIn("CrmRouting ROUTE", result.storage_status_text)
-        self.assertIn(connection.name, result.storage_status_text)
+        self.assertEqual(result.storage_status_text, f"CrmRouting ROUTE (id={routing.id})")
 
     @patch("breathecode.marketing.actions.get_save_leads", return_value="TRUE")
     @patch("breathecode.marketing.actions.send_to_active_campaign")
@@ -210,8 +209,7 @@ class CrmRoutingTestSuite(MarketingTestCase):
         mock_legacy_event.assert_not_called()
         self.assertEqual(result.crm_routing_id, routing.id)
         self.assertIsNotNone(result.crm_routed_at)
-        self.assertIn("CrmRouting ROUTE", result.storage_status_text)
-        self.assertIn("BREVO", result.storage_status_text)
+        self.assertEqual(result.storage_status_text, f"CrmRouting ROUTE (id={routing.id})")
 
     @patch("breathecode.marketing.actions.Brevo.test_connection")
     def test_brevo_connection_does_not_require_url(self, mock_test):

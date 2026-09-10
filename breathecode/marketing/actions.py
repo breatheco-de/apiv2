@@ -999,10 +999,7 @@ def register_new_lead(form_entry=None):
 
     if skip_crm:
         entry.storage_status = "PERSISTED"
-        entry.storage_status_text = (
-            f"Not sent to CRM because CrmRouting DROP matched "
-            f"(id={routing.id} condition={routing.condition or 'true'})"
-        )
+        entry.storage_status_text = f"CrmRouting DROP (id={routing.id})"
         entry.save()
         form_entry["storage_status"] = "PERSISTED"
         logger.info("FormEntry persisted without CRM because CrmRouting DROP matched id=%s", routing.id)
@@ -1023,12 +1020,7 @@ def register_new_lead(form_entry=None):
 
     entry.storage_status = "PERSISTED"
     if custom_destination:
-        connection = routing.connection
-        entry.storage_status_text = (
-            f"CrmRouting ROUTE matched "
-            f"(id={routing.id} condition={routing.condition or 'true'} "
-            f"connection={connection.name}/{connection.crm_vendor})"
-        )
+        entry.storage_status_text = f"CrmRouting ROUTE (id={routing.id})"
     else:
         entry.storage_status_text = ""
     entry.save()
