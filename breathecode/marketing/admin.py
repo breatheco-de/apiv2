@@ -123,6 +123,19 @@ class CRMConnectionAdmin(admin.ModelAdmin):
     )
     list_filter = ["crm_vendor", "sync_status", "is_active"]
     readonly_fields = ["sync_status", "sync_message", "last_interaction_at", "created_at", "updated_at"]
+    fields = (
+        "name",
+        "crm_vendor",
+        "api_url",
+        "api_key",
+        "mapping_fields",
+        "is_active",
+        "sync_status",
+        "sync_message",
+        "last_interaction_at",
+        "created_at",
+        "updated_at",
+    )
     actions = [test_crm_connections]
 
 

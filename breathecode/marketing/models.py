@@ -118,6 +118,17 @@ class CRMConnection(models.Model):
     crm_vendor = models.CharField(max_length=20, choices=CRM_VENDORS)
     api_url = models.URLField(blank=True, null=True, default=None)
     api_key = models.CharField(max_length=150)
+    mapping_fields = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text=(
+            "Per-field value remaps for this connection. "
+            "Format: {\"field\": {\"<lead-value>\": \"<mapping-value>\"}}. "
+            "lead-value = value that arrives on the lead; "
+            "mapping-value = value sent to the CRM. "
+            'Example: {"tags": {"<lead-value>": "<mapping-value>"}}'
+        ),
+    )
     sync_status = models.CharField(max_length=15, choices=SYNC_STATUS, default=INCOMPLETED)
     sync_message = models.CharField(max_length=255, blank=True, null=True, default=None)
     last_interaction_at = models.DateTimeField(default=None, blank=True, null=True)
@@ -137,6 +148,27 @@ class CRMConnection(models.Model):
         if self.crm_vendor == BREVO:
             self.api_url = None
 
+        if self.mapping_fields in (None, ""):
+            self.mapping_fields = {}
+        if not isinstance(self.mapping_fields, dict):
+            raise ValidationError({"mapping_fields": "mapping_fields must be a JSON object"})
+        for field_name, value_map in self.mapping_fields.items():
+            if not isinstance(field_name, str) or not field_name.strip():
+                raise ValidationError({"mapping_fields": "mapping_fields keys must be non-empty strings"})
+            if not isinstance(value_map, dict):
+                raise ValidationError(
+                    {"mapping_fields": f'mapping_fields["{field_name}"] must be an object of <lead-value> → <mapping-value>'}
+                )
+            for incoming, outgoing in value_map.items():
+                if not isinstance(incoming, str) or not isinstance(outgoing, str):
+                    raise ValidationError(
+                        {
+                            "mapping_fields": (
+                                f'mapping_fields["{field_name}"] must map strings to strings '
+                                "(<lead-value> → <mapping-value>)"
+                            )
+                        }
+                    )
     def save(self, *args, **kwargs):
         if self.pk:
             previous = CRMConnection.objects.filter(pk=self.pk).values("crm_vendor", "api_url", "api_key").first()

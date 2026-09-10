@@ -34,6 +34,7 @@ from .models import (
     AcademyAlias,
     ActiveCampaignAcademy,
     Automation,
+    CRMConnection,
     CrmRouting,
     DROP,
     EmailDomainValidation,
@@ -664,13 +665,50 @@ def set_optional(contact, key, data, custom_key=None, crm_vendor="ACTIVE_CAMPAIG
     return contact
 
 
-def get_lead_tags(ac_academy, form_entry):
+def map_incoming_field_values(mapping_fields, field_name, values):
+    """Replace lead field values using CRMConnection.mapping_fields.
+
+    Convention: mapping_fields[field]["<lead-value>"] = "<mapping-value>".
+    Unmapped values are returned unchanged.
+    """
+    if not values:
+        return values
+    if not isinstance(mapping_fields, dict):
+        return values
+    value_map = mapping_fields.get(field_name) or {}
+    if not isinstance(value_map, dict) or not value_map:
+        return values
+    return [value_map.get(value, value) for value in values]
+
+
+def find_crm_connection_for_academy(ac_academy):
+    """Match a CRMConnection that shares credentials with an ActiveCampaignAcademy."""
+    if ac_academy is None:
+        return None
+    qs = CRMConnection.objects.filter(
+        crm_vendor=ac_academy.crm_vendor,
+        api_key=ac_academy.ac_key,
+        is_active=True,
+    )
+    if ac_academy.crm_vendor == "ACTIVE_CAMPAIGN":
+        qs = qs.filter(api_url=ac_academy.ac_url)
+    else:
+        qs = qs.filter(api_url__isnull=True)
+    return qs.order_by("id").first()
+
+
+def get_lead_tags(ac_academy, form_entry, mapping_fields=None):
     if "tags" not in form_entry or form_entry["tags"] == "":
         raise Exception("You need to specify tags for this entry")
     else:
-        _tags = [t.strip() for t in form_entry["tags"].split(",")]
-        if len(_tags) == 0 or _tags[0] == "":
+        _tags = [t.strip() for t in form_entry["tags"].split(",") if t.strip()]
+        if len(_tags) == 0:
             raise Exception("The contact tags are empty", 400)
+
+    incoming_tags = list(_tags)
+    _tags = map_incoming_field_values(mapping_fields, "tags", _tags)
+    if incoming_tags != _tags:
+        logger.info("Mapped lead tags %s → %s using CRMConnection.mapping_fields", incoming_tags, _tags)
 
     strong_tags = Tag.objects.filter(slug__in=_tags, tag_type="STRONG", ac_academy=ac_academy)
     soft_tags = Tag.objects.filter(slug__in=_tags, tag_type="SOFT", ac_academy=ac_academy)
@@ -843,8 +881,14 @@ def register_new_lead(form_entry=None):
         entry.save(update_fields=["crm_routing", "crm_routed_at", "updated_at"])
 
     send_academy = ac_academy
+    mapping_fields = {}
     if custom_destination:
         send_academy = _crm_destination_connection(routing.connection, academy=ac_academy.academy)
+        mapping_fields = routing.connection.mapping_fields or {}
+    else:
+        matched_connection = find_crm_connection_for_academy(ac_academy)
+        if matched_connection is not None:
+            mapping_fields = matched_connection.mapping_fields or {}
 
     automations = []
     tags = []
@@ -866,7 +910,7 @@ def register_new_lead(form_entry=None):
             if hasattr(automations, "values_list"):
                 automations = automations.values_list("acp_id", flat=True)
 
-            tags = get_lead_tags(ac_academy, form_entry)
+            tags = get_lead_tags(ac_academy, form_entry, mapping_fields=mapping_fields)
             logger.info("found tags")
             logger.info(set(t.slug for t in tags))
 
@@ -876,6 +920,19 @@ def register_new_lead(form_entry=None):
                     "No automation was specified and the specified tag (if any) has no automation either"
                 )
 
+            automations = [tags[0].automation.acp_id]
+    elif custom_destination and send_academy.crm_vendor == "ACTIVE_CAMPAIGN":
+        automations = get_lead_automations(ac_academy, form_entry)
+        if hasattr(automations, "values_list"):
+            automations = automations.values_list("acp_id", flat=True)
+        tags = get_lead_tags(ac_academy, form_entry, mapping_fields=mapping_fields)
+        logger.info("found tags for CrmRouting ACTIVE_CAMPAIGN destination")
+        logger.info(set(t.slug for t in tags))
+        if (automations is None or len(automations) == 0) and len(tags) > 0:
+            if tags[0].automation is None:
+                raise ValidationException(
+                    "No automation was specified and the specified tag (if any) has no automation either"
+                )
             automations = [tags[0].automation.acp_id]
     elif (
         custom_destination

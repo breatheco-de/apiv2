@@ -4,7 +4,11 @@ from unittest.mock import patch
 
 from django.core.exceptions import ValidationError
 
-from breathecode.marketing.actions import register_new_lead, test_crm_connection as check_crm_connection
+from breathecode.marketing.actions import (
+    map_incoming_field_values,
+    register_new_lead,
+    test_crm_connection as check_crm_connection,
+)
 from breathecode.marketing.models import CRMConnection, CrmRouting
 from breathecode.marketing.tests.tasks.tests_persist_single_lead import generate_form_entry_kwargs
 from breathecode.services.brevo import Brevo, BrevoAuthException
@@ -210,6 +214,60 @@ class CrmRoutingTestSuite(MarketingTestCase):
         self.assertEqual(result.crm_routing_id, routing.id)
         self.assertIsNotNone(result.crm_routed_at)
         self.assertEqual(result.storage_status_text, f"CrmRouting ROUTE (id={routing.id})")
+
+    def test_map_incoming_field_values_uses_key_as_incoming(self):
+        mapped = map_incoming_field_values(
+            {"tags": {"new-conversion": "website-lead"}},
+            "tags",
+            ["new-conversion", "untouched"],
+        )
+        self.assertEqual(mapped, ["website-lead", "untouched"])
+
+    def test_mapping_fields_rejects_non_object(self):
+        with self.assertRaises(ValidationError):
+            CRMConnection.objects.create(
+                name="bad-map",
+                crm_vendor="BREVO",
+                api_key="brevo-key",
+                mapping_fields=["not", "an", "object"],
+            )
+
+    @patch("breathecode.marketing.actions.get_save_leads", return_value="TRUE")
+    @patch("breathecode.marketing.actions.send_to_active_campaign")
+    def test_route_maps_incoming_tags_before_ac_lookup(self, mock_send, _mock_save_leads):
+        mock_send.side_effect = lambda form_entry, *args, **kwargs: form_entry
+        model = self._models()
+        connection = self._connection(
+            mapping_fields={"tags": {"new-conversion-name": model.tag.slug}},
+        )
+        CrmRouting.objects.create(action="ROUTE", condition="true", connection=connection)
+
+        payload = self._payload(model)
+        payload["tags"] = "new-conversion-name"
+        result = register_new_lead(payload)
+
+        self.assertEqual(result.storage_status, "PERSISTED")
+        sent_tags = mock_send.call_args.args[4]
+        self.assertEqual([tag.slug for tag in sent_tags], [model.tag.slug])
+
+    @patch("breathecode.marketing.actions.get_save_leads", return_value="TRUE")
+    @patch("breathecode.marketing.actions.send_to_active_campaign")
+    def test_legacy_ac_uses_mapping_from_matching_connection(self, mock_send, _mock_save_leads):
+        mock_send.side_effect = lambda form_entry, *args, **kwargs: form_entry
+        model = self._models()
+        self._connection(
+            api_url=model.active_campaign_academy.ac_url,
+            api_key=model.active_campaign_academy.ac_key,
+            mapping_fields={"tags": {"new-conversion-name": model.tag.slug}},
+        )
+
+        payload = self._payload(model)
+        payload["tags"] = "new-conversion-name"
+        result = register_new_lead(payload)
+
+        self.assertEqual(result.storage_status, "PERSISTED")
+        sent_tags = mock_send.call_args.args[4]
+        self.assertEqual([tag.slug for tag in sent_tags], [model.tag.slug])
 
     @patch("breathecode.marketing.actions.Brevo.test_connection")
     def test_brevo_connection_does_not_require_url(self, mock_test):
