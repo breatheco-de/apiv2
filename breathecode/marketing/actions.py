@@ -10,6 +10,7 @@ from typing import Optional
 try:
     import dns.resolver  # type: ignore
     import dns.exception  # type: ignore
+
     DNS_AVAILABLE = True
 except ImportError:
     DNS_AVAILABLE = False
@@ -33,11 +34,14 @@ from .models import (
     AcademyAlias,
     ActiveCampaignAcademy,
     Automation,
-    CrmLeadOverride,
+    CrmRouting,
+    DROP,
     EmailDomainValidation,
     FormEntry,
+    ROUTE,
     Tag,
 )
+from .crm_routing import matches_crm_condition
 from .utils.person_name import standardize_person_name
 
 logger = getLogger(__name__)
@@ -45,20 +49,21 @@ logger = getLogger(__name__)
 GOOGLE_CLOUD_KEY = os.getenv("GOOGLE_CLOUD_KEY")
 MAIL_ABSTRACT_KEY = os.getenv("MAIL_ABSTRACT_KEY")
 
+
 def _load_disposable_email_domains():
     """
     Carga la lista de dominios de emails desechables desde un archivo de texto.
     El archivo debe estar en breathecode/marketing/data/disposable_email_domains.txt
     Un dominio por línea, las líneas que empiezan con # son comentarios.
-    
+
     Returns:
         set: Conjunto de dominios desechables (en minúsculas)
-    
+
     Raises:
         FileNotFoundError: Si el archivo no existe
         IOError: Si hay un error leyendo el archivo
         Exception: Si ocurre cualquier otro error durante la carga
-    
+
     Nota: Esta función NO tiene fallback. Si falla, se lanza una excepción
     para evitar que la validación de emails funcione sin protección contra
     correos desechables (fail-secure).
@@ -66,7 +71,7 @@ def _load_disposable_email_domains():
     current_dir = os.path.dirname(os.path.abspath(__file__))
     data_dir = os.path.join(current_dir, "data")
     file_path = os.path.join(data_dir, "disposable_email_domains.txt")
-    
+
     if not os.path.exists(file_path):
         error_msg = (
             f"Archivo de dominios desechables no encontrado: {file_path}. "
@@ -74,10 +79,10 @@ def _load_disposable_email_domains():
         )
         logger.error(error_msg)
         raise FileNotFoundError(error_msg)
-    
+
     domains = set()
     line_num = 0
-    
+
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             for _line_num, line in enumerate(f, start=1):
@@ -93,7 +98,7 @@ def _load_disposable_email_domains():
         )
         logger.error(error_msg)
         raise IOError(error_msg) from e
-    
+
     if not domains:
         error_msg = (
             f"El archivo de dominios desechables está vacío: {file_path}. "
@@ -101,7 +106,7 @@ def _load_disposable_email_domains():
         )
         logger.error(error_msg)
         raise ValueError(error_msg)
-    
+
     logger.info(f"Cargados {len(domains)} dominios desechables desde {file_path}")
     return domains
 
@@ -187,13 +192,13 @@ def bind_formentry_with_webhook(webhook):
 def _check_mx_records(domain):
     """
     Verifica si el dominio tiene registros MX válidos y los retorna.
-    
+
     Los resultados se almacenan en la base de datos con expiración
     para evitar verificaciones repetidas del mismo dominio.
-    
+
     Args:
         domain: Dominio a verificar
-    
+
     Returns:
         tuple: (bool, list) - (has_mx, mx_records)
             - has_mx: True si el dominio tiene registros MX válidos
@@ -201,23 +206,26 @@ def _check_mx_records(domain):
     """
     try:
         import dns.resolver  # type: ignore
+
         dns_available = True
     except ImportError:
         dns_available = False
-    
+
     try:
         cached_result = EmailDomainValidation.get_valid_domain(domain)
         if cached_result is not None:
             if dns_available and (not cached_result.mx_records or len(cached_result.mx_records) == 0):
-                logger.debug(f"Cache tiene mx_records vacío pero dnspython está disponible, forzando nueva verificación para {domain}")
+                logger.debug(
+                    f"Cache tiene mx_records vacío pero dnspython está disponible, forzando nueva verificación para {domain}"
+                )
             else:
                 return (cached_result.has_mx, cached_result.mx_records or [])
     except Exception as e:
         logger.debug(f"No se pudo acceder al cache de validaciones MX: {e}")
-    
+
     mx_records = []
     has_mx = False
-    
+
     try:
         if dns_available:
             answers = dns.resolver.resolve(domain, "MX")
@@ -232,46 +240,48 @@ def _check_mx_records(domain):
     except Exception as e:
         logger.debug(f"Error verificando registros MX para {domain}: {e}")
         has_mx = False
-    
+
     try:
         domain_obj, _ = EmailDomainValidation.get_or_create_domain(domain)
         domain_obj.has_mx = has_mx
         domain_obj.mx_records = mx_records
         from django.utils import timezone
+
         domain_obj.next_check_at = timezone.now() + timedelta(days=180)
         domain_obj.save()
     except Exception as e:
         logger.debug(f"No se pudo guardar resultado de validación MX en BD: {e}")
-    
+
     return (has_mx, mx_records)
 
 
 def _check_spf(domain):
     """
     Verifica y obtiene el registro SPF del dominio.
-    
+
     Args:
         domain: Dominio a verificar
-    
+
     Returns:
         str o None: Registro SPF encontrado o None si no existe
     """
     try:
         import dns.resolver  # type: ignore
         import dns.exception  # type: ignore
+
         dns_available = True
     except ImportError:
         dns_available = False
-    
+
     try:
         cached_result = EmailDomainValidation.get_valid_domain(domain)
         if cached_result is not None and cached_result.spf:
             return cached_result.spf
     except Exception as e:
         logger.debug(f"No se pudo acceder al cache de validaciones SPF: {e}")
-    
+
     spf_record = None
-    
+
     try:
         if dns_available:
             try:
@@ -285,48 +295,50 @@ def _check_spf(domain):
                 pass
     except Exception as e:
         logger.debug(f"Error verificando registro SPF para {domain}: {e}")
-    
+
     try:
         domain_obj, created = EmailDomainValidation.get_or_create_domain(domain)
         domain_obj.spf = spf_record
         # Asegurar que next_check_at tenga un valor si es un registro nuevo
         if created or domain_obj.next_check_at is None:
             from django.utils import timezone
+
             domain_obj.next_check_at = timezone.now() + timedelta(days=180)
         domain_obj.save()
         logger.info(f"EmailDomainValidation actualizado (SPF) para {domain}: {spf_record is not None}")
     except Exception as e:
         logger.error(f"No se pudo guardar resultado de validación SPF en BD para {domain}: {e}", exc_info=True)
-    
+
     return spf_record
 
 
 def _check_dmarc(domain):
     """
     Verifica y obtiene el registro DMARC del dominio.
-    
+
     Args:
         domain: Dominio a verificar
-    
+
     Returns:
         str o None: Registro DMARC encontrado o None si no existe
     """
     try:
         import dns.resolver  # type: ignore
         import dns.exception  # type: ignore
+
         dns_available = True
     except ImportError:
         dns_available = False
-    
+
     try:
         cached_result = EmailDomainValidation.get_valid_domain(domain)
         if cached_result is not None and cached_result.dmarc:
             return cached_result.dmarc
     except Exception as e:
         logger.debug(f"No se pudo acceder al cache de validaciones DMARC: {e}")
-    
+
     dmarc_record = None
-    
+
     try:
         if dns_available:
             try:
@@ -341,19 +353,20 @@ def _check_dmarc(domain):
                 pass
     except Exception as e:
         logger.debug(f"Error verificando registro DMARC para {domain}: {e}")
-    
+
     try:
         domain_obj, created = EmailDomainValidation.get_or_create_domain(domain)
         domain_obj.dmarc = dmarc_record
         # Asegurar que next_check_at tenga un valor si es un registro nuevo
         if created or domain_obj.next_check_at is None:
             from django.utils import timezone
+
             domain_obj.next_check_at = timezone.now() + timedelta(days=180)
         domain_obj.save()
         logger.info(f"EmailDomainValidation actualizado (DMARC) para {domain}: {dmarc_record is not None}")
     except Exception as e:
         logger.error(f"No se pudo guardar resultado de validación DMARC en BD para {domain}: {e}", exc_info=True)
-    
+
     return dmarc_record
 
 
@@ -361,17 +374,17 @@ def _calculate_quality_score(has_mx, has_spf, has_dmarc, is_role, is_free):
     """
     Calcula un score de calidad del email basado en múltiples factores.
     Retorna un valor entre 0.0 y 1.0.
-    
+
     Nota: format_valid, is_disposable no se incluyen porque
     si alguno de estos falla, se lanza una excepción antes de llegar aquí.
-    
+
     Args:
         has_mx: True si el dominio tiene registros MX válidos
         has_spf: True si el dominio tiene registro SPF
         has_dmarc: True si el dominio tiene registro DMARC
         is_role: True si es un email de rol (info@, support@, etc.)
         is_free: True si es un email de proveedor gratuito (gmail.com, etc.)
-    
+
     Returns:
         float: Score entre 0.0 y 1.0
     """
@@ -452,6 +465,7 @@ def validate_email_local(email, lang):
         domain_obj.disposable = is_disposable
         if created or domain_obj.next_check_at is None:
             from django.utils import timezone
+
             domain_obj.next_check_at = timezone.now() + timedelta(days=180)
         domain_obj.save()
         logger.info(f"EmailDomainValidation actualizado (disposable) para {domain}: {is_disposable}")
@@ -741,24 +755,21 @@ def add_to_active_campaign(contact, academy_id: int, automation_id: int):
     logger.debug(f"Triggered automation with id {str(acp_id)}", response)
 
 
-def _form_entry_match_value(form_entry, field):
-    if field == "language":
-        raw = form_entry.get("utm_language") or form_entry.get("language")
-    else:
-        raw = form_entry.get(field)
-    if raw is None:
-        return ""
-    return str(raw).strip().lower()
-
-
-def find_crm_lead_override(form_entry, academy):
+def find_crm_routing(form_entry, academy):
     matched = []
-    for override in CrmLeadOverride.objects.filter(is_active=True):
-        if _form_entry_match_value(form_entry, override.match_field) != (override.match_value or "").strip().lower():
+    routes = CrmRouting.objects.filter(is_active=True).select_related("academy", "connection")
+    for routing in routes:
+        if routing.academy_id and (academy is None or routing.academy_id != academy.id):
             continue
-        if override.academy_id and (academy is None or override.academy_id != academy.id):
+        if routing.action == ROUTE and (
+            routing.connection is None
+            or not routing.connection.is_active
+            or routing.connection.sync_status != "COMPLETED"
+        ):
+            logger.warning("Ignoring CrmRouting id=%s because its CRM connection is unavailable", routing.id)
             continue
-        matched.append(override)
+        if matches_crm_condition(form_entry, routing.condition):
+            matched.append(routing)
 
     if not matched:
         return None
@@ -768,8 +779,13 @@ def find_crm_lead_override(form_entry, academy):
     return sorted(pool, key=lambda item: item.id)[0]
 
 
-def _crm_destination_academy(url, key, vendor, academy=None):
-    return SimpleNamespace(ac_url=url, ac_key=key, crm_vendor=vendor, academy=academy)
+def _crm_destination_connection(connection, academy=None):
+    return SimpleNamespace(
+        ac_url=connection.api_url,
+        ac_key=connection.api_key,
+        crm_vendor=connection.crm_vendor,
+        academy=academy,
+    )
 
 
 def register_new_lead(form_entry=None):
@@ -806,27 +822,26 @@ def register_new_lead(form_entry=None):
             f"No CRM vendor information for academy with slug {location}. Is Active Campaign or Brevo used?"
         )
 
-    override = find_crm_lead_override(form_entry, ac_academy.academy)
-    skip_crm = bool(override and not override.has_destination())
-    custom_destination = bool(override and override.has_destination())
-    if override:
+    entry = None
+    if "id" in form_entry:
+        entry = FormEntry.objects.filter(id=form_entry["id"]).first()
+
+    routing = find_crm_routing(entry, ac_academy.academy) if entry else None
+    skip_crm = bool(routing and routing.action == DROP)
+    custom_destination = bool(routing and routing.action == ROUTE)
+    if routing:
         logger.info(
-            "CrmLeadOverride matched id=%s field=%s value=%s skip_crm=%s custom_destination=%s",
-            override.id,
-            override.match_field,
-            override.match_value,
+            "CrmRouting matched id=%s condition=%s action=%s skip_crm=%s custom_destination=%s",
+            routing.id,
+            routing.condition,
+            routing.action,
             skip_crm,
             custom_destination,
         )
 
     send_academy = ac_academy
     if custom_destination:
-        send_academy = _crm_destination_academy(
-            override.destination_ac_url,
-            override.destination_ac_key,
-            override.destination_crm_vendor,
-            academy=ac_academy.academy,
-        )
+        send_academy = _crm_destination_connection(routing.connection, academy=ac_academy.academy)
 
     automations = []
     tags = []
@@ -859,8 +874,13 @@ def register_new_lead(form_entry=None):
                 )
 
             automations = [tags[0].automation.acp_id]
-    elif custom_destination and send_academy.crm_vendor == "BREVO" and "tags" in form_entry and len(form_entry["tags"]) > 0:
-        logger.info("Ignoring tags because CrmLeadOverride destination is Brevo")
+    elif (
+        custom_destination
+        and send_academy.crm_vendor == "BREVO"
+        and "tags" in form_entry
+        and len(form_entry["tags"]) > 0
+    ):
+        logger.info("Ignoring tags because CrmRouting destination is Brevo")
 
     if not "email" in form_entry:
         raise ValidationException("The email doesn't exist")
@@ -877,10 +897,9 @@ def register_new_lead(form_entry=None):
     if not "phone" in form_entry:
         raise ValidationException("The phone doesn't exist")
 
-    if not "id" in form_entry:
+    if "id" not in form_entry:
         raise ValidationException("The id doesn't exist")
 
-    entry = FormEntry.objects.filter(id=form_entry["id"]).first()
     if not entry:
         raise ValidationException("FormEntry not found (id: " + str(form_entry["id"]) + ")")
 
@@ -907,7 +926,7 @@ def register_new_lead(form_entry=None):
     }
 
     contact = set_optional(contact, "utm_url", form_entry, crm_vendor=send_academy.crm_vendor)
-    
+
     # Ensure location sent to Active Campaign matches the resolved academy/alias.
     # Only use alias.active_campaign_slug on slug/AC-slug match, not academy fallback.
     location_value = location
@@ -917,7 +936,9 @@ def register_new_lead(form_entry=None):
     elif ac_academy.academy and ac_academy.academy.active_campaign_slug:
         location_value = ac_academy.academy.active_campaign_slug
 
-    contact = set_optional(contact, "utm_location", {"location": location_value}, "location", crm_vendor=send_academy.crm_vendor)
+    contact = set_optional(
+        contact, "utm_location", {"location": location_value}, "location", crm_vendor=send_academy.crm_vendor
+    )
     contact = set_optional(contact, "course", form_entry, crm_vendor=send_academy.crm_vendor)
     contact = set_optional(contact, "utm_language", form_entry, "language", crm_vendor=send_academy.crm_vendor)
     contact = set_optional(contact, "utm_country", form_entry, "country", crm_vendor=send_academy.crm_vendor)
@@ -976,20 +997,23 @@ def register_new_lead(form_entry=None):
     if skip_crm:
         entry.storage_status = "PERSISTED"
         entry.storage_status_text = (
-            f"Not sent to CRM because CrmLeadOverride matched "
-            f"(id={override.id} {override.match_field}={override.match_value})"
+            f"Not sent to CRM because CrmRouting DROP matched "
+            f"(id={routing.id} condition={routing.condition or 'true'})"
         )
         entry.save()
         form_entry["storage_status"] = "PERSISTED"
-        logger.info("FormEntry persisted without CRM because CrmLeadOverride has no destination id=%s", override.id)
+        logger.info("FormEntry persisted without CRM because CrmRouting DROP matched id=%s", routing.id)
         return entry
 
     if send_academy.crm_vendor == "ACTIVE_CAMPAIGN":
         entry = send_to_active_campaign(entry, send_academy, contact, automations, tags)
     elif send_academy.crm_vendor == "BREVO":
-        if not hasattr(automations, "count"):
-            automations = Automation.objects.none()
-        entry = send_to_brevo(entry, send_academy, contact, automations)
+        if custom_destination:
+            entry = send_to_brevo_contact(entry, send_academy, contact)
+        else:
+            if not hasattr(automations, "count"):
+                automations = Automation.objects.none()
+            entry = send_to_brevo(entry, send_academy, contact, automations)
 
     if entry.storage_status == "ERROR":
         return entry
@@ -1064,6 +1088,39 @@ def send_to_brevo(form_entry, ac_academy, contact, automations):
         form_entry.save()
 
     return form_entry
+
+
+def send_to_brevo_contact(form_entry, crm_connection, contact):
+    brevo_client = Brevo(crm_connection.ac_key)
+    response = brevo_client.upsert_contact(contact)
+
+    if isinstance(response, dict) and response.get("id") is not None:
+        form_entry.ac_contact_id = str(response["id"])
+        form_entry.save(update_fields=["ac_contact_id"])
+
+    return form_entry
+
+
+def test_crm_connection(connection):
+    try:
+        if connection.crm_vendor == "ACTIVE_CAMPAIGN":
+            client = ActiveCampaignClient(connection.api_url, connection.api_key)
+            response = client.tags.list_all_tags(limit=1)
+        elif connection.crm_vendor == "BREVO":
+            response = Brevo(connection.api_key).test_connection()
+        else:
+            raise ValueError(f"Unsupported CRM vendor: {connection.crm_vendor}")
+
+        connection.sync_status = "COMPLETED"
+        connection.sync_message = "Connection successful"
+        return response
+    except Exception as exc:
+        connection.sync_status = "INCOMPLETED"
+        connection.sync_message = str(exc)[:255]
+        raise
+    finally:
+        connection.last_interaction_at = timezone.now()
+        connection.save(update_fields=["sync_status", "sync_message", "last_interaction_at", "updated_at"])
 
 
 def test_ac_connection(ac_academy):
@@ -1147,13 +1204,10 @@ def sync_tags(ac_academy):
     for tag in tags:
         # Look for existing tag by slug - check both ac_academy relationship AND direct academy
         # This handles tags created locally without ActiveCampaign
-        existing_tag = Tag.objects.filter(
-            slug=tag["tag"]
-        ).filter(
-            Q(ac_academy=ac_academy) | 
-            Q(academy=ac_academy.academy)
-        ).first()
-        
+        existing_tag = (
+            Tag.objects.filter(slug=tag["tag"]).filter(Q(ac_academy=ac_academy) | Q(academy=ac_academy.academy)).first()
+        )
+
         if existing_tag is None:
             # Tag doesn't exist locally - create new one
             t = Tag(

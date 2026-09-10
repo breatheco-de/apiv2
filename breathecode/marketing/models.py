@@ -7,7 +7,7 @@ from django import forms
 from django.contrib.auth.models import User
 from django.core.validators import RegexValidator
 from django.db import models
-from django.db.models import Q, UniqueConstraint, CheckConstraint
+from django.db.models import Q, CheckConstraint
 from django.forms import ValidationError
 
 from breathecode.admissions.models import Academy, Cohort, Syllabus
@@ -20,7 +20,8 @@ from .signals import form_entry_won_or_lost, new_form_entry_deal
 
 __all__ = [
     "ActiveCampaignAcademy",
-    "CrmLeadOverride",
+    "CRMConnection",
+    "CrmRouting",
     "AcademyAlias",
     "Automation",
     "Tag",
@@ -51,6 +52,13 @@ BREVO = "BREVO"
 CRM_VENDORS = (
     (ACTIVE_CAMPAIGN, "Active Campaign"),
     (BREVO, "Brevo"),
+)
+
+ROUTE = "ROUTE"
+DROP = "DROP"
+CRM_ROUTING_ACTIONS = (
+    (ROUTE, "Route"),
+    (DROP, "Drop"),
 )
 
 
@@ -103,24 +111,61 @@ class ActiveCampaignAcademy(models.Model):
         return f"{self.academy.name}" if self.academy else "Unnamed"
 
 
-CRM_LEAD_OVERRIDE_MATCH_FIELDS = (
-    ("course", "course"),
-    ("utm_campaign", "utm_campaign"),
-    ("utm_source", "utm_source"),
-    ("utm_medium", "utm_medium"),
-    ("utm_content", "utm_content"),
-    ("location", "location"),
-    ("tags", "tags"),
-    ("country", "country"),
-    ("language", "language"),
-)
+class CRMConnection(models.Model):
+    """Reusable credentials for a CRM destination."""
+
+    name = models.CharField(max_length=100, unique=True)
+    crm_vendor = models.CharField(max_length=20, choices=CRM_VENDORS)
+    api_url = models.URLField(blank=True, null=True, default=None)
+    api_key = models.CharField(max_length=150)
+    sync_status = models.CharField(max_length=15, choices=SYNC_STATUS, default=INCOMPLETED)
+    sync_message = models.CharField(max_length=255, blank=True, null=True, default=None)
+    last_interaction_at = models.DateTimeField(default=None, blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def clean(self):
+        super().clean()
+        self.name = (self.name or "").strip()
+        self.api_key = (self.api_key or "").strip()
+        self.api_url = (self.api_url or "").strip() or None
+
+        if self.crm_vendor == ACTIVE_CAMPAIGN and not self.api_url:
+            raise ValidationError({"api_url": "ActiveCampaign connections require an API URL"})
+
+        if self.crm_vendor == BREVO:
+            self.api_url = None
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            previous = CRMConnection.objects.filter(pk=self.pk).values("crm_vendor", "api_url", "api_key").first()
+            if previous and (
+                previous["crm_vendor"] != self.crm_vendor
+                or previous["api_url"] != self.api_url
+                or previous["api_key"] != self.api_key
+            ):
+                self.sync_status = INCOMPLETED
+                self.sync_message = "Credentials changed; connection must be tested again"
+                if kwargs.get("update_fields") is not None:
+                    kwargs["update_fields"] = set(kwargs["update_fields"]) | {"sync_status", "sync_message"}
+
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.name} ({self.get_crm_vendor_display()})"
 
 
-class CrmLeadOverride(models.Model):
-    """Replace the academy CRM destination when a FormEntry field matches."""
+class CrmRouting(models.Model):
+    """Drop or replace the academy CRM destination when a CEL condition matches."""
 
-    match_field = models.CharField(max_length=30, choices=CRM_LEAD_OVERRIDE_MATCH_FIELDS)
-    match_value = models.CharField(max_length=255, help_text="Case-insensitive exact match against the FormEntry payload")
+    action = models.CharField(max_length=10, choices=CRM_ROUTING_ACTIONS, default=ROUTE)
+    condition = models.TextField(
+        blank=True,
+        default="",
+        help_text='CEL expression evaluated against FormEntry as "lead". Empty matches every lead.',
+    )
     academy = models.ForeignKey(
         Academy,
         on_delete=models.CASCADE,
@@ -129,15 +174,13 @@ class CrmLeadOverride(models.Model):
         default=None,
         help_text="Empty = all academies. Set = only FormEntries whose location resolved to this academy",
     )
-    destination_ac_url = models.URLField(blank=True, null=True, default=None)
-    destination_ac_key = models.CharField(max_length=150, blank=True, null=True, default=None)
-    destination_crm_vendor = models.CharField(
-        max_length=20,
-        choices=CRM_VENDORS,
+    connection = models.ForeignKey(
+        CRMConnection,
+        on_delete=models.PROTECT,
         blank=True,
         null=True,
         default=None,
-        help_text="Leave empty with url and key to skip CRM. Fill all three to send to another AC/Brevo",
+        related_name="routes",
     )
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -145,47 +188,31 @@ class CrmLeadOverride(models.Model):
 
     class Meta:
         constraints = [
-            UniqueConstraint(
-                fields=["match_field", "match_value", "academy"],
-                name="uniq_crm_lead_override_match",
-                nulls_distinct=False,
-            ),
             CheckConstraint(
-                name="crm_lead_override_destination_all_or_nothing",
-                condition=(
-                    (
-                        (Q(destination_ac_url="") | Q(destination_ac_url__isnull=True))
-                        & (Q(destination_ac_key="") | Q(destination_ac_key__isnull=True))
-                        & (Q(destination_crm_vendor="") | Q(destination_crm_vendor__isnull=True))
-                    )
-                    | (
-                        Q(destination_ac_url__isnull=False)
-                        & ~Q(destination_ac_url="")
-                        & Q(destination_ac_key__isnull=False)
-                        & ~Q(destination_ac_key="")
-                        & Q(destination_crm_vendor__isnull=False)
-                        & ~Q(destination_crm_vendor="")
-                    )
-                ),
+                name="crm_routing_action_connection",
+                condition=(Q(action=ROUTE, connection__isnull=False) | Q(action=DROP, connection__isnull=True)),
             ),
         ]
 
-    def has_destination(self):
-        return bool(self.destination_ac_url and self.destination_ac_key and self.destination_crm_vendor)
-
     def clean(self):
         super().clean()
-        url = (self.destination_ac_url or "").strip()
-        key = (self.destination_ac_key or "").strip()
-        vendor = (self.destination_crm_vendor or "").strip()
-        filled = [bool(url), bool(key), bool(vendor)]
-        if any(filled) and not all(filled):
-            raise ValidationError("destination_ac_url, destination_ac_key and destination_crm_vendor must all be set or all empty")
-        self.destination_ac_url = url or None
-        self.destination_ac_key = key or None
-        self.destination_crm_vendor = vendor or None
-        if self.match_value:
-            self.match_value = self.match_value.strip()
+        self.condition = (self.condition or "").strip()
+
+        if self.action == ROUTE and self.connection_id is None:
+            raise ValidationError({"connection": "ROUTE requires a CRM connection"})
+
+        if self.action == DROP and self.connection_id is not None:
+            raise ValidationError({"connection": "DROP cannot have a CRM connection"})
+
+        if self.connection_id and not self.connection.is_active:
+            raise ValidationError({"connection": "The CRM connection is inactive"})
+
+        if self.connection_id and self.connection.sync_status != COMPLETED:
+            raise ValidationError({"connection": "The CRM connection must be tested successfully before routing"})
+
+        from .crm_routing import validate_crm_condition
+
+        validate_crm_condition(self.condition)
 
     def save(self, *args, **kwargs):
         self.full_clean()
@@ -193,8 +220,9 @@ class CrmLeadOverride(models.Model):
 
     def __str__(self):
         scope = self.academy.slug if self.academy else "all-academies"
-        dest = self.destination_crm_vendor or "no-crm"
-        return f"{self.match_field}={self.match_value} → {dest} ({scope})"
+        destination = self.connection.name if self.connection_id else "no-crm"
+        condition = self.condition or "true"
+        return f"{condition} → {self.action}:{destination} ({scope})"
 
 
 class AcademyAlias(models.Model):
@@ -273,16 +301,10 @@ class Tag(models.Model):
         help_text="The STRONG tags in a lead will determine to witch automation it does unless there is an 'automation' property on the lead JSON",
     )
     acp_id = models.IntegerField(
-        null=True,
-        blank=True,
-        default=None,
-        help_text="The id coming from active campaign (optional)"
+        null=True, blank=True, default=None, help_text="The id coming from active campaign (optional)"
     )
     subscribers = models.IntegerField(
-        null=True,
-        blank=True,
-        default=0,
-        help_text="Number of subscribers in ActiveCampaign (optional)"
+        null=True, blank=True, default=0, help_text="Number of subscribers in ActiveCampaign (optional)"
     )
 
     # For better maintance the tags can be disputed for deletion
@@ -806,28 +828,28 @@ class ShortLink(models.Model):
         null=True,
         blank=True,
         default=None,
-        help_text="Event reference in format '<id:slug>' (e.g., '<3434:event_slug>')"
+        help_text="Event reference in format '<id:slug>' (e.g., '<3434:event_slug>')",
     )
     course = models.CharField(
         max_length=200,
         null=True,
         blank=True,
         default=None,
-        help_text="Course reference in format '<id:slug>' (e.g., '<123:course_slug>')"
+        help_text="Course reference in format '<id:slug>' (e.g., '<123:course_slug>')",
     )
     downloadable = models.CharField(
         max_length=200,
         null=True,
         blank=True,
         default=None,
-        help_text="Downloadable reference in format '<id:slug>' (e.g., '<567:downloadable_slug>')"
+        help_text="Downloadable reference in format '<id:slug>' (e.g., '<567:downloadable_slug>')",
     )
     plan = models.CharField(
         max_length=200,
         null=True,
         blank=True,
         default=None,
-        help_text="Plan reference in format '<id:slug>' (e.g., '<789:plan_slug>')"
+        help_text="Plan reference in format '<id:slug>' (e.g., '<789:plan_slug>')",
     )
     referrer_user = models.ForeignKey(
         User,
@@ -835,22 +857,18 @@ class ShortLink(models.Model):
         null=True,
         blank=True,
         default=None,
-        related_name='referral_shortlinks',
-        help_text="User who referred this link (for affiliate tracking)"
+        related_name="referral_shortlinks",
+        help_text="User who referred this link (for affiliate tracking)",
     )
     purpose = models.TextField(
         max_length=500,
         null=True,
         blank=True,
         default=None,
-        help_text="Internal description of what this link is used for"
+        help_text="Internal description of what this link is used for",
     )
     notes = models.TextField(
-        max_length=1000,
-        null=True,
-        blank=True,
-        default=None,
-        help_text="Internal notes about this short link"
+        max_length=1000, null=True, blank=True, default=None, help_text="Internal notes about this short link"
     )
 
     lastclick_at = models.DateTimeField(
@@ -1117,7 +1135,7 @@ class EmailDomainValidation(models.Model):
     """
     Almacena resultados de validación de DNS para dominios de email.
     Incluye validaciones de MX, SPF, DMARC y detección de correos temporales.
-    
+
     Los registros expirados se pueden limpiar periódicamente.
     """
 
@@ -1135,9 +1153,7 @@ class EmailDomainValidation(models.Model):
     disposable = models.BooleanField(
         default=False, help_text="True si el dominio está en la lista de correos temporales"
     )
-    last_checked_at = models.DateTimeField(
-        auto_now=True, db_index=True, help_text="Fecha de la última verificación"
-    )
+    last_checked_at = models.DateTimeField(auto_now=True, db_index=True, help_text="Fecha de la última verificación")
     next_check_at = models.DateTimeField(
         db_index=True, help_text="Fecha de la próxima verificación recomendada", null=True, blank=True
     )
@@ -1165,10 +1181,10 @@ class EmailDomainValidation(models.Model):
     def get_or_create_domain(cls, domain):
         """
         Obtiene o crea un registro de validación para el dominio.
-        
+
         Args:
             domain: Dominio a verificar
-        
+
         Returns:
             tuple: (EmailDomainValidation, created) - El objeto y si fue creado
         """
@@ -1179,10 +1195,10 @@ class EmailDomainValidation(models.Model):
     def get_valid_domain(cls, domain):
         """
         Obtiene un resultado de validación válido (no expirado) si existe.
-        
+
         Args:
             domain: Dominio a verificar
-        
+
         Returns:
             EmailDomainValidation o None si no existe o está expirado
         """
@@ -1212,7 +1228,7 @@ class EmailDomainValidation(models.Model):
     ):
         """
         Actualiza o crea un registro de validación para el dominio.
-        
+
         Args:
             domain: Dominio validado
             has_mx: True si el dominio tiene registros MX válidos
@@ -1221,7 +1237,7 @@ class EmailDomainValidation(models.Model):
             dmarc: Registro DMARC encontrado
             disposable: True si el dominio está en la lista de correos temporales
             valid_days: Días de validez del resultado (default: 180, 6 meses)
-        
+
         Returns:
             EmailDomainValidation creado o actualizado
         """
@@ -1266,12 +1282,12 @@ class CourseResaleSettings(models.Model):
     """
     Allows an academy to resell a course from another academy.
     This model stores reseller-specific settings while keeping the original course data intact.
-    
+
     The reseller can customize almost everything except:
     - slug: Unique identifier (belongs to original course)
     - syllabus: Course content (belongs to original owner)
     - cohort: Cohort configuration (belongs to original owner)
-    
+
     All resale_* fields override the original course values when set.
     If a resale_* field is null/blank, the original course value is used.
     """
@@ -1288,7 +1304,7 @@ class CourseResaleSettings(models.Model):
 
     # Reseller-specific overrides (same field names as Course model for consistency)
     # If null/blank, the original course value is used
-    
+
     # Pricing and plans
     plan_slug = models.SlugField(
         max_length=150,
@@ -1303,7 +1319,7 @@ class CourseResaleSettings(models.Model):
         default=None,
         help_text="Custom plan mapping by country code for the reseller (overrides course.plan_by_country_code)",
     )
-    
+
     # Visual customization
     icon_url = models.URLField(
         null=True,
@@ -1331,7 +1347,7 @@ class CourseResaleSettings(models.Model):
         default=None,
         help_text="Custom technologies list for the reseller (overrides course.technologies)",
     )
-    
+
     # Status and visibility
     status = models.CharField(
         max_length=15,
@@ -1360,7 +1376,7 @@ class CourseResaleSettings(models.Model):
         default=None,
         help_text="Controls inclusion in reseller's listings and sitemaps (overrides course.is_listed)",
     )
-    
+
     # Features
     has_waiting_list = models.BooleanField(
         null=True,
@@ -1368,7 +1384,7 @@ class CourseResaleSettings(models.Model):
         default=None,
         help_text="Whether the reseller has a waiting list (overrides course.has_waiting_list)",
     )
-    
+
     # Control
     is_active = models.BooleanField(default=True, help_text="Whether the resale is currently active")
 
@@ -1395,14 +1411,14 @@ class CourseResaleSettings(models.Model):
 
         if has_feature_flag(self.academy, "commerce.reseller", default=False) is False:
             raise ValidationError(
-                {
-                    "academy": "Academy must have the 'reseller' feature enabled in academy_features to resell courses"
-                }
+                {"academy": "Academy must have the 'reseller' feature enabled in academy_features to resell courses"}
             )
 
         if self.course.academy == self.academy:
             raise ValidationError(
-                {"academy": "An academy cannot resell its own courses. The reseller academy must be different from the course owner."}
+                {
+                    "academy": "An academy cannot resell its own courses. The reseller academy must be different from the course owner."
+                }
             )
 
     def save(self, *args, **kwargs):

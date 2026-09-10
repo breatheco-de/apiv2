@@ -22,6 +22,7 @@ from .actions import (
     sync_automations,
     sync_tags,
     test_ac_connection,
+    test_crm_connection,
 )
 from .models import (
     AcademyAlias,
@@ -29,9 +30,10 @@ from .models import (
     ActiveCampaignAcademy,
     ActiveCampaignWebhook,
     Automation,
+    CRMConnection,
     Course,
     CourseTranslation,
-    CrmLeadOverride,
+    CrmRouting,
     Downloadable,
     EmailDomainValidation,
     FormEntry,
@@ -90,20 +92,55 @@ def sync_ac_automations(modeladmin, request, queryset):
         messages.error(request, message=str(e))
 
 
-@admin.register(CrmLeadOverride)
-class CrmLeadOverrideAdmin(admin.ModelAdmin):
-    """If the FormEntry matches, this replaces the academy CRM. Empty destination = do not send."""
-    search_fields = ["match_field", "match_value", "academy__slug", "academy__name"]
+@admin.display(description="♼ Test CRM connection")
+def test_crm_connections(modeladmin, request, queryset):
+    successes = 0
+    errors = []
+    for connection in queryset:
+        try:
+            test_crm_connection(connection)
+            successes += 1
+        except Exception as exc:
+            errors.append(f"{connection.name}: {exc}")
+
+    if successes:
+        messages.success(request, message=f"Successful CRM connections: {successes}")
+    if errors:
+        messages.error(request, message="; ".join(errors))
+
+
+@admin.register(CRMConnection)
+class CRMConnectionAdmin(admin.ModelAdmin):
+    search_fields = ["name", "crm_vendor"]
     list_display = (
         "id",
-        "match_field",
-        "match_value",
+        "name",
+        "crm_vendor",
+        "sync_status",
+        "is_active",
+        "last_interaction_at",
+        "sync_message",
+    )
+    list_filter = ["crm_vendor", "sync_status", "is_active"]
+    readonly_fields = ["sync_status", "sync_message", "last_interaction_at", "created_at", "updated_at"]
+    actions = [test_crm_connections]
+
+
+@admin.register(CrmRouting)
+class CrmRoutingAdmin(admin.ModelAdmin):
+    """Route or drop a FormEntry when its CEL condition matches."""
+
+    search_fields = ["condition", "academy__slug", "academy__name", "connection__name"]
+    list_display = (
+        "id",
+        "action",
+        "condition",
         "academy",
-        "destination_crm_vendor",
+        "connection",
         "is_active",
         "updated_at",
     )
-    list_filter = ["is_active", "match_field", "destination_crm_vendor"]
+    list_filter = ["is_active", "action", "connection__crm_vendor"]
     raw_id_fields = ["academy"]
 
 
@@ -451,6 +488,7 @@ class TagAdmin(admin.ModelAdmin, AdminExportCsvMixin):
         if obj.ac_academy and obj.acp_id:
             return format_html("<span class='badge bg-success'>Yes</span>")
         return format_html("<span class='badge bg-warning'>No</span>")
+
     is_connected_to_ac.short_description = "AC Connected"
 
 

@@ -161,3 +161,17 @@ class Brevo:
             logger.exception("Error while creating contact in Brevo")
             raise e
             # return False
+
+    def test_connection(self):
+        return self.get("/account")
+
+    def upsert_contact(self, contact: dict):
+        mapped_contact = map_contact_keys(contact)
+        attributes = {key: value for key, value in mapped_contact.items() if key != "EMAIL"}
+        body = {
+            "email": contact["email"],
+            "attributes": attributes,
+            "updateEnabled": True,
+            "getId": True,
+        }
+        return self.post("/contacts", request_data=body)
