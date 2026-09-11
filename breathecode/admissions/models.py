@@ -578,11 +578,12 @@ class Cohort(models.Model):
     )
 
     cohorts_order = models.CharField(
-        max_length=120,
+        max_length=3000,
         null=True,
         blank=True,
         default=None,
-        help_text="An IDs comma separated list to indicate the order in which the micro cohorts will be displayed",
+        help_text="Comma-separated micro cohort IDs in display order. "
+        "Sized for ~40 five-digit IDs plus commas/spaces (and extra headroom).",
     )
     color = models.CharField(
         max_length=50,
