@@ -10,7 +10,7 @@ from breathecode.admissions.models import CohortUser
 from breathecode.admissions.utils.academy_features import has_feature_flag
 from breathecode.registry.models import Asset
 
-from .models import Task
+from .models import AssignmentTelemetry, Task
 from .utils.indicators import EngagementIndicator, FrustrationIndicator, UserIndicatorCalculator
 
 logger = logging.getLogger(__name__)
@@ -63,6 +63,85 @@ def deliver_task(github_url, live_url=None, task_id=None, task=None):
             task.revision_status = "IGNORED"
             task.reviewed_at = timezone.now()
     task.save()
+
+    return task
+
+
+LEARNPACK_COMPLETION_THRESHOLD = 99.999
+
+
+def _telemetry_slugs_for_associated_slug(associated_slug: str) -> set[str]:
+    slugs = {associated_slug} if associated_slug else set()
+    if not associated_slug:
+        return slugs
+
+    asset = Asset.objects.filter(slug=associated_slug).first()
+    if asset is None:
+        from breathecode.registry.models import AssetAlias
+
+        alias = AssetAlias.objects.filter(slug=associated_slug).select_related("asset").first()
+        asset = alias.asset if alias else None
+
+    if asset is None:
+        return slugs
+
+    canonical = asset.get_canonical_translation_asset()
+    slugs.add(canonical.slug)
+    slugs.add(asset.slug)
+    slugs.update(elem.slug for elem in canonical.all_translations.all() if elem and elem.slug)
+    return slugs
+
+
+def find_assignment_telemetry_for_task(task: Task) -> AssignmentTelemetry | None:
+    slugs = _telemetry_slugs_for_associated_slug(task.associated_slug)
+    if not slugs or task.user_id is None:
+        return None
+
+    qs = AssignmentTelemetry.objects.filter(user=task.user, asset_slug__in=slugs)
+    completed = qs.filter(completion_rate__gte=LEARNPACK_COMPLETION_THRESHOLD).order_by("-id").first()
+    if completed is not None:
+        return completed
+    return qs.order_by("-id").first()
+
+
+def apply_existing_learnpack_telemetry(task: Task, *, persist: bool = True) -> Task:
+    """Link existing LearnPack telemetry to an EXERCISE task and mark it DONE when completed.
+
+    Used by the one-shot management command apply_learnpack_telemetry_to_cohort_tasks.
+    AssignmentTelemetry is per user+slug (including translations), not per cohort.
+    """
+    if task is None or task.task_type != Task.TaskType.EXERCISE:
+        return task
+
+    if task.task_status == Task.TaskStatus.DONE and task.telemetry_id:
+        return task
+
+    telemetry = find_assignment_telemetry_for_task(task)
+    if telemetry is None:
+        return task
+
+    updated = False
+    if task.telemetry_id != telemetry.id:
+        task.telemetry = telemetry
+        updated = True
+
+    if (
+        telemetry.completion_rate is not None
+        and telemetry.completion_rate >= LEARNPACK_COMPLETION_THRESHOLD
+        and task.task_status != Task.TaskStatus.DONE
+    ):
+        task.task_status = Task.TaskStatus.DONE
+        task.revision_status = Task.RevisionStatus.APPROVED
+        task.description = "You have completed all steps on this exercise"
+        now = timezone.now()
+        if task.delivered_at is None:
+            task.delivered_at = now
+        if task.reviewed_at is None:
+            task.reviewed_at = now
+        updated = True
+
+    if updated and task.pk and persist:
+        task.save()
 
     return task
 
