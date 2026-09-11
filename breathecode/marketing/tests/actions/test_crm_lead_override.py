@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError
 from breathecode.marketing.actions import (
     map_incoming_field_values,
     register_new_lead,
+    resolve_brevo_event_name,
     test_crm_connection as check_crm_connection,
 )
 from breathecode.marketing.models import CRMConnection, CrmRouting
@@ -210,10 +211,34 @@ class CrmRoutingTestSuite(MarketingTestCase):
 
         self.assertEqual(result.storage_status, "PERSISTED")
         mock_contact.assert_called_once()
+        self.assertEqual(mock_contact.call_args.kwargs.get("event_name"), model.tag.slug)
         mock_legacy_event.assert_not_called()
         self.assertEqual(result.crm_routing_id, routing.id)
         self.assertIsNotNone(result.crm_routed_at)
         self.assertEqual(result.storage_status_text, f"CrmRouting ROUTE (id={routing.id})")
+
+    @patch("breathecode.marketing.actions.get_save_leads", return_value="TRUE")
+    @patch("breathecode.services.brevo.Brevo.track_event")
+    @patch("breathecode.services.brevo.Brevo.upsert_contact")
+    def test_brevo_route_tracks_mapped_tags_as_event_name(self, mock_upsert, mock_track, _mock_save_leads):
+        mock_upsert.return_value = {"id": 99}
+        model = self._models(course="ai-flex")
+        connection = self._connection(
+            vendor="BREVO",
+            mapping_fields={"tags": {model.tag.slug: "student_application"}},
+        )
+        CrmRouting.objects.create(
+            action="ROUTE",
+            condition='lead.course == "ai-flex"',
+            connection=connection,
+        )
+
+        result = register_new_lead(self._payload(model))
+
+        self.assertEqual(result.storage_status, "PERSISTED")
+        mock_upsert.assert_called_once()
+        mock_track.assert_called_once()
+        self.assertEqual(mock_track.call_args.args[1], "student_application")
 
     def test_map_incoming_field_values_uses_key_as_incoming(self):
         mapped = map_incoming_field_values(
@@ -222,6 +247,28 @@ class CrmRoutingTestSuite(MarketingTestCase):
             ["new-conversion", "untouched"],
         )
         self.assertEqual(mapped, ["website-lead", "untouched"])
+
+    def test_resolve_brevo_event_name_keeps_comma_separated_string(self):
+        self.assertEqual(
+            resolve_brevo_event_name({"tags": "ai-flex,ai-fluency"}),
+            "ai-flex,ai-fluency",
+        )
+
+    def test_resolve_brevo_event_name_maps_whole_string_or_tokens(self):
+        self.assertEqual(
+            resolve_brevo_event_name(
+                {"tags": "ai-flex,ai-fluency"},
+                {"tags": {"ai-flex,ai-fluency": "combined-event"}},
+            ),
+            "combined-event",
+        )
+        self.assertEqual(
+            resolve_brevo_event_name(
+                {"tags": "ai-flex,ai-fluency"},
+                {"tags": {"ai-flex": "flex-event"}},
+            ),
+            "flex-event,ai-fluency",
+        )
 
     def test_mapping_fields_rejects_non_object(self):
         with self.assertRaises(ValidationError):

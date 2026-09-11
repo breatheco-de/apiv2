@@ -681,6 +681,30 @@ def map_incoming_field_values(mapping_fields, field_name, values):
     return [value_map.get(value, value) for value in values]
 
 
+def resolve_brevo_event_name(form_entry, mapping_fields=None):
+    """Build Brevo event_name from FormEntry.tags (optionally remapped).
+
+    The tags field is treated as one string (e.g. "ai-flex,ai-fluency").
+    If the whole string is not in mapping_fields["tags"], each comma-separated
+    token is remapped and joined back.
+    """
+    if isinstance(form_entry, dict):
+        raw = (form_entry.get("tags") or "").strip()
+    else:
+        raw = (getattr(form_entry, "tags", None) or "").strip()
+    if not raw:
+        return None
+
+    mapped_whole = map_incoming_field_values(mapping_fields, "tags", [raw])[0]
+    if mapped_whole != raw:
+        return mapped_whole
+
+    parts = [part.strip() for part in raw.split(",") if part.strip()]
+    if not parts:
+        return None
+    return ",".join(map_incoming_field_values(mapping_fields, "tags", parts))
+
+
 def find_crm_connection_for_academy(ac_academy):
     """Match a CRMConnection that shares credentials with an ActiveCampaignAcademy."""
     if ac_academy is None:
@@ -904,8 +928,6 @@ def register_new_lead(form_entry=None):
         if ac_academy.crm_vendor == "BREVO":
             if hasattr(automations, "values_list"):
                 automations = automations.values_list("slug", flat=True)
-            if "tags" in form_entry and len(form_entry["tags"]) > 0:
-                raise Exception("Brevo CRM does not support tags, please remove them from the contact payload")
         else:
             if hasattr(automations, "values_list"):
                 automations = automations.values_list("acp_id", flat=True)
@@ -914,7 +936,11 @@ def register_new_lead(form_entry=None):
             logger.info("found tags")
             logger.info(set(t.slug for t in tags))
 
-        if (automations is None or len(automations) == 0) and len(tags) > 0:
+        if (
+            ac_academy.crm_vendor != "BREVO"
+            and (automations is None or len(automations) == 0)
+            and len(tags) > 0
+        ):
             if tags[0].automation is None:
                 raise ValidationException(
                     "No automation was specified and the specified tag (if any) has no automation either"
@@ -934,13 +960,12 @@ def register_new_lead(form_entry=None):
                     "No automation was specified and the specified tag (if any) has no automation either"
                 )
             automations = [tags[0].automation.acp_id]
-    elif (
-        custom_destination
-        and send_academy.crm_vendor == "BREVO"
-        and "tags" in form_entry
-        and len(form_entry["tags"]) > 0
-    ):
-        logger.info("Ignoring tags because CrmRouting destination is Brevo")
+
+    brevo_event_name = None
+    if not skip_crm and send_academy.crm_vendor == "BREVO":
+        brevo_event_name = resolve_brevo_event_name(form_entry, mapping_fields=mapping_fields)
+        if brevo_event_name:
+            logger.info("Brevo event_name resolved from tags: %s", brevo_event_name)
 
     if not "email" in form_entry:
         raise ValidationException("The email doesn't exist")
@@ -1066,11 +1091,11 @@ def register_new_lead(form_entry=None):
         entry = send_to_active_campaign(entry, send_academy, contact, automations, tags)
     elif send_academy.crm_vendor == "BREVO":
         if custom_destination:
-            entry = send_to_brevo_contact(entry, send_academy, contact)
+            entry = send_to_brevo_contact(entry, send_academy, contact, event_name=brevo_event_name)
         else:
             if not hasattr(automations, "count"):
                 automations = Automation.objects.none()
-            entry = send_to_brevo(entry, send_academy, contact, automations)
+            entry = send_to_brevo(entry, send_academy, contact, automations, event_name=brevo_event_name)
 
     if entry.storage_status == "ERROR":
         return entry
@@ -1126,7 +1151,7 @@ def send_to_active_campaign(form_entry, ac_academy, contact, automations, tags):
     return form_entry
 
 
-def send_to_brevo(form_entry, ac_academy, contact, automations):
+def send_to_brevo(form_entry, ac_academy, contact, automations, event_name=None):
 
     if automations is None:
         _a = None
@@ -1139,7 +1164,7 @@ def send_to_brevo(form_entry, ac_academy, contact, automations):
         _a = None
 
     brevo_client = Brevo(ac_academy.ac_key)
-    response = brevo_client.create_contact(contact, _a)
+    response = brevo_client.create_contact(contact, _a, event_name=event_name)
 
     # Brevo does not answer with the contact ID when the create_contact
     # is being made thru triggering a brevo event
@@ -1150,13 +1175,16 @@ def send_to_brevo(form_entry, ac_academy, contact, automations):
     return form_entry
 
 
-def send_to_brevo_contact(form_entry, crm_connection, contact):
+def send_to_brevo_contact(form_entry, crm_connection, contact, event_name=None):
     brevo_client = Brevo(crm_connection.ac_key)
     response = brevo_client.upsert_contact(contact)
 
     if isinstance(response, dict) and response.get("id") is not None:
         form_entry.ac_contact_id = str(response["id"])
         form_entry.save(update_fields=["ac_contact_id"])
+
+    if event_name:
+        brevo_client.track_event(contact, event_name)
 
     return form_entry
 

@@ -145,10 +145,10 @@ class Brevo:
     #     except Exception:
     #         return False
 
-    def create_contact(self, contact: dict, automation_slug):
+    def create_contact(self, contact: dict, automation_slug, event_name=None):
         try:
             body = {
-                "event_name": "add_to_automation",
+                "event_name": event_name or "add_to_automation",
                 "identifiers": {"email_id": contact["email"]},
                 "contact_properties": {**map_contact_keys(contact)},
                 "event_properties": {
@@ -175,3 +175,14 @@ class Brevo:
             "getId": True,
         }
         return self.post("/contacts", request_data=body)
+
+    def track_event(self, contact: dict, event_name: str, event_properties=None):
+        if event_properties is None:
+            event_properties = {}
+        body = {
+            "event_name": event_name,
+            "identifiers": {"email_id": contact["email"]},
+            "contact_properties": {**map_contact_keys(contact)},
+            "event_properties": event_properties,
+        }
+        return self.post("/events", request_data=body)
