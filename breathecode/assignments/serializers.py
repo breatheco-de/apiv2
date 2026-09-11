@@ -8,6 +8,7 @@ from rest_framework import serializers
 import breathecode.activity.tasks as tasks_activity
 from breathecode.admissions.models import CohortUser
 from breathecode.admissions.services.completion import get_effective_assets_by_type_for_cohort_user
+from breathecode.assignments.actions import apply_existing_learnpack_telemetry
 from breathecode.authenticate.models import ProfileAcademy, Token
 from breathecode.utils import serpy
 
@@ -247,7 +248,7 @@ class PostTaskSerializer(serializers.ModelSerializer):
 
         # avoid creating a task twice, if the user already has it it will be re-used.
         if _task is not None:
-            return _task
+            return apply_existing_learnpack_telemetry(_task)
 
         cohort = validated_data.get("cohort")
         user = validated_data["user"]
@@ -270,8 +271,7 @@ class PostTaskSerializer(serializers.ModelSerializer):
                     return None
 
         instance = Task.objects.create(**validated_data)
-
-        return instance
+        return apply_existing_learnpack_telemetry(instance)
 
 
 class AttachmentListSerializer(serializers.ListSerializer):
