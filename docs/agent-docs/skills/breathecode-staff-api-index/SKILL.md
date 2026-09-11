@@ -44,7 +44,7 @@ If the session is **learner-only** (authenticated student using `me` / `user/me`
 | **feedback** | NPS surveys, student satisfaction studies, feedback forms | `bc-feedback-*` |
 | **marketing** | URL shortener, **FormEntry create** (public, app, staff, bulk CSV), **FormEntry staff management**, UTM tracking, **academy-scoped marketing courses** (list/create/clone under `/v1/marketing/academy/course`) | `bc-marketing-*`, [`bc-marketing-create-form-entry`](../bc-marketing-create-form-entry/SKILL.md), [`bc-marketing-manage-form-entries`](../bc-marketing-manage-form-entries/SKILL.md), [`bc-marketing-debug-form-entry`](../bc-marketing-debug-form-entry/SKILL.md) |
 | **media** | Images, videos, documents used in LMS content, asset management | `bc-media-*` |
-| **mentorship** | Mentors, mentor availability, session scheduling, session notes | `bc-mentorship-*` |
+| **mentorship** | Mentors, services, Calendly booking, meet short links, session activity | `bc-mentorship-*`, [`bc-mentorship-create-manage-mentor`](../bc-mentorship-create-manage-mentor/SKILL.md), [`bc-mentorship-book-and-join-session`](../bc-mentorship-book-and-join-session/SKILL.md), [`bc-mentorship-review-session-activity`](../bc-mentorship-review-session-activity/SKILL.md) |
 | **monitoring** | Platform monitoring endpoints, report retrieval APIs, monitoring webhooks, and operational status resources | `bc-monitoring-*` |
 | **notify** | Email, SMS, WhatsApp messaging, notification templates, delivery status | `bc-notify-*` |
 | **payments** | Billing plans, invoices, subscriptions, shop items, payment history | `bc-payments-*` |
@@ -66,7 +66,9 @@ Some user requests touch multiple domains. Load ALL listed skills before proceed
 | Configure or fetch micro syllabus with macro-specific overrides | `bc-admissions-create-cohort` (Path B, optional overrides step) + [SYLLABUS.md — Macro cohort syllabus overrides](../../SYLLABUS.md#macro-cohort-syllabus-overrides) (supports `slug.vN` and ordered `N:slug.vN` keys) |
 | Enroll a student in a cohort | `bc-admissions-enroll-student` + `bc-payments-*` (student must have a valid plan) |
 | Issue a certificate to a student | `bc-certificate-*` + `bc-admissions-*` (verify cohort completion status) |
-| Schedule a mentorship session | `bc-mentorship-*` + `bc-notify-*` (session confirmation messaging) |
+| Create or activate a mentor for an academy | [`bc-mentorship-create-manage-mentor`](../bc-mentorship-create-manage-mentor/SKILL.md) + [`bc-authenticate-staff-authentication`](../bc-authenticate-staff-authentication/SKILL.md) + [`bc-authenticate-staff-invites`](../bc-authenticate-staff-invites/SKILL.md) (ProfileAcademy prerequisite) |
+| Help a student or mentor book or join a mentorship | [`bc-mentorship-book-and-join-session`](../bc-mentorship-book-and-join-session/SKILL.md) + `bc-authenticate-*` (token); on join credit failure also `bc-payments-*` |
+| Review mentorship meeting activity / session log | [`bc-mentorship-review-session-activity`](../bc-mentorship-review-session-activity/SKILL.md) + [`bc-authenticate-staff-authentication`](../bc-authenticate-staff-authentication/SKILL.md) |
 | Send a notification | `bc-notify-*` + the domain that triggered the notification |
 | Create a marketing lead (form, app, staff, or CSV bulk) | [`bc-marketing-create-form-entry`](../bc-marketing-create-form-entry/SKILL.md) |
 | Bulk import leads from CSV | [`bc-marketing-create-form-entry`](../bc-marketing-create-form-entry/SKILL.md) (`PUT /v1/marketing/academy/upload`) |
