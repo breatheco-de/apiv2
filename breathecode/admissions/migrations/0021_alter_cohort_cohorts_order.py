@@ -14,9 +14,8 @@ class Migration(migrations.Migration):
             field=models.CharField(
                 blank=True,
                 default=None,
-                help_text="Comma-separated micro cohort IDs in display order. "
-                "Sized for ~40 five-digit IDs plus commas/spaces (and extra headroom).",
-                max_length=3000,
+                help_text="Comma-separated micro cohort IDs in display order.",
+                max_length=900,
                 null=True,
             ),
         ),
