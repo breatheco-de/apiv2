@@ -105,10 +105,10 @@ def find_assignment_telemetry_for_task(task: Task) -> AssignmentTelemetry | None
 
 
 def apply_existing_learnpack_telemetry(task: Task, *, persist: bool = True) -> Task:
-    """Link existing LearnPack telemetry to a task and mark it DONE when already completed.
+    """Link existing LearnPack telemetry to an EXERCISE task and mark it DONE when completed.
 
-    Used when creating or syncing Tasks after a cohort transfer: AssignmentTelemetry is per
-    user+slug, not per cohort, so the new Task would otherwise stay PENDING.
+    Used by the one-shot management command apply_learnpack_telemetry_to_cohort_tasks.
+    AssignmentTelemetry is per user+slug (including translations), not per cohort.
     """
     if task is None or task.task_type != Task.TaskType.EXERCISE:
         return task

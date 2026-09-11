@@ -16,7 +16,6 @@ import breathecode.notify.actions as actions
 from breathecode.admissions.models import CohortUser
 from breathecode.assignments.actions import (
     NOTIFICATION_STRINGS,
-    apply_existing_learnpack_telemetry,
     calculate_telemetry_indicator,
     validate_task_for_notifications,
 )
@@ -346,8 +345,6 @@ def sync_cohort_user_tasks(cohort_user_id: int, **_: Any):
                 task_type=cohort_task["task_type"],
             )
             user_task.save()
-
-        apply_existing_learnpack_telemetry(user_task)
 
     logger.info(f"Cohort User {cohort_user_id} synced successfully")
 

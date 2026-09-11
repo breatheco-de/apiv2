@@ -1339,7 +1339,7 @@ class CohortSerializer(CohortSerializerMixin):
     micro_cohorts = serializers.PrimaryKeyRelatedField(
         queryset=Cohort.objects.all(), many=True, required=False, allow_null=True
     )
-    cohorts_order = serializers.CharField(required=False, allow_null=True, allow_blank=True, max_length=3000)
+    cohorts_order = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
     class Meta:
         model = Cohort
@@ -1402,7 +1402,7 @@ class CohortPUTSerializer(CohortSerializerMixin):
     micro_cohorts = serializers.PrimaryKeyRelatedField(
         queryset=Cohort.objects.all(), many=True, required=False, allow_null=True
     )
-    cohorts_order = serializers.CharField(required=False, allow_null=True, allow_blank=True, max_length=3000)
+    cohorts_order = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
     class Meta:
         model = Cohort
