@@ -105,6 +105,7 @@ def deprovision_service_receiver(sender: Type[Service], instance: Service, user_
                 service_slug,
                 plan_financing_id,
             )
+            # test
             return
     elif academy_id is not None:
         has_consumables = payment_actions.user_has_service_entitlement_in_academy(
