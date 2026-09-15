@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
 
@@ -69,6 +70,40 @@ def test_enqueues_notify_and_teardown_when_fully_paid(mock_schedule_task, bc):
         call(model.plan_financing.id),
         call(model.plan_financing.id),
     ]
+
+
+@pytest.mark.django_db
+@patch.dict(os.environ, {"THIRD_PARTY_DEPROVISION_GRACE_DAYS": "15"})
+@patch("breathecode.payments.actions.schedule_task")
+def test_schedules_notify_at_expiry_and_teardown_after_grace(mock_schedule_task, bc):
+    """FULLY_PAID + VPS: notify at plan_expires_at, teardown at plan_expires_at + N days."""
+    from breathecode.payments.tasks import notify_plan_financing_third_party_deprovision
+    from breathecode.provisioning.tasks import deprovision_plan_financing_third_party
+
+    utc_now = timezone.now()
+    plan_expires_at = utc_now + timedelta(days=10)
+    manager = MagicMock()
+    manager.exists.return_value = False
+    mock_schedule_task.return_value = manager
+    model = _financing(
+        bc,
+        status=PlanFinancing.Status.FULLY_PAID,
+        with_vps=True,
+        plan_expires_at=plan_expires_at,
+    )
+
+    with (
+        patch("breathecode.payments.actions.timezone.now", return_value=utc_now),
+        patch("breathecode.provisioning.actions.get_service_deprovisioner", return_value=lambda **kwargs: None),
+    ):
+        actions.schedule_plan_financing_third_party_deprovision(model.plan_financing)
+
+    assert mock_schedule_task.call_count == 2
+    notify_call, teardown_call = mock_schedule_task.call_args_list
+    assert notify_call.args[0] is notify_plan_financing_third_party_deprovision
+    assert teardown_call.args[0] is deprovision_plan_financing_third_party
+    assert notify_call.args[1] == actions._eta_for_schedule_at(plan_expires_at, utc_now)
+    assert teardown_call.args[1] == actions._eta_for_schedule_at(plan_expires_at + timedelta(days=15), utc_now)
 
 
 @pytest.mark.django_db
