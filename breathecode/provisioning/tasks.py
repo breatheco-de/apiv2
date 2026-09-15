@@ -18,7 +18,7 @@ from task_manager.django.decorators import task
 
 from breathecode.authenticate.models import User
 from breathecode.payments import actions as payment_actions
-from breathecode.payments.models import Consumable, Service
+from breathecode.payments.models import Consumable, PlanFinancing, Service
 from breathecode.payments.services.stripe import Stripe
 from breathecode.payments.signals import consume_service, deprovision_service, reimburse_service_units
 from breathecode.provisioning import actions
@@ -863,3 +863,54 @@ def deprovision_litellm_user_task(
             updated_at=timezone.now(),
         )
         logger.info(f"Deprovisioned user {user_id} from Litellm for academy {academy_id} and vendor {vendor_id}")
+
+
+@task(priority=TaskPriority.STUDENT.value)
+def deprovision_plan_financing_third_party(plan_financing_id: int, **_: Any):
+    """
+    After the global grace window, tear down third-party resources of a FULLY_PAID plan.
+
+    Does not change financing status. Does not send email. Does not schedule itself.
+    Emits ``deprovision_service`` for each plan service that already has a deprovisioner.
+    """
+    plan_financing = PlanFinancing.objects.filter(id=plan_financing_id).first()
+    if not plan_financing:
+        logger.info("deprovision_plan_financing_third_party: plan financing %s not found", plan_financing_id)
+        return
+
+    if plan_financing.status != PlanFinancing.Status.FULLY_PAID:
+        logger.info(
+            "deprovision_plan_financing_third_party: plan financing %s status=%s, skipping",
+            plan_financing_id,
+            plan_financing.status,
+        )
+        return
+
+    run_at = actions.get_deprovision_at(plan_financing.plan_expires_at)
+    utc_now = timezone.now()
+    if run_at is None:
+        logger.info(
+            "deprovision_plan_financing_third_party: plan financing %s has no plan_expires_at, skipping",
+            plan_financing_id,
+        )
+        return
+    if run_at > utc_now:
+        logger.info(
+            "deprovision_plan_financing_third_party: plan financing %s run_at %s still in the future, skipping",
+            plan_financing_id,
+            run_at,
+        )
+        return
+
+    context = {
+        "academy_id": plan_financing.academy_id,
+        "plan_financing_id": plan_financing.id,
+    }
+
+    for service in actions.iter_plan_financing_services_with_deprovisioner(plan_financing):
+        deprovision_service.send_robust(
+            sender=Service,
+            instance=service,
+            user_id=plan_financing.user_id,
+            context=context,
+        )

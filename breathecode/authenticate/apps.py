@@ -5,5 +5,6 @@ class AcademyConfig(AppConfig):
     name = "breathecode.authenticate"
 
     def ready(self):
+        from . import actions  # noqa: F401 — register @service_deprovisioner handlers
         from . import receivers  # noqa: F401
         from . import flags  # noqa: F401

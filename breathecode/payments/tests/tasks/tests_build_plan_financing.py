@@ -895,6 +895,47 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch("logging.Logger.error", MagicMock())
     @patch.object(timezone, "now", MagicMock(return_value=UTC_NOW))
     @patch("breathecode.payments.tasks.build_service_stock_scheduler_from_plan_financing.delay", MagicMock())
+    @patch("breathecode.payments.actions.schedule_plan_financing_third_party_deprovision")
+    def test_single_installment_schedules_third_party_deprovision(self, mock_schedule):
+        bag = {
+            "status": "PAID",
+            "was_delivered": False,
+            "chosen_period": "NO_SET",
+            "how_many_installments": 1,
+        }
+        invoice = {"status": "FULFILLED", "amount": 15000.0}
+        plan = {"is_renewable": False, "time_of_life": 12, "time_of_life_unit": "MONTH"}
+        model = self.bc.database.create(bag=bag, invoice=invoice, plan=plan)
+
+        build_plan_financing.delay(model.bag.id, model.invoice.id)
+
+        mock_schedule.assert_called_once()
+        self.assertEqual(mock_schedule.call_args.args[0].status, "FULLY_PAID")
+
+    @patch("logging.Logger.info", MagicMock())
+    @patch("logging.Logger.error", MagicMock())
+    @patch.object(timezone, "now", MagicMock(return_value=UTC_NOW))
+    @patch("breathecode.payments.tasks.build_service_stock_scheduler_from_plan_financing.delay", MagicMock())
+    @patch("breathecode.payments.actions.schedule_plan_financing_third_party_deprovision")
+    def test_deposit_does_not_schedule_third_party_deprovision(self, mock_schedule):
+        bag = {
+            "status": "PAID",
+            "was_delivered": False,
+            "chosen_period": "NO_SET",
+            "how_many_installments": 1,
+        }
+        invoice = {"status": "FULFILLED", "amount": 5000}
+        plan = {"is_renewable": False, "time_of_life": 12, "time_of_life_unit": "MONTH"}
+        model = self.bc.database.create(bag=bag, invoice=invoice, plan=plan)
+
+        build_plan_financing.delay(model.bag.id, model.invoice.id, principal_amount=15000, initial_payment_amount=5000)
+
+        mock_schedule.assert_not_called()
+
+    @patch("logging.Logger.info", MagicMock())
+    @patch("logging.Logger.error", MagicMock())
+    @patch.object(timezone, "now", MagicMock(return_value=UTC_NOW))
+    @patch("breathecode.payments.tasks.build_service_stock_scheduler_from_plan_financing.delay", MagicMock())
     def test_single_installment_with_initial_payment_stays_active(self):
         """Upfront deposit + 1 installment must NOT be FULLY_PAID at creation."""
         bag = {

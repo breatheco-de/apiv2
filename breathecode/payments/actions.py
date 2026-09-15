@@ -362,6 +362,135 @@ def schedule_standalone_consumable_deprovision(consumable_id: int, valid_until: 
     schedule_task(deprovision_standalone_consumable, eta).call(consumable_id)
 
 
+def _task_already_scheduled_or_done(task_callable: Any, entity_id: int) -> bool:
+    """True if this callable was already queued or finished for ``entity_id``."""
+    from task_manager.core.actions import get_fn_desc, parse_payload
+    from task_manager.django.models import ScheduledTask, TaskManager
+
+    module_name, function_name = get_fn_desc(task_callable)
+    if not module_name or not function_name:
+        return False
+    arguments = parse_payload({"args": [entity_id], "kwargs": {}})
+    if ScheduledTask.objects.filter(
+        task_module=module_name,
+        task_name=function_name,
+        arguments=arguments,
+        status__in=["PENDING", "DONE"],
+    ).exists():
+        return True
+    return TaskManager.objects.filter(
+        task_module=module_name,
+        task_name=function_name,
+        arguments=arguments,
+        status="DONE",
+    ).exists()
+
+
+def schedule_plan_financing_third_party_deprovision(plan_financing: PlanFinancing) -> None:
+    """
+    Schedule the grace-window email and the later teardown of third-party resources.
+
+    v1: one notify at ``plan_expires_at`` and one teardown at ``get_deprovision_at``.
+    Same env days for every vendor. Does not send email itself.
+    """
+    from breathecode.payments.tasks import notify_plan_financing_third_party_deprovision
+    from breathecode.provisioning.actions import (
+        get_deprovision_at,
+        iter_plan_financing_services_with_deprovisioner,
+    )
+    from breathecode.provisioning.tasks import deprovision_plan_financing_third_party
+
+    if plan_financing.status != PlanFinancing.Status.FULLY_PAID:
+        return
+
+    run_at = get_deprovision_at(plan_financing.plan_expires_at)
+    if run_at is None:
+        return
+
+    if not any(iter_plan_financing_services_with_deprovisioner(plan_financing)):
+        return
+
+    plan_financing_id = plan_financing.id
+    if _task_already_scheduled_or_done(deprovision_plan_financing_third_party, plan_financing_id):
+        return
+
+    utc_now = timezone.now()
+
+    if not _task_already_scheduled_or_done(notify_plan_financing_third_party_deprovision, plan_financing_id):
+        notify_eta = _eta_for_schedule_at(plan_financing.plan_expires_at, utc_now)
+        schedule_task(notify_plan_financing_third_party_deprovision, notify_eta).call(plan_financing_id)
+
+    teardown_eta = _eta_for_schedule_at(run_at, utc_now)
+    schedule_task(deprovision_plan_financing_third_party, teardown_eta).call(plan_financing_id)
+
+
+def _entity_ids_from_task_arguments(arguments_list) -> set[int]:
+    ids: set[int] = set()
+    for arguments in arguments_list:
+        if not isinstance(arguments, dict):
+            continue
+        args = arguments.get("args") or []
+        if not args:
+            continue
+        try:
+            ids.add(int(args[0]))
+        except (TypeError, ValueError):
+            continue
+    return ids
+
+
+def _tracked_teardown_plan_financing_ids() -> set[int]:
+    from task_manager.core.actions import get_fn_desc
+    from task_manager.django.models import ScheduledTask, TaskManager
+
+    from breathecode.provisioning.tasks import deprovision_plan_financing_third_party
+
+    module_name, function_name = get_fn_desc(deprovision_plan_financing_third_party)
+    if not module_name or not function_name:
+        return set()
+
+    scheduled = ScheduledTask.objects.filter(
+        task_module=module_name,
+        task_name=function_name,
+        status__in=["PENDING", "DONE"],
+    ).values_list("arguments", flat=True)
+    done = TaskManager.objects.filter(
+        task_module=module_name,
+        task_name=function_name,
+        status="DONE",
+    ).values_list("arguments", flat=True)
+    return _entity_ids_from_task_arguments(scheduled) | _entity_ids_from_task_arguments(done)
+
+
+def iter_fully_paid_missing_third_party_deprovision():
+    """FULLY_PAID financings with deprovisioners and no teardown job yet.
+
+    Uses a filtered queryset of plans whose services match ``@service_deprovisioner`` slugs.
+    After the first pass, already-tracked ids are excluded in SQL so later runs stay cheap.
+    """
+    from breathecode.utils.decorators.service_deprovisioner import get_service_deprovisioner_slugs
+
+    slugs = get_service_deprovisioner_slugs()
+    if not slugs:
+        return
+
+    tracked_ids = _tracked_teardown_plan_financing_ids()
+    plan_ids = PlanServiceItem.objects.filter(service_item__service__slug__in=slugs).values_list("plan_id", flat=True)
+    qs = (
+        PlanFinancing.objects.filter(
+            status=PlanFinancing.Status.FULLY_PAID,
+            plan_expires_at__isnull=False,
+            plans__in=plan_ids,
+        )
+        .select_related("user")
+        .distinct()
+    )
+    if tracked_ids:
+        qs = qs.exclude(id__in=tracked_ids)
+
+    yield from qs.iterator()
+
+
 def _vps_alignment_billing_scope(consumable: Consumable) -> dict | None:
     """
     Misma suscripción/plan/asiento (o team) que el consumible renovado.
