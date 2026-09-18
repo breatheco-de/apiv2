@@ -318,6 +318,20 @@ class UserInvite(models.Model):
         if self.pk and self._email and self.email != self._email:
             raise forms.ValidationError("Email is readonly")
 
+        # Auto-set academy from cohort or course FK when academy is absent
+        if not self.academy_id:
+            cohort_academy_id = self.cohort.academy_id if self.cohort_id and self.cohort else None
+            course_academy_id = self.course.academy_id if self.course_id and self.course else None
+
+            if cohort_academy_id and course_academy_id and cohort_academy_id != course_academy_id:
+                raise forms.ValidationError(
+                    "Invite cohort and course belong to different academies; set academy explicitly."
+                )
+
+            implied_academy_id = cohort_academy_id or course_academy_id
+            if implied_academy_id:
+                self.academy_id = implied_academy_id
+
         # we don't have to validate email if previous invite already has
         if created and self.email:
             pre_invite = UserInvite.objects.filter(email=self.email, is_email_validated=True).first()

@@ -6,7 +6,7 @@ import pytest
 from django.contrib.auth.models import User
 from django.urls import reverse_lazy
 
-from breathecode.admissions.models import Academy
+from breathecode.admissions.models import Academy, City, Country
 from breathecode.authenticate.models import Capability, ProfileAcademy, Role, UserInvite
 
 pytestmark = pytest.mark.django_db
@@ -18,11 +18,16 @@ def academy_setup():
     role = Role.objects.create(slug="staff", name="Staff")
     role.capabilities.add(capability)
 
+    country, _ = Country.objects.get_or_create(code="US", defaults={"name": "United States"})
+    city, _ = City.objects.get_or_create(name="Test City", defaults={"country": country})
+
     academy = Academy.objects.create(
         slug="test-academy",
         name="Test Academy",
         logo_url="https://example.com/logo.png",
         street_address="123 Main Street",
+        city=city,
+        country=country,
     )
 
     staff = User.objects.create(username="staff", email="staff@example.com")
@@ -151,17 +156,22 @@ def test_search_with_invalid_value(client, academy_setup):
     )
 
     authenticate(client, staff, academy)
-    # Invalid values are ignored, so we should get all pending invites
-    url = reverse_lazy("authenticate:academy_user_invite") + "?user_id=abc,123"
+    # Non-numeric values are silently stripped; if none remain the filter is skipped and all
+    # pending invites are returned.
+    url = reverse_lazy("authenticate:academy_user_invite") + "?user_id=abc,def"
     response = client.get(url)
 
     assert response.status_code == 200
-    # Since "abc" is ignored and 123 doesn't exist, we should get all pending invites
     payload = response.json()
+    # All user_id values were invalid so the filter is skipped — all pending invites returned
     assert len(payload) >= 1
-    # The invite we created should be in the results
-    invite_ids = [item["id"] for item in payload]
-    assert invite.id in invite_ids
+    assert any(item["id"] == invite.id for item in payload)
+
+    # A valid but non-existent user_id returns empty
+    url2 = reverse_lazy("authenticate:academy_user_invite") + "?user_id=99999"
+    response2 = client.get(url2)
+    assert response2.status_code == 200
+    assert response2.json() == []
 
 
 def test_filter_by_academy_null(client, academy_setup):

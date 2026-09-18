@@ -32,7 +32,8 @@ description: Documenta la validación del JSON de syllabus (root vs overrides *.
 - Si una lista está presente (`lessons/quizzes/replits/assignments`), se valida su forma:
   - Debe ser lista.
   - Items pueden ser **placeholders por índice**: `null` o `{}` (no-op; no requieren `slug`).
-  - Items con contenido real deben ser objeto con `slug` string (salvo marcador `DELETED`).
+  - Items pueden ser **parches solo de orden**: `{ "display_order": N }` con entero **≥ 0** (sin `slug`; se fusiona con el asset base en ese índice).
+  - Items con contenido real deben ser objeto con `slug` string (salvo marcador `DELETED` o parche solo `display_order`).
 
 ## Restricción: self-override (prohibido)
 
@@ -48,6 +49,27 @@ description: Documenta la validación del JSON de syllabus (root vs overrides *.
       {},
       {
         "lessons": [null, {}, { "slug": "keep-your-projects", "title": "Keep your projects" }]
+      }
+    ]
+  }
+}
+```
+
+## Ejemplo: override de `display_order` en macro
+
+Parche solo de orden en el índice 0 de `replits` (fusiona con el exercise base de la micro):
+
+```json
+{
+  "basic-personal-assistants-with-openclaw.v2": {
+    "days": [
+      {
+        "lessons": [{ "display_order": 2 }],
+        "replits": [
+          { "display_order": 0 },
+          { "slug": "introduction-to-ssh-for-beginners-en", "display_order": 1 }
+        ],
+        "assignments": [{ "display_order": 5 }]
       }
     ]
   }
