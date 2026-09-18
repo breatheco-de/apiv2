@@ -2,7 +2,7 @@ from typing import Callable, Dict
 
 from capyc.rest_framework.exceptions import ValidationException
 
-__all__ = ["service_deprovisioner", "get_service_deprovisioner"]
+__all__ = ["service_deprovisioner", "get_service_deprovisioner", "get_service_deprovisioner_slugs"]
 
 _deprovisioners_registry: Dict[str, Callable] = {}
 
@@ -29,3 +29,7 @@ def service_deprovisioner(service_slug: str):
 
 def get_service_deprovisioner(service_slug: str) -> Callable | None:
     return _deprovisioners_registry.get(service_slug)
+
+
+def get_service_deprovisioner_slugs() -> tuple[str, ...]:
+    return tuple(_deprovisioners_registry)

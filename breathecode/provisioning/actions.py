@@ -24,12 +24,12 @@ from breathecode.authenticate.models import (
     ProfileAcademy,
 )
 from breathecode.payments.actions import user_has_service_entitlement_in_academy
-from breathecode.payments.models import Consumable, Currency, PlanFinancing, Subscription
+from breathecode.payments.models import Consumable, Currency, PlanFinancing, PlanServiceItem, Subscription
 from breathecode.payments.signals import consume_service
 from breathecode.registry.models import Asset
 from breathecode.services.github import Github
 from breathecode.utils import getLogger
-from breathecode.utils.decorators import service_deprovisioner
+from breathecode.utils.decorators import get_service_deprovisioner, service_deprovisioner
 
 from .models import (
     ProvisioningAcademy,
@@ -48,6 +48,76 @@ from .utils.llm_client import LLMClientError, get_llm_client
 from .utils.vps_client import VPSProvisioningError, get_vps_client
 
 logger = getLogger(__name__)
+
+
+def get_deprovision_grace_days() -> int:
+    """
+    Days to wait after plan expiry before tearing down third-party resources.
+
+    v1: one window for every academy and every ``@service_deprovisioner`` service,
+    from ``THIRD_PARTY_DEPROVISION_GRACE_DAYS`` (0–90, default 15).
+    """
+    try:
+        days = int(os.getenv("THIRD_PARTY_DEPROVISION_GRACE_DAYS", "15"))
+    except (TypeError, ValueError):
+        days = 15
+    return max(0, min(days, 90))
+
+
+def get_deprovision_at(plan_expires_at: datetime | None) -> datetime | None:
+    """
+    When to tear down third-party resources after a FULLY_PAID plan ends.
+
+    ``plan_expires_at + get_deprovision_grace_days()``.
+    """
+    if plan_expires_at is None:
+        return None
+    return plan_expires_at + timedelta(days=get_deprovision_grace_days())
+
+
+def iter_plan_financing_services_with_deprovisioner(plan_financing: PlanFinancing):
+    """Plan services that already have a ``@service_deprovisioner`` handler."""
+    seen: set[int] = set()
+    for plan in plan_financing.plans.all():
+        for plan_service_item in PlanServiceItem.objects.select_related("service_item__service").filter(plan=plan):
+            service = plan_service_item.service_item.service
+            slug = getattr(service, "slug", None)
+            if not slug or not get_service_deprovisioner(slug):
+                continue
+            if service.id in seen:
+                continue
+            seen.add(service.id)
+            yield service
+
+
+_DEPROVISION_SERVICE_LABELS = {
+    "vps_server": "VPS",
+    "llm-budget": "LLM",
+    "github-copilot": "Copilot",
+}
+
+
+def format_deprovision_service_labels(services, lang: str | None = None) -> str:
+    """Human list of third-party resources that will be torn down (EN: and / ES: y)."""
+    labels: list[str] = []
+    seen: set[str] = set()
+    for service in services:
+        slug = getattr(service, "slug", None)
+        if not slug:
+            continue
+        label = _DEPROVISION_SERVICE_LABELS.get(slug, slug)
+        if label in seen:
+            continue
+        seen.add(label)
+        labels.append(label)
+    if not labels:
+        return ""
+    conjunction = "y" if (lang or "").lower().startswith("es") else "and"
+    if len(labels) == 1:
+        return labels[0]
+    if len(labels) == 2:
+        return f"{labels[0]} {conjunction} {labels[1]}"
+    return f"{', '.join(labels[:-1])} {conjunction} {labels[-1]}"
 
 
 def sync_machine_types(provisioning_academy, assignment):

@@ -363,6 +363,36 @@ def plan_financing_fully_paid_drift(plan_financing_id: int):
     return None
 
 
+@supervisor(delta=timedelta(hours=6))
+def supervise_fully_paid_missing_third_party_deprovision():
+    """
+    Detect FULLY_PAID plans that never got third-party teardown scheduled
+    (legacy rows, deposits, admin-created financings).
+    """
+    from breathecode.payments.actions import iter_fully_paid_missing_third_party_deprovision
+
+    for plan_financing in iter_fully_paid_missing_third_party_deprovision():
+        yield (
+            f"PlanFinancing {plan_financing.id} for user {plan_financing.user.email} is FULLY_PAID "
+            "but has no third-party deprovision scheduled",
+            "plan-financing-missing-third-party-deprovision",
+            {"plan_financing_id": plan_financing.id},
+        )
+
+
+@issue(supervise_fully_paid_missing_third_party_deprovision, delta=timedelta(minutes=30), attempts=3)
+def plan_financing_missing_third_party_deprovision(plan_financing_id: int):
+    """Enqueue notify + teardown using the same helper as charge/build."""
+    from breathecode.payments.actions import schedule_plan_financing_third_party_deprovision
+
+    plan_financing = PlanFinancing.objects.filter(id=plan_financing_id).first()
+    if not plan_financing:
+        return True
+
+    schedule_plan_financing_third_party_deprovision(plan_financing)
+    return True
+
+
 # ------------------------------
 # Seats & Billing Team Supervisors
 # ------------------------------
