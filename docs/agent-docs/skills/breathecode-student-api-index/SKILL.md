@@ -49,7 +49,7 @@ These areas are primarily documented for **academy staff** in the staff index. I
 | **events** | My workshops, RSVPs, check-ins, live class join | `bc-events-*`, [`bc-events-create-and-edit-event`](../bc-events-create-and-edit-event/SKILL.md) (where it documents student-facing paths) |
 | **feedback** | Surveys assigned to me, responses | `bc-feedback-*`, [`bc-feedback-create-manage-feedback-survey`](../bc-feedback-create-manage-feedback-survey/SKILL.md) |
 | **media** | Media used in learning content | `bc-media-*` |
-| **mentorship** | My mentorship sessions and bills | `bc-mentorship-*` |
+| **mentorship** | Book/join mentors via short links; my mentorship sessions | `bc-mentorship-*`, [`bc-mentorship-book-and-join-session`](../bc-mentorship-book-and-join-session/SKILL.md), [`bc-mentorship-review-session-activity`](../bc-mentorship-review-session-activity/SKILL.md) |
 | **notify** | My notification hooks / subscriptions where exposed under user-scoped routes | `bc-notify-*` |
 | **payments** | My plans, subscriptions, invoices, shop purchases | `bc-payments-*`, [`bc-payments-cancel-subscription-and-refund`](../bc-payments-cancel-subscription-and-refund/SKILL.md) |
 | **provisioning** | My VPS, containers, or LiteLLM API keys / budget entitlement | `bc-provisioning-*`, [`bc-provisioning-manage-vps-server`](../bc-provisioning-manage-vps-server/SKILL.md), [`bc-provisioning-manage-my-llm-keys`](../bc-provisioning-manage-my-llm-keys/SKILL.md) |
@@ -70,6 +70,8 @@ Some user requests touch multiple domains. Load ALL listed skills before proceed
 | See **my** events, join, check in, or live class | [`bc-events-create-and-edit-event`](../bc-events-create-and-edit-event/SKILL.md) + `bc-authenticate-*` (student-facing event paths) |
 | Send LearnPack / package telemetry as the current user | [`bc-assignment-diagnose-asset-telemetry`](../bc-assignment-diagnose-asset-telemetry/SKILL.md) + `bc-authenticate-*` |
 | See **my** joined cohorts and progress (including self-paced `never_ends`) | [`bc-admissions-read-student-my-cohorts-and-progress`](../bc-admissions-read-student-my-cohorts-and-progress/SKILL.md) + `bc-authenticate-*` |
+| Book or join a mentorship session | [`bc-mentorship-book-and-join-session`](../bc-mentorship-book-and-join-session/SKILL.md) + [`bc-authenticate-student-authentication`](../bc-authenticate-student-authentication/SKILL.md); on join credit failure also `bc-payments-*` |
+| See **my** mentorship sessions | [`bc-mentorship-review-session-activity`](../bc-mentorship-review-session-activity/SKILL.md) (Path B — `/user/me/session`) + [`bc-authenticate-student-authentication`](../bc-authenticate-student-authentication/SKILL.md) |
 
 ## Routing Rules
 

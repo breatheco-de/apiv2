@@ -32,7 +32,7 @@ def fake_stripe_pay(**kwargs):
 @patch("breathecode.payments.tasks.renew_plan_financing_consumables.delay", MagicMock())
 @patch("mixer.main.LOGGER.info", MagicMock())
 @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
-def test_staff_assigned_with_previous_stripe_invoice_auto_charges(database: capy.Database):
+def test_admin_managed_with_stripe_invoice_closes_installment_without_card_charge(database: capy.Database):
     model = database.create(
         academy=1,
         proof_of_payment=1,
@@ -90,10 +90,10 @@ def test_staff_assigned_with_previous_stripe_invoice_auto_charges(database: capy
     ) as mock_stripe_pay:
         charge_plan_financing.delay(1)
 
-    mock_stripe_pay.assert_called_once()
+    mock_stripe_pay.assert_not_called()
     pf = database.list_of("payments.PlanFinancing")[0]
     assert pf["status"] == "ACTIVE"
     assert pf["installments_paid"] == 3
     assert pf["next_payment_at"] == model.plan_financing.next_payment_at + relativedelta(months=1)
-    assert len(database.list_of("payments.Invoice")) == 3
-    assert notify_actions.send_email_message.call_count == 1
+    assert len(database.list_of("payments.Invoice")) == 2
+    assert notify_actions.send_email_message.call_count == 0

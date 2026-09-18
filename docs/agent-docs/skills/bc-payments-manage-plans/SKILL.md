@@ -346,3 +346,13 @@ Use `country_code` to verify regional pricing adjustments on GET.
 After plans are active, load **`bc-marketing-create-or-clone-course`** to publish the course catalog entry with `plan_slug`.
 
 For checkout issues, confirm payment methods via **`bc-payments-manage-academy-payment-methods`**.
+
+## Operational maintenance (consumables / plan financing)
+
+When consumables are duplicated or issued for a future unpaid period (e.g. after catch-up charges or renew bugs), use the Django command **`prune_plan_consumables`** — do not delete rows manually without listing first.
+
+- **Doc:** [`PLAN_FINANCING_CONSUMABLES_PRUNE.md`](../../PLAN_FINANCING_CONSUMABLES_PRUNE.md) — rules (grace day, expired skip, cascade), flags, and how to extend the command for future cleanup.
+- **Code:** `breathecode/payments/management/commands/prune_plan_consumables.py`, helpers in `breathecode/payments/actions.py` (`consumable_valid_until_exceeds_next_payment`, `plan_financing_consumable_prune_cutoff_date`, `consumable_valid_until_is_expired`).
+- **Tests:** `breathecode/payments/tests/management/commands/tests_prune_plan_consumables.py`.
+
+Related: `backfill_plan_financing_created_by_admin` (admin charge catch-up, not prune), `diagnose_scheduler` (scheduler not issuing).

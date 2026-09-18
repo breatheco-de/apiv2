@@ -338,6 +338,7 @@ class AssetSerializer(serpy.Serializer):
     learnpack_deploy_url = serpy.Field()
     learnpack_id = serpy.Field()
     manifest = serpy.Field()
+    is_seo_tracked = serpy.Field()
 
     translations = serpy.MethodField()
     technologies = serpy.MethodField()
@@ -381,7 +382,6 @@ class AcademyAssetSerializer(AssetSerializer):
 
     requirements = serpy.Field()
 
-    is_seo_tracked = serpy.Field()
     last_seo_scan_at = serpy.Field()
     seo_json_status = serpy.Field()
     optimization_rating = serpy.Field()

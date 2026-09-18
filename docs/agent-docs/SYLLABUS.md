@@ -370,6 +370,7 @@ A macro cohort’s **`SyllabusVersion.json`** may include extra keys shaped like
 | **`lessons`**, **`quizzes`**, **`replits`**, **`assignments`** | Merged **by index inside each day** (same as days). |
 | **Skip a slot** | Use **`null`** at that index (no change to the base item). |
 | **Remove an item** | Use **`{ "status": "DELETED" }`** at that index; it is dropped after merge. |
+| **Reorder assets (mixed types)** | Patch **`display_order`** on the asset at its bucket index. Use **`{ "display_order": N }`** alone (merges into the base asset at that index) or **`{ "slug": "...", "display_order": N }`**. Integer **≥ 0**. The app sorts by `display_order` when present on the effective (merged) syllabus. |
 | **Other day fields** | Shallow-merged into the base day (e.g. `teacher_instructions`, `extended_instructions`). |
 
 `teacher_instructions` alone do **not** add lessons; you must include a **`lessons`** array in the override day when you want to add or change lesson entries.
@@ -418,6 +419,7 @@ Macro cohorts can carry a **`SyllabusVersion`** whose JSON is not only the usual
 - **`days`**: merged **by index** (day 0 with day 0, etc.). Changing the order of days in the micro syllabus is not supported via overrides alone; publish a **new micro syllabus version** if the base order must change.
 - **Asset lists** `lessons`, `quizzes`, `replits`, `assignments`: merged **by index** within each day.
 - **Logical deletion**: an asset (or a whole day) can be marked with **`"status": "DELETED"`** so it does not appear after merge.
+- **`display_order`**: macro overrides **may** change asset order by patching `display_order` at the same bucket index (`lessons[0]`, `replits[2]`, etc.). A patch may be **`{ "display_order": N }`** only (merged into the base asset) or include **`slug`** for clarity. Requires integer **≥ 0**. Cross-bucket order is resolved in the student app after merge.
 - **Task creation**: if the student's `CohortUser.source_macro_cohort` is set, `POST /v1/assignment/task` and `sync_cohort_user_tasks` only create Tasks for slugs that remain in that **effective** syllabus. Deleted override assets are skipped (existing Tasks are not removed). Without that FK, creation still uses the micro syllabus as before.
 - Other day-level fields are merged with the base day where applicable.
 
