@@ -137,6 +137,7 @@ def setup(monkeypatch):
 
 
 # FIXME: create_v2 fail in this test file
+@patch("breathecode.payments.tasks.transaction.on_commit", new=lambda fn, *a, **k: fn())
 class PaymentsTestSuite(PaymentsTestCase):
     """
     🔽🔽🔽 PlanFinancing not found
@@ -1287,6 +1288,56 @@ class PaymentsTestSuite(PaymentsTestCase):
 
     @patch("logging.Logger.info", MagicMock())
     @patch("logging.Logger.error", MagicMock())
+    @patch("breathecode.notify.actions.send_email_message", MagicMock())
+    @patch("mixer.main.LOGGER.info", MagicMock())
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test_admin_managed_renew_waits_until_charge_commits(self):
+        """Do not enqueue renew until the charge transaction commits."""
+        plan_financing = {
+            "valid_until": UTC_NOW + relativedelta(months=6),
+            "next_payment_at": UTC_NOW - relativedelta(days=5),
+            "monthly_price": 100.0,
+            "how_many_installments": 3,
+            "installments_paid": 1,
+            "plan_expires_at": UTC_NOW + relativedelta(months=12),
+            "created_by_admin": True,
+        }
+        plan = {"is_renewable": False, "time_of_life": 12, "time_of_life_unit": "MONTH"}
+        bag = {"how_many_installments": 3, "was_delivered": True, "type": "BAG"}
+        invoice = {
+            "paid_at": UTC_NOW - relativedelta(months=2),
+            "amount": 100.0,
+            "status": "FULFILLED",
+        }
+        model = self.bc.database.create(
+            academy=1,
+            plan_financing=plan_financing,
+            invoice=invoice,
+            plan=plan,
+            bag=bag,
+        )
+        model.plan_financing.invoices.add(model.invoice)
+
+        with (
+            patch("breathecode.payments.services.stripe.Stripe.pay", MagicMock()),
+            patch("breathecode.payments.tasks.transaction.on_commit") as mock_on_commit,
+            patch("breathecode.payments.tasks.renew_plan_financing_consumables.delay") as mock_delay,
+        ):
+            charge_plan_financing.delay(1)
+
+            mock_delay.assert_not_called()
+            self.assertTrue(mock_on_commit.called)
+            for args, _kwargs in mock_on_commit.call_args_list:
+                args[0]()
+
+            mock_delay.assert_called_once_with(1)
+
+        pf = self.bc.database.list_of("payments.PlanFinancing")[0]
+        self.assertEqual(pf["status"], "ACTIVE")
+        self.assertEqual(pf["installments_paid"], 2)
+
+    @patch("logging.Logger.info", MagicMock())
+    @patch("logging.Logger.error", MagicMock())
     @patch("breathecode.payments.tasks.renew_plan_financing_consumables.delay", MagicMock())
     @patch("mixer.main.LOGGER.info", MagicMock())
     @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
@@ -1399,6 +1450,63 @@ class PaymentsTestSuite(PaymentsTestCase):
         pf = self.bc.database.list_of("payments.PlanFinancing")[0]
         self.assertEqual(pf["status"], "FULLY_PAID")
         tasks.renew_plan_financing_consumables.delay.assert_called_once_with(1)
+
+    @patch("logging.Logger.info", MagicMock())
+    @patch("logging.Logger.error", MagicMock())
+    @patch("breathecode.payments.tasks.renew_plan_financing_consumables.delay", MagicMock())
+    @patch("mixer.main.LOGGER.info", MagicMock())
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    @patch("breathecode.payments.actions.schedule_plan_financing_third_party_deprovision")
+    def test_reconcile_schedules_third_party_deprovision(self, mock_schedule):
+        plan_financing = {
+            "valid_until": UTC_NOW + relativedelta(months=6),
+            "next_payment_at": UTC_NOW + relativedelta(days=20),
+            "monthly_price": 15000.0,
+            "how_many_installments": 1,
+            "installments_paid": 1,
+            "plan_expires_at": UTC_NOW + relativedelta(months=12),
+        }
+        plan = {"is_renewable": False, "time_of_life": 12, "time_of_life_unit": "MONTH"}
+        bag = {"how_many_installments": 1, "was_delivered": True}
+        invoice = {"paid_at": UTC_NOW - relativedelta(days=5), "amount": 15000.0, "status": "FULFILLED"}
+        model = self.bc.database.create(academy=1, plan_financing=plan_financing, invoice=invoice, plan=plan, bag=bag)
+        model.plan_financing.invoices.add(model.invoice)
+
+        with patch("breathecode.payments.services.stripe.Stripe.pay", MagicMock()):
+            charge_plan_financing.delay(model.plan_financing.id)
+
+        mock_schedule.assert_called_once()
+        self.assertEqual(mock_schedule.call_args.args[0].id, model.plan_financing.id)
+
+    @patch("logging.Logger.info", MagicMock())
+    @patch("logging.Logger.error", MagicMock())
+    @patch("breathecode.notify.actions.send_email_message", MagicMock())
+    @patch("breathecode.payments.tasks.renew_plan_financing_consumables.delay", MagicMock())
+    @patch("mixer.main.LOGGER.info", MagicMock())
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    @patch("breathecode.payments.actions.schedule_plan_financing_third_party_deprovision")
+    def test_last_installment_schedules_third_party_deprovision(self, mock_schedule):
+        plan_financing = {
+            "valid_until": UTC_NOW + relativedelta(months=3),
+            "next_payment_at": UTC_NOW - relativedelta(days=1),
+            "monthly_price": 1200,
+            "how_many_installments": 1,
+            "plan_expires_at": UTC_NOW + relativedelta(months=12),
+        }
+        plan = {"is_renewable": False, "time_of_life": 12, "time_of_life_unit": "MONTH"}
+        invoice = {"paid_at": UTC_NOW - relativedelta(days=90), "amount": 5000, "status": "FULFILLED"}
+        bag = {"how_many_installments": 1, "was_delivered": True}
+        model = self.bc.database.create(academy=1, plan_financing=plan_financing, invoice=invoice, plan=plan, bag=bag)
+        model.plan_financing.invoices.add(model.invoice)
+
+        with patch(
+            "breathecode.payments.services.stripe.Stripe.pay",
+            MagicMock(side_effect=fake_stripe_pay(paid_at=UTC_NOW, academy=model.academy)),
+        ):
+            charge_plan_financing.delay(model.plan_financing.id)
+
+        mock_schedule.assert_called_once()
+        self.assertEqual(mock_schedule.call_args.args[0].status, "FULLY_PAID")
 
     @patch("logging.Logger.info", MagicMock())
     @patch("logging.Logger.error", MagicMock())

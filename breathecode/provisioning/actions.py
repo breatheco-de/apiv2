@@ -24,12 +24,17 @@ from breathecode.authenticate.models import (
     ProfileAcademy,
 )
 from breathecode.payments.actions import user_has_service_entitlement_in_academy
-from breathecode.payments.models import Consumable, Currency, PlanFinancing, Subscription
+from breathecode.payments.models import Consumable, Currency, PlanFinancing, PlanServiceItem, Subscription
 from breathecode.payments.signals import consume_service
 from breathecode.registry.models import Asset
 from breathecode.services.github import Github
 from breathecode.utils import getLogger
-from breathecode.utils.decorators import service_deprovisioner
+from breathecode.utils.decorators import (
+    get_service_deprovisioner,
+    get_service_power_off,
+    service_deprovisioner,
+    service_power_off,
+)
 
 from .models import (
     ProvisioningAcademy,
@@ -48,6 +53,117 @@ from .utils.llm_client import LLMClientError, get_llm_client
 from .utils.vps_client import VPSProvisioningError, get_vps_client
 
 logger = getLogger(__name__)
+
+# Fraction of THIRD_PARTY_DEPROVISION_GRACE_DAYS used to power off (the rest is teardown).
+POWER_OFF_GRACE_RATIO = 0.8
+
+
+def get_deprovision_grace_days() -> int:
+    """
+    Days to wait after plan expiry before tearing down third-party resources.
+
+    v1: one window for every academy and every ``@service_deprovisioner`` service,
+    from ``THIRD_PARTY_DEPROVISION_GRACE_DAYS`` (0–90, default 15).
+    """
+    try:
+        days = int(os.getenv("THIRD_PARTY_DEPROVISION_GRACE_DAYS", "15"))
+    except (TypeError, ValueError):
+        days = 15
+    return max(0, min(days, 90))
+
+
+def get_deprovision_at(plan_expires_at: datetime | None) -> datetime | None:
+    """
+    When to tear down third-party resources after a FULLY_PAID plan ends.
+
+    ``plan_expires_at + get_deprovision_grace_days()``.
+    """
+    if plan_expires_at is None:
+        return None
+    return plan_expires_at + timedelta(days=get_deprovision_grace_days())
+
+
+def get_power_off_at(plan_expires_at: datetime | None) -> datetime | None:
+    """When to power off VPS: 80% of the grace window after ``plan_expires_at``."""
+    if plan_expires_at is None:
+        return None
+    return plan_expires_at + timedelta(days=get_deprovision_grace_days() * POWER_OFF_GRACE_RATIO)
+
+
+def get_power_off_grace_days() -> float:
+    """Days from expiry until power-off (``POWER_OFF_GRACE_RATIO`` of the grace window)."""
+    return get_deprovision_grace_days() * POWER_OFF_GRACE_RATIO
+
+
+def get_remaining_teardown_grace_days() -> float:
+    """Days from power-off until teardown (the remaining fraction of the grace window)."""
+    return get_deprovision_grace_days() - get_power_off_grace_days()
+
+
+def iter_plan_financing_services_with_deprovisioner(plan_financing: PlanFinancing):
+    """Plan services that already have a ``@service_deprovisioner`` handler."""
+    seen: set[int] = set()
+    for plan in plan_financing.plans.all():
+        for plan_service_item in PlanServiceItem.objects.select_related("service_item__service").filter(plan=plan):
+            service = plan_service_item.service_item.service
+            slug = getattr(service, "slug", None)
+            if not slug or not get_service_deprovisioner(slug):
+                continue
+            if service.id in seen:
+                continue
+            seen.add(service.id)
+            yield service
+
+
+def iter_plan_financing_services_with_power_off(plan_financing: PlanFinancing):
+    """Plan services that already have a ``@service_power_off`` handler."""
+    seen: set[int] = set()
+    for plan in plan_financing.plans.all():
+        for plan_service_item in PlanServiceItem.objects.select_related("service_item__service").filter(plan=plan):
+            service = plan_service_item.service_item.service
+            slug = getattr(service, "slug", None)
+            if not slug or not get_service_power_off(slug):
+                continue
+            if service.id in seen:
+                continue
+            seen.add(service.id)
+            yield service
+
+
+_DEPROVISION_SERVICE_LABELS = {
+    "vps_server": "VPS",
+    "llm-budget": "LLM",
+    "github-copilot": "Copilot",
+}
+
+
+def deprovision_service_label(service) -> str:
+    """Short name for a third-party service in student-facing copy (VPS, LLM, Copilot)."""
+    slug = getattr(service, "slug", None) or ""
+    return _DEPROVISION_SERVICE_LABELS.get(slug, slug)
+
+
+def format_deprovision_service_labels(services, lang: str | None = None) -> str:
+    """Human list of third-party resources that will be torn down (EN: and / ES: y)."""
+    labels: list[str] = []
+    seen: set[str] = set()
+    for service in services:
+        slug = getattr(service, "slug", None)
+        if not slug:
+            continue
+        label = deprovision_service_label(service)
+        if label in seen:
+            continue
+        seen.add(label)
+        labels.append(label)
+    if not labels:
+        return ""
+    conjunction = "y" if (lang or "").lower().startswith("es") else "and"
+    if len(labels) == 1:
+        return labels[0]
+    if len(labels) == 2:
+        return f"{labels[0]} {conjunction} {labels[1]}"
+    return f"{', '.join(labels[:-1])} {conjunction} {labels[-1]}"
 
 
 def sync_machine_types(provisioning_academy, assignment):
@@ -1879,3 +1995,108 @@ def deprovision_vps_server(user_id: int, context: dict | None = None, **_: Any):
 
     for vps_id in vps_qs.values_list("id", flat=True):
         deprovision_vps_task.delay(vps_id)
+
+
+@service_power_off("vps_server")
+def power_off_vps_server(user_id: int, context: dict | None = None, **_: Any):
+    """Power off VPS machines for one subscription or plan financing. Vendor errors are logged; teardown still runs later."""
+    logger.info("power_off_vps_server: user_id=%s", user_id)
+
+    academy_id = None
+    subscription_id: int | None = None
+    plan_financing_id: int | None = None
+    if isinstance(context, dict):
+        academy_id = context.get("academy_id") or context.get("academy")
+        if context.get("subscription_id") is not None:
+            try:
+                subscription_id = int(context["subscription_id"])
+            except (TypeError, ValueError):
+                subscription_id = None
+        if context.get("plan_financing_id") is not None:
+            try:
+                plan_financing_id = int(context["plan_financing_id"])
+            except (TypeError, ValueError):
+                plan_financing_id = None
+    if academy_id is not None:
+        try:
+            academy_id = int(academy_id)
+        except Exception:
+            academy_id = None
+
+    if subscription_id is None and plan_financing_id is None:
+        logger.warning(
+            "power_off_vps_server: missing subscription_id and plan_financing_id, skipping user_id=%s",
+            user_id,
+        )
+        return
+
+    if subscription_id is not None:
+        has_consumables = Consumable.list(
+            user=user_id,
+            service="vps_server",
+            extra={"subscription_id": subscription_id},
+        ).exists()
+        if has_consumables:
+            logger.info(
+                "power_off_vps_server: user %s still has vps_server consumables on subscription %s, skipping",
+                user_id,
+                subscription_id,
+            )
+            return
+    else:
+        has_consumables = Consumable.list(
+            user=user_id,
+            service="vps_server",
+            extra={"plan_financing_id": plan_financing_id},
+        ).exists()
+        if has_consumables:
+            logger.info(
+                "power_off_vps_server: user %s still has vps_server consumables on plan financing %s, skipping",
+                user_id,
+                plan_financing_id,
+            )
+            return
+
+    statuses = [
+        ProvisioningVPS.VPS_STATUS_PENDING,
+        ProvisioningVPS.VPS_STATUS_PROVISIONING,
+        ProvisioningVPS.VPS_STATUS_ACTIVE,
+    ]
+    vps_qs = ProvisioningVPS.objects.filter(user_id=user_id, status__in=statuses).select_related(
+        "vendor", "academy"
+    )
+    if academy_id:
+        vps_qs = vps_qs.filter(academy_id=academy_id)
+    if subscription_id is not None:
+        vps_qs = vps_qs.filter(consumed_consumable__subscription_id=subscription_id)
+    else:
+        vps_qs = vps_qs.filter(consumed_consumable__plan_financing_id=plan_financing_id)
+
+    powered_off = 0
+    for vps in vps_qs:
+        if not vps.external_id:
+            logger.warning("power_off_vps_server: VPS id=%s has no external_id, skipping", vps.id)
+            continue
+        provisioning_academy = ProvisioningAcademy.objects.filter(academy=vps.academy, vendor=vps.vendor).first()
+        if not provisioning_academy:
+            logger.warning("power_off_vps_server: no ProvisioningAcademy for VPS id=%s, skipping", vps.id)
+            continue
+        client = get_vps_client(vps.vendor)
+        power_off = getattr(client, "power_off_vps", None) if client else None
+        if not power_off:
+            logger.warning(
+                "power_off_vps_server: vendor has no power_off_vps for VPS id=%s, teardown will still run later",
+                vps.id,
+            )
+            continue
+        try:
+            power_off({"token": provisioning_academy.credentials_token or ""}, vps.external_id)
+            powered_off += 1
+        except VPSProvisioningError as e:
+            logger.warning(
+                "power_off_vps_server: power off failed for VPS id=%s, teardown will still run later: %s",
+                vps.id,
+                e,
+            )
+
+    logger.info("power_off_vps_server: user_id=%s powered_off=%s", user_id, powered_off)
