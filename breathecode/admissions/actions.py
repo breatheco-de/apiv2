@@ -60,6 +60,16 @@ def is_deleted_marker(item: Any) -> bool:
     return isinstance(status, str) and status.upper() == "DELETED"
 
 
+def is_display_order_only_patch(item: Any) -> bool:
+    """Macro override patch that only changes display_order at the same bucket index."""
+    if not isinstance(item, dict):
+        return False
+    if set(item.keys()) != {"display_order"}:
+        return False
+    value = item.get("display_order")
+    return isinstance(value, int) and value >= 0
+
+
 def _iter_reference_keys(syllabus_json: dict) -> Iterator[str]:
     for key in syllabus_json.keys():
         if key == "days":
@@ -752,8 +762,7 @@ def test_syllabus(syl, validate_assets=False, ignore=None, academy_id: int | Non
                 continue
 
             if "slug" not in a:
-                if partial_override and len(a.keys()) == 0:
-                    # `{}` is an explicit no-op placeholder.
+                if partial_override and is_display_order_only_patch(a):
                     continue
                 _log.error(f"Missing slug on {_type} property on module {index}")
                 continue
