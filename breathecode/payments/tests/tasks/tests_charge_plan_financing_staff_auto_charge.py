@@ -14,6 +14,11 @@ UTC_NOW = timezone.now()
 pytestmark = pytest.mark.usefixtures("db")
 
 
+@pytest.fixture(autouse=True)
+def execute_on_commit(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr("breathecode.payments.tasks.transaction.on_commit", lambda fn, *a, **k: fn())
+
+
 def fake_stripe_pay(**kwargs):
     def wrapper(user, bag, amount: int, currency="usd", description="", **extra_kwargs):
         filtered_kwargs = {k: v for k, v in kwargs.items() if k not in ["user", "bag", "academy", "currency", "amount"]}

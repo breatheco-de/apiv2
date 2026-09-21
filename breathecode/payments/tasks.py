@@ -9,6 +9,7 @@ from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from dateutil.relativedelta import relativedelta
 from django.core.cache import cache
+from django.db import transaction
 from django.db.models import F, Max, Sum
 from django.utils import timezone
 from django_redis import get_redis_connection
@@ -1012,6 +1013,138 @@ def notify_plan_financing_renewal(self, plan_financing_id: int, **_: Any):
     logger.info(f"Sent installment notification for plan_financing {plan_financing_id}")
 
 
+def _display_grace_days(days: float) -> int | float:
+    if abs(days - round(days)) < 1e-9:
+        return int(round(days))
+    return round(days, 1)
+
+
+def _in_days_phrase(days: float, lang: str) -> str:
+    n = _display_grace_days(days)
+    if n <= 0:
+        return "hoy" if lang == "es" else "today"
+    if lang == "es":
+        return "en 1 día" if n == 1 else f"en {n} días"
+    return "in 1 day" if n == 1 else f"in {n} days"
+
+
+def _days_later_phrase(days: float, lang: str) -> str:
+    n = _display_grace_days(days)
+    if n <= 0:
+        return "el mismo día" if lang == "es" else "the same day"
+    if lang == "es":
+        return "1 día después" if n == 1 else f"{n} días después"
+    return "1 day later" if n == 1 else f"{n} days later"
+
+
+def _third_party_deprovision_notice_copy(plan_title: str, services, power_off_services, lang: str) -> tuple[str, str]:
+    """Short subject + HTML bullet list: 80/20 copy if the service can power off, else full grace."""
+    from django.utils.html import escape
+
+    from breathecode.provisioning.actions import (
+        deprovision_service_label,
+        get_deprovision_grace_days,
+        get_power_off_grace_days,
+        get_remaining_teardown_grace_days,
+    )
+
+    subject = translation(
+        lang,
+        en=f"Your {plan_title} plan expired: the following third-party consumables will be deprovisioned",
+        es=f"Tu plan {plan_title} expiró: se eliminarán los siguientes consumibles de terceros",
+    )
+    power_off_ids = {getattr(service, "id", None) for service in power_off_services}
+    items: list[str] = []
+    for service in services:
+        label = deprovision_service_label(service)
+        if getattr(service, "id", None) in power_off_ids:
+            line = translation(
+                lang,
+                en=(
+                    f"{label}: {_in_days_phrase(get_power_off_grace_days(), lang)} we will power off {label}. "
+                    f"{_days_later_phrase(get_remaining_teardown_grace_days(), lang)} we will permanently delete {label}."
+                ),
+                es=(
+                    f"{label}: {_in_days_phrase(get_power_off_grace_days(), lang)} apagaremos {label}. "
+                    f"{_days_later_phrase(get_remaining_teardown_grace_days(), lang)} lo eliminaremos de forma permanente."
+                ),
+            )
+        else:
+            line = translation(
+                lang,
+                en=f"{label}: {_in_days_phrase(get_deprovision_grace_days(), lang)}.",
+                es=f"{label}: {_in_days_phrase(get_deprovision_grace_days(), lang)}.",
+            )
+        items.append(f"<li>{escape(line)}</li>")
+    message = f"<ul>{''.join(items)}</ul>"
+    return subject, message
+
+
+@task(priority=TaskPriority.NOTIFICATION.value)
+def notify_plan_financing_third_party_deprovision(plan_financing_id: int, **_: Any):
+    """Tell the student that third-party resources will be removed after the grace window."""
+    from breathecode.provisioning.actions import (
+        iter_plan_financing_services_with_deprovisioner,
+        iter_plan_financing_services_with_power_off,
+    )
+
+    plan_financing = PlanFinancing.objects.filter(id=plan_financing_id).first()
+    if not plan_financing:
+        logger.info("notify_plan_financing_third_party_deprovision: plan financing %s not found", plan_financing_id)
+        return
+
+    if plan_financing.status != PlanFinancing.Status.FULLY_PAID:
+        logger.info(
+            "notify_plan_financing_third_party_deprovision: plan financing %s status=%s, skipping",
+            plan_financing_id,
+            plan_financing.status,
+        )
+        return
+
+    if not plan_financing.plan_expires_at:
+        logger.info(
+            "notify_plan_financing_third_party_deprovision: plan financing %s has no plan_expires_at, skipping",
+            plan_financing_id,
+        )
+        return
+
+    utc_now = timezone.now()
+    if plan_financing.plan_expires_at > utc_now:
+        logger.info(
+            "notify_plan_financing_third_party_deprovision: plan financing %s plan_expires_at still in the future, skipping",
+            plan_financing_id,
+        )
+        return
+
+    services = list(iter_plan_financing_services_with_deprovisioner(plan_financing))
+    if not services:
+        logger.info(
+            "notify_plan_financing_third_party_deprovision: plan financing %s has no deprovisioner services, skipping",
+            plan_financing_id,
+        )
+        return
+
+    settings = get_user_settings(plan_financing.user.id)
+    lang = settings.lang
+    plan = plan_financing.plans.first()
+    plan_title = plan.title or plan.slug if plan else "plan"
+    power_off_services = list(iter_plan_financing_services_with_power_off(plan_financing))
+    subject, message = _third_party_deprovision_notice_copy(plan_title, services, power_off_services, lang)
+
+    notify_actions.send_email_message(
+        "message",
+        plan_financing.user.email,
+        {
+            "SUBJECT": subject,
+            "MESSAGE": message,
+            "BUTTON": translation(settings.lang, en="Go to 4Geeks", es="Ir a 4Geeks"),
+            "LINK": get_app_url(),
+        },
+        academy=plan_financing.academy,
+    )
+    logger.info("Sent third-party deprovision notice for plan_financing %s", plan_financing_id)
+
+
 def fallback_charge_plan_financing(self, plan_financing_id: int, exception: Exception, **_: Any):
     if not (plan_financing := PlanFinancing.objects.filter(id=plan_financing_id).first()):
         return
@@ -1146,7 +1279,11 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                     hours=2
                 )
                 if needs_renew:
-                    renew_plan_financing_consumables.delay(plan_financing.id)
+                    transaction.on_commit(
+                        lambda pf_id=plan_financing.id: renew_plan_financing_consumables.delay(pf_id)
+                    )
+
+                actions.schedule_plan_financing_third_party_deprovision(plan_financing)
 
                 raise AbortTask(f"PlanFinancing {plan_financing_id} reconciled to FULLY_PAID")
 
@@ -1516,6 +1653,9 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                 plan_financing.status_message = None
                 plan_financing.save()
 
+                if plan_financing.status == PlanFinancing.Status.FULLY_PAID:
+                    actions.schedule_plan_financing_third_party_deprovision(plan_financing)
+
                 logger.info(
                     "Closed installment plan_financing_id=%s created_by_admin=%s installments_paid=%s next_payment_at=%s status=%s",
                     plan_financing_id,
@@ -1525,7 +1665,9 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                     plan_financing.status,
                 )
 
-                renew_plan_financing_consumables.delay(plan_financing.id)
+                transaction.on_commit(
+                    lambda pf_id=plan_financing.id: renew_plan_financing_consumables.delay(pf_id)
+                )
 
                 # Anchor next charge ETA to next_payment_at (+3s), not truncated ".days".
                 if remaining_installments > 0:
@@ -2136,6 +2278,9 @@ def build_plan_financing(
 
     if not is_full_financing_amount and financing_status != PlanFinancing.Status.FULLY_PAID:
         actions.reschedule_billing_tasks(plan_financing_id=financing.id)
+
+    if financing_status == PlanFinancing.Status.FULLY_PAID:
+        actions.schedule_plan_financing_third_party_deprovision(financing)
 
     logger.info(f"PlanFinancing was created with id {financing.id}")
 

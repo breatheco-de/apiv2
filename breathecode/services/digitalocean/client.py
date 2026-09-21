@@ -203,20 +203,7 @@ class DigitalOceanVPSClient:
             raise VPSProvisioningError(f"Invalid DigitalOcean droplet id: {external_id}") from e
         _do_request("DELETE", token, f"/droplets/{droplet_id}")
 
-    def restart_vps(
-        self,
-        credentials: Dict[str, Any],
-        external_id: str,
-        *,
-        mode: str,
-    ) -> Dict[str, Any]:
-        """Queue a DigitalOcean droplet action from public API ``mode`` (graceful→reboot, forced→power_cycle)."""
-        if mode == ProvisioningVPS.RestartMode.GRACEFUL.value:
-            action_type = "reboot"
-        elif mode == ProvisioningVPS.RestartMode.FORCED.value:
-            action_type = "power_cycle"
-        else:
-            raise VPSProvisioningError(f"Unsupported restart mode: {mode!r}")
+    def _post_droplet_action(self, credentials: Dict[str, Any], external_id: str, action_type: str) -> Dict[str, Any]:
         token = credentials.get("token") or credentials.get("access_token")
         if not token:
             raise VPSProvisioningError("DigitalOcean credentials missing token")
@@ -231,6 +218,26 @@ class DigitalOceanVPSClient:
             "action_status": action.get("status"),
             "action_type": action.get("type") or action_type,
         }
+
+    def power_off_vps(self, credentials: Dict[str, Any], external_id: str) -> None:
+        """Shut down the droplet; it stays provisioned until destroy_vps."""
+        self._post_droplet_action(credentials, external_id, "power_off")
+
+    def restart_vps(
+        self,
+        credentials: Dict[str, Any],
+        external_id: str,
+        *,
+        mode: str,
+    ) -> Dict[str, Any]:
+        """Queue a DigitalOcean droplet action from public API ``mode`` (graceful→reboot, forced→power_cycle)."""
+        if mode == ProvisioningVPS.RestartMode.GRACEFUL.value:
+            action_type = "reboot"
+        elif mode == ProvisioningVPS.RestartMode.FORCED.value:
+            action_type = "power_cycle"
+        else:
+            raise VPSProvisioningError(f"Unsupported restart mode: {mode!r}")
+        return self._post_droplet_action(credentials, external_id, action_type)
 
     def test_connection(self, credentials: Dict[str, Any]) -> None:
         token = credentials.get("token") or credentials.get("access_token")
