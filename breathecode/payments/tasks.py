@@ -891,18 +891,8 @@ def charge_subscription(self, subscription_id: int, **_: Any):
                 return
 
             renew_subscription_consumables.delay(subscription.id)
-
-            # Schedule next charge based on days until next_payment_at
-            days_until_next_payment = (subscription.next_payment_at - utc_now).days
-            manager = schedule_task(charge_subscription, f"{days_until_next_payment}d")
-            if not manager.exists(subscription.id):
-                manager.call(subscription.id)
-
-            if early_renewal_window_days > 0 and days_until_next_payment > early_renewal_window_days:
-                notification_day = days_until_next_payment - early_renewal_window_days
-                manager = schedule_task(notify_subscription_renewal, f"{notification_day}d")
-                if not manager.exists(subscription.id):
-                    manager.call(subscription.id)
+            # Anchor next charge ETA to next_payment_at (+3s), not truncated ".days".
+            actions.reschedule_billing_tasks(subscription_id=subscription.id)
 
     except LockError:
         raise RetryTask("Could not acquire lock for activity, operation timed out.")
@@ -1185,9 +1175,6 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                 raise AbortTask(f"PlanFinancing with id {plan_financing_id} was paid this month")
 
             settings = get_user_settings(plan_financing.user.id)
-
-            payment_settings = AcademyPaymentSettings.objects.filter(academy=plan_financing.academy).first()
-            early_renewal_window_days = payment_settings.early_renewal_window_days if payment_settings else 2
 
             # Inform about discontinued catalog plans without stopping contractual financing charges.
             if plan_financing.plans.filter(status=Plan.Status.DISCONTINUED).exists():
@@ -1540,22 +1527,9 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
                 renew_plan_financing_consumables.delay(plan_financing.id)
 
-                # Schedule next charge if plan is still active and has remaining installments
-                days_until_next_payment = (plan_financing.next_payment_at - utc_now).days
-                if days_until_next_payment > 0 and remaining_installments > 0:
-                    manager = schedule_task(charge_plan_financing, f"{days_until_next_payment}d")
-                    if not manager.exists(plan_financing_id):
-                        manager.call(plan_financing_id)
-
-                if (
-                    installment_closed
-                    and early_renewal_window_days > 0
-                    and days_until_next_payment > early_renewal_window_days
-                ):
-                    notification_day = days_until_next_payment - early_renewal_window_days
-                    manager = schedule_task(notify_plan_financing_renewal, f"{notification_day}d")
-                    if not manager.exists(plan_financing_id):
-                        manager.call(plan_financing_id)
+                # Anchor next charge ETA to next_payment_at (+3s), not truncated ".days".
+                if remaining_installments > 0:
+                    actions.reschedule_billing_tasks(plan_financing_id=plan_financing.id)
 
     except LockError:
         raise RetryTask("Could not acquire lock for activity, operation timed out.")
@@ -1990,20 +1964,7 @@ def build_subscription(
 
     build_service_stock_scheduler_from_subscription.delay(subscription.id)
 
-    # Schedule the next charge task based on days until next_payment_at
-    days_until_next_payment = (next_payment_at - subscription.paid_at).days
-    manager = schedule_task(charge_subscription, f"{days_until_next_payment}d")
-    if not manager.exists(subscription.id):
-        manager.call(subscription.id)
-
-    payment_settings = AcademyPaymentSettings.objects.filter(academy=subscription.academy).first()
-    early_renewal_window_days = payment_settings.early_renewal_window_days if payment_settings else 0
-
-    if early_renewal_window_days > 0 and days_until_next_payment > early_renewal_window_days:
-        notification_day = days_until_next_payment - early_renewal_window_days
-        manager = schedule_task(notify_subscription_renewal, f"{notification_day}d")
-        if not manager.exists(subscription.id):
-            manager.call(subscription.id)
+    actions.reschedule_billing_tasks(subscription_id=subscription.id)
 
     logger.info(f"Subscription was created with id {subscription.id}")
 
@@ -2174,17 +2135,7 @@ def build_plan_financing(
     build_service_stock_scheduler_from_plan_financing.delay(financing.id)
 
     if not is_full_financing_amount and financing_status != PlanFinancing.Status.FULLY_PAID:
-        # Schedule monthly charges based on days until next payment
-        days_until_next_payment = (next_payment_at - invoice.paid_at).days
-        manager = schedule_task(charge_plan_financing, f"{days_until_next_payment}d")
-        if not manager.exists(financing.id):
-            manager.call(financing.id)
-
-        if days_until_next_payment > 2:
-            notification_day = days_until_next_payment - 2
-            manager = schedule_task(notify_plan_financing_renewal, f"{notification_day}d")
-            if not manager.exists(financing.id):
-                manager.call(financing.id)
+        actions.reschedule_billing_tasks(plan_financing_id=financing.id)
 
     logger.info(f"PlanFinancing was created with id {financing.id}")
 
