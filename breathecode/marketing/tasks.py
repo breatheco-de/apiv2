@@ -52,6 +52,15 @@ def persist_single_lead(form_data, **_: Any):
                 entry.storage_status_text = str(e)
                 entry.storage_status = "PENDING"
                 entry.save()
+                # Keep retrying so tags can finish. send_to_active_campaign
+                # skips Soft/STRONG if this same row already has ac_contact_id.
+                if entry.ac_contact_id:
+                    logger.info(
+                        "Timeout after FormEntry %s already has ac_contact_id %s; "
+                        "retry will skip automations and only finish tags",
+                        entry.id,
+                        entry.ac_contact_id,
+                    )
                 raise RetryTask(f"Timeout processing lead for form_entry {str(entry.id)}")
 
     except Exception as e:

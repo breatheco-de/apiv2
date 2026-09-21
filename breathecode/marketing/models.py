@@ -659,14 +659,16 @@ class FormEntry(models.Model):
         if self.academy is not None and self.academy.activecampaignacademy is not None:
             duplicate_leads_delta_avoidance = self.academy.activecampaignacademy.duplicate_leads_delta_avoidance
 
+        # PENDING too: two parallel POSTs both land as PENDING before Celery runs.
+        # Tie-break same created_at with lower id so exactly one of the pair is sent.
         last_one = (
             FormEntry.objects.filter(
                 email=self.email,
                 course=incoming_lead["course"],
-                storage_status="PERSISTED",
-                created_at__lte=self.created_at,
+                storage_status__in=["PERSISTED", "PENDING"],
             )
             .exclude(id=self.id)
+            .filter(Q(created_at__lt=self.created_at) | Q(created_at=self.created_at, id__lt=self.id))
             .order_by("-created_at")
             .first()
         )
