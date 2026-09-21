@@ -388,17 +388,27 @@ def _task_already_scheduled_or_done(task_callable: Any, entity_id: int) -> bool:
 
 def schedule_plan_financing_third_party_deprovision(plan_financing: PlanFinancing) -> None:
     """
-    Schedule the grace-window email and the later teardown of third-party resources.
+    Schedule the grace-window email, optional 80% power-off, and 100% teardown.
 
-    v1: one notify at ``plan_expires_at`` and one teardown at ``get_deprovision_at``.
-    Same env days for every vendor. Does not send email itself.
+    Notify at ``plan_expires_at``. Power-off (if the plan has ``@service_power_off``)
+    at 80% of the grace window. Teardown at ``get_deprovision_at``.
+    If that window already passed, still notify and re-anchor power-off/teardown to
+    ``now + 80%/100% of get_deprovision_grace_days()``.
+    Does not send email itself.
     """
     from breathecode.payments.tasks import notify_plan_financing_third_party_deprovision
     from breathecode.provisioning.actions import (
         get_deprovision_at,
+        get_deprovision_grace_days,
+        get_power_off_at,
+        get_power_off_grace_days,
         iter_plan_financing_services_with_deprovisioner,
+        iter_plan_financing_services_with_power_off,
     )
-    from breathecode.provisioning.tasks import deprovision_plan_financing_third_party
+    from breathecode.provisioning.tasks import (
+        deprovision_plan_financing_third_party,
+        power_off_plan_financing_third_party,
+    )
 
     if plan_financing.status != PlanFinancing.Status.FULLY_PAID:
         return
@@ -415,12 +425,32 @@ def schedule_plan_financing_third_party_deprovision(plan_financing: PlanFinancin
         return
 
     utc_now = timezone.now()
+    teardown_at = run_at
+    power_off_at = get_power_off_at(plan_financing.plan_expires_at)
+    if run_at <= utc_now:
+        grace_days = get_deprovision_grace_days()
+        teardown_at = utc_now + timedelta(days=grace_days)
+        power_off_at = utc_now + timedelta(days=get_power_off_grace_days())
+        logger.info(
+            "schedule_plan_financing_third_party_deprovision: plan_financing_id=%s window already over, "
+            "re-anchoring teardown to now + %s days",
+            plan_financing_id,
+            grace_days,
+        )
 
     if not _task_already_scheduled_or_done(notify_plan_financing_third_party_deprovision, plan_financing_id):
         notify_eta = _eta_for_schedule_at(plan_financing.plan_expires_at, utc_now)
         schedule_task(notify_plan_financing_third_party_deprovision, notify_eta).call(plan_financing_id)
 
-    teardown_eta = _eta_for_schedule_at(run_at, utc_now)
+    if (
+        power_off_at is not None
+        and any(iter_plan_financing_services_with_power_off(plan_financing))
+        and not _task_already_scheduled_or_done(power_off_plan_financing_third_party, plan_financing_id)
+    ):
+        power_off_eta = _eta_for_schedule_at(power_off_at, utc_now)
+        schedule_task(power_off_plan_financing_third_party, power_off_eta).call(plan_financing_id)
+
+    teardown_eta = _eta_for_schedule_at(teardown_at, utc_now)
     schedule_task(deprovision_plan_financing_third_party, teardown_eta).call(plan_financing_id)
 
 

@@ -914,3 +914,53 @@ def deprovision_plan_financing_third_party(plan_financing_id: int, **_: Any):
             user_id=plan_financing.user_id,
             context=context,
         )
+
+
+@task(priority=TaskPriority.STUDENT.value)
+def power_off_plan_financing_third_party(plan_financing_id: int, **_: Any):
+    """
+    At 80% of the grace window, power off third-party resources that support it.
+
+    Does not change financing status. Does not send email. Does not schedule itself.
+    Calls ``get_service_power_off`` for each plan service that has a handler, always
+    with ``plan_financing_id`` in the context.
+    """
+    plan_financing = PlanFinancing.objects.filter(id=plan_financing_id).first()
+    if not plan_financing:
+        logger.info("power_off_plan_financing_third_party: plan financing %s not found", plan_financing_id)
+        return
+
+    if plan_financing.status != PlanFinancing.Status.FULLY_PAID:
+        logger.info(
+            "power_off_plan_financing_third_party: plan financing %s status=%s, skipping",
+            plan_financing_id,
+            plan_financing.status,
+        )
+        return
+
+    run_at = actions.get_power_off_at(plan_financing.plan_expires_at)
+    utc_now = timezone.now()
+    if run_at is None:
+        logger.info(
+            "power_off_plan_financing_third_party: plan financing %s has no plan_expires_at, skipping",
+            plan_financing_id,
+        )
+        return
+    if run_at > utc_now:
+        logger.info(
+            "power_off_plan_financing_third_party: plan financing %s run_at %s still in the future, skipping",
+            plan_financing_id,
+            run_at,
+        )
+        return
+
+    context = {
+        "academy_id": plan_financing.academy_id,
+        "plan_financing_id": plan_financing.id,
+    }
+
+    for service in actions.iter_plan_financing_services_with_power_off(plan_financing):
+        handler = actions.get_service_power_off(service.slug)
+        if not handler:
+            continue
+        handler(user_id=plan_financing.user_id, context=context)
