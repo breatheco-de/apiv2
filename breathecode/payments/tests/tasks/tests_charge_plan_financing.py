@@ -137,6 +137,7 @@ def setup(monkeypatch):
 
 
 # FIXME: create_v2 fail in this test file
+@patch("breathecode.payments.tasks.transaction.on_commit", new=lambda fn, *a, **k: fn())
 class PaymentsTestSuite(PaymentsTestCase):
     """
     🔽🔽🔽 PlanFinancing not found
@@ -1284,6 +1285,56 @@ class PaymentsTestSuite(PaymentsTestCase):
         charge_tasks = [t for t in scheduled if t["task_name"] == "charge_plan_financing"]
         self.assertEqual(len(charge_tasks), 1)
         self.assertEqual(charge_tasks[0]["status"], "PENDING")
+
+    @patch("logging.Logger.info", MagicMock())
+    @patch("logging.Logger.error", MagicMock())
+    @patch("breathecode.notify.actions.send_email_message", MagicMock())
+    @patch("mixer.main.LOGGER.info", MagicMock())
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test_admin_managed_renew_waits_until_charge_commits(self):
+        """Do not enqueue renew until the charge transaction commits."""
+        plan_financing = {
+            "valid_until": UTC_NOW + relativedelta(months=6),
+            "next_payment_at": UTC_NOW - relativedelta(days=5),
+            "monthly_price": 100.0,
+            "how_many_installments": 3,
+            "installments_paid": 1,
+            "plan_expires_at": UTC_NOW + relativedelta(months=12),
+            "created_by_admin": True,
+        }
+        plan = {"is_renewable": False, "time_of_life": 12, "time_of_life_unit": "MONTH"}
+        bag = {"how_many_installments": 3, "was_delivered": True, "type": "BAG"}
+        invoice = {
+            "paid_at": UTC_NOW - relativedelta(months=2),
+            "amount": 100.0,
+            "status": "FULFILLED",
+        }
+        model = self.bc.database.create(
+            academy=1,
+            plan_financing=plan_financing,
+            invoice=invoice,
+            plan=plan,
+            bag=bag,
+        )
+        model.plan_financing.invoices.add(model.invoice)
+
+        with (
+            patch("breathecode.payments.services.stripe.Stripe.pay", MagicMock()),
+            patch("breathecode.payments.tasks.transaction.on_commit") as mock_on_commit,
+            patch("breathecode.payments.tasks.renew_plan_financing_consumables.delay") as mock_delay,
+        ):
+            charge_plan_financing.delay(1)
+
+            mock_delay.assert_not_called()
+            self.assertTrue(mock_on_commit.called)
+            for args, _kwargs in mock_on_commit.call_args_list:
+                args[0]()
+
+            mock_delay.assert_called_once_with(1)
+
+        pf = self.bc.database.list_of("payments.PlanFinancing")[0]
+        self.assertEqual(pf["status"], "ACTIVE")
+        self.assertEqual(pf["installments_paid"], 2)
 
     @patch("logging.Logger.info", MagicMock())
     @patch("logging.Logger.error", MagicMock())

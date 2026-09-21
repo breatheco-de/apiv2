@@ -9,6 +9,7 @@ from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from dateutil.relativedelta import relativedelta
 from django.core.cache import cache
+from django.db import transaction
 from django.db.models import F, Max, Sum
 from django.utils import timezone
 from django_redis import get_redis_connection
@@ -1288,7 +1289,9 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                     hours=2
                 )
                 if needs_renew:
-                    renew_plan_financing_consumables.delay(plan_financing.id)
+                    transaction.on_commit(
+                        lambda pf_id=plan_financing.id: renew_plan_financing_consumables.delay(pf_id)
+                    )
 
                 actions.schedule_plan_financing_third_party_deprovision(plan_financing)
 
@@ -1666,13 +1669,6 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                 if plan_financing.status == PlanFinancing.Status.FULLY_PAID:
                     actions.schedule_plan_financing_third_party_deprovision(plan_financing)
 
-                if unpaid_staff_cycle:
-                    logger.info(
-                        "Staff-assigned plan financing %s: installment unpaid; "
-                        "advanced next_payment_at without PAYMENT_ISSUE",
-                        plan_financing_id,
-                    )
-                    
                 logger.info(
                     "Closed installment plan_financing_id=%s created_by_admin=%s installments_paid=%s next_payment_at=%s status=%s",
                     plan_financing_id,
@@ -1682,7 +1678,9 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                     plan_financing.status,
                 )
 
-                renew_plan_financing_consumables.delay(plan_financing.id)
+                transaction.on_commit(
+                    lambda pf_id=plan_financing.id: renew_plan_financing_consumables.delay(pf_id)
+                )
 
                 # Schedule next charge if plan is still active and has remaining installments
                 days_until_next_payment = (plan_financing.next_payment_at - utc_now).days
