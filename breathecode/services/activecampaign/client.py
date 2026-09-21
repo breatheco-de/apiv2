@@ -82,7 +82,7 @@ class ActiveCampaignClient(Client):
         if headers:
             _headers.update(headers)
 
-        kwargs["timeout"] = 2
+        kwargs["timeout"] = 6
 
         return self._parse(requests.request(method, self.BASE_URL + endpoint, headers=_headers, **kwargs))
 
