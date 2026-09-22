@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 
@@ -6,7 +7,7 @@ from django.contrib.auth.models import User
 from rest_framework import serializers
 
 import breathecode.activity.tasks as tasks_activity
-from breathecode.admissions.models import CohortUser
+from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.admissions.services.completion import get_effective_assets_by_type_for_cohort_user
 from breathecode.authenticate.models import ProfileAcademy, Token
 from breathecode.utils import serpy
@@ -160,6 +161,118 @@ class TaskHookSerializer(serpy.Serializer):
         if obj.telemetry_id is not None and obj.telemetry is not None:
             return obj.telemetry.telemetry
         return None
+
+
+class TaskStatusUpdatedHookSerializer(TaskHookSerializer):
+    """Payload for assignment.assignment_status_updated, including module and syllabus completion."""
+
+    module_completed = serpy.MethodField()
+    completed_module_name = serpy.MethodField()
+    syllabus_completed = serpy.MethodField()
+    macro_cohort = serpy.MethodField()
+    plan_slugs = serpy.MethodField()
+
+    def _module_completion(self, obj) -> tuple[bool, str | None]:
+        cached = getattr(self, "_module_completion_cache", None)
+        if cached is not None and cached[0] == obj.pk:
+            return cached[1]
+
+        completed = False
+        name = None
+        if getattr(obj, "task_status", None) == Task.TaskStatus.DONE:
+            cohort = getattr(obj, "cohort", None)
+            if cohort is not None and getattr(cohort, "syllabus_version_id", None):
+                from breathecode.certificate.actions import syllabus_weeks_to_days
+                from breathecode.feedback.actions import _find_module_for_asset_in_syllabus, _is_module_complete
+
+                syllabus_version = cohort.syllabus_version
+                module_index = _find_module_for_asset_in_syllabus(syllabus_version, obj.associated_slug)
+                if module_index is not None and _is_module_complete(obj.user, cohort, module_index):
+                    completed = True
+                    raw = syllabus_version.json
+                    syllabus_json = json.loads(raw) if isinstance(raw, str) else (raw or {})
+                    days = syllabus_weeks_to_days(syllabus_json).get("days") or []
+                    label = days[module_index].get("label") if module_index < len(days) else None
+                    if isinstance(label, dict):
+                        label = label.get("en") or label.get("es")
+                    name = label.strip() if isinstance(label, str) and label.strip() else None
+
+        result = (completed, name)
+        self._module_completion_cache = (obj.pk, result)
+        return result
+
+    def get_module_completed(self, obj):
+        return self._module_completion(obj)[0]
+
+    def get_completed_module_name(self, obj):
+        return self._module_completion(obj)[1]
+
+    def get_macro_cohort(self, obj):
+        if obj.cohort_id is None:
+            return None
+
+        cohort_user = (
+            CohortUser.objects.filter(user_id=obj.user_id, cohort_id=obj.cohort_id)
+            .select_related("source_macro_cohort")
+            .first()
+        )
+        macro = cohort_user.source_macro_cohort if cohort_user is not None else None
+        if macro is None:
+            parents = list(
+                Cohort.objects.filter(micro_cohorts=obj.cohort_id, cohortuser__user_id=obj.user_id)
+                .distinct()
+                .order_by("id")[:2]
+            )
+            macro = parents[0] if len(parents) == 1 else None
+        if macro is None:
+            return None
+
+        return {"id": macro.id, "name": macro.name, "slug": macro.slug}
+
+    def get_plan_slugs(self, obj):
+        from breathecode.payments.models import PlanFinancing, Subscription
+
+        slugs = set(
+            Subscription.objects.filter(user_id=obj.user_id, status=Subscription.Status.ACTIVE).values_list(
+                "plans__slug", flat=True
+            )
+        )
+        slugs.update(
+            PlanFinancing.objects.filter(
+                user_id=obj.user_id,
+                status__in=[PlanFinancing.Status.ACTIVE, PlanFinancing.Status.FULLY_PAID],
+            ).values_list("plans__slug", flat=True)
+        )
+        slugs.discard(None)
+        return sorted(slugs)
+
+    def get_syllabus_completed(self, obj):
+        if getattr(obj, "task_status", None) != Task.TaskStatus.DONE:
+            return False
+
+        cohort = getattr(obj, "cohort", None)
+        if cohort is None or not getattr(cohort, "syllabus_version_id", None):
+            return False
+
+        from breathecode.feedback.actions import _find_module_for_asset_in_syllabus, _is_syllabus_complete
+
+        if _find_module_for_asset_in_syllabus(cohort.syllabus_version, obj.associated_slug) is None:
+            return False
+
+        already_done = (
+            Task.objects.filter(
+                user_id=obj.user_id,
+                cohort_id=cohort.id,
+                associated_slug=obj.associated_slug,
+                task_status=Task.TaskStatus.DONE,
+            )
+            .exclude(pk=obj.pk)
+            .exists()
+        )
+        if already_done:
+            return False
+
+        return _is_syllabus_complete(obj.user, cohort)
 
 
 class TaskGETSmallSerializer(serpy.Serializer):
