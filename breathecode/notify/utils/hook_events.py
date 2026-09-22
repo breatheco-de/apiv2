@@ -100,7 +100,7 @@ HOOK_EVENTS_METADATA = {
         "action": "assignments.Task.assignment_status_updated",
         "description": "Triggered when an assignment's task status changes (PENDING to DONE)",
         # app, signal, sender, event_action all auto-derived from action
-        "serializer": "breathecode.assignments.serializers.TaskHookSerializer",
+        "serializer": "breathecode.assignments.serializers.TaskStatusUpdatedHookSerializer",
     },
     "assignment.assignment_revision_status_updated": {
         "action": "assignments.Task.assignment_revision_status_updated",
