@@ -34,6 +34,10 @@ class UserSmallSerializer(serpy.Serializer):
     last_name = serpy.Field()
 
 
+class UserHookSerializer(UserSmallSerializer):
+    email = serpy.Field()
+
+
 class CohortSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     name = serpy.Field()
@@ -164,70 +168,30 @@ class TaskHookSerializer(serpy.Serializer):
 
 
 class TaskStatusUpdatedHookSerializer(TaskHookSerializer):
-    """Payload for assignment.assignment_status_updated, including module and syllabus completion."""
+    """Payload for assignment.assignment_status_updated, including module and syllabus progress."""
 
-    module_completed = serpy.MethodField()
-    completed_module_name = serpy.MethodField()
-    syllabus_completed = serpy.MethodField()
-    macro_cohort = serpy.MethodField()
+    user = UserHookSerializer()
+    cohort = serpy.MethodField()
+    module = serpy.MethodField()
+    syllabus = serpy.MethodField()
     plan_slugs = serpy.MethodField()
 
-    def _module_completion(self, obj) -> tuple[bool, str | None]:
-        cached = getattr(self, "_module_completion_cache", None)
-        if cached is not None and cached[0] == obj.pk:
-            return cached[1]
-
-        completed = False
-        name = None
-        if getattr(obj, "task_status", None) == Task.TaskStatus.DONE:
-            cohort = getattr(obj, "cohort", None)
-            if cohort is not None and getattr(cohort, "syllabus_version_id", None):
-                from breathecode.certificate.actions import syllabus_weeks_to_days
-                from breathecode.feedback.actions import _find_module_for_asset_in_syllabus, _is_module_complete
-
-                syllabus_version = cohort.syllabus_version
-                module_index = _find_module_for_asset_in_syllabus(syllabus_version, obj.associated_slug)
-                if module_index is not None and _is_module_complete(obj.user, cohort, module_index):
-                    completed = True
-                    raw = syllabus_version.json
-                    syllabus_json = json.loads(raw) if isinstance(raw, str) else (raw or {})
-                    days = syllabus_weeks_to_days(syllabus_json).get("days") or []
-                    label = days[module_index].get("label") if module_index < len(days) else None
-                    if isinstance(label, dict):
-                        label = label.get("en") or label.get("es")
-                    name = label.strip() if isinstance(label, str) and label.strip() else None
-
-        result = (completed, name)
-        self._module_completion_cache = (obj.pk, result)
-        return result
-
-    def get_module_completed(self, obj):
-        return self._module_completion(obj)[0]
-
-    def get_completed_module_name(self, obj):
-        return self._module_completion(obj)[1]
-
-    def get_macro_cohort(self, obj):
-        if obj.cohort_id is None:
+    def get_cohort(self, obj):
+        cohort = getattr(obj, "cohort", None)
+        if cohort is None:
             return None
 
-        cohort_user = (
-            CohortUser.objects.filter(user_id=obj.user_id, cohort_id=obj.cohort_id)
-            .select_related("source_macro_cohort")
-            .first()
-        )
-        macro = cohort_user.source_macro_cohort if cohort_user is not None else None
-        if macro is None:
-            parents = list(
-                Cohort.objects.filter(micro_cohorts=obj.cohort_id, cohortuser__user_id=obj.user_id)
-                .distinct()
-                .order_by("id")[:2]
-            )
-            macro = parents[0] if len(parents) == 1 else None
-        if macro is None:
-            return None
+        payload = {"id": cohort.id, "name": cohort.name, "slug": cohort.slug}
+        macro = self._macro(obj)
+        if macro is not None:
+            payload["macro"] = macro
+        return payload
 
-        return {"id": macro.id, "name": macro.name, "slug": macro.slug}
+    def get_module(self, obj):
+        return self._progress(obj)["module"]
+
+    def get_syllabus(self, obj):
+        return self._progress(obj)["syllabus"]
 
     def get_plan_slugs(self, obj):
         from breathecode.payments.models import PlanFinancing, Subscription
@@ -246,33 +210,143 @@ class TaskStatusUpdatedHookSerializer(TaskHookSerializer):
         slugs.discard(None)
         return sorted(slugs)
 
-    def get_syllabus_completed(self, obj):
-        if getattr(obj, "task_status", None) != Task.TaskStatus.DONE:
-            return False
+    def _macro_cohort(self, obj):
+        cached = getattr(self, "_macro_cohort_cache", None)
+        if cached is not None and cached[0] == obj.pk:
+            return cached[1]
 
+        macro = None
+        if obj.cohort_id is not None:
+            cohort_user = (
+                CohortUser.objects.filter(user_id=obj.user_id, cohort_id=obj.cohort_id)
+                .select_related("source_macro_cohort")
+                .first()
+            )
+            macro = cohort_user.source_macro_cohort if cohort_user is not None else None
+            if macro is None:
+                parents = list(
+                    Cohort.objects.filter(micro_cohorts=obj.cohort_id, cohortuser__user_id=obj.user_id)
+                    .distinct()
+                    .order_by("id")[:2]
+                )
+                macro = parents[0] if len(parents) == 1 else None
+
+        self._macro_cohort_cache = (obj.pk, macro)
+        return macro
+
+    def _macro(self, obj):
+        macro = self._macro_cohort(obj)
+        if macro is None:
+            return None
+        return {"id": macro.id, "name": macro.name, "slug": macro.slug}
+
+    def _syllabus_progress_field(self, obj):
+        return "micro_progress" if self._macro_cohort(obj) is not None else "progress"
+
+    def _progress(self, obj):
+        cached = getattr(self, "_progress_cache", None)
+        if cached is not None and cached[0] == obj.pk:
+            return cached[1]
+
+        progress_field = self._syllabus_progress_field(obj)
+        empty_syllabus = {"completed": False, progress_field: None}
+        if self._macro_cohort(obj) is not None:
+            empty_syllabus["macro_progress"] = self._macro_progress_ratio(obj)
+        result = {"module": None, "syllabus": empty_syllabus}
         cohort = getattr(obj, "cohort", None)
-        if cohort is None or not getattr(cohort, "syllabus_version_id", None):
-            return False
+        if cohort is not None and getattr(cohort, "syllabus_version_id", None):
+            from breathecode.certificate.actions import syllabus_weeks_to_days
+            from breathecode.feedback.actions import _find_module_for_asset_in_syllabus, _get_module_assets_from_syllabus
 
-        from breathecode.feedback.actions import _find_module_for_asset_in_syllabus, _is_syllabus_complete
+            syllabus_version = cohort.syllabus_version
+            module_index = _find_module_for_asset_in_syllabus(syllabus_version, obj.associated_slug)
+            if module_index is not None:
+                raw = syllabus_version.json
+                syllabus_json = json.loads(raw) if isinstance(raw, str) else (raw or {})
+                days = syllabus_weeks_to_days(syllabus_json).get("days") or []
+                syllabus_slugs = self._slugs_from_syllabus_version(syllabus_version)
+                module_slugs = list(dict.fromkeys(_get_module_assets_from_syllabus(syllabus_version, module_index)))
+                done = set(
+                    Task.objects.filter(
+                        user_id=obj.user_id,
+                        cohort_id=cohort.id,
+                        associated_slug__in=syllabus_slugs,
+                        task_status=Task.TaskStatus.DONE,
+                    ).values_list("associated_slug", flat=True)
+                )
+                syllabus = {
+                    "completed": bool(syllabus_slugs) and all(slug in done for slug in syllabus_slugs),
+                    progress_field: self._progress_ratio(syllabus_slugs, done),
+                }
+                if self._macro_cohort(obj) is not None:
+                    syllabus["macro_progress"] = self._macro_progress_ratio(obj)
+                result = {
+                    "module": {
+                        "completed": bool(module_slugs) and all(slug in done for slug in module_slugs),
+                        "name": self._module_label(days, module_index),
+                        "progress": self._progress_ratio(module_slugs, done),
+                    },
+                    "syllabus": syllabus,
+                }
 
-        if _find_module_for_asset_in_syllabus(cohort.syllabus_version, obj.associated_slug) is None:
-            return False
+        self._progress_cache = (obj.pk, result)
+        return result
 
-        already_done = (
+    def _slugs_from_syllabus_version(self, syllabus_version):
+        from breathecode.certificate.actions import syllabus_weeks_to_days
+        from breathecode.feedback.actions import _get_module_assets_from_syllabus
+
+        if syllabus_version is None:
+            return []
+        raw = syllabus_version.json
+        syllabus_json = json.loads(raw) if isinstance(raw, str) else (raw or {})
+        days = syllabus_weeks_to_days(syllabus_json).get("days") or []
+        slugs = []
+        for index in range(len(days)):
+            slugs.extend(_get_module_assets_from_syllabus(syllabus_version, index))
+        return list(dict.fromkeys(slugs))
+
+    def _macro_progress_ratio(self, obj):
+        macro = self._macro_cohort(obj)
+        if macro is None:
+            return None
+
+        micros = list(macro.micro_cohorts.select_related("syllabus_version").all())
+        if obj.cohort is not None and all(micro.id != obj.cohort_id for micro in micros):
+            micros.append(obj.cohort)
+
+        slugs = []
+        cohort_ids = []
+        for micro in micros:
+            cohort_ids.append(micro.id)
+            slugs.extend(self._slugs_from_syllabus_version(getattr(micro, "syllabus_version", None)))
+        slugs = list(dict.fromkeys(slugs))
+        if not slugs:
+            return None
+
+        done = set(
             Task.objects.filter(
                 user_id=obj.user_id,
-                cohort_id=cohort.id,
-                associated_slug=obj.associated_slug,
+                cohort_id__in=cohort_ids,
+                associated_slug__in=slugs,
                 task_status=Task.TaskStatus.DONE,
-            )
-            .exclude(pk=obj.pk)
-            .exists()
+            ).values_list("associated_slug", flat=True)
         )
-        if already_done:
-            return False
+        return self._progress_ratio(slugs, done)
 
-        return _is_syllabus_complete(obj.user, cohort)
+    def _module_label(self, days, module_index):
+        label = days[module_index].get("label") if module_index < len(days) else None
+        if isinstance(label, dict):
+            label = label.get("en") or label.get("es")
+        if isinstance(label, str) and label.strip():
+            return label.strip()
+        return None
+
+    def _progress_ratio(self, slugs, done):
+        if not slugs:
+            return None
+        finished = sum(1 for slug in slugs if slug in done)
+        return round(finished / len(slugs), 4)
 
 
 class TaskGETSmallSerializer(serpy.Serializer):

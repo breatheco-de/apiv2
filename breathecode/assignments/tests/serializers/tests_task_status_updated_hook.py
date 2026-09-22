@@ -46,9 +46,10 @@ def test_module_completed_is_false_when_task_is_not_done(cohort_with_module):
 
     payload = TaskStatusUpdatedHookSerializer(task).data
 
-    assert payload["module_completed"] is False
-    assert payload["completed_module_name"] is None
-    assert payload["macro_cohort"] is None
+    assert payload["module"] == {"completed": False, "name": "Module 1", "progress": 0}
+    assert payload["syllabus"] == {"completed": False, "progress": 0}
+    assert payload["user"]["email"] == cohort_with_module.user.email
+    assert "macro" not in payload["cohort"]
     assert payload["plan_slugs"] == []
 
 
@@ -56,7 +57,10 @@ def test_module_completed_is_false_when_task_is_not_done(cohort_with_module):
 def test_module_completed_is_false_when_another_asset_is_pending(cohort_with_module):
     task = _task(cohort_with_module, "lesson-1", "LESSON")
 
-    assert TaskStatusUpdatedHookSerializer(task).data["module_completed"] is False
+    payload = TaskStatusUpdatedHookSerializer(task).data
+
+    assert payload["module"] == {"completed": False, "name": "Module 1", "progress": 0.5}
+    assert payload["syllabus"] == {"completed": False, "progress": 0.5}
 
 
 @pytest.mark.django_db
@@ -66,8 +70,8 @@ def test_module_completed_is_true_when_every_asset_in_the_module_is_done(cohort_
 
     payload = TaskStatusUpdatedHookSerializer(task).data
 
-    assert payload["module_completed"] is True
-    assert payload["completed_module_name"] == "Module 1"
+    assert payload["module"] == {"completed": True, "name": "Module 1", "progress": 1}
+    assert payload["syllabus"] == {"completed": True, "progress": 1}
 
 
 @pytest.mark.django_db
@@ -85,7 +89,7 @@ def test_completed_module_name_uses_english_then_spanish(db, bc: Breathecode):
     )
     task = _task(model, "lesson-1", "LESSON")
 
-    assert TaskStatusUpdatedHookSerializer(task).data["completed_module_name"] == "Intro"
+    assert TaskStatusUpdatedHookSerializer(task).data["module"]["name"] == "Intro"
 
 
 @pytest.mark.django_db
@@ -103,7 +107,7 @@ def test_completed_module_name_falls_back_to_spanish(db, bc: Breathecode):
     )
     task = _task(model, "lesson-1", "LESSON")
 
-    assert TaskStatusUpdatedHookSerializer(task).data["completed_module_name"] == "Introducción"
+    assert TaskStatusUpdatedHookSerializer(task).data["module"]["name"] == "Introducción"
 
 
 @pytest.mark.django_db
@@ -157,8 +161,12 @@ def test_macro_cohort_comes_from_source_macro_and_plan_slugs_are_current(db, bc:
 
     payload = TaskStatusUpdatedHookSerializer(_task(model, "lesson-1", "LESSON")).data
 
-    assert payload["macro_cohort"] == {"id": macro.id, "name": "Macro Course", "slug": "macro-course"}
+    assert payload["cohort"]["macro"] == {"id": macro.id, "name": "Macro Course", "slug": "macro-course"}
     assert payload["plan_slugs"] == ["live-financing", "live-sub"]
+    assert payload["syllabus"]["completed"] is False
+    assert payload["syllabus"]["micro_progress"] is None
+    assert "macro_progress" in payload["syllabus"]
+    assert "progress" not in payload["syllabus"]
 
 
 def _parent(academy, slug, name):
@@ -182,7 +190,9 @@ def test_macro_cohort_uses_the_only_enrolled_parent(db, bc: Breathecode):
 
     payload = TaskStatusUpdatedHookSerializer(_task(model, "lesson-1", "LESSON")).data
 
-    assert payload["macro_cohort"] == {"id": parent.id, "name": "AI Engineering 1", "slug": "ai-engineering-1"}
+    assert payload["cohort"]["macro"] == {"id": parent.id, "name": "AI Engineering 1", "slug": "ai-engineering-1"}
+    assert payload["syllabus"]["micro_progress"] is None
+    assert "macro_progress" in payload["syllabus"]
 
 
 @pytest.mark.django_db
@@ -199,14 +209,97 @@ def test_macro_cohort_stays_null_when_several_parents_are_enrolled(db, bc: Breat
 
     payload = TaskStatusUpdatedHookSerializer(_task(model, "lesson-1", "LESSON")).data
 
-    assert payload["macro_cohort"] is None
+    assert "macro" not in payload["cohort"]
+    assert payload["syllabus"] == {"completed": False, "progress": None}
+    assert "macro_progress" not in payload["syllabus"]
+
+
+@pytest.mark.django_db
+def test_syllabus_uses_micro_progress_when_macro_exists(db, bc: Breathecode):
+    from django.utils import timezone
+
+    from breathecode.admissions.models import Cohort
+
+    model = bc.database.create(
+        user=1,
+        academy=1,
+        cohort=1,
+        cohort_user=1,
+        syllabus_version={"json": MODULE_JSON},
+    )
+    macro = Cohort.objects.create(
+        slug="macro-course",
+        name="Macro Course",
+        kickoff_date=timezone.now(),
+        academy=model.academy,
+    )
+    model.cohort_user.source_macro_cohort = macro
+    model.cohort_user.save(update_fields=["source_macro_cohort"])
+
+    payload = TaskStatusUpdatedHookSerializer(_task(model, "lesson-1", "LESSON")).data
+
+    assert payload["syllabus"] == {"completed": False, "micro_progress": 0.5, "macro_progress": 0.5}
+    assert "progress" not in payload["syllabus"]
+    assert payload["module"]["progress"] == 0.5
+
+
+@pytest.mark.django_db
+def test_syllabus_macro_progress_counts_every_micro(db, bc: Breathecode):
+    from django.utils import timezone
+
+    from breathecode.admissions.models import Cohort
+
+    first = bc.database.create(
+        user=1,
+        academy=1,
+        cohort=1,
+        cohort_user=1,
+        syllabus_version={"json": MODULE_JSON},
+    )
+    second = bc.database.create(
+        user=first.user,
+        academy=first.academy,
+        cohort=1,
+        cohort_user=1,
+        syllabus={"slug": "other-micro"},
+        syllabus_version={
+            "json": {
+                "days": [
+                    {
+                        "lessons": [{"slug": "other-1", "title": "Other 1"}],
+                        "quizzes": [],
+                        "replits": [{"slug": "other-2", "title": "Other 2"}],
+                        "assignments": [],
+                    }
+                ]
+            }
+        },
+    )
+    macro = Cohort.objects.create(
+        slug="macro-course",
+        name="Macro Course",
+        kickoff_date=timezone.now(),
+        academy=first.academy,
+    )
+    macro.micro_cohorts.add(first.cohort, second.cohort)
+    first.cohort_user.source_macro_cohort = macro
+    first.cohort_user.save(update_fields=["source_macro_cohort"])
+    second.cohort_user.source_macro_cohort = macro
+    second.cohort_user.save(update_fields=["source_macro_cohort"])
+
+    payload = TaskStatusUpdatedHookSerializer(_task(first, "lesson-1", "LESSON")).data
+
+    assert payload["syllabus"] == {"completed": False, "micro_progress": 0.5, "macro_progress": 0.25}
 
 
 @pytest.mark.django_db
 def test_module_completed_is_false_when_the_asset_is_not_in_the_syllabus(cohort_with_module):
     task = _task(cohort_with_module, "unknown-asset", "LESSON")
 
-    assert TaskStatusUpdatedHookSerializer(task).data["module_completed"] is False
+    payload = TaskStatusUpdatedHookSerializer(task).data
+
+    assert payload["module"] is None
+    assert payload["syllabus"] == {"completed": False, "progress": None}
 
 
 def _cohort(bc, syllabus_json):
@@ -233,8 +326,9 @@ def test_syllabus_completed_is_true_when_the_last_asset_is_done(db, bc: Breathec
 
     payload = TaskStatusUpdatedHookSerializer(task).data
 
-    assert payload["syllabus_completed"] is True
-    assert payload["module_completed"] is True
+    assert payload["syllabus"] == {"completed": True, "progress": 1}
+    assert payload["module"]["completed"] is True
+    assert payload["module"]["progress"] == 1
 
 
 @pytest.mark.django_db
@@ -254,5 +348,6 @@ def test_syllabus_completed_is_false_when_another_asset_is_pending(db, bc: Breat
 
     payload = TaskStatusUpdatedHookSerializer(task).data
 
-    assert payload["syllabus_completed"] is False
-    assert payload["module_completed"] is False
+    assert payload["syllabus"] == {"completed": False, "progress": 0.5}
+    assert payload["module"]["completed"] is False
+    assert payload["module"]["progress"] == 0.5
