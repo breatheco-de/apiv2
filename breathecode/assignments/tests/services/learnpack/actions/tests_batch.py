@@ -191,3 +191,92 @@ def test_batch_falls_back_to_package_id_when_asset_and_slug_are_missing(database
     assert telemetry is not None
     assert telemetry.asset_slug == asset.slug
     assert task.telemetry_id == telemetry.id
+
+
+def test_batch_prefers_student_task_group_when_package_has_duplicate_english_assets(database: capy.Database):
+    """LearnPack may send every asset id tied to a package, including an orphan duplicate."""
+    model = database.create(
+        user=1,
+        asset=[
+            {
+                "slug": "mastering-javascript-promises-dup",
+                "lang": "us",
+                "asset_type": "EXERCISE",
+                "learnpack_id": 10219,
+            },
+            {
+                "slug": "mastering-promises-syllabus",
+                "lang": "us",
+                "asset_type": "EXERCISE",
+                "learnpack_id": 10219,
+            },
+            {
+                "slug": "dominando-promesas-es",
+                "lang": "es",
+                "asset_type": "EXERCISE",
+                "learnpack_id": 10219,
+            },
+        ],
+        task={
+            "associated_slug": "mastering-promises-syllabus",
+            "task_type": "EXERCISE",
+            "user": 1,
+            "title": "Mastering Promises",
+        },
+        learn_pack_webhook=1,
+    )
+
+    duplicate_en, syllabus_en, spanish = model.asset
+    spanish.all_translations.add(syllabus_en)
+
+    webhook = model.learn_pack_webhook
+    webhook.student = model.user
+    webhook.payload = {
+        "asset_id": f"{duplicate_en.id},{syllabus_en.id},{spanish.id}",
+        "package_id": 10219,
+        "user_id": model.user.id,
+        "event": "batch",
+        "step": 10,
+    }
+    webhook.save()
+
+    batch(None, webhook)
+
+    telemetry = AssignmentTelemetry.objects.filter(user=model.user).first()
+    task = Task.objects.get(id=model.task.id)
+
+    assert telemetry is not None
+    assert telemetry.asset_slug == syllabus_en.slug
+    assert telemetry.asset_slug != duplicate_en.slug
+    assert task.telemetry_id == telemetry.id
+
+
+def test_batch_relinks_task_telemetry_on_update(database: capy.Database):
+    model = database.create(
+        user=1,
+        asset={"slug": "relink-exercise", "lang": "us", "asset_type": "EXERCISE"},
+        task={"associated_slug": "relink-exercise", "task_type": "EXERCISE", "user": 1, "title": "Exercise"},
+        learn_pack_webhook=1,
+    )
+
+    telemetry = AssignmentTelemetry.objects.create(
+        user=model.user,
+        asset_slug="relink-exercise",
+        telemetry={"step": 1},
+    )
+    task = model.task
+    task.telemetry = None
+    task.save()
+    assert task.telemetry_id is None
+
+    webhook = model.learn_pack_webhook
+    webhook.student = model.user
+    webhook.payload = {"asset_id": model.asset.id, "user_id": model.user.id, "event": "batch", "step": 2}
+    webhook.save()
+
+    batch(None, webhook)
+
+    task.refresh_from_db()
+    telemetry.refresh_from_db()
+    assert task.telemetry_id == telemetry.id
+    assert telemetry.telemetry["step"] == 2
