@@ -119,7 +119,10 @@ class PreviewSubscriptionRenewalAmountTestSuite(PaymentsTestCase):
         model.subscription.save(update_fields=["currency"])
 
         bags_before = Bag.objects.count()
-        data = GetSubscriptionSerializer(model.subscription).data
+        skipped = GetSubscriptionSerializer(model.subscription).data
+        self.assertIsNone(skipped["next_renewal_amount"])
+
+        data = GetSubscriptionSerializer(model.subscription, include_billing=True).data
 
         self.assertEqual(data["next_renewal_amount"], 479.99)
         self.assertIsNotNone(data["currency"])

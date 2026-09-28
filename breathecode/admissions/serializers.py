@@ -788,11 +788,7 @@ class GETCohortUserSmallSerializer(serpy.Serializer):
     finantial_status = serpy.Field()
     educational_status = serpy.Field()
     created_at = serpy.Field()
-    completion = serpy.MethodField()
     source_macro_cohort = serpy.MethodField()
-
-    def get_completion(self, obj):
-        return evaluate_cohort_user_completion(obj)
 
     def get_source_macro_cohort(self, obj):
         cohort = obj.source_macro_cohort

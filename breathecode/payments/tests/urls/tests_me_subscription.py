@@ -221,7 +221,9 @@ def get_plan_financing_serializer(
     return {
         "id": plan_financing.id,
         "academy": academy_serializer(academy),
-        "invoices": [invoice_serializer(self, invoice, currency, user) for invoice in invoices],
+        "invoices": [],
+        "has_invoice": any((invoice.amount or 0) >= 0 for invoice in invoices),
+        "has_paid_invoice": any((invoice.amount or 0) > 0 for invoice in invoices),
         "valid_until": self.bc.datetime.to_iso_string(plan_financing.valid_until),
         "next_payment_at": self.bc.datetime.to_iso_string(plan_financing.next_payment_at),
         "plan_expires_at": self.bc.datetime.to_iso_string(plan_financing.plan_expires_at),
@@ -274,7 +276,9 @@ def get_subscription_serializer(
     return {
         "id": subscription.id,
         "academy": academy_serializer(academy),
-        "invoices": [invoice_serializer(self, invoice, currency, user) for invoice in invoices],
+        "invoices": [],
+        "has_invoice": any((invoice.amount or 0) >= 0 for invoice in invoices),
+        "has_paid_invoice": any((invoice.amount or 0) > 0 for invoice in invoices),
         "paid_at": self.bc.datetime.to_iso_string(subscription.paid_at),
         "valid_until": valid_until,
         "created_at": created_at,
