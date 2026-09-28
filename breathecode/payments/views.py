@@ -2504,10 +2504,19 @@ class MeSubscriptionView(APIView):
             plan_financings = plan_financings.filter(valid_until__gte=now)
 
         subscriptions = handler.queryset(subscriptions.distinct())
-        subscription_serializer = GetSubscriptionSerializer(subscriptions, many=True)
+        include_billing = request.GET.get("include_billing", "").lower() in ("1", "true", "yes")
+        subscription_serializer = GetSubscriptionSerializer(
+            subscriptions,
+            many=True,
+            include_billing=include_billing,
+        )
 
         plan_financings = handler.queryset(plan_financings.distinct())
-        plan_financing_serializer = GetPlanFinancingSerializer(plan_financings, many=True)
+        plan_financing_serializer = GetPlanFinancingSerializer(
+            plan_financings,
+            many=True,
+            include_billing=include_billing,
+        )
 
         return handler.response(
             {

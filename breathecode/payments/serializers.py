@@ -1428,10 +1428,45 @@ class GetAbstractIOweYouSerializer(serpy.Serializer):
     selected_event_type_set = GetEventTypeSetSerializer(many=False, required=False)
 
     plans = serpy.ManyToManyField(GetPlanSmallSerializer(attr="plans", many=True))
-    invoices = serpy.ManyToManyField(GetInvoiceSerializer(attr="invoices", many=True))
+    invoices = serpy.MethodField()
+    has_invoice = serpy.MethodField()
+    has_paid_invoice = serpy.MethodField()
 
     next_payment_at = serpy.Field()
     valid_until = serpy.Field()
+
+    def __init__(self, *args, **kwargs):
+        # None: callers outside me/subscription keep the invoice list and skip the renewal preview.
+        # False: light payload. True: invoices plus the renewal amount.
+        if "include_billing" in kwargs:
+            self.include_billing = bool(kwargs.pop("include_billing"))
+        else:
+            self.include_billing = None
+        super().__init__(*args, **kwargs)
+
+    def get_invoices(self, obj):
+        if self.include_billing is False:
+            return []
+        return GetInvoiceSerializer(obj.invoices.all(), many=True).data
+
+    def _invoice_amounts(self, obj):
+        cache = getattr(self, "_invoice_amount_cache", None)
+        if cache is None:
+            cache = {}
+            self._invoice_amount_cache = cache
+        if obj.pk not in cache:
+            cache[obj.pk] = list(obj.invoices.values_list("amount", flat=True))
+        return cache[obj.pk]
+
+    def get_has_invoice(self, obj):
+        if self.include_billing is not False:
+            return None
+        return any((amount or 0) >= 0 for amount in self._invoice_amounts(obj))
+
+    def get_has_paid_invoice(self, obj):
+        if self.include_billing is not False:
+            return None
+        return any((amount or 0) > 0 for amount in self._invoice_amounts(obj))
 
     # Billing team and seat information
     has_billing_team = serpy.MethodField()
@@ -1518,6 +1553,9 @@ class GetSubscriptionSerializer(GetAbstractIOweYouSerializer):
         return GetCurrencySmallSerializer(currency, many=False).data
 
     def get_next_renewal_amount(self, obj):
+        if self.include_billing is not True:
+            return None
+
         from breathecode.payments.actions import preview_subscription_renewal_amount
 
         return preview_subscription_renewal_amount(obj)
