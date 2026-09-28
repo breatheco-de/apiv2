@@ -1037,10 +1037,15 @@ def _days_later_phrase(days: float, lang: str) -> str:
     return "1 day later" if n == 1 else f"{n} days later"
 
 
-def _third_party_deprovision_notice_copy(plan_title: str, services, power_off_services, lang: str) -> tuple[str, str]:
-    """Short subject + HTML bullet list: 80/20 copy if the service can power off, else full grace."""
-    from django.utils.html import escape
+def _notice_paragraph(text: str) -> str:
+    from html import escape
 
+    style = "text-align:left;font-size:16px;line-height:1.5;margin:0 0 12px;"
+    return f'<p style="{style}">{escape(text, quote=False)}</p>'
+
+
+def _service_notice_line(service, is_power_off: bool, lang: str) -> str:
+    """Plain-language line for one third-party service. Days follow the grace window."""
     from breathecode.provisioning.actions import (
         deprovision_service_label,
         get_deprovision_grace_days,
@@ -1048,35 +1053,74 @@ def _third_party_deprovision_notice_copy(plan_title: str, services, power_off_se
         get_remaining_teardown_grace_days,
     )
 
+    slug = getattr(service, "slug", None) or ""
+    if is_power_off and slug == "vps_server":
+        later = _days_later_phrase(get_remaining_teardown_grace_days(), lang)
+        later_sentence = later[:1].upper() + later[1:]
+        return translation(
+            lang,
+            en=(
+                f"Your server will be turned off {_in_days_phrase(get_power_off_grace_days(), lang)}. "
+                f"{later_sentence} we will delete it permanently, including everything stored on it."
+            ),
+            es=(
+                f"Tu servidor se apaga {_in_days_phrase(get_power_off_grace_days(), lang)}. "
+                f"{later_sentence} lo borramos para siempre, con todo lo que tengas guardado ahí."
+            ),
+        )
+    if not is_power_off and slug == "github-copilot":
+        when = _in_days_phrase(get_deprovision_grace_days(), lang)
+        return translation(
+            lang,
+            en=f"GitHub Copilot will be turned off {when}.",
+            es=f"GitHub Copilot se desactiva {when}.",
+        )
+    if not is_power_off and slug == "llm-budget":
+        when = _in_days_phrase(get_deprovision_grace_days(), lang)
+        return translation(
+            lang,
+            en=f"Your AI credits will stop working {when}.",
+            es=f"Tus créditos de IA dejan de funcionar {when}.",
+        )
+
+    label = deprovision_service_label(service)
+    when = _in_days_phrase(get_deprovision_grace_days(), lang)
+    return translation(
+        lang,
+        en=f"{label} will be removed {when}.",
+        es=f"{label} se elimina {when}.",
+    )
+
+
+def _third_party_deprovision_notice_copy(plan_title: str, services, power_off_services, lang: str) -> tuple[str, str]:
+    """Subject plus left-aligned paragraphs. Power-off services explain shutdown, then deletion."""
     subject = translation(
         lang,
-        en=f"Your {plan_title} plan expired: the following third-party consumables will be deprovisioned",
-        es=f"Tu plan {plan_title} expiró: se eliminarán los siguientes consumibles de terceros",
+        en=f'Action required: your "{plan_title}" plan has expired',
+        es=f'Acción requerida: tu plan "{plan_title}" venció',
+    )
+    intro = translation(
+        lang,
+        en=f'Your "{plan_title}" plan has expired.',
+        es=f'Tu plan "{plan_title}" ya venció.',
+    )
+    what_happens = translation(
+        lang,
+        en="If you do not renew, this is what we will do:",
+        es="Si no renuevas, esto es lo que vamos a hacer:",
+    )
+    closing = translation(
+        lang,
+        en="If you want to keep using them, renew your plan before those dates.",
+        es="Si quieres seguir usándolos, renueva el plan antes de esas fechas.",
     )
     power_off_ids = {getattr(service, "id", None) for service in power_off_services}
-    items: list[str] = []
-    for service in services:
-        label = deprovision_service_label(service)
-        if getattr(service, "id", None) in power_off_ids:
-            line = translation(
-                lang,
-                en=(
-                    f"{label}: {_in_days_phrase(get_power_off_grace_days(), lang)} we will power off {label}. "
-                    f"{_days_later_phrase(get_remaining_teardown_grace_days(), lang)} we will permanently delete {label}."
-                ),
-                es=(
-                    f"{label}: {_in_days_phrase(get_power_off_grace_days(), lang)} apagaremos {label}. "
-                    f"{_days_later_phrase(get_remaining_teardown_grace_days(), lang)} lo eliminaremos de forma permanente."
-                ),
-            )
-        else:
-            line = translation(
-                lang,
-                en=f"{label}: {_in_days_phrase(get_deprovision_grace_days(), lang)}.",
-                es=f"{label}: {_in_days_phrase(get_deprovision_grace_days(), lang)}.",
-            )
-        items.append(f"<li>{escape(line)}</li>")
-    message = f"<ul>{''.join(items)}</ul>"
+    lines = [
+        _service_notice_line(service, getattr(service, "id", None) in power_off_ids, lang) for service in services
+    ]
+    message = "".join(
+        _notice_paragraph(text) for text in [intro, what_happens, *lines, closing]
+    )
     return subject, message
 
 

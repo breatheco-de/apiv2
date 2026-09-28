@@ -50,16 +50,27 @@ def test_notice_copy_lists_power_off_and_teardown_only_services():
         [vps],
         "en",
     )
-    assert subject == (
-        "Your QA VPS power-off 80/20 plan expired: "
-        "the following third-party consumables will be deprovisioned"
+    assert subject == 'Action required: your "QA VPS power-off 80/20" plan has expired'
+    assert "Your server will be turned off in 12 days." in message
+    assert "3 days later we will delete it permanently, including everything stored on it." in message
+    assert "Your AI credits will stop working in 15 days." in message
+    assert "GitHub Copilot will be turned off in 15 days." in message
+    assert "text-align:left" in message
+    assert "<li>" not in message
+    assert "power off" not in message
+
+    subject_es, message_es = _third_party_deprovision_notice_copy(
+        "QA VPS power-off 80/20",
+        [vps, llm, copilot],
+        [vps],
+        "es",
     )
-    assert "VPS: in 12 days we will power off VPS" in message
-    assert "3 days later we will permanently delete VPS" in message
-    assert "LLM: in 15 days." in message
-    assert "Copilot: in 15 days." in message
-    assert "power off LLM" not in message
-    assert "power off Copilot" not in message
+    assert subject_es == 'Acción requerida: tu plan "QA VPS power-off 80/20" venció'
+    assert 'Tu plan "QA VPS power-off 80/20" ya venció.' in message_es
+    assert "Tu servidor se apaga en 12 días." in message_es
+    assert "3 días después lo borramos para siempre, con todo lo que tengas guardado ahí." in message_es
+    assert "GitHub Copilot se desactiva en 15 días." in message_es
+    assert "Tus créditos de IA dejan de funcionar en 15 días." in message_es
 
 
 def _financing_with_vps(bc, *, status: str, plan_expires_at):
@@ -118,15 +129,12 @@ def test_sends_when_fully_paid_and_expiry_reached(mock_send, _mock_settings, bc)
     args, kwargs = mock_send.call_args
     assert args[0] == "message"
     assert args[1] == model.user.email
-    assert "VPS" in args[2]["MESSAGE"]
-    assert "plan expired" in args[2]["SUBJECT"]
-    assert "third-party consumables will be deprovisioned" in args[2]["SUBJECT"]
-    assert "powered off in 12 days" not in args[2]["SUBJECT"]
-    assert "Copilot" not in args[2]["SUBJECT"]
-    assert "LLM" not in args[2]["MESSAGE"]
-    assert "<li>" in args[2]["MESSAGE"]
-    assert "VPS: in 12 days we will power off VPS" in args[2]["MESSAGE"]
-    assert "3 days later we will permanently delete VPS" in args[2]["MESSAGE"]
+    assert args[2]["SUBJECT"] == 'Action required: your "Full Stack" plan has expired'
+    assert "Your server will be turned off in 12 days." in args[2]["MESSAGE"]
+    assert "3 days later we will delete it permanently, including everything stored on it." in args[2]["MESSAGE"]
+    assert "GitHub Copilot" not in args[2]["MESSAGE"]
+    assert "AI credits" not in args[2]["MESSAGE"]
+    assert "<li>" not in args[2]["MESSAGE"]
     assert kwargs["academy"] == model.academy
 
 
@@ -206,6 +214,7 @@ def test_llm_only_mentions_delete_not_power_off_split(mock_send, _mock_settings,
 
     mock_send.assert_called_once()
     payload = mock_send.call_args.args[2]
-    assert "third-party consumables will be deprovisioned" in payload["SUBJECT"]
-    assert "LLM: in 15 days." in payload["MESSAGE"]
+    assert payload["SUBJECT"].startswith("Action required:")
+    assert "Your AI credits will stop working in 15 days." in payload["MESSAGE"]
+    assert "Your server will be turned off" not in payload["MESSAGE"]
     assert "power off" not in payload["MESSAGE"]
