@@ -1,7 +1,7 @@
 import ast
 import logging
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
 from typing import Any, Optional
 from urllib.parse import urlencode
 
@@ -1028,55 +1028,172 @@ def _in_days_phrase(days: float, lang: str) -> str:
     return "in 1 day" if n == 1 else f"in {n} days"
 
 
-def _days_later_phrase(days: float, lang: str) -> str:
-    n = _display_grace_days(days)
-    if n <= 0:
-        return "el mismo día" if lang == "es" else "the same day"
-    if lang == "es":
-        return "1 día después" if n == 1 else f"{n} días después"
-    return "1 day later" if n == 1 else f"{n} days later"
+def _format_notice_date(moment, lang: str) -> str:
+    from django.utils import formats
+    from django.utils.translation import override
+
+    language = "es" if lang == "es" else "en"
+    fmt = r"j \d\e F \d\e Y" if language == "es" else "F j, Y"
+    with override(language):
+        return formats.date_format(moment, fmt)
 
 
-def _third_party_deprovision_notice_copy(plan_title: str, services, power_off_services, lang: str) -> tuple[str, str]:
-    """Short subject + HTML bullet list: 80/20 copy if the service can power off, else full grace."""
+def _notice_deadline(plan_expires_at, days: float, tz_name: str | None):
+    """Calendar moment of a grace deadline, in the academy timezone when it is valid."""
+    from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+    if plan_expires_at is None:
+        return None
+    moment = plan_expires_at + timedelta(days=days)
+    if not tz_name:
+        return moment
+    try:
+        zone = ZoneInfo(tz_name)
+    except ZoneInfoNotFoundError:
+        return moment
+    if timezone.is_naive(moment):
+        moment = timezone.make_aware(moment, timezone=dt_timezone.utc)
+    return moment.astimezone(zone)
+
+
+def _when_label(days: float, moment, lang: str) -> str:
+    when = _in_days_phrase(days, lang)
+    if when:
+        when = when[0].upper() + when[1:]
+    if moment is None:
+        return when
+    return f"{when} ({_format_notice_date(moment, lang)})"
+
+
+def _service_effect(service, kind: str, lang: str) -> str:
+    from breathecode.provisioning.actions import deprovision_service_label
+
+    slug = service.slug if getattr(service, "slug", None) else ""
+    label = deprovision_service_label(service)
+    if slug == "vps_server" and kind == "power_off":
+        return translation(
+            lang,
+            en=f"Your server will be turned off ({label}).",
+            es=f"Tu servidor se apagará ({label}).",
+        )
+    if slug == "vps_server":
+        return translation(
+            lang,
+            en=f"Your server and all stored data will be permanently deleted ({label}).",
+            es=f"Tu servidor y todos los datos guardados se borrarán de forma permanente ({label}).",
+        )
+    if slug == "github-copilot":
+        return translation(
+            lang,
+            en=f"Access to GitHub Copilot will be disabled ({label}).",
+            es=f"Se desactivará GitHub Copilot ({label}).",
+        )
+    if slug == "llm-budget":
+        return translation(
+            lang,
+            en=f"Your AI credits will stop working ({label}).",
+            es=f"Tus créditos de IA dejarán de funcionar ({label}).",
+        )
+    if kind == "power_off":
+        return translation(lang, en=f"{label} will be turned off.", es=f"{label} se apagará.")
+    return translation(lang, en=f"{label} will be removed.", es=f"{label} se eliminará.")
+
+
+def _timeline_paragraph(label: str, sentences: list[str], *, last: bool) -> str:
     from django.utils.html import escape
 
-    from breathecode.provisioning.actions import (
-        deprovision_service_label,
-        get_deprovision_grace_days,
-        get_power_off_grace_days,
-        get_remaining_teardown_grace_days,
+    margin = "0" if last else "0 0 8px 0"
+    return (
+        f'<p style="margin:{margin}; text-align:left;">'
+        f"<strong>{escape(label)}:</strong> {escape(' '.join(sentences))}</p>"
     )
+
+
+def _third_party_deprovision_notice_copy(
+    plan_title: str,
+    services,
+    power_off_services,
+    lang: str,
+    plan_expires_at=None,
+    tz_name: str | None = None,
+) -> tuple[str, str]:
+    """Left-aligned notice: the plan expired, then what each service loses and on which date."""
+    from django.utils.html import escape
+
+    from breathecode.provisioning.actions import get_deprovision_grace_days, get_power_off_grace_days
 
     subject = translation(
         lang,
-        en=f"Your {plan_title} plan expired: the following third-party consumables will be deprovisioned",
-        es=f"Tu plan {plan_title} expiró: se eliminarán los siguientes consumibles de terceros",
+        en=f'Action required: your "{plan_title}" plan expired',
+        es=f'Acción requerida: tu plan "{plan_title}" venció',
     )
+    safe_title = escape(plan_title)
+    intro = translation(
+        lang,
+        en=f'Your "{safe_title}" plan has expired. Renew it to keep your services running.',
+        es=f'Tu plan "{safe_title}" venció. Renuévalo para mantener tus servicios activos.',
+    )
+    box_title = translation(
+        lang,
+        en="What happens if you don't renew?",
+        es="¿Qué pasa si no renuevas?",
+    )
+    access_note = translation(
+        lang,
+        en=(
+            "You will still have access to the course content and learning materials. "
+            "Consumables will stop being generated."
+        ),
+        es=(
+            "Seguirás teniendo acceso al contenido del curso y a los materiales de aprendizaje. "
+            "Los consumibles dejarán de generarse."
+        ),
+    )
+
+    power_off_days = get_power_off_grace_days()
+    teardown_days = get_deprovision_grace_days()
     power_off_ids = {getattr(service, "id", None) for service in power_off_services}
-    items: list[str] = []
+    power_off_sentences: list[str] = []
+    teardown_sentences: list[str] = []
     for service in services:
-        label = deprovision_service_label(service)
         if getattr(service, "id", None) in power_off_ids:
-            line = translation(
-                lang,
-                en=(
-                    f"{label}: {_in_days_phrase(get_power_off_grace_days(), lang)} we will power off {label}. "
-                    f"{_days_later_phrase(get_remaining_teardown_grace_days(), lang)} we will permanently delete {label}."
-                ),
-                es=(
-                    f"{label}: {_in_days_phrase(get_power_off_grace_days(), lang)} apagaremos {label}. "
-                    f"{_days_later_phrase(get_remaining_teardown_grace_days(), lang)} lo eliminaremos de forma permanente."
-                ),
-            )
+            power_off_sentences.append(_service_effect(service, "power_off", lang))
+            teardown_sentences.append(_service_effect(service, "teardown", lang))
         else:
-            line = translation(
-                lang,
-                en=f"{label}: {_in_days_phrase(get_deprovision_grace_days(), lang)}.",
-                es=f"{label}: {_in_days_phrase(get_deprovision_grace_days(), lang)}.",
+            teardown_sentences.append(_service_effect(service, "teardown", lang))
+
+    blocks: list[tuple[str, list[str]]] = []
+    same_day = _display_grace_days(power_off_days) == _display_grace_days(teardown_days)
+    if power_off_sentences and not same_day:
+        blocks.append(
+            (
+                _when_label(power_off_days, _notice_deadline(plan_expires_at, power_off_days, tz_name), lang),
+                power_off_sentences,
             )
-        items.append(f"<li>{escape(line)}</li>")
-    message = f"<ul>{''.join(items)}</ul>"
+        )
+    closing = power_off_sentences + teardown_sentences if same_day else teardown_sentences
+    if closing:
+        blocks.append(
+            (
+                _when_label(teardown_days, _notice_deadline(plan_expires_at, teardown_days, tz_name), lang),
+                closing,
+            )
+        )
+
+    paragraphs = "".join(
+        _timeline_paragraph(label, sentences, last=index == len(blocks) - 1)
+        for index, (label, sentences) in enumerate(blocks)
+    )
+    message = (
+        '<div style="text-align:left; font-family:sans-serif; font-size:16px; line-height:150%; color:#000000;">'
+        f'<p style="margin:0 0 16px 0; text-align:left;">{intro}</p>'
+        f'<p style="margin:0 0 16px 0; text-align:left;">{access_note}</p>'
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">'
+        '<tr><td style="background-color:#fff8e6; border-left:4px solid #e6a817; padding:16px 18px; text-align:left;">'
+        f'<p style="margin:0 0 10px 0; text-align:left; font-weight:700;">{escape(box_title)}</p>'
+        f"{paragraphs}"
+        "</td></tr></table></div>"
+    )
     return subject, message
 
 
@@ -1129,7 +1246,14 @@ def notify_plan_financing_third_party_deprovision(plan_financing_id: int, **_: A
     plan = plan_financing.plans.first()
     plan_title = plan.title or plan.slug if plan else "plan"
     power_off_services = list(iter_plan_financing_services_with_power_off(plan_financing))
-    subject, message = _third_party_deprovision_notice_copy(plan_title, services, power_off_services, lang)
+    subject, message = _third_party_deprovision_notice_copy(
+        plan_title,
+        services,
+        power_off_services,
+        lang,
+        plan_financing.plan_expires_at,
+        plan_financing.academy.timezone,
+    )
 
     notify_actions.send_email_message(
         "message",
