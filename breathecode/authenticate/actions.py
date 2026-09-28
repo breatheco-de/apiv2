@@ -1844,6 +1844,18 @@ def accept_invite_action(data=None, token=None, lang="en"):
         primary = cohorts_list[0]
         joined = cohorts_list[1:] if len(cohorts_list) > 1 else None
 
+        # Staff or N8N may already have created this plan before the student opens the invite.
+        # Accepting must still validate the email. A second financing is rejected.
+        if payments_actions.user_blocking_plan_financings(invite_user, plan).exists():
+            logger.warning(
+                "accept_invite_action skipped financing because one is already active "
+                "user_id=%s plan_id=%s invite_id=%s",
+                invite_user.id,
+                plan.id,
+                ui.id,
+            )
+            continue
+
         payments_actions.create_invited_plan_financing_for_user(
             user=invite_user,
             plan=plan,

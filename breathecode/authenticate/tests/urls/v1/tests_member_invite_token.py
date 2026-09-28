@@ -783,6 +783,83 @@ class AuthenticateTestSuite(AuthTestCase):
         self.bc.check.calls(build_plan_financing.delay.call_args_list, [])
 
     """
+    🔽🔽🔽 POST when this plan already has an active financing
+    """
+
+    @patch("django.template.loader.render_to_string", MagicMock(side_effect=render_to_string_mock))
+    @patch("django.contrib.auth.hashers.get_hasher", MagicMock(side_effect=GetHasherMock))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.authenticate.tasks.async_validate_email_invite.delay", MagicMock())
+    @patch("breathecode.payments.tasks.build_plan_financing.delay", MagicMock(return_value=None))
+    def test__post__cohort_saas__financing_already_active(self):
+        from dateutil.relativedelta import relativedelta
+        from django.utils import timezone
+
+        utc_now = timezone.now()
+        user = {"email": "user@dotdotdotdot.dot", "first_name": "Lord", "last_name": "Valdomero"}
+        plan = {"time_of_life": None, "time_of_life_unit": None, "status": "ACTIVE"}
+        cohort = {"available_as_saas": True}
+        model = self.bc.database.create(
+            user=user,
+            user_invite=user,
+            profile_academy=user,
+            role="student",
+            plan=plan,
+            currency=1,
+            cohort=cohort,
+            cohort_set=1,
+            cohort_set_cohort=1,
+            plan_financing={
+                "status": "ACTIVE",
+                "monthly_price": 100,
+                "plan_expires_at": utc_now + relativedelta(months=12),
+                "valid_until": utc_now + relativedelta(months=3),
+                "next_payment_at": utc_now + relativedelta(months=1),
+            },
+        )
+        if model.academy.main_currency_id is None:
+            model.academy.main_currency = model.currency
+            model.academy.save()
+        model.plan.cohort_set = model.cohort_set
+        model.plan.save()
+        model.cohort_set.cohorts.add(model.cohort)
+        model.plan.invites.add(model.user_invite)
+        model.plan_financing.plans.add(model.plan)
+        model.user_invite.refresh_from_db()
+        self.assertEqual(model.user_invite.status, "PENDING")
+
+        url = reverse_lazy("authenticate:member_invite_token", kwargs={"token": model.user_invite.token})
+        data = {
+            "first_name": "abc",
+            "last_name": "xyz",
+            "password": "^3^3uUppppp",
+            "repeat_password": "^3^3uUppppp",
+        }
+        response = self.client.post(url, data)
+        content = self.bc.format.from_bytes(response.content)
+
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+        self.assertNotIn("already have an active financing", content)
+        self.assertNotIn("Invitation not found", content)
+        invites = self.bc.database.list_of("authenticate.UserInvite")
+        self.assertEqual(
+            invites,
+            [
+                {
+                    **self.bc.format.to_dict(model.user_invite),
+                    "status": "ACCEPTED",
+                    "is_email_validated": True,
+                    "user_id": model.user.id,
+                    "clicked_at": invites[0]["clicked_at"],
+                }
+            ],
+        )
+        self.assertIsNotNone(invites[0]["clicked_at"])
+        self.assertEqual(len(self.bc.database.list_of("payments.PlanFinancing")), 1)
+        self.bc.check.calls(build_plan_financing.delay.call_args_list, [])
+
+    """
     🔽🔽🔽 POST Academy saas
     """
 
