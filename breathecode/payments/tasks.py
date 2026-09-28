@@ -1028,84 +1028,28 @@ def _in_days_phrase(days: float, lang: str) -> str:
     return "in 1 day" if n == 1 else f"in {n} days"
 
 
-_MONTHS_EN = (
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-)
-_MONTHS_ES = (
-    "enero",
-    "febrero",
-    "marzo",
-    "abril",
-    "mayo",
-    "junio",
-    "julio",
-    "agosto",
-    "septiembre",
-    "octubre",
-    "noviembre",
-    "diciembre",
-)
-
-# Student-facing outcome. Power-off services also get a teardown line at the end of the grace window.
-_DEPROVISION_EFFECTS = {
-    "vps_server": {
-        "power_off": {
-            "en": "Your server will be turned off.",
-            "es": "Tu servidor se apagará.",
-        },
-        "teardown": {
-            "en": "Your server and all stored data will be permanently deleted.",
-            "es": "Tu servidor y todos los datos guardados se borrarán de forma permanente.",
-        },
-    },
-    "github-copilot": {
-        "teardown": {
-            "en": "Access to GitHub Copilot will be disabled.",
-            "es": "Se desactivará GitHub Copilot.",
-        },
-    },
-    "llm-budget": {
-        "teardown": {
-            "en": "Your AI credits will stop working.",
-            "es": "Tus créditos de IA dejarán de funcionar.",
-        },
-    },
-}
-
-
-def _is_spanish(lang: str) -> bool:
-    return (lang or "").lower().startswith("es")
-
-
 def _format_notice_date(moment, lang: str) -> str:
-    if _is_spanish(lang):
-        return f"{moment.day} de {_MONTHS_ES[moment.month - 1]} de {moment.year}"
-    return f"{_MONTHS_EN[moment.month - 1]} {moment.day}, {moment.year}"
+    from django.utils import formats
+    from django.utils.translation import override
+
+    language = "es" if lang == "es" else "en"
+    fmt = r"j \d\e F \d\e Y" if language == "es" else "F j, Y"
+    with override(language):
+        return formats.date_format(moment, fmt)
 
 
 def _notice_deadline(plan_expires_at, days: float, tz_name: str | None):
     """Calendar moment of a grace deadline, in the academy timezone when it is valid."""
+    from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
     if plan_expires_at is None:
         return None
     moment = plan_expires_at + timedelta(days=days)
     if not tz_name:
         return moment
     try:
-        from zoneinfo import ZoneInfo
-
         zone = ZoneInfo(tz_name)
-    except Exception:
+    except ZoneInfoNotFoundError:
         return moment
     if timezone.is_naive(moment):
         moment = timezone.make_aware(moment, timezone=dt_timezone.utc)
@@ -1124,13 +1068,32 @@ def _when_label(days: float, moment, lang: str) -> str:
 def _service_effect(service, kind: str, lang: str) -> str:
     from breathecode.provisioning.actions import deprovision_service_label
 
-    slug = getattr(service, "slug", None) or ""
+    slug = service.slug if getattr(service, "slug", None) else ""
     label = deprovision_service_label(service)
-    sentence = _DEPROVISION_EFFECTS.get(slug, {}).get(kind, {}).get("es" if _is_spanish(lang) else "en")
-    if sentence:
-        if label and f"({label})" not in sentence:
-            sentence = sentence[:-1] + f" ({label})." if sentence.endswith(".") else f"{sentence} ({label})"
-        return sentence
+    if slug == "vps_server" and kind == "power_off":
+        return translation(
+            lang,
+            en=f"Your server will be turned off ({label}).",
+            es=f"Tu servidor se apagará ({label}).",
+        )
+    if slug == "vps_server":
+        return translation(
+            lang,
+            en=f"Your server and all stored data will be permanently deleted ({label}).",
+            es=f"Tu servidor y todos los datos guardados se borrarán de forma permanente ({label}).",
+        )
+    if slug == "github-copilot":
+        return translation(
+            lang,
+            en=f"Access to GitHub Copilot will be disabled ({label}).",
+            es=f"Se desactivará GitHub Copilot ({label}).",
+        )
+    if slug == "llm-budget":
+        return translation(
+            lang,
+            en=f"Your AI credits will stop working ({label}).",
+            es=f"Tus créditos de IA dejarán de funcionar ({label}).",
+        )
     if kind == "power_off":
         return translation(lang, en=f"{label} will be turned off.", es=f"{label} se apagará.")
     return translation(lang, en=f"{label} will be removed.", es=f"{label} se eliminará.")
@@ -1200,20 +1163,20 @@ def _third_party_deprovision_notice_copy(
             teardown_sentences.append(_service_effect(service, "teardown", lang))
 
     blocks: list[tuple[str, list[str]]] = []
-    same_moment = abs(power_off_days - teardown_days) < 1e-9
-    if power_off_sentences and not same_moment:
+    same_day = _display_grace_days(power_off_days) == _display_grace_days(teardown_days)
+    if power_off_sentences and not same_day:
         blocks.append(
             (
                 _when_label(power_off_days, _notice_deadline(plan_expires_at, power_off_days, tz_name), lang),
                 power_off_sentences,
             )
         )
-    teardown_at = teardown_sentences if not same_moment else power_off_sentences + teardown_sentences
-    if teardown_at:
+    closing = power_off_sentences + teardown_sentences if same_day else teardown_sentences
+    if closing:
         blocks.append(
             (
                 _when_label(teardown_days, _notice_deadline(plan_expires_at, teardown_days, tz_name), lang),
-                teardown_at,
+                closing,
             )
         )
 
@@ -1289,7 +1252,7 @@ def notify_plan_financing_third_party_deprovision(plan_financing_id: int, **_: A
         power_off_services,
         lang,
         plan_financing.plan_expires_at,
-        getattr(plan_financing.academy, "timezone", None),
+        plan_financing.academy.timezone,
     )
 
     notify_actions.send_email_message(
