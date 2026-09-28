@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -44,33 +44,56 @@ def test_notice_copy_lists_power_off_and_teardown_only_services():
     vps = SimpleNamespace(id=1, slug="vps_server")
     llm = SimpleNamespace(id=2, slug="llm-budget")
     copilot = SimpleNamespace(id=3, slug="github-copilot")
+    expires = datetime(2026, 9, 28, 12, 0, tzinfo=dt_timezone.utc)
     subject, message = _third_party_deprovision_notice_copy(
         "QA VPS power-off 80/20",
         [vps, llm, copilot],
         [vps],
         "en",
+        expires,
+        "UTC",
     )
-    assert subject == 'Action required: your "QA VPS power-off 80/20" plan has expired'
-    assert "Your server will be turned off in 12 days." in message
-    assert "3 days later we will delete it permanently, including everything stored on it." in message
-    assert "Your AI credits will stop working in 15 days." in message
-    assert "GitHub Copilot will be turned off in 15 days." in message
+    assert subject == 'Action required: your "QA VPS power-off 80/20" plan expired'
     assert "text-align:left" in message
-    assert "<li>" not in message
-    assert "power off" not in message
+    assert "background-color:#fff8e6" in message
+    assert 'Your "QA VPS power-off 80/20" plan has expired.' in message
+    assert "You will still have access to the course content and learning materials." in message
+    assert "Consumables will stop being generated." in message
+    assert "In 12 days (October 10, 2026):" in message
+    assert "Your server will be turned off (VPS)." in message
+    assert "In 15 days (October 13, 2026):" in message
+    assert "Your server and all stored data will be permanently deleted (VPS)." in message
+    assert "Access to GitHub Copilot will be disabled (Copilot)." in message
+    assert "Your AI credits will stop working (LLM)." in message
+    assert "we will power off" not in message
+    assert "deprovision" not in message.lower()
+    assert "<ul>" not in message
 
-    subject_es, message_es = _third_party_deprovision_notice_copy(
-        "QA VPS power-off 80/20",
+
+@patch.dict(os.environ, {"THIRD_PARTY_DEPROVISION_GRACE_DAYS": "15"})
+def test_notice_copy_spanish_uses_action_required_and_calendar_dates():
+    vps = SimpleNamespace(id=1, slug="vps_server")
+    llm = SimpleNamespace(id=2, slug="llm-budget")
+    copilot = SimpleNamespace(id=3, slug="github-copilot")
+    expires = datetime(2026, 9, 28, 12, 0, tzinfo=dt_timezone.utc)
+    subject, message = _third_party_deprovision_notice_copy(
+        "Plan Apoyo Profesional - AI Engineering",
         [vps, llm, copilot],
         [vps],
         "es",
+        expires,
+        "UTC",
     )
-    assert subject_es == 'Acción requerida: tu plan "QA VPS power-off 80/20" venció'
-    assert 'Tu plan "QA VPS power-off 80/20" ya venció.' in message_es
-    assert "Tu servidor se apaga en 12 días." in message_es
-    assert "3 días después lo borramos para siempre, con todo lo que tengas guardado ahí." in message_es
-    assert "GitHub Copilot se desactiva en 15 días." in message_es
-    assert "Tus créditos de IA dejan de funcionar en 15 días." in message_es
+    assert subject == 'Acción requerida: tu plan "Plan Apoyo Profesional - AI Engineering" venció'
+    assert 'Tu plan "Plan Apoyo Profesional - AI Engineering" venció.' in message
+    assert "Seguirás teniendo acceso al contenido del curso y a los materiales de aprendizaje." in message
+    assert "Los consumibles dejarán de generarse." in message
+    assert "En 12 días (10 de octubre de 2026):" in message
+    assert "Tu servidor se apagará (VPS)." in message
+    assert "En 15 días (13 de octubre de 2026):" in message
+    assert "se borrarán de forma permanente (VPS)." in message
+    assert "Se desactivará GitHub Copilot (Copilot)." in message
+    assert "Tus créditos de IA dejarán de funcionar (LLM)." in message
 
 
 def _financing_with_vps(bc, *, status: str, plan_expires_at):
@@ -129,12 +152,17 @@ def test_sends_when_fully_paid_and_expiry_reached(mock_send, _mock_settings, bc)
     args, kwargs = mock_send.call_args
     assert args[0] == "message"
     assert args[1] == model.user.email
-    assert args[2]["SUBJECT"] == 'Action required: your "Full Stack" plan has expired'
-    assert "Your server will be turned off in 12 days." in args[2]["MESSAGE"]
-    assert "3 days later we will delete it permanently, including everything stored on it." in args[2]["MESSAGE"]
-    assert "GitHub Copilot" not in args[2]["MESSAGE"]
+    assert args[2]["SUBJECT"].startswith("Action required:")
+    assert 'your "Full Stack" plan expired' in args[2]["SUBJECT"]
+    assert "third-party consumables" not in args[2]["SUBJECT"]
+    assert "Your server will be turned off (VPS)." in args[2]["MESSAGE"]
+    assert "permanently deleted" in args[2]["MESSAGE"]
+    assert "In 12 days (" in args[2]["MESSAGE"]
+    assert "In 15 days (" in args[2]["MESSAGE"]
+    assert "text-align:left" in args[2]["MESSAGE"]
+    assert "Copilot" not in args[2]["MESSAGE"]
     assert "AI credits" not in args[2]["MESSAGE"]
-    assert "<li>" not in args[2]["MESSAGE"]
+    assert args[2]["BUTTON"] == "Go to 4Geeks"
     assert kwargs["academy"] == model.academy
 
 
@@ -215,6 +243,7 @@ def test_llm_only_mentions_delete_not_power_off_split(mock_send, _mock_settings,
     mock_send.assert_called_once()
     payload = mock_send.call_args.args[2]
     assert payload["SUBJECT"].startswith("Action required:")
-    assert "Your AI credits will stop working in 15 days." in payload["MESSAGE"]
-    assert "Your server will be turned off" not in payload["MESSAGE"]
+    assert "Your AI credits will stop working (LLM)." in payload["MESSAGE"]
+    assert "In 15 days (" in payload["MESSAGE"]
+    assert "turned off" not in payload["MESSAGE"]
     assert "power off" not in payload["MESSAGE"]
