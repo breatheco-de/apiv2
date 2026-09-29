@@ -1189,9 +1189,6 @@ class PostFormEntrySerializerV2(serializers.ModelSerializer):
         model = FormEntry
         exclude = ()
         read_only_fields = ["id"]
-        extra_kwargs = {
-            "gclid": {"write_only": True},  # Hide gclid from input, we use ppc_tracking_id instead
-        }
 
     def to_internal_value(self, data):
         """Map ppc_tracking_id to gclid before validation"""
