@@ -1,142 +1,687 @@
-{% extends "base.html" %}
-{% block content %}
+<!DOCTYPE html>
+<html>
 
-<script src="https://unpkg.com/dayjs@1.11.7/dayjs.min.js"></script>
-<script src="https://unpkg.com/react@17/umd/react.development.js"></script>
-<script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
-<script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Lato&display=swap" rel="stylesheet">
-<style>
-  body {
-    margin: 0;
-    padding: 0;
-    font-family: 'Lato', sans-serif;
-  }
-
-  header {
-    background: black;
-    color: white;
-    padding: 15px 0;
-  }
-
-  .clock {
-    display: flex;
-    margin: auto;
-    max-width: 300px;
-    text-align: center;
-  }
-
-  .clock>div {
-    border-radius: 5px;
-    border: 1px solid grey;
-    margin: 0 5px;
-    padding: 10px;
-    width: 33%;
-    height: 70px;
-    font-size: 40px;
-    position: relative;
-  }
-
-  .clock>div>span {
-    position: absolute;
-    left: 50%;
-    font-weight: 800;
-    top: 50%;
-    transform: translate(-50%, -50%);
-  }
-
-  .clock .interval {
-    display: block;
-    font-size: 20px;
-  }
-
-  .button {
-    background: #0097cd;
-    display: inline-block;
-    padding: 10px 15px;
-    color: white;
-    font-weight: 700;
-    border-radius: 3px;
-  }
-</style>
-
-<div id="root"></div>
-<script type="text/babel">
-  const calculateTimeLeft = () => {
-    const difference = +new Date('{{ event.starting_at.isoformat }}') - +new Date(Date.now() + 5000 * 60);
-    let timeLeft = {};
-
-    if (difference > 0) {
-      timeLeft = {
-        days: Math.floor(difference / (1000 * 60 * 60 * 24)),
-        hrs: Math.floor((difference / (1000 * 60 * 60)) % 24),
-        min: Math.floor((difference / 1000 / 60) % 60),
-        sec: Math.floor((difference / 1000) % 60),
-      };
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ event.title }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
     }
 
-    return timeLeft;
-  };
+    body {
+      margin: 0;
+      font-family: 'Lato', sans-serif;
+      color: #1a202c;
+      background: #ffffff;
+    }
 
-  function Clock(time) {
+    .navbar {
+      display: flex;
+      align-items: center;
+      height: 64px;
+      padding: 0 24px;
+      border-bottom: 1px solid #e2e8f0;
+    }
 
-    const [timeLeft, setTimeLeft] = React.useState(calculateTimeLeft());
-    const [year] = React.useState(new Date().getFullYear());
+    .navbar img {
+      max-height: 32px;
+      max-width: 160px;
+    }
 
-    React.useEffect(() => {
-      setTimeout(() => {
-        let _tl = calculateTimeLeft();
-        if (Object.keys(_tl).length == 0) window.location.href = "{{ event.live_stream_url }}";
-        setTimeLeft(_tl);
-      }, 1000);
-    });
+    .hero {
+      position: relative;
+      background: #eef9fe;
+      padding: 48px 24px 40px;
+    }
 
-    const timerComponents = [];
-    Object.keys(timeLeft).forEach((interval) => {
-      if (!timeLeft[interval]) {
-        return;
+    .hero-decor {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .hero-decor svg {
+      position: absolute;
+    }
+
+    .decor-left {
+      left: -12px;
+      top: 50%;
+      width: 56px;
+      height: 112px;
+      transform: translateY(-50%);
+    }
+
+    .decor-right {
+      right: -10px;
+      top: 64px;
+      width: 50px;
+      height: 100px;
+    }
+
+    .decor-outline {
+      left: calc(50% + 380px);
+      top: -24px;
+      width: 72px;
+      height: 130px;
+    }
+
+    .decor-dots {
+      right: 18px;
+      top: 18px;
+      width: 60px;
+      height: 14px;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 1040px;
+      margin: 0 auto;
+    }
+
+    .pill {
+      display: inline-block;
+      background: #ffe7a8;
+      color: #1a202c;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 4px;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      font-size: 40px;
+      font-weight: 900;
+      line-height: 1.15;
+      margin: 0 0 16px;
+      max-width: 720px;
+    }
+
+    .meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 15px;
+      margin: 8px 0;
+    }
+
+    .meta.small {
+      font-size: 13px;
+      color: #4a5568;
+    }
+
+    .meta svg {
+      width: 18px;
+      height: 18px;
+      fill: #0097cd;
+      flex-shrink: 0;
+    }
+
+    .content {
+      padding: 32px 24px 64px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 340px;
+      grid-template-rows: auto 1fr;
+      grid-template-areas:
+        "clock aside"
+        "description aside";
+      column-gap: 48px;
+    }
+
+    .clock-panel {
+      grid-area: clock;
+      align-self: start;
+      background: #0b1120;
+      color: #ffffff;
+      border: 2px solid #25c26e;
+      border-radius: 16px;
+      padding: 36px 24px 40px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+      margin-bottom: 32px;
+    }
+
+    .clock-panel h2 {
+      margin: 0 0 24px;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #9fb3c8;
+    }
+
+    .clock {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .clock .unit {
+      min-width: 110px;
+    }
+
+    .clock .value {
+      display: block;
+      font-size: 80px;
+      font-weight: 900;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .clock .label {
+      display: block;
+      margin-top: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: #9fb3c8;
+    }
+
+    .clock .sep {
+      font-size: 64px;
+      font-weight: 900;
+      line-height: 1;
+      padding: 0 4px;
+      color: #25c26e;
+    }
+
+    .aside {
+      grid-area: aside;
+    }
+
+    .description-area {
+      grid-area: description;
+    }
+
+    .card {
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      overflow: hidden;
+      background: #ffffff;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    }
+
+    .card-banner {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .card-body {
+      padding: 22px 24px 24px;
+      text-align: center;
+    }
+
+    .card-body h3 {
+      font-size: 20px;
+      margin: 0 0 8px;
+    }
+
+    .card-body p {
+      font-size: 14px;
+      line-height: 1.5;
+      margin: 0 0 18px;
+      color: #4a5568;
+    }
+
+    .button {
+      display: block;
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 6px;
+      border: none;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 700;
+      text-decoration: none;
+      text-align: center;
+      cursor: pointer;
+    }
+
+    .button.primary {
+      background: #25c26e;
+      color: #ffffff;
+    }
+
+    .button.primary[aria-disabled="true"] {
+      background: #cbd5e0;
+      color: #4a5568;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    .button.calendar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: #0084ff;
+      color: #ffffff;
+    }
+
+    .button.calendar svg {
+      width: 20px;
+      height: 20px;
+      fill: #ffffff;
+    }
+
+    .note {
+      margin-top: 14px;
+      font-size: 12px;
+      color: #718096;
+    }
+
+    .reminder,
+    .attendees {
+      margin-top: 16px;
+      padding: 22px 24px;
+      border-radius: 16px;
+      background: #eef9fe;
+      text-align: center;
+    }
+
+    .reminder p,
+    .attendees p {
+      margin: 0 0 16px;
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1.5;
+    }
+
+    .attendees-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      justify-items: center;
+    }
+
+    .avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: #cbd5e0;
+    }
+
+    .avatar.initials {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .avatar.initials:nth-child(4n+1) {
+      background: #0084ff;
+    }
+
+    .avatar.initials:nth-child(4n+2) {
+      background: #25c26e;
+    }
+
+    .avatar.initials:nth-child(4n+3) {
+      background: #ffb718;
+    }
+
+    .avatar.initials:nth-child(4n) {
+      background: #eb5757;
+    }
+
+    .description {
+      font-size: 15px;
+      line-height: 1.6;
+      white-space: pre-line;
+      word-wrap: break-word;
+    }
+
+    footer {
+      border-top: 1px solid #e2e8f0;
+      padding: 20px 24px;
+      text-align: center;
+      font-size: 13px;
+      color: #718096;
+    }
+
+    footer a {
+      color: #0097cd;
+    }
+
+    @media (max-width: 1100px) {
+      .decor-outline {
+        display: none;
       }
-      timerComponents.push(<div><span>{timeLeft[interval]}</span><span class="interval">{interval}</span></div>);
-    });
 
-    const size = { width: (120 * timerComponents.length) + "px" }
-    return (<div>
-      <h3>This event will start in</h3>
-      <div className="clock" style={size}>
-        {timerComponents.length ?
-          timerComponents.map((t, i) => <div key={i}><span>{t}</span></div>) :
-          <a href="{{ event.live_stream_url }}" className="button">Click here to join</a>
-        }
+      .clock .unit {
+        min-width: 80px;
+      }
+
+      .clock .value {
+        font-size: 56px;
+      }
+
+      .clock .sep {
+        font-size: 44px;
+      }
+    }
+
+    @media (max-width: 860px) {
+      .layout {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto;
+        grid-template-areas:
+          "clock"
+          "aside"
+          "description";
+      }
+
+      .aside {
+        margin-bottom: 32px;
+      }
+
+      h1 {
+        font-size: 30px;
+      }
+
+      .clock-panel {
+        padding: 28px 12px 32px;
+        margin-bottom: 24px;
+      }
+
+      .clock .unit {
+        min-width: 64px;
+      }
+
+      .clock .value {
+        font-size: 42px;
+      }
+
+      .clock .label {
+        font-size: 11px;
+        letter-spacing: 1px;
+      }
+
+      .clock .sep {
+        font-size: 34px;
+        padding: 0 2px;
+      }
+
+      .decor-dots {
+        display: none;
+      }
+
+      .decor-left,
+      .decor-right {
+        width: 32px;
+        height: 64px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <nav class="navbar">
+    <img src="{{ COMPANY_LOGO|default:'https://storage.googleapis.com/breathecode/logos/4geeks-vertical-logo.png' }}"
+      alt="{{ COMPANY_NAME|default:'4Geeks' }}">
+  </nav>
+
+  <section class="hero">
+    <div class="hero-decor" aria-hidden="true">
+      <svg class="decor-left" viewBox="0 0 60 120">
+        <polygon points="60,0 32,0 0,60 32,120 60,120 28,60" fill="#0084ff" />
+      </svg>
+      <svg class="decor-right" viewBox="0 0 60 120">
+        <polygon points="0,0 28,0 60,60 28,120 0,120 32,60" fill="#0084ff" />
+      </svg>
+      <svg class="decor-outline" viewBox="0 0 72 130" fill="none" stroke="#25c26e" stroke-width="2">
+        <polygon points="30,1 44,1 12,65 44,129 30,129 2,65" />
+        <polygon points="58,1 72,1 40,65 72,129 58,129 26,65" />
+      </svg>
+      <svg class="decor-dots" viewBox="0 0 60 14">
+        <circle cx="7" cy="7" r="6" fill="#0097cd" />
+        <circle cx="30" cy="7" r="6" fill="#ffb718" />
+        <circle cx="53" cy="7" r="6" fill="#eb5757" />
+      </svg>
+    </div>
+    <div class="container">
+      {% if event.event_type.name %}
+      <span class="pill">{{ event.event_type.name }}</span>
+      {% endif %}
+      <h1>{{ event.title }}</h1>
+      <div class="meta">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 16H5V9h14v11z" />
+        </svg>
+        <span id="event-date"></span>
+      </div>
+      <div class="meta small" id="event-duration-row" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 11h-5v-2h3V6h2v7z" />
+        </svg>
+        <span id="event-duration"></span>
       </div>
     </div>
-    );
-  }
+  </section>
 
-  function Body() {
-    return (
-      <main>
-        <header>
-          <div className="container">
-            <h1>{{ event.title }}</h1>
+  <section class="content">
+    <div class="container layout">
+      <div class="clock-panel" aria-live="polite">
+        <h2 data-i18n="startsIn"></h2>
+        <div class="clock">
+          <div class="unit"><span class="value" id="days">00</span><span class="label" data-i18n="days"></span></div>
+          <span class="sep">:</span>
+          <div class="unit"><span class="value" id="hours">00</span><span class="label" data-i18n="hours"></span></div>
+          <span class="sep">:</span>
+          <div class="unit"><span class="value" id="minutes">00</span><span class="label" data-i18n="minutes"></span>
           </div>
-        </header>
-        <div className="container">
-          <Clock />
+          <span class="sep">:</span>
+          <div class="unit"><span class="value" id="seconds">00</span><span class="label" data-i18n="seconds"></span>
+          </div>
         </div>
-      </main>
-    );
-  }
-
-  function App() {
-    return (
-      <div>
-        <Body />
       </div>
-    );
-  }
-  ReactDOM.render(<App />, document.getElementById('root'));
-</script>
 
-{% endblock %}
+      <div class="aside">
+        <div class="card">
+          {% if event.banner %}
+          <img class="card-banner" src="{{ event.banner }}" alt="{{ event.title }}">
+          {% endif %}
+          <div class="card-body">
+            <h3 data-i18n="title"></h3>
+            <p data-i18n="subtitle"></p>
+            <a class="button primary" id="join-button" aria-disabled="true" data-i18n="join"></a>
+            <div class="note" data-i18n="note"></div>
+          </div>
+        </div>
+        <div class="reminder">
+          <p data-i18n="reminder"></p>
+          <a class="button calendar" id="calendar-button" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 16H5V9h14v11zM7 11h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2zm-8 4h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2z" />
+            </svg>
+            <span data-i18n="calendar"></span>
+          </a>
+        </div>
+        {% if attendees_preview.total %}
+        <div class="attendees" id="attendees" data-total="{{ attendees_preview.total }}">
+          <p id="attendees-text"></p>
+          <div class="attendees-grid">
+            {% for attendee in attendees_preview.attendees %}
+            {% if attendee.avatar_url %}
+            <img class="avatar" src="{{ attendee.avatar_url }}" alt="{{ attendee.first_name }}"
+              title="{{ attendee.first_name }} {{ attendee.last_name }}">
+            {% else %}
+            <span class="avatar initials" title="{{ attendee.first_name }} {{ attendee.last_name }}">{{ attendee.first_name|default:"?"|slice:":1"|upper }}{{ attendee.last_name|slice:":1"|upper }}</span>
+            {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="description-area">
+        {% if event.description %}
+        <div class="description">{{ event.description }}</div>
+        {% elif event.excerpt %}
+        <div class="description">{{ event.excerpt }}</div>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span data-i18n="question"></span>
+    <a href="mailto:{{ COMPANY_INFO_EMAIL|default:'support@4geeks.com' }}">{{ COMPANY_INFO_EMAIL|default:'support@4geeks.com' }}</a>
+    · {{ COMPANY_LEGAL_NAME|default:'4Geeks LLC' }}
+  </footer>
+
+  <script>
+    (function () {
+      var EARLY_ACCESS_MS = 5 * 60 * 1000;
+      var startingAt = new Date('{{ event.starting_at.isoformat }}');
+      var endingAtRaw = '{% if event.ending_at %}{{ event.ending_at.isoformat }}{% endif %}';
+      var endingAt = endingAtRaw ? new Date(endingAtRaw) : null;
+      var liveStreamUrl = '{{ event.live_stream_url|default:""|escapejs }}';
+      var title = '{{ event.title|escapejs }}';
+      var lang = ('{{ event.lang|default:""|escapejs }}' || navigator.language || 'en').toLowerCase();
+      var isEs = lang.indexOf('es') === 0;
+      var locale = isEs ? 'es' : 'en';
+
+      var strings = {
+        es: {
+          startsIn: 'El evento empieza en',
+          days: 'DÍAS',
+          hours: 'HRS',
+          minutes: 'MIN',
+          seconds: 'SEG',
+          title: 'El evento comenzará pronto',
+          subtitle: 'Guarda esta página. Cuando llegue la hora te llevaremos automáticamente a la sala.',
+          join: 'Unirme al evento',
+          joinNow: 'Entrar ahora',
+          reminder: '¿Quieres que te recordemos del evento? ¡Añádelo a tu calendario!',
+          calendar: 'Añadir a mi calendario',
+          note: 'La sala se abre 5 minutos antes del inicio.',
+          question: '¿Tienes preguntas?',
+          attendees: function (total) {
+            return total > 20 ? total + ' personas inscritas' : 'Personas inscritas:';
+          },
+          duration: function (m) {
+            return m >= 60 ? formatHours(m, 'h') + ' de duración' : m + ' min de duración';
+          },
+        },
+        en: {
+          startsIn: 'The event starts in',
+          days: 'DAYS',
+          hours: 'HRS',
+          minutes: 'MIN',
+          seconds: 'SEC',
+          title: 'The event will start soon',
+          subtitle: 'Keep this page open. When it is time we will take you to the room automatically.',
+          join: 'Join the event',
+          joinNow: 'Join now',
+          reminder: 'Want us to remind you about the event? Add it to your calendar!',
+          calendar: 'Add to my calendar',
+          note: 'The room opens 5 minutes before the start.',
+          question: 'Have a question?',
+          attendees: function (total) {
+            return total > 20 ? total + ' people registered' : 'Registered people:';
+          },
+          duration: function (m) {
+            return m >= 60 ? formatHours(m, 'h') + ' duration' : m + ' min duration';
+          },
+        },
+      };
+      var t = strings[locale];
+
+      function formatHours(minutes, suffix) {
+        var h = Math.floor(minutes / 60);
+        var m = minutes % 60;
+        return h + suffix + (m ? ' ' + m + 'min' : '');
+      }
+
+      function pad(n) {
+        return String(n).padStart(2, '0');
+      }
+
+      function toCalendarDate(d) {
+        return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+      }
+
+      document.querySelectorAll('[data-i18n]').forEach(function (el) {
+        var value = t[el.getAttribute('data-i18n')];
+        if (typeof value === 'string') el.textContent = value;
+      });
+
+      var dateText = new Intl.DateTimeFormat(locale, {
+        weekday: 'long',
+        day: '2-digit',
+        month: 'long',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZoneName: 'short',
+      }).format(startingAt);
+      document.getElementById('event-date').textContent = dateText.charAt(0).toUpperCase() + dateText.slice(1);
+
+      if (endingAt && endingAt > startingAt) {
+        var minutes = Math.round((endingAt - startingAt) / 60000);
+        document.getElementById('event-duration').textContent = t.duration(minutes);
+        document.getElementById('event-duration-row').hidden = false;
+      }
+
+      var calendarUrl = 'https://calendar.google.com/calendar/render?action=TEMPLATE'
+        + '&text=' + encodeURIComponent(title)
+        + '&dates=' + toCalendarDate(startingAt) + '/' + toCalendarDate(endingAt || new Date(+startingAt + 3600000))
+        + '&details=' + encodeURIComponent(window.location.href);
+      document.getElementById('calendar-button').href = calendarUrl;
+
+      var attendeesBox = document.getElementById('attendees');
+      if (attendeesBox) {
+        document.getElementById('attendees-text').textContent = t.attendees(
+          Number(attendeesBox.getAttribute('data-total'))
+        );
+      }
+
+      var joinButton = document.getElementById('join-button');
+      var redirected = false;
+
+      function tick() {
+        var diff = Math.max(0, startingAt - Date.now());
+        document.getElementById('days').textContent = pad(Math.floor(diff / 86400000));
+        document.getElementById('hours').textContent = pad(Math.floor(diff / 3600000) % 24);
+        document.getElementById('minutes').textContent = pad(Math.floor(diff / 60000) % 60);
+        document.getElementById('seconds').textContent = pad(Math.floor(diff / 1000) % 60);
+
+        if (diff <= EARLY_ACCESS_MS && !redirected) {
+          redirected = true;
+          if (liveStreamUrl) {
+            joinButton.href = liveStreamUrl;
+            joinButton.textContent = t.joinNow;
+            joinButton.setAttribute('aria-disabled', 'false');
+            window.location.href = liveStreamUrl;
+          } else if (diff === 0) {
+            window.location.reload();
+          } else {
+            redirected = false;
+          }
+        }
+      }
+
+      tick();
+      setInterval(tick, 1000);
+    })();
+  </script>
+</body>
+
+</html>
