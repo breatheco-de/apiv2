@@ -19,6 +19,7 @@ class ActionCertificateGenerateOneCertificateTestCase(CertificateTestCase):
     """
 
     @patch("logging.Logger.info", MagicMock())
+    @patch("logging.Logger.warning", MagicMock())
     @patch("logging.Logger.error", MagicMock())
     @patch("breathecode.certificate.actions.generate_certificate", MagicMock())
     @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
@@ -28,8 +29,21 @@ class ActionCertificateGenerateOneCertificateTestCase(CertificateTestCase):
         async_generate_certificate(1, 1, layout)
 
         self.assertEqual(actions.generate_certificate.call_args_list, [])
-        self.assertEqual(logging.Logger.info.call_args_list, [call("starting-generating-certificate")])
-        self.assertEqual(logging.Logger.error.call_args_list, [call("cohort-user-not-found")])
+        self.assertEqual(
+            logging.Logger.info.call_args_list,
+            [call("[GENERATE_CERTIFICATE] async task start cohort_id=%s user_id=%s layout=%s", 1, 1, "vanilla")],
+        )
+        self.assertEqual(
+            logging.Logger.warning.call_args_list,
+            [
+                call(
+                    "[GENERATE_CERTIFICATE] async task aborted reason=cohort-user-not-found cohort_id=%s user_id=%s",
+                    1,
+                    1,
+                )
+            ],
+        )
+        self.assertEqual(logging.Logger.error.call_args_list, [])
 
     """
     🔽🔽🔽 Call generate_certificate successful
@@ -59,8 +73,8 @@ class ActionCertificateGenerateOneCertificateTestCase(CertificateTestCase):
         self.assertEqual(
             logging.Logger.info.call_args_list,
             [
-                call("starting-generating-certificate"),
-                call("generating-certificate"),
+                call("[GENERATE_CERTIFICATE] async task start cohort_id=%s user_id=%s layout=%s", 1, 1, "vanilla"),
+                call("[GENERATE_CERTIFICATE] async task calling generate_certificate cohort_id=%s user_id=%s", 1, 1),
             ],
         )
 
@@ -115,14 +129,19 @@ class ActionCertificateGenerateOneCertificateTestCase(CertificateTestCase):
         self.assertEqual(
             logging.Logger.info.call_args_list,
             [
-                call("starting-generating-certificate"),
-                call("generating-certificate"),
+                call("[GENERATE_CERTIFICATE] async task start cohort_id=%s user_id=%s layout=%s", 1, 1, "vanilla"),
+                call("[GENERATE_CERTIFICATE] async task calling generate_certificate cohort_id=%s user_id=%s", 1, 1),
             ],
         )
 
         self.assertEqual(
             logging.Logger.error.call_args_list,
             [
-                call("error-generating-certificate", exc_info=True),
+                call(
+                    "[GENERATE_CERTIFICATE] async task unhandled error cohort_id=%s user_id=%s",
+                    1,
+                    1,
+                    exc_info=True,
+                ),
             ],
         )
