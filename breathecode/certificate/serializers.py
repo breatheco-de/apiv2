@@ -194,6 +194,7 @@ class UserSpecialtySerializer(serpy.Serializer):
     cohort = CohortMidSerializer(required=False, many=False)
 
     preview_url = serpy.Field()
+    pdf_url = serpy.MethodField()
 
     layout = TinyLayoutDesignSerializer(required=False, many=False)
 
@@ -201,3 +202,9 @@ class UserSpecialtySerializer(serpy.Serializer):
     updated_at = serpy.Field()
     created_at = serpy.Field()
     issued_at = serpy.Field()
+
+    def get_pdf_url(self, obj):
+        if obj.status != "PERSISTED":
+            return None
+
+        return f"https://certificate.4geeks.com/pdf/{obj.token}"

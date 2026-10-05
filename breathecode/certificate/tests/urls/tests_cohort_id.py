@@ -214,7 +214,11 @@ class CertificateTestSuite(CertificateTestCase):
 
         user_specialty = self.bc.database.get("certificate.UserSpecialty", 1, dict=False)
         self.assertEqual(
-            signals.user_specialty_saved.send_robust.call_args_list,
+            [
+                x
+                for x in signals.user_specialty_saved.send_robust.call_args_list
+                if x.kwargs["instance"].user_id == model.user.id
+            ],
             [
                 # Action
                 call(instance=user_specialty, sender=user_specialty.__class__),
@@ -362,6 +366,9 @@ class CertificateTestSuite(CertificateTestCase):
         url = reverse_lazy("certificate:cohort_id", kwargs={"cohort_id": 1})
         response = self.client.post(url, format="json")
         json = response.json()
+        teacher_certificate = next(x for x in json if x["user"]["id"] == teacher_model.user.id)
+        self.assertEqual(teacher_certificate["status"], "ERROR")
+        json = [x for x in json if x["user"]["id"] == model.user.id]
 
         self.assertDatetime(json[0]["updated_at"])
         del json[0]["updated_at"]
@@ -384,6 +391,8 @@ class CertificateTestSuite(CertificateTestCase):
                     "schedule": {
                         "id": model["syllabus_schedule"].id,
                         "name": model["syllabus_schedule"].name,
+                        "schedule_type": model["syllabus_schedule"].schedule_type,
+                        "description": model["syllabus_schedule"].description,
                         "syllabus": model["syllabus_schedule"].syllabus.id,
                     },
                     "syllabus_version": {
@@ -406,6 +415,7 @@ class CertificateTestSuite(CertificateTestCase):
                     "foot_note": model["layout_design"].foot_note,
                 },
                 "preview_url": model["user_specialty"].preview_url,
+                "pdf_url": None,
                 "signed_by": teacher_model["user"].first_name + " " + teacher_model["user"].last_name,
                 "signed_by_role": "Director",
                 "specialty": {
@@ -437,20 +447,6 @@ class CertificateTestSuite(CertificateTestCase):
                 "issued_at": None,
                 "status_text": "bad-finantial-status",
                 "user": {"first_name": model["user"].first_name, "id": 1, "last_name": model["user"].last_name},
-                "profile_academy": {
-                    "first_name": model["profile_academy"].first_name,
-                    "id": model["profile_academy"].id,
-                    "last_name": model["profile_academy"].last_name,
-                    "status": model["profile_academy"].status,
-                    "phone": model["profile_academy"].phone,
-                    "created_at": self.datetime_to_iso(model["profile_academy"].created_at),
-                    "email": model["profile_academy"].email,
-                    "academy": {
-                        "id": 1,
-                        "name": model["academy"].name,
-                        "slug": model["academy"].slug,
-                    },
-                },
             }
         ]
 
@@ -459,7 +455,7 @@ class CertificateTestSuite(CertificateTestCase):
 
         user_specialty = self.bc.database.get("certificate.UserSpecialty", 1, dict=False)
         self.assertEqual(
-            self.all_user_specialty_dict(),
+            [x for x in self.all_user_specialty_dict() if x["user_id"] == model.user.id],
             [
                 {
                     "academy_id": 1,
@@ -482,7 +478,11 @@ class CertificateTestSuite(CertificateTestCase):
         )
 
         self.assertEqual(
-            signals.user_specialty_saved.send_robust.call_args_list,
+            [
+                x
+                for x in signals.user_specialty_saved.send_robust.call_args_list
+                if x.kwargs["instance"].user_id == model.user.id
+            ],
             [
                 # Mixer
                 call(instance=model.user_specialty, sender=model.user_specialty.__class__),
@@ -531,6 +531,9 @@ class CertificateTestSuite(CertificateTestCase):
         url = reverse_lazy("certificate:cohort_id", kwargs={"cohort_id": 1})
         response = self.client.post(url, format="json")
         json = response.json()
+        teacher_certificate = next(x for x in json if x["user"]["id"] == teacher_model.user.id)
+        self.assertEqual(teacher_certificate["status"], "ERROR")
+        json = [x for x in json if x["user"]["id"] == model.user.id]
 
         self.assertDatetime(json[0]["updated_at"])
         del json[0]["updated_at"]
@@ -553,6 +556,8 @@ class CertificateTestSuite(CertificateTestCase):
                     "schedule": {
                         "id": model["syllabus_schedule"].id,
                         "name": model["syllabus_schedule"].name,
+                        "schedule_type": model["syllabus_schedule"].schedule_type,
+                        "description": model["syllabus_schedule"].description,
                         "syllabus": model["syllabus_schedule"].syllabus.id,
                     },
                     "syllabus_version": {
@@ -575,6 +580,7 @@ class CertificateTestSuite(CertificateTestCase):
                     "foot_note": model["layout_design"].foot_note,
                 },
                 "preview_url": model["user_specialty"].preview_url,
+                "pdf_url": None,
                 "signed_by": teacher_model["user"].first_name + " " + teacher_model["user"].last_name,
                 "signed_by_role": "Director",
                 "specialty": {
@@ -606,20 +612,6 @@ class CertificateTestSuite(CertificateTestCase):
                 "issued_at": None,
                 "status_text": "bad-educational-status",
                 "user": {"first_name": model["user"].first_name, "id": 1, "last_name": model["user"].last_name},
-                "profile_academy": {
-                    "first_name": model["profile_academy"].first_name,
-                    "id": model["profile_academy"].id,
-                    "last_name": model["profile_academy"].last_name,
-                    "status": model["profile_academy"].status,
-                    "phone": model["profile_academy"].phone,
-                    "created_at": self.datetime_to_iso(model["profile_academy"].created_at),
-                    "email": model["profile_academy"].email,
-                    "academy": {
-                        "id": 1,
-                        "name": model["academy"].name,
-                        "slug": model["academy"].slug,
-                    },
-                },
             }
         ]
 
@@ -627,7 +619,7 @@ class CertificateTestSuite(CertificateTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         user_specialty = self.bc.database.get("certificate.UserSpecialty", 1, dict=False)
         self.assertEqual(
-            self.all_user_specialty_dict(),
+            [x for x in self.all_user_specialty_dict() if x["user_id"] == model.user.id],
             [
                 {
                     "academy_id": 1,
@@ -690,6 +682,9 @@ class CertificateTestSuite(CertificateTestCase):
         url = reverse_lazy("certificate:cohort_id", kwargs={"cohort_id": 1})
         response = self.client.post(url, format="json")
         json = response.json()
+        teacher_certificate = next(x for x in json if x["user"]["id"] == teacher_model.user.id)
+        self.assertEqual(teacher_certificate["status"], "ERROR")
+        json = [x for x in json if x["user"]["id"] == model.user.id]
 
         self.assertDatetime(json[0]["updated_at"])
         del json[0]["updated_at"]
@@ -712,6 +707,8 @@ class CertificateTestSuite(CertificateTestCase):
                     "schedule": {
                         "id": model["syllabus_schedule"].id,
                         "name": model["syllabus_schedule"].name,
+                        "schedule_type": model["syllabus_schedule"].schedule_type,
+                        "description": model["syllabus_schedule"].description,
                         "syllabus": model["syllabus_schedule"].syllabus.id,
                     },
                     "syllabus_version": {
@@ -734,6 +731,7 @@ class CertificateTestSuite(CertificateTestCase):
                     "foot_note": model["layout_design"].foot_note,
                 },
                 "preview_url": model["user_specialty"].preview_url,
+                "pdf_url": None,
                 "signed_by": teacher_model["user"].first_name + " " + teacher_model["user"].last_name,
                 "signed_by_role": "Director",
                 "specialty": {
@@ -765,20 +763,6 @@ class CertificateTestSuite(CertificateTestCase):
                 "issued_at": None,
                 "status_text": "cohort-not-finished",
                 "user": {"first_name": model["user"].first_name, "id": 1, "last_name": model["user"].last_name},
-                "profile_academy": {
-                    "first_name": model["profile_academy"].first_name,
-                    "id": model["profile_academy"].id,
-                    "last_name": model["profile_academy"].last_name,
-                    "status": model["profile_academy"].status,
-                    "phone": model["profile_academy"].phone,
-                    "created_at": self.datetime_to_iso(model["profile_academy"].created_at),
-                    "email": model["profile_academy"].email,
-                    "academy": {
-                        "id": 1,
-                        "name": model["academy"].name,
-                        "slug": model["academy"].slug,
-                    },
-                },
             }
         ]
 
@@ -786,7 +770,7 @@ class CertificateTestSuite(CertificateTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         user_specialty = self.bc.database.get("certificate.UserSpecialty", 1, dict=False)
         self.assertEqual(
-            self.all_user_specialty_dict(),
+            [x for x in self.all_user_specialty_dict() if x["user_id"] == model.user.id],
             [
                 {
                     "academy_id": 1,
@@ -809,7 +793,11 @@ class CertificateTestSuite(CertificateTestCase):
         )
 
         self.assertEqual(
-            signals.user_specialty_saved.send_robust.call_args_list,
+            [
+                x
+                for x in signals.user_specialty_saved.send_robust.call_args_list
+                if x.kwargs["instance"].user_id == model.user.id
+            ],
             [
                 # Mixer
                 call(instance=model.user_specialty, sender=model.user_specialty.__class__),
@@ -866,6 +854,9 @@ class CertificateTestSuite(CertificateTestCase):
         response = self.client.post(url, data, format="json")
         end = timezone.now()
         json = response.json()
+        teacher_certificate = next(x for x in json if x["user"]["id"] == teacher_model.user.id)
+        self.assertEqual(teacher_certificate["status"], "ERROR")
+        json = [x for x in json if x["user"]["id"] == model.user.id]
 
         self.assertDatetime(json[0]["updated_at"])
         del json[0]["updated_at"]
@@ -893,6 +884,8 @@ class CertificateTestSuite(CertificateTestCase):
                     "schedule": {
                         "id": model["syllabus_schedule"].id,
                         "name": model["syllabus_schedule"].name,
+                        "schedule_type": model["syllabus_schedule"].schedule_type,
+                        "description": model["syllabus_schedule"].description,
                         "syllabus": model["syllabus_schedule"].syllabus.id,
                     },
                     "syllabus_version": {
@@ -915,6 +908,7 @@ class CertificateTestSuite(CertificateTestCase):
                     "foot_note": model["layout_design"].foot_note,
                 },
                 "preview_url": model["user_specialty"].preview_url,
+                "pdf_url": f"https://certificate.4geeks.com/pdf/{model['user_specialty'].token}",
                 "signed_by": teacher_model["user"].first_name + " " + teacher_model["user"].last_name,
                 "signed_by_role": "Director",
                 "specialty": {
@@ -945,20 +939,6 @@ class CertificateTestSuite(CertificateTestCase):
                 "status": "PERSISTED",
                 "status_text": "Certificate successfully queued for PDF generation",
                 "user": {"first_name": model["user"].first_name, "id": 1, "last_name": model["user"].last_name},
-                "profile_academy": {
-                    "first_name": model["profile_academy"].first_name,
-                    "id": model["profile_academy"].id,
-                    "last_name": model["profile_academy"].last_name,
-                    "status": model["profile_academy"].status,
-                    "phone": model["profile_academy"].phone,
-                    "created_at": self.datetime_to_iso(model["profile_academy"].created_at),
-                    "email": model["profile_academy"].email,
-                    "academy": {
-                        "id": 1,
-                        "name": model["academy"].name,
-                        "slug": model["academy"].slug,
-                    },
-                },
             }
         ]
 
@@ -967,7 +947,7 @@ class CertificateTestSuite(CertificateTestCase):
 
         user_specialty = self.bc.database.get("certificate.UserSpecialty", 1, dict=False)
         self.assertEqual(
-            self.all_user_specialty_dict(),
+            [x for x in self.all_user_specialty_dict() if x["user_id"] == model.user.id],
             [
                 {
                     "academy_id": 1,
@@ -990,7 +970,11 @@ class CertificateTestSuite(CertificateTestCase):
         )
 
         self.assertEqual(
-            signals.user_specialty_saved.send_robust.call_args_list,
+            [
+                x
+                for x in signals.user_specialty_saved.send_robust.call_args_list
+                if x.kwargs["instance"].user_id == model.user.id
+            ],
             [
                 # Mixer
                 call(instance=model.user_specialty, sender=model.user_specialty.__class__),
@@ -999,8 +983,8 @@ class CertificateTestSuite(CertificateTestCase):
             ],
         )
 
-    @patch("breathecode.certificate.views.generate_certificate_ignoring_tasks", MagicMock())
-    @patch("breathecode.certificate.views.generate_certificate", MagicMock())
+    @patch("breathecode.certificate.views.generate_certificate_ignoring_tasks")
+    @patch("breathecode.certificate.views.generate_certificate")
     def test_post__with_student_id__calls_generate_for_one_student(self, mock_generate, mock_generate_ignore):
         self.headers(academy=1)
         cohort_kwargs = {"stage": "ENDED"}
@@ -1016,6 +1000,7 @@ class CertificateTestSuite(CertificateTestCase):
             syllabus_version=True,
             syllabus_schedule=True,
             specialty=True,
+            user_specialty=True,
             layout_design=True,
             cohort_kwargs=cohort_kwargs,
         )
@@ -1028,8 +1013,8 @@ class CertificateTestSuite(CertificateTestCase):
         mock_generate.assert_called_once()
         mock_generate_ignore.assert_not_called()
 
-    @patch("breathecode.certificate.views.generate_certificate_ignoring_tasks", MagicMock())
-    @patch("breathecode.certificate.views.generate_certificate", MagicMock())
+    @patch("breathecode.certificate.views.generate_certificate_ignoring_tasks")
+    @patch("breathecode.certificate.views.generate_certificate")
     def test_post__with_ignore_tasks__uses_ignoring_generator(self, mock_generate, mock_generate_ignore):
         self.headers(academy=1)
         cohort_kwargs = {"stage": "ENDED"}
@@ -1045,6 +1030,7 @@ class CertificateTestSuite(CertificateTestCase):
             syllabus_version=True,
             syllabus_schedule=True,
             specialty=True,
+            user_specialty=True,
             layout_design=True,
             cohort_kwargs=cohort_kwargs,
         )
@@ -1057,8 +1043,8 @@ class CertificateTestSuite(CertificateTestCase):
         mock_generate_ignore.assert_called_once()
         mock_generate.assert_not_called()
 
-    @patch("breathecode.certificate.views.generate_certificate_ignoring_tasks", MagicMock())
-    @patch("breathecode.certificate.views.generate_certificate", MagicMock())
+    @patch("breathecode.certificate.views.generate_certificate_ignoring_tasks")
+    @patch("breathecode.certificate.views.generate_certificate")
     @patch(GOOGLE_CLOUD_PATH["client"], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH["bucket"], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH["blob"], apply_google_cloud_blob_mock())
@@ -1081,6 +1067,7 @@ class CertificateTestSuite(CertificateTestCase):
             syllabus_version=True,
             syllabus_schedule=True,
             specialty=True,
+            user_specialty=True,
             layout_design=True,
             cohort_kwargs=cohort_kwargs,
             cohort_user_kwargs=cohort_user_kwargs,
