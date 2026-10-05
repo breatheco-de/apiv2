@@ -1711,6 +1711,7 @@ def join_event(request, token, event):
             {
                 "token": token.key,
                 "event": EventJoinSmallSerializer(event).data,
+                "attendees_preview": actions.get_event_attendees_preview(event),
                 **obj,
             },
         )
