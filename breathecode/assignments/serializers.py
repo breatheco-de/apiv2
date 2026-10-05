@@ -8,7 +8,7 @@ from rest_framework import serializers
 
 import breathecode.activity.tasks as tasks_activity
 from breathecode.admissions.models import Cohort, CohortUser
-from breathecode.admissions.services.completion import get_effective_assets_by_type_for_cohort_user
+from breathecode.admissions.services.completion import get_task_assets_by_type_for_cohort_user
 from breathecode.authenticate.models import ProfileAcademy, Token
 from breathecode.utils import serpy
 
@@ -440,9 +440,15 @@ class PostTaskSerializer(serializers.ModelSerializer):
         user = validated_data["user"]
         if cohort is not None:
             cohort_user = CohortUser.objects.filter(user=user, cohort=cohort).first()
-            assets_by_type = (
-                get_effective_assets_by_type_for_cohort_user(cohort_user) if cohort_user is not None else None
-            )
+            # a request brings many tasks of the same cohort, resolve its syllabus once
+            assets_cache = self.context.setdefault("task_assets_by_cohort", {})
+            if cohort.id not in assets_cache:
+                assets_cache[cohort.id] = (
+                    get_task_assets_by_type_for_cohort_user(cohort_user, self.context.get("macro_cohort_slug"))
+                    if cohort_user is not None
+                    else None
+                )
+            assets_by_type = assets_cache[cohort.id]
             if assets_by_type is not None:
                 allowed = assets_by_type.get(validated_data["task_type"], set())
                 slug = validated_data["associated_slug"]

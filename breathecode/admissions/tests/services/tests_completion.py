@@ -5,6 +5,7 @@ from breathecode.admissions.services.completion import (
     evaluate_cohort_user_completion,
     get_cached_cohort_user_completion,
     get_effective_assets_by_type_for_cohort_user,
+    get_task_assets_by_type_for_cohort_user,
     graduate_cohort_user_if_complete,
 )
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
@@ -399,3 +400,76 @@ def test_effective_assets_omits_deleted_override(db, bc: Breathecode):
 
     assert assets is not None
     assert assets["PROJECT"] == {"project-1"}
+
+
+def _micro_shared_by_two_macros(bc: Breathecode):
+    micro = bc.database.create(
+        user=1,
+        syllabus={"slug": "micro-course"},
+        syllabus_version={"version": 1, "json": {"days": [{"assignments": []}]}},
+        cohort=1,
+        cohort_user=1,
+    )
+    # lower cohort id, its override has no project
+    macro_without_project = bc.database.create(
+        syllabus={"slug": "macro-course-new"},
+        syllabus_version={
+            "version": 1,
+            "json": {"days": [], "micro-course.v1": {"days": [{"replits": [{"slug": "exercise-1"}]}]}},
+        },
+        cohort={"micro_cohorts": [micro.cohort]},
+        cohort_user={"user": micro.user},
+    )
+    macro_with_project = bc.database.create(
+        syllabus={"slug": "macro-course-old"},
+        syllabus_version={
+            "version": 1,
+            "json": {"days": [], "micro-course.v1": {"days": [{"assignments": [{"slug": "project-1"}]}]}},
+        },
+        cohort={"micro_cohorts": [micro.cohort]},
+        cohort_user={"user": micro.user},
+    )
+    return micro, macro_without_project, macro_with_project
+
+
+def test_task_assets_none_without_macro(db, bc: Breathecode):
+    model = bc.database.create(
+        syllabus={"slug": "micro-course"},
+        syllabus_version={"version": 1, "json": {"days": [{"assignments": [{"slug": "project-1"}]}]}},
+        cohort=1,
+        cohort_user=1,
+    )
+
+    assert get_task_assets_by_type_for_cohort_user(model.cohort_user) is None
+
+
+def test_task_assets_merges_every_enrolled_macro(db, bc: Breathecode):
+    micro, _, _ = _micro_shared_by_two_macros(bc)
+
+    assets = get_task_assets_by_type_for_cohort_user(micro.cohort_user)
+
+    assert micro.cohort_user.source_macro_cohort_id is None
+    assert assets is not None
+    assert assets["PROJECT"] == {"project-1"}
+    assert assets["EXERCISE"] == {"exercise-1"}
+
+
+def test_task_assets_merges_other_enrolled_macro_with_source_macro(db, bc: Breathecode):
+    micro, macro_without_project, _ = _micro_shared_by_two_macros(bc)
+    micro.cohort_user.source_macro_cohort = macro_without_project.cohort
+    micro.cohort_user.save()
+
+    assets = get_task_assets_by_type_for_cohort_user(micro.cohort_user)
+
+    assert assets is not None
+    assert assets["PROJECT"] == {"project-1"}
+
+
+def test_task_assets_ignores_macro_where_user_is_not_enrolled(db, bc: Breathecode):
+    micro, _, macro_with_project = _micro_shared_by_two_macros(bc)
+    macro_with_project.cohort_user.delete()
+
+    assets = get_task_assets_by_type_for_cohort_user(micro.cohort_user)
+
+    assert assets is not None
+    assert assets["PROJECT"] == set()
