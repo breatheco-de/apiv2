@@ -1136,7 +1136,16 @@ class TaskMeView(APIView):
         if isinstance(request.data, list) == False:
             payload = [request.data]
 
-        serializer = PostTaskSerializer(data=payload, context={"request": request, "user_id": user_id}, many=True)
+        serializer = PostTaskSerializer(
+            data=payload,
+            context={
+                "request": request,
+                "user_id": user_id,
+                # macro the student is working through, same querystring the syllabus endpoint takes
+                "macro_cohort_slug": request.GET.get("macro-cohort"),
+            },
+            many=True,
+        )
         if serializer.is_valid():
             saved_tasks = serializer.save()
             if saved_tasks:

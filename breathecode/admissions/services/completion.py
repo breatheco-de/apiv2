@@ -145,6 +145,101 @@ def get_effective_assets_by_type_for_cohort_user(cohort_user: CohortUser) -> dic
     )
 
 
+def get_enrolled_parent_macro_cohorts(cohort_user: CohortUser) -> list:
+    """Parent macros of this micro where the user is enrolled too."""
+    cohort = cohort_user.cohort
+    if cohort is None:
+        return []
+
+    parents = list(cohort.main_cohorts.select_related("syllabus_version"))
+    if not parents:
+        return []
+
+    enrolled_ids = set(
+        CohortUser.objects.filter(
+            user_id=cohort_user.user_id, cohort_id__in=[parent.id for parent in parents]
+        ).values_list("cohort_id", flat=True)
+    )
+    return [parent for parent in parents if parent.id in enrolled_ids]
+
+
+def get_task_assets_by_type_for_cohort_user(
+    cohort_user: CohortUser, macro_cohort_slug: str | None = None
+) -> dict[str, set[str]] | None:
+    """Assets the student can open in this micro.
+
+    A micro is shared between macros and each macro overrides its syllabus differently. When the client
+    says which macro the student is working through, and the student belongs to it, only that override
+    applies. Otherwise the assets of all their macros are accepted, not only the source_macro ones.
+
+    Returns None when no macro overrides the micro so callers keep legacy task-create behavior.
+    """
+    from breathecode.admissions.actions import build_reference_key, get_reference_payload
+
+    cohort = cohort_user.cohort
+    micro_version = cohort.syllabus_version if cohort else None
+    if micro_version is None or micro_version.syllabus is None:
+        return None
+
+    macros_by_id = {macro.id: macro for macro in get_enrolled_parent_macro_cohorts(cohort_user)}
+    source_macro = cohort_user.source_macro_cohort
+    if source_macro is not None:
+        macros_by_id.setdefault(source_macro.id, source_macro)
+
+    # macros sharing a syllabus version override the micro the same way, resolve each version once
+    macro_versions = {
+        macro.syllabus_version_id: macro.syllabus_version
+        for macro in macros_by_id.values()
+        if macro.syllabus_version is not None
+    }
+    reference_key = build_reference_key(micro_version.syllabus.slug, micro_version.version)
+    if not any(get_reference_payload(version.json, reference_key) for version in macro_versions.values()):
+        return None
+
+    if macro_cohort_slug:
+        requested_macro = next((macro for macro in macros_by_id.values() if macro.slug == macro_cohort_slug), None)
+        requested_version = requested_macro.syllabus_version if requested_macro else None
+        if requested_version is not None and get_reference_payload(requested_version.json, reference_key):
+            logger.info(
+                "Task assets resolved from requested macro cohort_user_id=%s micro_cohort_id=%s macro_cohort_id=%s",
+                cohort_user.id,
+                cohort.id,
+                requested_macro.id,
+            )
+            return get_syllabus_assets_by_type(
+                micro_version,
+                macro_syllabus_json=requested_version.json,
+                syllabus_slug=micro_version.syllabus.slug,
+                syllabus_version_number=micro_version.version,
+            )
+
+        logger.info(
+            "Requested macro ignored, not an overriding macro of the student cohort_user_id=%s macro_cohort_slug=%s",
+            cohort_user.id,
+            macro_cohort_slug,
+        )
+
+    assets_by_type: dict[str, set[str]] = {task_type: set() for task_type in TASK_TYPES}
+    for macro_version in macro_versions.values():
+        macro_assets = get_syllabus_assets_by_type(
+            micro_version,
+            macro_syllabus_json=macro_version.json,
+            syllabus_slug=micro_version.syllabus.slug,
+            syllabus_version_number=micro_version.version,
+        )
+        for task_type, slugs in macro_assets.items():
+            assets_by_type.setdefault(task_type, set()).update(slugs)
+
+    logger.info(
+        "Task assets resolved cohort_user_id=%s micro_cohort_id=%s macro_cohort_ids=%s macro_versions=%s",
+        cohort_user.id,
+        cohort.id,
+        sorted(macros_by_id),
+        sorted(macro_versions),
+    )
+    return assets_by_type
+
+
 def get_effective_syllabus_json_for_cohort_user(cohort_user: CohortUser) -> dict:
     """Normalized syllabus JSON, merged with the source_macro override when present."""
     cohort = cohort_user.cohort
