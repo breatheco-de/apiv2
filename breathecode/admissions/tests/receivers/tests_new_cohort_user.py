@@ -100,13 +100,43 @@ def test_with_cohort_users_previously_created(enable_signals, bc: Breathecode):
             **bc.format.to_dict(model_main_cohort.cohort_user),
             "id": 1,
             "cohort_id": 1,
+            "source_macro_cohort_id": model_main_cohort.cohort.id,
         },
         {
             **bc.format.to_dict(model_main_cohort.cohort_user),
             "id": 2,
             "cohort_id": 2,
+            "source_macro_cohort_id": model_main_cohort.cohort.id,
         },
         {
             **bc.format.to_dict(model_main_cohort.cohort_user),
         },
     ]
+
+
+def test_source_macro_stays_empty_when_another_enrolled_macro_shares_the_micro(enable_signals, bc: Breathecode):
+    from breathecode.admissions.models import CohortUser
+
+    enable_signals()
+
+    model_micro_cohort = bc.database.create(
+        cohort={"available_as_saas": True},
+    )
+
+    model_first_macro = bc.database.create(
+        user=1,
+        cohort_user={"role": "STUDENT"},
+        cohort={"available_as_saas": True, "micro_cohorts": [model_micro_cohort.cohort]},
+    )
+
+    # legacy micro enrollment, created before source_macro_cohort existed
+    CohortUser.objects.filter(cohort=model_micro_cohort.cohort).update(source_macro_cohort=None)
+
+    bc.database.create(
+        cohort_user={"user": model_first_macro.user, "role": "STUDENT"},
+        cohort={"available_as_saas": True, "micro_cohorts": [model_micro_cohort.cohort]},
+    )
+
+    micro_cohort_users = CohortUser.objects.filter(cohort=model_micro_cohort.cohort)
+    assert micro_cohort_users.count() == 1
+    assert micro_cohort_users.first().source_macro_cohort_id is None
