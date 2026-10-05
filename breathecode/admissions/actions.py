@@ -507,6 +507,33 @@ class ImportCohortTimeSlots:
         return cohort_timeslot
 
 
+def sync_cohort_timeslots_timezone(cohort: Cohort) -> int:
+    """
+    Move the active timeslots of a cohort to its current timezone, keeping the wall-clock time.
+
+    Each timeslot is saved one by one so `timeslot_saved` rebuilds its future live classes.
+    """
+    from .models import CohortTimeSlot
+
+    timezone = cohort.timezone or cohort.academy.timezone
+    logger.info("Syncing timeslots timezone cohort_id=%s timezone=%s", cohort.id, timezone)
+
+    if not timezone:
+        logger.warning("Timeslots timezone sync skipped, cohort without timezone cohort_id=%s", cohort.id)
+        return 0
+
+    timeslots = CohortTimeSlot.objects.filter(cohort=cohort, removed_at__isnull=True).exclude(timezone=timezone)
+
+    updated = 0
+    for timeslot in timeslots:
+        timeslot.timezone = timezone
+        timeslot.save()
+        updated += 1
+
+    logger.info("Timeslots timezone synced cohort_id=%s timezone=%s updated=%s", cohort.id, timezone, updated)
+    return updated
+
+
 def find_asset_on_json(asset_slug, asset_type=None, user=None):
     from breathecode.authenticate.models import ProfileAcademy
     from django.contrib.auth.models import AnonymousUser
