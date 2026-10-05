@@ -95,8 +95,6 @@ def test_with_many_micro_cohorts_one_graduated(enable_signals, bc: Breathecode):
         cohort={"available_as_saas": True, "micro_cohorts": [*model_micro_cohorts.cohort]},
     )
 
-    # joining the macro filled the source macro of the micro enrollments the user already had
-    model_cohort_users.cohort_user[0].refresh_from_db()
     model_cohort_users.cohort_user[0].educational_status = "GRADUATED"
     model_cohort_users.cohort_user[0].save()
 
@@ -104,11 +102,9 @@ def test_with_many_micro_cohorts_one_graduated(enable_signals, bc: Breathecode):
         {
             **bc.format.to_dict(model_cohort_users.cohort_user[0]),
             "educational_status": "GRADUATED",
-            "source_macro_cohort_id": model_main_cohort.cohort.id,
         },
         {
             **bc.format.to_dict(model_cohort_users.cohort_user[1]),
-            "source_macro_cohort_id": model_main_cohort.cohort.id,
         },
         {
             **bc.format.to_dict(model_main_cohort.cohort_user),

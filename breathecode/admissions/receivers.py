@@ -17,7 +17,6 @@ from breathecode.authenticate.models import CredentialsDiscord
 from breathecode.certificate.actions import get_assets_from_syllabus
 
 from ..activity import tasks as activity_tasks
-from .actions import fill_source_macro_cohort_if_unambiguous
 from .models import Academy, Cohort, CohortUser, Syllabus, SyllabusVersion
 from .signals import academy_saved, cohort_log_saved, cohort_user_created, student_edu_status_updated, syllabus_created
 
@@ -70,8 +69,6 @@ def join_to_micro_cohorts(cohort_user):
                 source_macro_cohort=cohort_user.cohort,
             )
             micro_cohort_user.save()
-        else:
-            fill_source_macro_cohort_if_unambiguous(micro_cohort_user, cohort_user.cohort)
 
 
 @receiver(cohort_user_created, sender=CohortUser)

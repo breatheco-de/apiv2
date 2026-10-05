@@ -37,13 +37,7 @@ from breathecode.utils.decorators import has_permission
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from breathecode.utils.views import render_message
 
-from .actions import (
-    fill_source_macro_cohort_if_unambiguous,
-    find_asset_on_json,
-    resolve_syllabus_json,
-    test_syllabus,
-    update_asset_on_json,
-)
+from .actions import find_asset_on_json, resolve_syllabus_json, test_syllabus, update_asset_on_json
 from .actions import academy_student_progress_report_rows
 from .models import (
     DELETED,
@@ -3404,7 +3398,6 @@ class UserMicroCohortsSyncView(APIView):
             micro_cohort_user = CohortUser.objects.filter(user=user, cohort=micro_cohort).first()
 
             if micro_cohort_user:
-                fill_source_macro_cohort_if_unambiguous(micro_cohort_user, macro_cohort)
                 fields_to_update: list[str] = []
 
                 if micro_cohort_user.role != user_macro_cohort.role:

@@ -507,37 +507,6 @@ class ImportCohortTimeSlots:
         return cohort_timeslot
 
 
-def fill_source_macro_cohort_if_unambiguous(micro_cohort_user: CohortUser, macro_cohort: Cohort) -> bool:
-    """
-    Fill the source macro of a micro enrollment that has none.
-
-    It stays empty when the user is enrolled in another macro sharing this micro, no single macro owns it.
-    """
-    if micro_cohort_user.source_macro_cohort_id is not None:
-        return False
-
-    shared_with_other_macro = (
-        CohortUser.objects.filter(
-            user_id=micro_cohort_user.user_id, cohort__micro_cohorts__id=micro_cohort_user.cohort_id
-        )
-        .exclude(cohort_id=macro_cohort.id)
-        .exists()
-    )
-    if shared_with_other_macro:
-        logger.info(
-            "Source macro left empty, micro shared by enrolled macros cohort_user_id=%s macro_cohort_id=%s",
-            micro_cohort_user.id,
-            macro_cohort.id,
-        )
-        return False
-
-    # update() skips the CohortUser save side effects, only this field changes
-    CohortUser.objects.filter(id=micro_cohort_user.id).update(source_macro_cohort_id=macro_cohort.id)
-    micro_cohort_user.source_macro_cohort_id = macro_cohort.id
-    logger.info("Source macro filled cohort_user_id=%s macro_cohort_id=%s", micro_cohort_user.id, macro_cohort.id)
-    return True
-
-
 def find_asset_on_json(asset_slug, asset_type=None, user=None):
     from breathecode.authenticate.models import ProfileAcademy
     from django.contrib.auth.models import AnonymousUser

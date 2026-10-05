@@ -421,21 +421,6 @@ def test_sync__adds_missing_micros_with_their_source_macro(client, bc, student):
     assert micro_enrollment(student, second).source_macro_cohort_id == macro.cohort.id
 
 
-def test_sync__fills_an_empty_source_macro_only_when_one_macro_owns_the_micro(client, bc, student):
-    shared, general, campus = _shared_micro_world(bc)
-    own = create_micro(bc, slug="micro-own")
-    campus.cohort.micro_cohorts.add(own.cohort)
-    enroll(bc, student, campus)
-    enroll(bc, student, general)
-    CohortUser.objects.filter(user=student, cohort__in=[shared.cohort, own.cohort]).update(source_macro_cohort_id=None)
-    client.force_authenticate(student)
-
-    client.post(reverse_lazy("admissions:me_micro_cohorts_sync", kwargs={"macro_cohort_slug": "macro-campus"}))
-
-    assert micro_enrollment(student, own).source_macro_cohort_id == campus.cohort.id
-    assert micro_enrollment(student, shared).source_macro_cohort_id is None
-
-
 # -- micros that differ per macro (v2 / v3 of the same course) ---------------------------------------------
 
 
