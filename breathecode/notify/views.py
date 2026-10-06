@@ -13,15 +13,27 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from breathecode.admissions.models import Academy, Cohort
+from breathecode.authenticate.actions import get_user_language
 from breathecode.utils import APIViewExtensions, GenerateLookupsMixin
 from breathecode.utils.decorators import capable_of
 
 from .actions import get_template_content
-from .models import AcademyNotifySettings, Hook, HookError, Notification, SlackChannel, SlackTeam, SlackUser, SlackUserTeam
+from .models import (
+    AcademyNotifySettings,
+    Hook,
+    HookError,
+    InboxNotification,
+    Notification,
+    SlackChannel,
+    SlackTeam,
+    SlackUser,
+    SlackUserTeam,
+)
 from .serializers import (
     AcademyNotifySettingsSerializer,
     HookErrorSerializer,
     HookSerializer,
+    InboxNotificationSerializer,
     NotificationSerializer,
     SlackTeamCredentialsUpsertSerializer,
     SlackTeamCredentialsStatusSerializer,
@@ -858,6 +870,48 @@ class NotificationsView(APIView, GenerateLookupsMixin):
 
         serializer = NotificationSerializer(items, many=True)
         return handler.response(serializer.data)
+
+
+class MeInboxView(APIView, GenerateLookupsMixin):
+    """Inbox of the current user. Reading the list does not mark anything as read."""
+
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    def get(self, request):
+        handler = self.extensions(request)
+        items = InboxNotification.objects.filter(user__id=request.user.id).select_related("academy")
+
+        if request.GET.get("unread") == "true":
+            items = items.filter(read_at__isnull=True)
+
+        items = handler.queryset(items)
+        serializer = InboxNotificationSerializer(items, many=True)
+        return handler.response(serializer.data)
+
+    def put(self, request, notification_id=None):
+        """Mark one notification as read, or all of them when no id is given."""
+        items = InboxNotification.objects.filter(user__id=request.user.id)
+
+        if notification_id is not None:
+            items = items.filter(id=notification_id)
+            if not items.exists():
+                lang = get_user_language(request)
+                raise ValidationException(
+                    translation(lang, en="Notification not found", es="Notificación no encontrada", slug="not-found"),
+                    code=404,
+                )
+
+        items.filter(read_at__isnull=True).update(read_at=timezone.now())
+        unread = InboxNotification.objects.filter(user__id=request.user.id, read_at__isnull=True).count()
+        return Response({"unread": unread})
+
+
+class MeInboxUnreadView(APIView):
+    """How many unread notifications the current user has, the bell polls it."""
+
+    def get(self, request):
+        unread = InboxNotification.objects.filter(user__id=request.user.id, read_at__isnull=True).count()
+        return Response({"unread": unread})
 
 
 class NotificationTemplatesView(APIView):

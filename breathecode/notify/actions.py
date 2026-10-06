@@ -4,6 +4,7 @@ import os
 
 import requests
 from capyc.rest_framework.exceptions import ValidationException
+from django.db import transaction
 from django.template.loader import get_template
 from django.utils import timezone
 from premailer import transform
@@ -14,7 +15,7 @@ from twilio.rest import Client
 from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.services.slack import client
 
-from .models import Device, SlackChannel, SlackTeam, SlackUser, SlackUserTeam
+from .models import Device, InboxNotification, SlackChannel, SlackTeam, SlackUser, SlackUserTeam
 
 push_service = None
 FIREBASE_KEY = os.getenv("FIREBASE_KEY", None)
@@ -150,6 +151,57 @@ def send_email_message(template_slug, to, data=None, force=False, inline_css=Fal
     else:
         logger.warning(f"Email to {to} not sent because EMAIL_NOTIFICATIONS_ENABLED != TRUE")
         return True
+
+
+def send_inbox_notification(
+    user,
+    slug,
+    title,
+    message="",
+    level=InboxNotification.Level.INFO,
+    link=None,
+    academy=None,
+    meta=None,
+    dedupe_key=None,
+):
+    """
+    Leave a message in the inbox of a user, the frontend shows it in the navbar bell.
+
+    Call it next to whatever already tells the user about something that affects them (an email, a
+    teardown). title and message are plain text in the language of the user. With dedupe_key the user
+    gets it once per slug and key, so a task that runs twice does not repeat it.
+
+    It never raises, a failure here must not break the caller. Returns the notification, or None when
+    it could not be saved.
+    """
+    user_id = getattr(user, "id", user)
+    if not user_id:
+        logger.warning(f"Inbox notification {slug} not sent, there is no user")
+        return None
+
+    fields = {
+        "title": str(title)[:150],
+        "message": message or "",
+        "level": level,
+        "link": link,
+        "academy": academy,
+        "meta": meta,
+    }
+
+    try:
+        # a savepoint, so a failed insert does not break the transaction of the caller
+        with transaction.atomic():
+            if dedupe_key is None:
+                return InboxNotification.objects.create(user_id=user_id, slug=slug, **fields)
+
+            notification, _ = InboxNotification.objects.get_or_create(
+                user_id=user_id, slug=slug, dedupe_key=dedupe_key, defaults=fields
+            )
+            return notification
+
+    except Exception:
+        logger.exception(f"Error sending inbox notification {slug} to user {user_id}")
+        return None
 
 
 def send_sms(slug, phone_number, data=None, academy=None):

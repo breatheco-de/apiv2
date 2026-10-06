@@ -63,6 +63,42 @@ def test_emits_deprovision_when_fully_paid_and_grace_passed(mock_signal, bc):
 
 @pytest.mark.django_db
 @patch("breathecode.provisioning.tasks.deprovision_service")
+def test_leaves_one_inbox_notification_with_the_removed_services(mock_signal, bc):
+    model = _financing_with_third_party_services(
+        bc,
+        status=PlanFinancing.Status.FULLY_PAID,
+        plan_expires_at=timezone.now() - timedelta(days=30),
+    )
+
+    deprovision_plan_financing_third_party(model.plan_financing.id)
+    deprovision_plan_financing_third_party(model.plan_financing.id)
+
+    notifications = bc.database.list_of("notify.InboxNotification")
+    assert len(notifications) == 1
+    assert notifications[0]["user_id"] == model.user.id
+    assert notifications[0]["slug"] == "services-removed"
+    assert notifications[0]["level"] == "WARNING"
+    assert notifications[0]["meta"] == {"plan_financing_id": model.plan_financing.id}
+    assert "no longer have access to your server, your AI credits and GitHub Copilot." in notifications[0]["message"]
+
+
+@pytest.mark.django_db
+@patch("breathecode.provisioning.tasks.deprovision_service")
+def test_no_inbox_notification_when_the_deprovisioner_fails(mock_signal, bc):
+    mock_signal.send_robust.return_value = [(None, Exception("vendor is down"))]
+    model = _financing_with_vps(
+        bc,
+        status=PlanFinancing.Status.FULLY_PAID,
+        plan_expires_at=timezone.now() - timedelta(days=30),
+    )
+
+    deprovision_plan_financing_third_party(model.plan_financing.id)
+
+    assert bc.database.list_of("notify.InboxNotification") == []
+
+
+@pytest.mark.django_db
+@patch("breathecode.provisioning.tasks.deprovision_service")
 def test_skips_when_not_fully_paid(mock_signal, bc):
     model = _financing_with_vps(
         bc,
