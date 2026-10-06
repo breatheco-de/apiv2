@@ -888,6 +888,131 @@ def test_post__skips_slug_deleted_by_macro_override(client: capy.Client, bc: Bre
     assert response.json()[0]["associated_slug"] == "project-keep"
 
 
+def test_post__creates_slug_from_any_enrolled_macro_override(client: capy.Client, bc: Breathecode):
+    url = reverse_lazy("assignments:user_me_task")
+    micro = bc.database.create(
+        user=1,
+        syllabus={"slug": "micro-course"},
+        syllabus_version={"version": 1, "json": {"days": [{"assignments": []}]}},
+        cohort=1,
+        cohort_user=1,
+    )
+    # lower cohort id, its override has no project
+    bc.database.create(
+        syllabus={"slug": "macro-course-new"},
+        syllabus_version={
+            "version": 1,
+            "json": {"days": [], "micro-course.v1": {"days": [{"replits": [{"slug": "exercise-1"}]}]}},
+        },
+        cohort={"micro_cohorts": [micro.cohort]},
+        cohort_user={"user": micro.user},
+    )
+    bc.database.create(
+        syllabus={"slug": "macro-course-old"},
+        syllabus_version={
+            "version": 1,
+            "json": {
+                "days": [],
+                "micro-course.v1": {"days": [{"assignments": [{"slug": "project-1", "title": "Project"}]}]},
+            },
+        },
+        cohort={"micro_cohorts": [micro.cohort]},
+        cohort_user={"user": micro.user},
+    )
+    client.force_authenticate(micro.user)
+
+    response = client.post(
+        url,
+        [
+            {
+                "associated_slug": "project-1",
+                "title": "Project",
+                "task_type": "PROJECT",
+                "cohort": micro.cohort.id,
+            },
+            {
+                "associated_slug": "project-unknown",
+                "title": "Unknown",
+                "task_type": "PROJECT",
+                "cohort": micro.cohort.id,
+            },
+        ],
+        format="json",
+    )
+
+    assert response.status_code == status.HTTP_201_CREATED
+    tasks = bc.database.list_of("assignments.Task")
+    assert [(task["associated_slug"], task["cohort_id"]) for task in tasks] == [("project-1", micro.cohort.id)]
+    assert [task["associated_slug"] for task in response.json()] == ["project-1"]
+
+
+def _micro_with_two_enrolled_macros(bc: Breathecode):
+    micro = bc.database.create(
+        user=1,
+        syllabus={"slug": "micro-course"},
+        syllabus_version={"version": 1, "json": {"days": [{"assignments": []}]}},
+        cohort=1,
+        cohort_user=1,
+    )
+    macros = []
+    for slug, project in (("macro-a", "project-a"), ("macro-b", "project-b")):
+        macros.append(
+            bc.database.create(
+                syllabus={"slug": f"{slug}-course"},
+                syllabus_version={
+                    "version": 1,
+                    "json": {
+                        "days": [],
+                        "micro-course.v1": {"days": [{"assignments": [{"slug": project, "title": project}]}]},
+                    },
+                },
+                cohort={"slug": slug, "micro_cohorts": [micro.cohort]},
+                cohort_user={"user": micro.user},
+            )
+        )
+    return micro, macros
+
+
+def _post_projects(client: capy.Client, micro, slugs, querystring=""):
+    return client.post(
+        reverse_lazy("assignments:user_me_task") + querystring,
+        [{"associated_slug": slug, "title": slug, "task_type": "PROJECT", "cohort": micro.cohort.id} for slug in slugs],
+        format="json",
+    )
+
+
+def test_post__requested_macro_limits_slugs_to_its_override(client: capy.Client, bc: Breathecode):
+    micro, _ = _micro_with_two_enrolled_macros(bc)
+    client.force_authenticate(micro.user)
+
+    response = _post_projects(client, micro, ["project-a", "project-b"], "?macro-cohort=macro-b")
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert [task["associated_slug"] for task in bc.database.list_of("assignments.Task")] == ["project-b"]
+
+
+def test_post__requested_macro_without_enrollment_falls_back_to_enrolled_macros(client: capy.Client, bc: Breathecode):
+    micro, macros = _micro_with_two_enrolled_macros(bc)
+    macros[1].cohort_user.delete()
+    client.force_authenticate(micro.user)
+
+    response = _post_projects(client, micro, ["project-a", "project-b"], "?macro-cohort=macro-b")
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert [task["associated_slug"] for task in bc.database.list_of("assignments.Task")] == ["project-a"]
+
+
+def test_post__unknown_requested_macro_falls_back_to_enrolled_macros(client: capy.Client, bc: Breathecode):
+    micro, _ = _micro_with_two_enrolled_macros(bc)
+    client.force_authenticate(micro.user)
+
+    response = _post_projects(client, micro, ["project-a", "project-b", "project-c"], "?macro-cohort=not-a-macro")
+
+    assert response.status_code == status.HTTP_201_CREATED
+    slugs = sorted(task["associated_slug"] for task in bc.database.list_of("assignments.Task"))
+    assert slugs == ["project-a", "project-b"]
+
+
 def test_post__creates_base_slugs_without_source_macro(client: capy.Client, database: capy.Database):
     url = reverse_lazy("assignments:user_me_task")
     micro = database.create(

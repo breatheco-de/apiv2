@@ -233,6 +233,8 @@ class CertificateTestSuite(CertificateTestCase):
                     "schedule": {
                         "id": model["syllabus_schedule"].id,
                         "name": model["syllabus_schedule"].name,
+                        "schedule_type": model["syllabus_schedule"].schedule_type,
+                        "description": model["syllabus_schedule"].description,
                         "syllabus": model["syllabus_schedule"].syllabus.id,
                     },
                     "syllabus_version": {
@@ -256,6 +258,11 @@ class CertificateTestSuite(CertificateTestCase):
                     "foot_note": model["layout_design"].foot_note,
                 },
                 "preview_url": model["user_specialty"].preview_url,
+                "pdf_url": (
+                    f"https://certificate.4geeks.com/pdf/{model['user_specialty'].token}"
+                    if model["user_specialty"].status == "PERSISTED"
+                    else None
+                ),
                 "signed_by_role": "Director",
                 "specialty": {
                     "academy": (
@@ -285,20 +292,6 @@ class CertificateTestSuite(CertificateTestCase):
                 "status": "PENDING",
                 "status_text": None,
                 "user": {"first_name": model["user"].first_name, "id": 1, "last_name": model["user"].last_name},
-                "profile_academy": {
-                    "first_name": model["profile_academy"].first_name,
-                    "id": model["profile_academy"].id,
-                    "last_name": model["profile_academy"].last_name,
-                    "status": model["profile_academy"].status,
-                    "phone": model["profile_academy"].phone,
-                    "created_at": self.datetime_to_iso(model["profile_academy"].created_at),
-                    "email": model["profile_academy"].email,
-                    "academy": {
-                        "id": 1,
-                        "name": model["academy"].name,
-                        "slug": model["academy"].slug,
-                    },
-                },
             }
         ]
         self.assertEqual(json, expected)
@@ -450,6 +443,8 @@ class CertificateTestSuite(CertificateTestCase):
                     "schedule": {
                         "id": models[0]["syllabus_schedule"].id,
                         "name": models[0]["syllabus_schedule"].name,
+                        "schedule_type": models[0]["syllabus_schedule"].schedule_type,
+                        "description": models[0]["syllabus_schedule"].description,
                         "syllabus": models[0]["syllabus_schedule"].syllabus.id,
                     },
                     "syllabus_version": {
@@ -473,6 +468,11 @@ class CertificateTestSuite(CertificateTestCase):
                     "foot_note": models[0].layout_design.foot_note,
                 },
                 "preview_url": models[0].user_specialty.preview_url,
+                "pdf_url": (
+                    f"https://certificate.4geeks.com/pdf/{models[0].user_specialty.token}"
+                    if models[0].user_specialty.status == "PERSISTED"
+                    else None
+                ),
                 "signed_by_role": "Director",
                 "specialty": {
                     "academy": (
@@ -502,7 +502,6 @@ class CertificateTestSuite(CertificateTestCase):
                 "status": "PENDING",
                 "status_text": None,
                 "user": {"first_name": models[0].user.first_name, "id": 2, "last_name": models[0].user.last_name},
-                "profile_academy": None,
             },
             {
                 "academy": {
@@ -521,6 +520,8 @@ class CertificateTestSuite(CertificateTestCase):
                     "schedule": {
                         "id": models[0]["syllabus_schedule"].id,
                         "name": models[0]["syllabus_schedule"].name,
+                        "schedule_type": models[0]["syllabus_schedule"].schedule_type,
+                        "description": models[0]["syllabus_schedule"].description,
                         "syllabus": models[0]["syllabus_schedule"].syllabus.id,
                     },
                     "syllabus_version": {
@@ -544,6 +545,11 @@ class CertificateTestSuite(CertificateTestCase):
                     "foot_note": models[1].layout_design.foot_note,
                 },
                 "preview_url": models[1].user_specialty.preview_url,
+                "pdf_url": (
+                    f"https://certificate.4geeks.com/pdf/{models[1].user_specialty.token}"
+                    if models[1].user_specialty.status == "PERSISTED"
+                    else None
+                ),
                 "signed_by_role": "Director",
                 "specialty": {
                     "academy": (
@@ -573,7 +579,6 @@ class CertificateTestSuite(CertificateTestCase):
                 "status": "PENDING",
                 "status_text": None,
                 "user": {"first_name": models[1].user.first_name, "id": 3, "last_name": models[1].user.last_name},
-                "profile_academy": None,
             },
         ]
         self.assertEqual(json, expected)
@@ -727,6 +732,8 @@ class CertificateTestSuite(CertificateTestCase):
                     "schedule": {
                         "id": models[0]["syllabus_schedule"].id,
                         "name": models[0]["syllabus_schedule"].name,
+                        "schedule_type": models[0]["syllabus_schedule"].schedule_type,
+                        "description": models[0]["syllabus_schedule"].description,
                         "syllabus": models[0]["syllabus_schedule"].syllabus.id,
                     },
                     "syllabus_version": None,
@@ -737,6 +744,11 @@ class CertificateTestSuite(CertificateTestCase):
                 "id": 1,
                 "layout": None,
                 "preview_url": models[0].user_specialty.preview_url,
+                "pdf_url": (
+                    f"https://certificate.4geeks.com/pdf/{models[0].user_specialty.token}"
+                    if models[0].user_specialty.status == "PERSISTED"
+                    else None
+                ),
                 "signed_by": models[0].user_specialty.signed_by,
                 "signed_by_role": "Director",
                 "specialty": {
@@ -768,7 +780,6 @@ class CertificateTestSuite(CertificateTestCase):
                 "status_text": None,
                 "updated_at": self.datetime_to_iso(models[0].user_specialty.updated_at),
                 "user": {"first_name": models[0].user.first_name, "id": 2, "last_name": models[0].user.last_name},
-                "profile_academy": None,
             }
         ]
         self.assertEqual(json, expected)
@@ -862,6 +873,8 @@ class CertificateTestSuite(CertificateTestCase):
                     "schedule": {
                         "id": models[0]["syllabus_schedule"].id,
                         "name": models[0]["syllabus_schedule"].name,
+                        "schedule_type": models[0]["syllabus_schedule"].schedule_type,
+                        "description": models[0]["syllabus_schedule"].description,
                         "syllabus": models[0]["syllabus_schedule"].syllabus.id,
                     },
                     "syllabus_version": None,
@@ -872,6 +885,11 @@ class CertificateTestSuite(CertificateTestCase):
                 "id": 1,
                 "layout": None,
                 "preview_url": models[0].user_specialty.preview_url,
+                "pdf_url": (
+                    f"https://certificate.4geeks.com/pdf/{models[0].user_specialty.token}"
+                    if models[0].user_specialty.status == "PERSISTED"
+                    else None
+                ),
                 "signed_by": models[0].user_specialty.signed_by,
                 "signed_by_role": "Director",
                 "specialty": {
@@ -903,7 +921,6 @@ class CertificateTestSuite(CertificateTestCase):
                 "status_text": None,
                 "updated_at": self.datetime_to_iso(models[0].user_specialty.updated_at),
                 "user": {"first_name": models[0].user.first_name, "id": 2, "last_name": models[0].user.last_name},
-                "profile_academy": None,
             }
         ]
         self.assertEqual(json, expected)
@@ -993,6 +1010,8 @@ class CertificateTestSuite(CertificateTestCase):
                     "schedule": {
                         "id": models[0]["syllabus_schedule"].id,
                         "name": models[0]["syllabus_schedule"].name,
+                        "schedule_type": models[0]["syllabus_schedule"].schedule_type,
+                        "description": models[0]["syllabus_schedule"].description,
                         "syllabus": models[0]["syllabus_schedule"].syllabus.id,
                     },
                     "syllabus_version": None,
@@ -1002,6 +1021,11 @@ class CertificateTestSuite(CertificateTestCase):
                 "id": 1,
                 "layout": None,
                 "preview_url": models[0].user_specialty.preview_url,
+                "pdf_url": (
+                    f"https://certificate.4geeks.com/pdf/{models[0].user_specialty.token}"
+                    if models[0].user_specialty.status == "PERSISTED"
+                    else None
+                ),
                 "signed_by": models[0].user_specialty.signed_by,
                 "issued_at": models[0].user_specialty.issued_at,
                 "signed_by_role": "Director",
@@ -1034,7 +1058,6 @@ class CertificateTestSuite(CertificateTestCase):
                 "status_text": None,
                 "updated_at": self.datetime_to_iso(models[0].user_specialty.updated_at),
                 "user": {"first_name": models[0].user.first_name, "id": 2, "last_name": models[0].user.last_name},
-                "profile_academy": None,
             }
         ]
         self.assertEqual(json, expected)
@@ -1125,6 +1148,8 @@ class CertificateTestSuite(CertificateTestCase):
                     "schedule": {
                         "id": models[0]["syllabus_schedule"].id,
                         "name": models[0]["syllabus_schedule"].name,
+                        "schedule_type": models[0]["syllabus_schedule"].schedule_type,
+                        "description": models[0]["syllabus_schedule"].description,
                         "syllabus": models[0]["syllabus_schedule"].syllabus.id,
                     },
                     "syllabus_version": None,
@@ -1135,6 +1160,11 @@ class CertificateTestSuite(CertificateTestCase):
                 "id": 1,
                 "layout": None,
                 "preview_url": models[0].user_specialty.preview_url,
+                "pdf_url": (
+                    f"https://certificate.4geeks.com/pdf/{models[0].user_specialty.token}"
+                    if models[0].user_specialty.status == "PERSISTED"
+                    else None
+                ),
                 "signed_by": models[0].user_specialty.signed_by,
                 "signed_by_role": "Director",
                 "specialty": {
@@ -1170,7 +1200,6 @@ class CertificateTestSuite(CertificateTestCase):
                     "id": 2,
                     "last_name": models[0].user.last_name,
                 },
-                "profile_academy": None,
             }
         ]
 

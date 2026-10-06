@@ -29,6 +29,11 @@ def get_serializer(self, user_specialty, academy, specialty, user):
         "issued_at": user_specialty.issued_at,
         "layout": user_specialty.layout,
         "preview_url": user_specialty.preview_url,
+        "pdf_url": (
+            f"https://certificate.4geeks.com/pdf/{user_specialty.token}"
+            if user_specialty.status == "PERSISTED"
+            else None
+        ),
         "signed_by": user_specialty.signed_by,
         "signed_by_role": user_specialty.signed_by_role,
         "specialty": {
@@ -39,6 +44,7 @@ def get_serializer(self, user_specialty, academy, specialty, user):
             ),
             "created_at": self.bc.datetime.to_iso_string(specialty.created_at),
             "description": specialty.description,
+            "duration_in_hours": specialty.duration_in_hours,
             "id": specialty.id,
             "logo_url": specialty.logo_url,
             "name": specialty.name,
@@ -61,7 +67,6 @@ def get_serializer(self, user_specialty, academy, specialty, user):
             "id": user.id,
             "last_name": user.last_name,
         },
-        "profile_academy": None,
     }
 
 
