@@ -165,6 +165,16 @@ def test_sends_when_fully_paid_and_expiry_reached(mock_send, _mock_settings, bc)
     assert args[2]["BUTTON"] == "Go to 4Geeks"
     assert kwargs["academy"] == model.academy
 
+    notifications = bc.database.list_of("notify.InboxNotification")
+    assert len(notifications) == 1
+    assert notifications[0]["user_id"] == model.user.id
+    assert notifications[0]["slug"] == "plan-expired"
+    assert notifications[0]["title"] == 'Your "Full Stack" plan has expired'
+    assert notifications[0]["link"] == "/profile/subscriptions"
+    assert " we will turn off your server. On " in notifications[0]["message"]
+    assert " you will permanently lose access to your server. Renew your plan" in notifications[0]["message"]
+    assert "<" not in notifications[0]["message"]
+
 
 @pytest.mark.django_db
 @patch("breathecode.payments.tasks.get_user_settings", return_value=SimpleNamespace(lang="en"))

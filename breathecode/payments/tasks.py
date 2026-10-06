@@ -1201,6 +1201,9 @@ def _third_party_deprovision_notice_copy(
 def notify_plan_financing_third_party_deprovision(plan_financing_id: int, **_: Any):
     """Tell the student that third-party resources will be removed after the grace window."""
     from breathecode.provisioning.actions import (
+        format_deprovision_service_names,
+        get_deprovision_grace_days,
+        get_power_off_grace_days,
         iter_plan_financing_services_with_deprovisioner,
         iter_plan_financing_services_with_power_off,
     )
@@ -1253,6 +1256,42 @@ def notify_plan_financing_third_party_deprovision(plan_financing_id: int, **_: A
         lang,
         plan_financing.plan_expires_at,
         plan_financing.academy.timezone,
+    )
+
+    tz_name = plan_financing.academy.timezone
+    expires_at = plan_financing.plan_expires_at
+    off_date = _format_notice_date(_notice_deadline(expires_at, get_power_off_grace_days(), tz_name), lang)
+    end_date = _format_notice_date(_notice_deadline(expires_at, get_deprovision_grace_days(), tz_name), lang)
+    names = format_deprovision_service_names(services, lang)
+    turn_off = ""
+    if power_off_services and off_date != end_date:
+        off_names = format_deprovision_service_names(power_off_services, lang)
+        turn_off = translation(
+            lang, en=f"On {off_date} we will turn off {off_names}. ", es=f"El {off_date} apagaremos {off_names}. "
+        )
+
+    notify_actions.send_inbox_notification(
+        plan_financing.user,
+        "plan-expired",
+        translation(lang, en=f'Your "{plan_title}" plan has expired', es=f'Tu plan "{plan_title}" venció'),
+        translation(
+            lang,
+            en=(
+                "You can still open your course content, but the services that came with the plan are about "
+                f"to end. {turn_off}On {end_date} you will permanently lose access to {names}. "
+                "Renew your plan before that date to keep everything as it is."
+            ),
+            es=(
+                "Puedes seguir entrando al contenido de tu curso, pero los servicios que venían con el plan "
+                f"están por terminar. {turn_off}El {end_date} perderás el acceso a {names} de forma definitiva. "
+                "Renueva tu plan antes de esa fecha para conservar todo como está."
+            ),
+        ),
+        level="WARNING",
+        link="/profile/subscriptions",
+        academy=plan_financing.academy,
+        meta={"plan_financing_id": plan_financing.id},
+        dedupe_key=f"plan-financing-{plan_financing.id}-{expires_at:%Y%m%d}",
     )
 
     notify_actions.send_email_message(

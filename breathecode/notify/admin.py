@@ -18,6 +18,7 @@ from .models import (
     CohortProxy,
     Device,
     HookError,
+    InboxNotification,
     Notification,
     SlackChannel,
     SlackTeam,
@@ -312,6 +313,14 @@ class NotificationAdmin(admin.ModelAdmin):
     list_display = ("operation_code", "status", "type", "user", "academy", "done_at", "sent_at", "seen_at")
     search_fields = ("operation_code", "message", "user__username", "user__email", "academy__name")
     list_filter = ("status", "type")
+    raw_id_fields = ("user", "academy")
+
+
+@admin.register(InboxNotification)
+class InboxNotificationAdmin(admin.ModelAdmin):
+    list_display = ("slug", "title", "level", "user", "academy", "created_at", "read_at")
+    search_fields = ("slug", "title", "message", "user__username", "user__email", "academy__name")
+    list_filter = ("level", "slug")
     raw_id_fields = ("user", "academy")
 
 
