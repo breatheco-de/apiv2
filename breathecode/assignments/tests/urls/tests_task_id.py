@@ -745,3 +745,91 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.bc.database.list_of("assignments.Task"), [self.bc.format.to_dict(model.task)])
         self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
+
+    """
+    🔽🔽🔽 Put by the owner can't overwrite the review
+    """
+
+    @patch("breathecode.assignments.tasks.student_task_notification", MagicMock())
+    @patch("breathecode.assignments.tasks.teacher_task_notification", MagicMock())
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
+    def test_task_id__put__owner_resubmits_with_stale_review_fields(self):
+        reviewed_at = timezone.now() - timezone.timedelta(hours=2)
+        read_at = timezone.now() - timezone.timedelta(hours=1)
+        task = {
+            "task_status": "DONE",
+            "revision_status": "REJECTED",
+            "description": "Feedback 1: missing README",
+            "reviewed_at": reviewed_at,
+            "read_at": read_at,
+        }
+        model = self.bc.database.create(user=1, task=task, cohort=1)
+        self.client.force_authenticate(model.user)
+
+        url = reverse_lazy("assignments:task_id", kwargs={"task_id": 1})
+        data = {
+            "github_url": "https://github.com/student/attempt-2",
+            "revision_status": "PENDING",
+            "description": "",
+            "reviewed_at": None,
+            "read_at": None,
+        }
+        response = self.client.put(url, data, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        task = self.bc.database.get("assignments.Task", 1, dict=False)
+        self.assertEqual(task.github_url, "https://github.com/student/attempt-2")
+        self.assertEqual(task.revision_status, "PENDING")
+        self.assertEqual(task.description, "Feedback 1: missing README")
+        self.assertEqual(task.reviewed_at, reviewed_at)
+        self.assertEqual(task.read_at, read_at)
+
+    @patch("breathecode.assignments.tasks.student_task_notification", MagicMock())
+    @patch("breathecode.assignments.tasks.teacher_task_notification", MagicMock())
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
+    def test_task_id__put__owner_read_at_only_moves_forward(self):
+        read_at = timezone.now() - timezone.timedelta(hours=1)
+        task = {"task_status": "DONE", "revision_status": "REJECTED", "read_at": read_at}
+        model = self.bc.database.create(user=1, task=task, cohort=1)
+        self.client.force_authenticate(model.user)
+
+        url = reverse_lazy("assignments:task_id", kwargs={"task_id": 1})
+
+        older = read_at - timezone.timedelta(hours=1)
+        response = self.client.put(url, {"read_at": self.bc.datetime.to_iso_string(older)}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.get("assignments.Task", 1, dict=False).read_at, read_at)
+
+        newer = timezone.now()
+        response = self.client.put(url, {"read_at": self.bc.datetime.to_iso_string(newer)}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.get("assignments.Task", 1, dict=False).read_at, newer)
+
+    @patch("breathecode.assignments.tasks.student_task_notification", MagicMock())
+    @patch("breathecode.assignments.tasks.teacher_task_notification", MagicMock())
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
+    def test_task_id__put__teacher_updates_the_review_after_a_resubmission(self):
+        task = {
+            "user_id": 1,
+            "task_status": "DONE",
+            "revision_status": "PENDING",
+            "description": "Feedback 1: missing README",
+        }
+        cohort_users = [{"role": "STUDENT", "user_id": 1}, {"role": "TEACHER", "user_id": 2}]
+        model = self.bc.database.create(user=2, task=task, cohort=1, cohort_user=cohort_users)
+        self.bc.request.authenticate(model.user[1])
+
+        url = reverse_lazy("assignments:task_id", kwargs={"task_id": 1})
+        data = {"revision_status": "REJECTED", "description": "Feedback 2: missing tests"}
+        response = self.client.put(url, data, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        task = self.bc.database.get("assignments.Task", 1, dict=False)
+        self.assertEqual(task.revision_status, "REJECTED")
+        self.assertEqual(task.description, "Feedback 2: missing tests")
+        self.assertIsNotNone(task.reviewed_at)
