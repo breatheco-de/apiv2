@@ -568,6 +568,10 @@ class MediaTestSuite(AssignmentsTestCase):
 
         json = response.json()
 
+        # the owner can't overwrite the review left by the teacher
+        for x in range(0, 2):
+            data[x]["description"] = model.task[x].description
+
         expected = [
             put_serializer(self, model.task[x], {"updated_at": self.bc.datetime.to_iso_string(UTC_NOW), **data[x]})
             for x in range(0, 2)

@@ -515,7 +515,16 @@ class PUTTaskSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
 
-        if self.instance.user.id != self.context["request"].user.id:
+        if self.instance.user.id == self.context["request"].user.id:
+            # The review belongs to the reviewer, clients resend stale copies of these fields when delivering
+            data.pop("description", None)
+            data.pop("reviewed_at", None)
+            if "read_at" in data and (
+                data["read_at"] is None or (self.instance.read_at and data["read_at"] < self.instance.read_at)
+            ):
+                data.pop("read_at")
+
+        else:
             if "task_status" in data and data["task_status"] != self.instance.task_status:
                 raise ValidationException(
                     "Only the task owner can modify its status",

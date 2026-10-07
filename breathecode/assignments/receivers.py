@@ -2,11 +2,15 @@ import logging
 from typing import Any, Type
 
 # from capyc.core.i18n import translation
+from django.db import transaction
+from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
 from breathecode.admissions.signals import syllabus_asset_slug_updated
 from breathecode.assignments import tasks
+from breathecode.commons.receivers import is_cache_enabled
 
+from .caches import TaskCache
 from .models import Task
 from .signals import assignment_status_updated
 
@@ -31,6 +35,21 @@ def process_syllabus_asset_slug_updated(sender, **kwargs):
         f"{asset_type} slug {from_slug} was replaced with {to_slug} on all the syllabus, as a sideeffect "
         "we are replacing the slug also on the student tasks"
     )
+
+
+def _clear_task_cache():
+    try:
+        TaskCache.clear(max_deep=0)
+    except Exception:
+        logger.exception("Could not clear the task cache")
+
+
+@receiver(post_save, sender=Task)
+@receiver(post_delete, sender=Task)
+def clear_task_cache_on_change(sender: Type[Task], **kwargs: Any):
+    # The generic invalidation runs on Celery and can lag behind, students must see a review right away
+    if is_cache_enabled():
+        transaction.on_commit(_clear_task_cache)
 
 
 @receiver(assignment_status_updated, sender=Task)
