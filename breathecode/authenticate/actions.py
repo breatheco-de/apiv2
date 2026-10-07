@@ -23,7 +23,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 import breathecode.notify.actions as notify_actions
-from breathecode.admissions.models import Academy, CohortUser, UP_TO_DATE
+from breathecode.admissions.models import Academy, Cohort, CohortUser, UP_TO_DATE
 from breathecode.authenticate.models import CredentialsDiscord
 from breathecode.services.github import Github
 from breathecode.utils.decorators import service_deprovisioner
@@ -1234,10 +1234,18 @@ def add_to_organization(cohort_id, user_id):
 
 
 def remove_from_organization(cohort_id, user_id, force=False):
+    """
+    Schedule the user for removal from the academy GitHub organization.
+
+    ``force`` allows running after the CohortUser was deleted and skips the whitelist, but it never
+    skips the "still ACTIVE in another non never-ending cohort" protection.
+    """
 
     logger.debug(f"Removing user {user_id} from organization")
     cohort_user = CohortUser.objects.filter(cohort__id=cohort_id, user__id=user_id).first()
-    if cohort_user is None:
+    cohort = cohort_user.cohort if cohort_user else Cohort.objects.filter(id=cohort_id).first()
+    user = cohort_user.user if cohort_user else User.objects.filter(id=user_id).first()
+    if (cohort_user is None and not force) or cohort is None or user is None:
         raise ValidationException(
             translation(
                 en=f"User {user_id} does not belong to cohort {cohort_id}",
@@ -1245,8 +1253,7 @@ def remove_from_organization(cohort_id, user_id, force=False):
             ),
             slug="invalid-cohort-user",
         )
-    academy = cohort_user.cohort.academy
-    user = cohort_user.user
+    academy = cohort.academy
     github_user = GithubAcademyUser.objects.filter(user=user, academy=academy).first()
     try:
         # Check if user is whitelisted
@@ -1263,7 +1270,7 @@ def remove_from_organization(cohort_id, user_id, force=False):
         active_cohorts_in_academy = CohortUser.objects.filter(
             user=user, cohort__academy=academy, cohort__never_ends=False, educational_status="ACTIVE"
         ).first()
-        if active_cohorts_in_academy is not None and not force:
+        if active_cohorts_in_academy is not None:
             raise ValidationException(
                 translation(
                     en=f"Cannot remove user={user.id} from organization because edu_status is ACTIVE in {active_cohorts_in_academy.cohort.slug}",
@@ -1283,9 +1290,11 @@ def remove_from_organization(cohort_id, user_id, force=False):
 
         github_user.storage_status = "PENDING"
         github_user.storage_action = "DELETE"
-        github_user.log(
-            f"Scheduled to remove from organization because edu_status={cohort_user.educational_status} in cohort={cohort_user.cohort.slug}"
-        )
+        if cohort_user is None:
+            reason = f"was removed from cohort={cohort.slug}"
+        else:
+            reason = f"edu_status={cohort_user.educational_status} in cohort={cohort.slug}"
+        github_user.log(f"Scheduled to remove from organization because {reason}")
         github_user.save()
         return True
     except Exception as e:
