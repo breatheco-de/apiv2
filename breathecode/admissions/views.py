@@ -22,6 +22,7 @@ from slugify import slugify
 
 from breathecode.admissions import tasks
 from breathecode.admissions.caches import CohortCache, CohortUserCache, SyllabusVersionCache, TeacherCache, UserCache
+from breathecode.admissions.services.skills import get_syllabus_skills
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.configurable_settings import deep_merge_dict, extract_allowed_tree, is_path_allowed, iter_leaf_paths
@@ -2660,6 +2661,60 @@ class SyllabusVersionCSVView(APIView):
             cumulative_days += day["duration_in_days"] if "duration_in_days" in day else 1
 
         return response
+
+
+class SyllabusVersionSkillsView(APIView):
+    """Skills taught by a syllabus version: the union of the skills of every asset it references."""
+
+    @capable_of("read_syllabus")
+    def get(self, request, syllabus_id, version, academy_id=None):
+        lang = get_user_language(request)
+
+        syllabus_slug = None
+        if not syllabus_id.isnumeric():
+            syllabus_slug = syllabus_id
+            syllabus_id = None
+
+        items = SyllabusVersion.objects.filter(
+            Q(syllabus__id=syllabus_id) | Q(syllabus__slug=syllabus_slug),
+            Q(syllabus__academy_owner__id=academy_id) | Q(syllabus__private=False),
+        ).select_related("syllabus")
+
+        if version == "latest":
+            syllabus_version = items.filter(status="PUBLISHED").order_by("-version").first()
+        elif version.isnumeric():
+            syllabus_version = items.filter(version=version).first()
+        else:
+            syllabus_version = None
+
+        if syllabus_version is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Syllabus version not found",
+                    es="Versión del syllabus no encontrada",
+                    slug="syllabus-version-not-found",
+                ),
+                code=404,
+            )
+
+        requested_statuses_param = request.GET.get("status", None)
+        requested_statuses = set()
+        if requested_statuses_param is not None:
+            requested_statuses = set(s.strip().upper() for s in requested_statuses_param.split(","))
+
+        if syllabus_version.status in {"DEPRECATED", "DELETED"} and syllabus_version.status not in requested_statuses:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Syllabus version not found or was deprecated/deleted",
+                    es="Versión del syllabus no encontrada o fue desaprobada/eliminada",
+                    slug="syllabus-version-not-found",
+                ),
+                code=404,
+            )
+
+        return Response(get_syllabus_skills(syllabus_version), status=status.HTTP_200_OK)
 
 
 class SyllabusVersionForkView(APIView):

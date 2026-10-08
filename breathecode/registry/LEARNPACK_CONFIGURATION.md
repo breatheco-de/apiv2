@@ -10,7 +10,7 @@ This document explains how repository **`learn.json`** maps to **`Asset`** field
 
 | Source | What it controls |
 |--------|------------------|
-| **`learn.json` in GitHub** | Synced on pull into `asset.config`; `apply_learn_config` updates title, preview, `interactive`, `gitpod`, delivery, technologies, etc. |
+| **`learn.json` in GitHub** | Synced on pull into `asset.config`; `apply_learn_config` updates title, preview, `interactive`, `gitpod`, delivery, technologies, skills, etc. |
 | **`learnpack_deploy_url` on the Asset** | **Not** read from `learn.json` today. Set in the Breathecode registry (admin/API) when the pack is published to LearnPack Cloud. Enables the **iframe / “start interactive”** flow when the cohort has SaaS. |
 | **Cohort** | `available_as_saas` (iframe); provisioning **vendors** (e.g. GitHub Codespaces) loaded per academy. |
 
@@ -53,6 +53,21 @@ Only applies to **`PROJECT`** assets. If `template_url` appears in `learn.json` 
 ### `projectType` in `learn.json`
 
 Use `"exercise"` or `"project"` as appropriate. `"tutorial"` is a special `projectType` that also activates the interactive branch (with `gitpod` driven by `localhostOnly`).
+
+### `skills`
+
+Top-level list of the skills the package teaches. Slugs must exist in the talent skills catalog (they are never auto-created). Each entry is a slug or an object with a `level` (`foundation`, `core`, `applied`). Max **5** per package.
+
+```json
+{
+  "skills": ["python-loops", { "slug": "python-functions", "level": "core" }]
+}
+```
+
+- Read on every pull (`set_asset_skills`) and stored in `AssetSkill`; the API exposes them read-only on the asset. A syllabus's skills are the union of its assets' skills.
+- Omitting `skills` keeps the current ones (or inherits them from a translation that declares them); `[]` clears them.
+- More than 5 skills or a renamed (alias) slug rejects the whole list and keeps the previous skills; unknown slugs are dropped and the rest is applied. Each case logs an `AssetErrorLog` (`too-many-skills`, `deprecated-skill-slug`, `invalid-skill`).
+- Lessons declare the same list in their markdown frontmatter, quizzes in `info.skills`.
 
 ## `learnpack_deploy_url` (registry only)
 

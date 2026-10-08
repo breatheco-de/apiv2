@@ -1419,9 +1419,8 @@ class SkillBySlugView(APIView):
     def get(self, request, skill_slug=None, academy_id=None):
         lang = get_user_language(request)
 
-        try:
-            item = Skill.objects.get(slug=skill_slug)
-        except Skill.DoesNotExist:
+        item = Skill.get_by_slug_or_alias(skill_slug)
+        if item is None:
             raise ValidationException(
                 translation(lang, en="Skill not found", es="Habilidad no encontrada", slug="not-found"),
                 code=404,

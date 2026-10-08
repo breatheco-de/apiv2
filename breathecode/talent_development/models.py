@@ -1,4 +1,5 @@
-from django.db import models
+from django.core.exceptions import ValidationError
+from django.db import models, transaction
 
 from breathecode.admissions.models import Academy
 
@@ -262,6 +263,11 @@ class SkillDomain(TimeStampedModel):
 
 # skills are not related to an academy, they can be used across multiple academies.
 class Skill(TimeStampedModel):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Never touch self.slug here: with .only() / .defer() it would trigger a refresh_from_db recursion.
+        self.__old_slug = self.__dict__.get("slug")
+
     slug = models.SlugField(max_length=150, unique=True)
     name = models.CharField(max_length=150)
     domain = models.ForeignKey(
@@ -286,6 +292,55 @@ class Skill(TimeStampedModel):
 
     def __str__(self) -> str:
         return self.name
+
+    def clean(self):
+        if self.slug and SkillAlias.objects.filter(slug=self.slug).exclude(skill_id=self.pk).exists():
+            raise ValidationError({"slug": f"Slug '{self.slug}' is already used as an alias of another skill"})
+
+    def save(self, *args, **kwargs):
+        old_slug = self.__old_slug
+        slug_changed = self.pk is not None and old_slug is not None and old_slug != self.slug
+
+        with transaction.atomic():
+            super().save(*args, **kwargs)
+
+            if slug_changed:
+                # the new slug can't keep living as an alias of this same skill
+                SkillAlias.objects.filter(slug=self.slug, skill=self).delete()
+                SkillAlias.objects.get_or_create(slug=old_slug, defaults={"skill": self})
+
+        self.__old_slug = self.slug
+
+    @classmethod
+    def get_by_slug_or_alias(cls, slug: str) -> "Skill | None":
+        skill = cls.objects.filter(slug=slug).first()
+        if skill is not None:
+            return skill
+
+        alias = SkillAlias.objects.filter(slug=slug).select_related("skill").first()
+        return alias.skill if alias else None
+
+
+class SkillAlias(models.Model):
+    """
+    Previous slug of a skill, kept so references using the old slug can still be resolved.
+
+    Created automatically when a skill slug changes.
+    """
+
+    slug = models.SlugField(max_length=150, unique=True)
+    skill = models.ForeignKey(Skill, on_delete=models.CASCADE, related_name="aliases")
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+
+    class Meta:
+        ordering = ("slug",)
+
+    def __str__(self) -> str:
+        return f"{self.slug} -> {self.skill.slug}"
+
+    def clean(self):
+        if self.slug and Skill.objects.filter(slug=self.slug).exists():
+            raise ValidationError({"slug": f"Slug '{self.slug}' is already used by a skill"})
 
 class StageCompetency(TimeStampedModel):
     class RequiredLevel(models.TextChoices):

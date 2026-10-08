@@ -17,6 +17,7 @@ from slugify import slugify
 
 from breathecode.admissions.models import Academy, SyllabusVersion
 from breathecode.assessment.models import Assessment
+from breathecode.talent_development.models import StageCompetency
 
 from .signals import asset_readme_modified, asset_saved, asset_slug_modified, asset_status_updated, asset_title_modified
 from .utils import AssetErrorLogType, get_base_path_from_readme_url
@@ -322,6 +323,13 @@ ASSET_STATUS = (
     (PUBLISHED, "Published"),
 )
 
+SKILLS_SOURCE_FILE = "FILE"
+SKILLS_SOURCE_INHERITED = "INHERITED"
+SKILLS_SOURCE = (
+    (SKILLS_SOURCE_FILE, "File"),
+    (SKILLS_SOURCE_INHERITED, "Inherited"),
+)
+
 ASSET_SYNC_STATUS = (
     ("PENDING", "Pending"),
     ("ERROR", "Error"),
@@ -356,6 +364,22 @@ class Asset(models.Model):
 
     all_translations = models.ManyToManyField("self", blank=True)
     technologies = models.ManyToManyField(AssetTechnology, blank=True)
+    skills = models.ManyToManyField(
+        "talent_development.Skill",
+        through="AssetSkill",
+        blank=True,
+        related_name="assets",
+        help_text="Synced from the asset source file (learn.json, frontmatter or quiz json), read only",
+    )
+    skills_source = models.CharField(
+        max_length=10,
+        choices=SKILLS_SOURCE,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="FILE if the source file declares skills, INHERITED if they were copied from a translation, "
+        "empty if the source file never declared skills",
+    )
 
     category = models.ForeignKey(
         AssetCategory,
@@ -981,6 +1005,10 @@ class Asset(models.Model):
                 self.gitpod = False
 
         self.save()
+
+        from breathecode.registry.actions import set_asset_skills
+
+        set_asset_skills(self, config.get("skills"))
         return self
 
     def to_learn_config(self):
@@ -1031,6 +1059,10 @@ class Asset(models.Model):
             "projectType": self.asset_type.lower() if self.asset_type in ["PROJECT", "EXERCISE"] else "exercise",
         }
 
+        # the learn.json is the source of truth of the skills, keep its raw value (copied below) when it exists
+        if self.skills_source == SKILLS_SOURCE_FILE and not (self.config and "skills" in self.config):
+            config["skills"] = [x.skill.slug for x in self.asset_skills.select_related("skill").order_by("id")]
+
         if solution:
             config["solution"] = solution if len(solution) > 1 else list(solution.values())[0]
         if video_intro or video_solution:
@@ -1053,7 +1085,7 @@ class Asset(models.Model):
             }
 
         if self.config:
-            for key in ["slug", "title", "description", "preview", "difficulty", "duration", "template_url", "gitpod", "technologies", "projectType", "solution", "video", "editor", "grading", "localhostOnly", "delivery"]:
+            for key in ["slug", "title", "description", "preview", "difficulty", "duration", "template_url", "gitpod", "technologies", "skills", "projectType", "solution", "video", "editor", "grading", "localhostOnly", "delivery"]:
                 if key not in config and key in self.config:
                     config[key] = self.config[key]
 
@@ -1096,6 +1128,8 @@ class Asset(models.Model):
             metadata["duration"] = config["duration"]
         if "technologies" in config:
             metadata["technologies"] = config["technologies"]
+        if "skills" in config:
+            metadata["skills"] = config["skills"]
         if "slug" in config:
             metadata["slug"] = config["slug"]
         if "preview" in config:
@@ -1404,6 +1438,13 @@ class Asset(models.Model):
         config["lang"] = self.lang
         config["technologies"] = [t.slug for t in self.technologies.all()]
 
+        # keep the skills declared in the quiz json, it is their source of truth
+        previous_info = self.config.get("info") if isinstance(self.config, dict) else None
+        if isinstance(previous_info, dict) and "skills" in previous_info:
+            config["info"]["skills"] = previous_info["skills"]
+        elif self.skills_source == SKILLS_SOURCE_FILE:
+            config["info"]["skills"] = [x.skill.slug for x in self.asset_skills.select_related("skill").order_by("id")]
+
         return config
 
     def get_tasks(self):
@@ -1603,6 +1644,36 @@ class AssetAlias(models.Model):
 
     def __str__(self):
         return self.slug
+
+
+class AssetSkill(models.Model):
+    """Skill that an asset teaches, synced from the asset source file."""
+
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name="asset_skills")
+    skill = models.ForeignKey(
+        "talent_development.Skill",
+        on_delete=models.PROTECT,
+        related_name="asset_skills",
+        help_text="Remove the skill from every asset source file before deleting it",
+    )
+    level = models.CharField(
+        max_length=15,
+        choices=StageCompetency.RequiredLevel.choices,
+        null=True,
+        blank=True,
+        default=None,
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["asset", "skill"], name="uq_asset_skill"),
+        ]
+
+    def __str__(self):
+        return f"{self.asset_id} • {self.skill_id}"
 
 
 class AssetComment(models.Model):

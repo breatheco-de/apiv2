@@ -33,7 +33,7 @@ If the session is **learner-only** (authenticated student using `me` / `user/me`
 
 | Domain | Covers | Skill to Load |
 |---|---|---|
-| **admissions** | Students, cohorts, syllabi, enrollments, cohort stages, micro/macro cohorts | `bc-admissions-*` |
+| **admissions** | Students, cohorts, syllabi, skills taught by a syllabus version, enrollments, cohort stages, micro/macro cohorts | `bc-admissions-*` |
 | **activity** | User activity tracking, engagement stats, daily summaries, login streaks | `bc-activity-*` |
 | **assessment** | Quizzes, tests, student quiz attempts, grading | `bc-assessment-*` |
 | **assignment** | Student task deliveries, project submissions, revision requests; **PROJECT** teacher review (list → registry asset → `PUT` task; **ignore** = same `PUT` with `revision_status=IGNORED`, not a separate route) | `bc-assignment-*`, [`bc-assignment-review-submit-task-revision`](../bc-assignment-review-submit-task-revision/SKILL.md) |
@@ -49,7 +49,7 @@ If the session is **learner-only** (authenticated student using `me` / `user/me`
 | **notify** | Email, SMS, WhatsApp messaging, notification templates, delivery status | `bc-notify-*` |
 | **payments** | Billing plans, invoices, subscriptions, shop items, payment history | `bc-payments-*` |
 | **provisioning** | Student VPS servers, Codespaces containers, provisioning requests | `bc-provisioning-*` |
-| **registry** | Learning assets — lessons, exercises, projects, asset versioning; academy create/update including category and technologies; global technology catalog and alias normalization | `bc-registry-*`, [`bc-registry-manage-assets`](../bc-registry-manage-assets/SKILL.md), [`bc-registry-manage-technologies`](../bc-registry-manage-technologies/SKILL.md) |
+| **registry** | Learning assets — lessons, exercises, projects, asset versioning; academy create/update including category and technologies; read-only asset skills synced from source files; global technology catalog and alias normalization | `bc-registry-*`, [`bc-registry-manage-assets`](../bc-registry-manage-assets/SKILL.md), [`bc-registry-manage-technologies`](../bc-registry-manage-technologies/SKILL.md) |
 | **talent development** | Job families, job roles, career paths and stages, skill domains, global skills, competencies, stage-anchored skills (`/v1/talent/`) | `bc-talentdevelopment-*` |
 
 ---
@@ -107,6 +107,8 @@ Some user requests touch multiple domains. Load ALL listed skills before proceed
 | Create a marketing course from scratch or by cloning another course | `bc-marketing-create-or-clone-course` + [`bc-authenticate-staff-authentication`](../bc-authenticate-staff-authentication/SKILL.md) (staff list: `GET /v1/marketing/academy/course` with comma-separated numeric `Academy` ids and `crud_course` read-aggregate; create/clone: `POST` with `Academy` header; clone requires `crud_course` on source course academy too) |
 | Diagnose why graduation/certificate auto-issuance did not happen for a student or cohort | `bc-certificate-manage-and-assign-specialties` + `bc-admissions-*` (use `GET /v1/certificate/diagnostic` with `kind=graduation|certificate`, plus academy-scoped capability/header) |
 | Align or extend syllabus design with the school skills framework (job role stages, skills on the go) | `bc-admissions-*` (syllabus, cohorts) + `bc-talentdevelopment-manage-skills` (career path, stages, `stage_skill`, domains) |
+| Check whether a syllabus covers the skills required by a job role, career path, or stage | [`bc-admissions-read-syllabus-skills`](../bc-admissions-read-syllabus-skills/SKILL.md) (syllabus skills + client-side diff by skill slug against `skill?stage_ids=`) + `bc-talentdevelopment-manage-skills` (resolve career path and stages; the API has no syllabus-to-career-path link) |
+| Find which skills a syllabus teaches and fill skill gaps in its assets | [`bc-admissions-read-syllabus-skills`](../bc-admissions-read-syllabus-skills/SKILL.md) + [`bc-registry-manage-assets`](../bc-registry-manage-assets/SKILL.md) (asset skills come from the asset source file; find assets with `?skills=`) + `bc-talentdevelopment-manage-skills` (skill slugs must exist in the catalog) |
 | Cancel a user subscription and optionally issue a refund | `bc-payments-cancel-subscription-and-refund` + [`docs/llm-docs/BC_REFUNDS.md`](../../BC_REFUNDS.md) (use the skill for actor-specific flow and endpoint order, then use BC_REFUNDS for refund payload semantics and validations) |
 | Configure academy Stripe payment gateway credentials | [`bc-payments-configure-academy-stripe`](../bc-payments-configure-academy-stripe/SKILL.md) |
 | Create or manage checkout payment methods for an academy | [`bc-payments-manage-academy-payment-methods`](../bc-payments-manage-academy-payment-methods/SKILL.md) |
