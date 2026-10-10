@@ -1,6 +1,6 @@
 ---
 name: bc-payments-read-active-users-bills
-description: Use when academy staff need to read daily active-users billing snapshots or the month high-water-mark invoice; do NOT use for student checkout, AcademyService pricing, Stripe charges, or provisioning/GitHub bills.
+description: Use when academy staff need to read daily active-users billing snapshots, the month high-water-mark invoice, or resolve billed user_ids to student profiles; do NOT use for student checkout, AcademyService pricing, Stripe charges, or provisioning/GitHub bills.
 requires:
   - bc-authenticate-staff-authentication
 ---
@@ -11,6 +11,7 @@ requires:
 
 - Use when staff need the **month invoice** (peak-day charge and cohort line items) for platform active-user billing.
 - Use when staff need to list or inspect **daily** active-users bill snapshots for an academy.
+- Use when staff need to identify **which students** were billed on a cohort line (resolve item `user_ids` to student profiles).
 - Do NOT use for student plan checkout, `AcademyService` prices, subscription cancel/refund, or provisioning (`ProvisioningBill`) GitHub consumption bills.
 - Do NOT use to charge Stripe or POST-generate bills from the academy API (generation is ops/cron).
 
@@ -20,6 +21,7 @@ requires:
 - **Daily bill** = one snapshot per academy per calendar day (`billing_date`): who was billable that day, with one **item per cohort** after dedupe.
 - **Month invoice** = high-water mark: `amount = peak day's unique_user_count × that day's price_per_user`. Month response **`items`** are the **peak day's cohort lines**, not one row per date. Optional **`days`** is audit only.
 - **Capability:** `read_active_users_bill`. All `/academy/` routes require header **`Academy: <academy_id>`**. Send **`Accept-Language: en|es`** for translated errors.
+- **Resolving billed users** to student profiles is a separate auth endpoint and needs the **`read_student`** capability as well.
 - **Who counts as billable (generation rules):** student `CohortUser` with `ACTIVE` or `NOT_COMPLETING`, not `LATE`, cohort not `ENDED`/`DELETED`, student `ProfileAcademy` (by user or email), no non-student ProfileAcademy role at that academy, slug not matching exclude patterns.
 - **Config** lives on academy payment settings field **`internal_billing`** (Django admin PrettyJSON). `PUT /v1/payments/academy/paymentsettings` does **not** accept `internal_billing` today (Stripe/Coinbase only — see `bc-payments-configure-academy-stripe` for those keys only).
 - Daily rows appear after ops runs generation (e.g. management command / scheduled job). If month has no peak, do not invent a charge.
@@ -58,7 +60,8 @@ Set on **Academy payment settings → `internal_billing`**. Example:
 2. Confirm billing config: `internal_billing.active_users_billing.enabled` is `true` and `price_per_user` is set (admin). Use the JSON example above if configuring patterns.
 3. For an invoice UI, call month summary: `GET /v1/payments/academy/active-users-bill/month?year=<Y>&month=<M>`. Use `amount`, `price_per_user`, `unique_user_count`, `peak_date`, and cohort **`items`**.
 4. Optionally list daily bills: `GET /v1/payments/academy/active-users-bill?year=<Y>&month=<M>` (paginated), or open detail with `peak_bill_id`: `GET /v1/payments/academy/active-users-bill/<id>`.
-5. If `peak_date` / `peak_bill_id` is null or `items` is empty: report that no usable daily snapshots exist (disabled config, exclusions, or generation not run). Do not fabricate amounts.
+5. Optionally identify billed students: take an item's `user_ids` and call `GET /v1/auth/academy/student?users=<comma-separated ids>` with the same **`Academy`** header (requires `read_student`). Batch large lists into several calls.
+6. If `peak_date` / `peak_bill_id` is null or `items` is empty: report that no usable daily snapshots exist (disabled config, exclusions, or generation not run). Do not fabricate amounts.
 
 ## Endpoints
 
@@ -238,6 +241,48 @@ Empty month (no daily bills):
 }
 ```
 
+### Resolve billed users to student profiles
+
+- **Method / path:** `GET /v1/auth/academy/student?users=<id>,<id>,...`
+- **Headers:** `Authorization: Token <token>`, **`Academy: <academy_id>`**
+- **Permissions:** `read_student`
+- **Query:** `users` = comma-separated user ids (take them from a bill item's `user_ids`; non-numeric values are ignored). Combinable with `status` (`INVITED` or `ACTIVE`), `like` (name/email search), `cohort` (cohort slugs), `sort` (default `-created_at`)
+- **Pagination:** yes (standard list pagination)
+- **Note:** Only `student`-role profiles at the `Academy` header's academy are returned, matched by `user.id`.
+
+**Response `200` (array of student profiles; shape of one element):**
+
+```json
+{
+  "id": 3120,
+  "first_name": "Ana",
+  "last_name": "García",
+  "email": "ana@example.com",
+  "phone": "",
+  "address": null,
+  "status": "ACTIVE",
+  "created_at": "2026-02-10T14:03:22Z",
+  "academy": {
+    "id": 6,
+    "name": "4Geeks Madrid",
+    "slug": "madrid-spain"
+  },
+  "role": {
+    "id": "student",
+    "slug": "student",
+    "display_slug": "student",
+    "name": "Student"
+  },
+  "user": {
+    "id": 4662,
+    "email": "ana@example.com",
+    "first_name": "Ana",
+    "last_name": "García",
+    "profile": null
+  }
+}
+```
+
 ## Edge Cases
 
 - **403 missing capability / Academy header:** Load staff auth skill; ensure `read_active_users_bill` and `Academy` header.
@@ -246,6 +291,9 @@ Empty month (no daily bills):
 - **Empty month / null peak:** Billing disabled, exclude patterns removed everyone, or daily job not run — tell the user; do not invent charges.
 - **Glob patterns in config (`*foo*`):** Do not use; generation expects regex (`.*foo.*`). Misconfigured patterns are skipped or fail to match.
 - **Month `items` vs `days`:** Never treat `days` as invoice line items; cohort breakdown is only in `items` (peak day).
+- **Fewer student profiles than `user_ids`:** Billing also counts students whose student profile is linked only by email (no user on the profile); the `users` filter matches by user id, so those rows are missing. Report the unmatched ids instead of assuming they were not billed.
+- **403 on student lookup:** Staff has `read_active_users_bill` but not `read_student` — the bill is readable, the profile lookup is not.
+- **Very long id lists:** Split `users` into batches (e.g. 100 ids per call) to keep URLs short.
 
 ## Checklist
 
@@ -253,4 +301,5 @@ Empty month (no daily bills):
 2. `internal_billing.active_users_billing` shape understood (enabled, price, regex excludes) if diagnosing empty data.
 3. Month invoice fetched with `year` and `month`; `amount` and peak-day cohort `items` used for the invoice UI.
 4. Optional daily list/detail used only for audit or drill-down via `peak_bill_id`.
-5. Empty peak / empty items handled with a clear message — no fabricated totals.
+5. If identifying billed students: `read_student` confirmed and item `user_ids` resolved via `GET /v1/auth/academy/student?users=...`; unmatched ids reported.
+6. Empty peak / empty items handled with a clear message — no fabricated totals.
