@@ -1697,6 +1697,11 @@ class StudentView(APIView, GenerateLookupsMixin):
             lookups = self.generate_lookups(request, many_fields=["cohort"])
             items = items.filter(user__cohortuser__cohort__slug__in=lookups["cohort__in"])
 
+        users = request.GET.get("users", None)
+        if users is not None:
+            user_ids = [int(x) for x in users.split(",") if x.strip().isnumeric()]
+            items = items.filter(user__id__in=user_ids)
+
         items = handler.queryset(items)
         serializer = GetProfileAcademySmallSerializer(items, many=True)
 

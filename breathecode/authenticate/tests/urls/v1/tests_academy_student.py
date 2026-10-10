@@ -86,6 +86,7 @@ def format_profile_academy(self, profile_academy, role, academy):
         "phone": profile_academy.phone,
         "role": {
             "id": role.slug,
+            "display_slug": role.display_slug,
             "name": role.name,
             "slug": role.slug,
         },
@@ -197,7 +198,7 @@ class StudentGetTestSuite(AuthTestCase):
                 "id": model["profile_academy"].id,
                 "last_name": model["profile_academy"].last_name,
                 "phone": model["profile_academy"].phone,
-                "role": {"id": "student", "name": "student", "slug": "student"},
+                "role": {"id": "student", "display_slug": "student", "name": "student", "slug": "student"},
                 "status": "INVITED",
                 "user": {
                     "email": model["profile_academy"].user.email,
@@ -256,7 +257,7 @@ class StudentGetTestSuite(AuthTestCase):
                 "id": model["profile_academy"].id,
                 "last_name": model["profile_academy"].last_name,
                 "phone": model["profile_academy"].phone,
-                "role": {"id": "student", "name": "student", "slug": "student"},
+                "role": {"id": "student", "display_slug": "student", "name": "student", "slug": "student"},
                 "status": "INVITED",
                 "user": {
                     "email": model["profile_academy"].user.email,
@@ -333,7 +334,7 @@ class StudentGetTestSuite(AuthTestCase):
                 "id": model_1["profile_academy"].id,
                 "last_name": model_1["profile_academy"].last_name,
                 "phone": model_1["profile_academy"].phone,
-                "role": {"id": "student", "name": "student", "slug": "student"},
+                "role": {"id": "student", "display_slug": "student", "name": "student", "slug": "student"},
                 "status": "INVITED",
                 "user": {
                     "email": model_1["profile_academy"].user.email,
@@ -418,7 +419,7 @@ class StudentGetTestSuite(AuthTestCase):
                 "id": model_1["profile_academy"].id,
                 "last_name": model_1["profile_academy"].last_name,
                 "phone": model_1["profile_academy"].phone,
-                "role": {"id": "student", "name": "student", "slug": "student"},
+                "role": {"id": "student", "display_slug": "student", "name": "student", "slug": "student"},
                 "status": "INVITED",
                 "user": {
                     "email": model_1["profile_academy"].user.email,
@@ -503,7 +504,7 @@ class StudentGetTestSuite(AuthTestCase):
                 "id": model_1["profile_academy"].id,
                 "last_name": model_1["profile_academy"].last_name,
                 "phone": model_1["profile_academy"].phone,
-                "role": {"id": "student", "name": "student", "slug": "student"},
+                "role": {"id": "student", "display_slug": "student", "name": "student", "slug": "student"},
                 "status": "INVITED",
                 "user": {
                     "email": model_1["profile_academy"].user.email,
@@ -588,7 +589,7 @@ class StudentGetTestSuite(AuthTestCase):
                 "id": model_1["profile_academy"].id,
                 "last_name": model_1["profile_academy"].last_name,
                 "phone": model_1["profile_academy"].phone,
-                "role": {"id": "student", "name": "student", "slug": "student"},
+                "role": {"id": "student", "display_slug": "student", "name": "student", "slug": "student"},
                 "status": "INVITED",
                 "user": {
                     "email": model_1["profile_academy"].user.email,
@@ -705,6 +706,61 @@ class StudentGetTestSuite(AuthTestCase):
             )
 
             self.bc.database.delete("authenticate.ProfileAcademy")
+
+    """
+    🔽🔽🔽 GET query users
+    """
+
+    def test_academy_student__query_users(self):
+        profile_academies = [{"user_id": n} for n in range(1, 4)]
+        model = self.bc.database.create(
+            user=3, role="student", capability="read_student", profile_academy=profile_academies
+        )
+        self.client.force_authenticate(model.user[0])
+
+        url = reverse_lazy("authenticate:academy_student") + "?users=2,3"
+        response = self.client.get(url, headers={"academy": model.academy.id})
+
+        json = response.json()
+        expected = [
+            format_profile_academy(self, profile_academy, model.role, model.academy)
+            for profile_academy in reversed(model.profile_academy[1:])
+        ]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_academy_student__query_users__ignores_non_numeric_ids(self):
+        profile_academies = [{"user_id": n} for n in range(1, 4)]
+        model = self.bc.database.create(
+            user=3, role="student", capability="read_student", profile_academy=profile_academies
+        )
+        self.client.force_authenticate(model.user[0])
+
+        url = reverse_lazy("authenticate:academy_student") + "?users=2,abc, ,"
+        response = self.client.get(url, headers={"academy": model.academy.id})
+
+        json = response.json()
+        expected = [format_profile_academy(self, model.profile_academy[1], model.role, model.academy)]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_academy_student__query_users__other_academy(self):
+        model = self.bc.database.create(
+            user=2,
+            academy=2,
+            role="student",
+            capability="read_student",
+            profile_academy=[{"user_id": 1, "academy_id": 1}, {"user_id": 2, "academy_id": 2}],
+        )
+        self.client.force_authenticate(model.user[0])
+
+        url = reverse_lazy("authenticate:academy_student") + "?users=2"
+        response = self.client.get(url, headers={"academy": 1})
+
+        self.assertEqual(response.json(), [])
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     """
     🔽🔽🔽 Spy the extensions
@@ -1073,6 +1129,7 @@ class StudentPostTestSuite(AuthTestCase):
             "created_at": created_at,
             "role": {
                 "id": "student",
+                "display_slug": "student",
                 "slug": "student",
                 "name": "student",
             },
@@ -1511,6 +1568,7 @@ class StudentPostTestSuite(AuthTestCase):
             "created_at": created_at,
             "role": {
                 "id": "student",
+                "display_slug": "student",
                 "slug": "student",
                 "name": "student",
             },
@@ -1675,6 +1733,7 @@ class StudentPostTestSuite(AuthTestCase):
             "created_at": created_at,
             "role": {
                 "id": "student",
+                "display_slug": "student",
                 "slug": "student",
                 "name": "student",
             },
@@ -1861,6 +1920,7 @@ class StudentPostTestSuite(AuthTestCase):
             "created_at": created_at,
             "role": {
                 "id": "student",
+                "display_slug": "student",
                 "slug": "student",
                 "name": "student",
             },
