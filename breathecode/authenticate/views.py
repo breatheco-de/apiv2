@@ -1559,67 +1559,16 @@ class BulkStudentUploadView(APIView):
         if not isinstance(students, list) or len(students) == 0:
             raise ValidationException("students must be a non-empty array", code=400, slug="students-required")
 
-        from breathecode.payments.models import PaymentMethod, Plan
-
-        for row in students:
-            if not (row.get("email") or "").strip():
-                raise ValidationException("Each student must have an email", code=400, slug="email-required")
-            cohort_id = row.get("cohort_id")
-            if not cohort_id:
-                raise ValidationException(
-                    "Each student must have a cohort_id",
-                    code=400,
-                    slug="cohort-id-required",
-                )
-            cohort = Cohort.objects.filter(id=cohort_id, academy_id=academy_id).first()
-            if not cohort:
-                raise ValidationException(
-                    "Cohort not found or does not belong to this academy",
-                    slug="cohort-not-found",
-                    code=404,
-                )
-            if cohort.stage in ("INACTIVE", "DELETED", "ENDED"):
-                raise ValidationException(
-                    f"Cannot add students to a cohort that is {cohort.stage}",
-                    slug="cohort-not-available",
-                    code=400,
-                )
-            payment_method = row.get("payment_method")
-            if payment_method is not None and not PaymentMethod.objects.filter(
-                id=payment_method, academy_id=academy_id
-            ).exists():
-                raise ValidationException(
-                    "Payment method not found or does not belong to this academy",
-                    slug="payment-method-not-found",
-                    code=404,
-                )
-            plans = row.get("plans") or []
-            if plans:
-                lang = getattr(request, "LANG", None) or "en"
-                for plan_id in plans:
-                    plan = Plan.objects.filter(id=plan_id).first()
-                    if not plan:
-                        raise ValidationException("Plan not found", slug="plan-not-found", code=404)
-                    if plan.status == Plan.Status.DRAFT:
-                        raise ValidationException(
-                            translation(
-                                lang,
-                                en="Cannot assign draft plans to students. Publish the plan first.",
-                                es="No se pueden asignar planes en borrador a estudiantes. Publica el plan primero.",
-                            ),
-                            slug="plan-draft-not-assignable",
-                            code=400,
-                        )
-                    if not plan.cohort_set or not plan.cohort_set.cohorts.filter(id=cohort.id).exists():
-                        raise ValidationException(
-                            translation(
-                                lang,
-                                en="Plan does not include this cohort. The plan's cohort_set must contain the cohort.",
-                                es="El plan no incluye este cohort. El cohort_set del plan debe contener el cohort.",
-                            ),
-                            slug="plan-cohort-mismatch",
-                            code=400,
-                        )
+        if not all(isinstance(row, dict) for row in students):
+            raise ValidationException(
+                translation(
+                    get_user_language(request),
+                    en="Each student must be an object",
+                    es="Cada estudiante debe ser un objeto",
+                ),
+                code=400,
+                slug="invalid-student-row",
+            )
 
         soft = request.GET.get("soft") == "true"
         if soft:

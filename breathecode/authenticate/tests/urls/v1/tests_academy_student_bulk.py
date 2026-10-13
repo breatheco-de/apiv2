@@ -4,6 +4,7 @@ Test cases for POST /v1/auth/academy/student/invite/bulk and GET /v1/auth/academ
 
 from unittest.mock import MagicMock, patch
 
+from django.core.cache.backends.locmem import LocMemCache
 from django.urls import reverse_lazy
 from rest_framework import status
 
@@ -11,10 +12,12 @@ from breathecode.authenticate.utils.bulk_student_manager import (
     get_bulk_job_key,
     set_bulk_job_state,
 )
-from breathecode.authenticate.tasks import process_bulk_student_upload
 from breathecode.tests.mixins import GenerateModelsMixin
 
 from ...mixins.new_auth_test_case import AuthTestCase
+
+ACTIVE_ACADEMY = {"status": "ACTIVE"}
+OPEN_COHORT = {"stage": "STARTED", "available_as_saas": True}
 
 
 class BulkStudentUploadViewTestSuite(AuthTestCase):
@@ -26,6 +29,7 @@ class BulkStudentUploadViewTestSuite(AuthTestCase):
             url,
             {"students": [{"email": "a@a.com", "first_name": "A", "last_name": "B", "cohort_id": 1}]},
             format="json",
+            headers={"academy": 1},
         )
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -39,49 +43,110 @@ class BulkStudentUploadViewTestSuite(AuthTestCase):
         )
         self.assertIn(response.status_code, (status.HTTP_403_FORBIDDEN, status.HTTP_400_BAD_REQUEST))
 
-    def test_bulk_post_missing_cohort_id(self):
-        self.headers(academy=1)
+    def test_bulk_post_missing_cohort_id_fails_only_that_row(self):
         self.bc.database.create(
             authenticate=True,
             capability="crud_student",
             profile_academy=True,
-            academy=1,
+            academy=ACTIVE_ACADEMY,
+            cohort=OPEN_COHORT,
+            role="student",
         )
-        url = reverse_lazy("authenticate:academy_student_bulk")
+        url = reverse_lazy("authenticate:academy_student_bulk") + "?soft=true"
         response = self.client.post(
             url,
-            {"students": [{"email": "a@a.com", "first_name": "A", "last_name": "B"}]},
+            {
+                "students": [
+                    {"email": "a@a.com", "first_name": "A", "last_name": "B"},
+                    {"email": "b@b.com", "first_name": "B", "last_name": "C", "cohort_id": 1},
+                ]
+            },
             format="json",
+            headers={"academy": 1},
         )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.json().get("slug"), "cohort-id-required")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.json()["results"]
+        self.assertEqual(results[0]["status"], "failed")
+        self.assertEqual(results[0]["slug"], "cohort-id-required")
+        self.assertEqual(results[1]["status"], "created")
 
-    def test_bulk_post_empty_students(self):
-        self.headers(academy=1)
+    def test_bulk_post_invalid_student_row(self):
         self.bc.database.create(
             authenticate=True,
             capability="crud_student",
             profile_academy=True,
-            academy=1,
-            cohort=1,
+            academy=ACTIVE_ACADEMY,
+            role="student",
+        )
+        url = reverse_lazy("authenticate:academy_student_bulk")
+        response = self.client.post(url, {"students": ["a@a.com"]}, format="json", headers={"academy": 1})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json().get("detail"), "invalid-student-row")
+
+    def test_bulk_post_soft_plan_not_in_cohort_fails_only_that_row(self):
+        model = self.bc.database.create(
+            authenticate=True,
+            capability="crud_student",
+            profile_academy=True,
+            academy=ACTIVE_ACADEMY,
+            cohort=[OPEN_COHORT, OPEN_COHORT],
+            role="student",
+            cohort_set=1,
+            cohort_set_cohort={"cohort_id": 1},
+            plan={"status": "ACTIVE", "cohort_set_id": 1},
+        )
+        cohort_in_plan, cohort_outside_plan = model.cohort
+        url = reverse_lazy("authenticate:academy_student_bulk") + "?soft=true"
+        response = self.client.post(
+            url,
+            {
+                "students": [
+                    {"email": "ok@example.com", "first_name": "Ok", "cohort_id": cohort_in_plan.id, "plans": [1]},
+                    {
+                        "email": "bad@example.com",
+                        "first_name": "Bad",
+                        "cohort_id": cohort_outside_plan.id,
+                        "plans": [1],
+                    },
+                ]
+            },
+            format="json",
+            headers={"academy": 1},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.json()["results"]
+        self.assertEqual(results[0]["status"], "created")
+        self.assertEqual(results[1]["status"], "failed")
+        self.assertEqual(results[1]["slug"], "plan-cohort-mismatch")
+        self.assertEqual(results[1]["email"], "bad@example.com")
+        self.assertIn(cohort_outside_plan.slug, results[1]["message"])
+
+    def test_bulk_post_empty_students(self):
+        self.bc.database.create(
+            authenticate=True,
+            capability="crud_student",
+            profile_academy=True,
+            academy=ACTIVE_ACADEMY,
+            cohort=OPEN_COHORT,
+            role="student",
         )
         url = reverse_lazy("authenticate:academy_student_bulk")
         response = self.client.post(
             url,
             {"students": []},
             format="json",
+            headers={"academy": 1},
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.json().get("slug"), "students-required")
+        self.assertEqual(response.json().get("detail"), "students-required")
 
     def test_bulk_post_soft_run_returns_200_with_results(self):
-        self.headers(academy=1)
         model = self.bc.database.create(
             authenticate=True,
             capability="crud_student",
             profile_academy=True,
-            academy=1,
-            cohort=1,
+            academy=ACTIVE_ACADEMY,
+            cohort=OPEN_COHORT,
             role="student",
         )
         url = reverse_lazy("authenticate:academy_student_bulk") + "?soft=true"
@@ -94,6 +159,7 @@ class BulkStudentUploadViewTestSuite(AuthTestCase):
                 ],
             },
             format="json",
+            headers={"academy": 1},
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         json = response.json()
@@ -108,13 +174,12 @@ class BulkStudentUploadViewTestSuite(AuthTestCase):
         self.assertEqual(len(self.bc.database.list_of("admissions.CohortUser")), 0)
 
     def test_bulk_post_normal_returns_202_and_job_id(self):
-        self.headers(academy=1)
         self.bc.database.create(
             authenticate=True,
             capability="crud_student",
             profile_academy=True,
-            academy=1,
-            cohort=1,
+            academy=ACTIVE_ACADEMY,
+            cohort=OPEN_COHORT,
             role="student",
         )
         url = reverse_lazy("authenticate:academy_student_bulk")
@@ -128,6 +193,7 @@ class BulkStudentUploadViewTestSuite(AuthTestCase):
                     ],
                 },
                 format="json",
+                headers={"academy": 1},
             )
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         json = response.json()
@@ -137,54 +203,51 @@ class BulkStudentUploadViewTestSuite(AuthTestCase):
         mock_delay.delay.assert_called_once()
 
     def test_bulk_get_job_not_found(self):
-        self.headers(academy=1)
         self.bc.database.create(
             authenticate=True,
             capability="crud_student",
             profile_academy=True,
-            academy=1,
+            academy=ACTIVE_ACADEMY,
+            role="student",
         )
-        url = reverse_lazy("authenticate:academy_student_bulk_id", kwargs={"job_id": "00000000-0000-0000-0000-000000000001"})
-        response = self.client.get(url)
+        url = reverse_lazy(
+            "authenticate:academy_student_bulk_id", kwargs={"job_id": "00000000-0000-0000-0000-000000000001"}
+        )
+        response = self.client.get(url, headers={"academy": 1})
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.json().get("slug"), "job-not-found")
+        self.assertEqual(response.json().get("detail"), "job-not-found")
 
     @patch("breathecode.notify.actions.send_email_message", MagicMock())
     def test_bulk_post_then_get_job_returns_completed_with_results(self):
         """POST bulk → task runs synchronously → GET job returns completed with one created, one skipped."""
-        self.headers(academy=1)
         model = self.bc.database.create(
             authenticate=True,
             capability="crud_student",
             profile_academy=True,
-            academy=1,
-            cohort=2,
+            academy=ACTIVE_ACADEMY,
+            cohort=OPEN_COHORT,
+            cohort_user=1,
             role="student",
         )
-        cohort1 = model.cohort
-        cohort2 = self.bc.database.create(cohort=1, academy=model.academy).cohort
-        self.bc.database.create(cohort_user=1, user=model.user, cohort=cohort2)
         students = [
-            {"email": "new@example.com", "first_name": "New", "last_name": "User", "cohort_id": cohort1.id},
-            {"email": model.user.email, "first_name": "Existing", "last_name": "User", "cohort_id": cohort1.id},
+            {"email": "new@example.com", "first_name": "New", "last_name": "User", "cohort_id": model.cohort.id},
+            {"email": model.user.email, "first_name": "Existing", "last_name": "User", "cohort_id": model.cohort.id},
         ]
 
-        def run_task_sync(*args, **kwargs):
-            process_bulk_student_upload(*args, **kwargs)
-
-        with patch("breathecode.authenticate.tasks.process_bulk_student_upload") as mock_task:
-            mock_task.delay = run_task_sync
+        # the job state is skipped on the test fake cache, a real in-memory cache keeps it between requests
+        with patch("django.core.cache.cache", LocMemCache("bulk-student-upload", {})):
             url = reverse_lazy("authenticate:academy_student_bulk")
             response = self.client.post(
                 url,
                 {"students": students},
                 format="json",
+                headers={"academy": 1},
             )
-        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
-        job_id = response.json()["job_id"]
+            self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED, response.content)
+            job_id = response.json()["job_id"]
 
-        get_url = reverse_lazy("authenticate:academy_student_bulk_id", kwargs={"job_id": job_id})
-        get_response = self.client.get(get_url)
+            get_url = reverse_lazy("authenticate:academy_student_bulk_id", kwargs={"job_id": job_id})
+            get_response = self.client.get(get_url, headers={"academy": 1})
         self.assertEqual(get_response.status_code, status.HTTP_200_OK)
         data = get_response.json()
         self.assertEqual(data["status"], "completed")

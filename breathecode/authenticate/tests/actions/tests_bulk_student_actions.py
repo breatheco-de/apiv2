@@ -17,12 +17,14 @@ from breathecode.tests.mixins import GenerateModelsMixin
 
 from ..mixins.new_auth_test_case import AuthTestCase
 
+OPEN_COHORT = {"stage": "STARTED", "available_as_saas": True}
+
 
 class ClassifyBulkStudentRowTestSuite(AuthTestCase):
     """Tests for classify_bulk_student_row."""
 
     def test_classify_new_user(self):
-        self.bc.database.create(academy=1, cohort=1)
+        self.bc.database.create(academy=1, cohort=OPEN_COHORT)
         scenario = classify_bulk_student_row(academy_id=1, cohort_id=1, email="newuser@example.com")
         self.assertEqual(scenario, BulkStudentScenario.NEW_USER)
 
@@ -30,7 +32,7 @@ class ClassifyBulkStudentRowTestSuite(AuthTestCase):
         model = self.bc.database.create(
             user=1,
             academy=1,
-            cohort=1,
+            cohort=OPEN_COHORT,
             cohort_user=1,
         )
         scenario = classify_bulk_student_row(
@@ -44,11 +46,11 @@ class ClassifyBulkStudentRowTestSuite(AuthTestCase):
         model = self.bc.database.create(
             user=1,
             academy=1,
-            cohort=2,
+            cohort=[OPEN_COHORT, OPEN_COHORT],
             profile_academy=1,
         )
         cohort2 = model.cohort
-        cohort1 = self.bc.database.create(cohort=1, academy=model.academy).cohort
+        cohort1 = self.bc.database.create(cohort=OPEN_COHORT, academy=model.academy).cohort
         scenario = classify_bulk_student_row(
             academy_id=model.academy.id,
             cohort_id=cohort1.id,
@@ -57,9 +59,9 @@ class ClassifyBulkStudentRowTestSuite(AuthTestCase):
         self.assertEqual(scenario, BulkStudentScenario.SAME_ACADEMY_DIFFERENT_COHORT)
 
     def test_classify_different_academy_no_profile(self):
-        model = self.bc.database.create(user=1, academy=1, cohort=1)
+        model = self.bc.database.create(user=1, academy=1, cohort=OPEN_COHORT)
         academy2 = self.bc.database.create(academy=1).academy
-        cohort2 = self.bc.database.create(cohort=1, academy=academy2).cohort
+        cohort2 = self.bc.database.create(cohort=OPEN_COHORT, academy=academy2).cohort
         scenario = classify_bulk_student_row(
             academy_id=academy2.id,
             cohort_id=cohort2.id,
@@ -73,7 +75,7 @@ class ClassifyBulkStudentRowTestSuite(AuthTestCase):
         academy2 = self.bc.database.create(academy=1).academy
         self.bc.database.create(profile_academy=1, user=user, academy=academy1)
         self.bc.database.create(profile_academy=1, user=user, academy=academy2)
-        cohort2 = self.bc.database.create(cohort=1, academy=academy2).cohort
+        cohort2 = self.bc.database.create(cohort=OPEN_COHORT, academy=academy2).cohort
         scenario = classify_bulk_student_row(
             academy_id=academy2.id,
             cohort_id=cohort2.id,
@@ -83,7 +85,7 @@ class ClassifyBulkStudentRowTestSuite(AuthTestCase):
 
     def test_classify_empty_email_raises(self):
         """When email is blank, classify raises ValidationException."""
-        self.bc.database.create(academy=1, cohort=1)
+        self.bc.database.create(academy=1, cohort=OPEN_COHORT)
         for blank in ("", "   ", None):
             with self.subTest(blank=repr(blank)):
                 with self.assertRaises(ValidationException) as cm:
@@ -92,7 +94,7 @@ class ClassifyBulkStudentRowTestSuite(AuthTestCase):
 
     def test_classify_cohort_not_found_raises(self):
         """When cohort does not exist or does not belong to academy, classify raises ValidationException."""
-        self.bc.database.create(academy=1, cohort=1)
+        self.bc.database.create(academy=1, cohort=OPEN_COHORT)
         with self.assertRaises(ValidationException) as cm:
             classify_bulk_student_row(academy_id=1, cohort_id=999, email="any@example.com")
         self.assertEqual(getattr(cm.exception, "slug", None), "cohort-not-found")
@@ -102,7 +104,7 @@ class ValidateBulkStudentRowTestSuite(AuthTestCase):
     """Tests for validate_bulk_student_row (soft run)."""
 
     def test_validate_returns_classification_and_student_fields(self):
-        self.bc.database.create(academy=1, cohort=1)
+        self.bc.database.create(academy=1, cohort=OPEN_COHORT)
         row = {"email": "a@a.com", "first_name": "A", "last_name": "B", "phone": "123"}
         result = validate_bulk_student_row(academy_id=1, cohort_id=1, row_data=row)
         self.assertEqual(result["email"], "a@a.com")
@@ -117,23 +119,90 @@ class ValidateBulkStudentRowTestSuite(AuthTestCase):
         model = self.bc.database.create(
             user=1,
             academy=1,
-            cohort=1,
+            cohort=OPEN_COHORT,
             profile_academy=1,
         )
-        cohort2 = self.bc.database.create(cohort=1, academy=model.academy).cohort
+        cohort2 = self.bc.database.create(cohort=OPEN_COHORT, academy=model.academy).cohort
+        plan = self.bc.database.create(
+            academy=model.academy,
+            cohort_set=1,
+            cohort_set_cohort={"cohort": cohort2},
+            plan={"status": "ACTIVE", "cohort_set_id": 1},
+        ).plan
         row = {"email": model.user.email, "first_name": "A", "last_name": "B"}
         result = validate_bulk_student_row(
             academy_id=model.academy.id,
             cohort_id=cohort2.id,
             row_data=row,
-            plans=[1],
+            plans=[plan.id],
         )
         self.assertEqual(result["status"], "created")
         self.assertEqual(result["classification"], BulkStudentScenario.SAME_ACADEMY_DIFFERENT_COHORT.value)
 
+    def test_validate_plan_not_in_cohort_returns_failed_with_real_classification(self):
+        model = self.bc.database.create(
+            academy=1, cohort=[OPEN_COHORT, OPEN_COHORT], cohort_set=1, cohort_set_cohort={"cohort_id": 1}
+        )
+        plan = self.bc.database.create(plan={"status": "ACTIVE", "cohort_set_id": 1}).plan
+        cohort_outside_plan = model.cohort[1]
+        row = {"email": "a@a.com", "first_name": "A"}
+        result = validate_bulk_student_row(
+            academy_id=model.academy.id,
+            cohort_id=cohort_outside_plan.id,
+            row_data=row,
+            plans=[plan.id],
+        )
+        self.assertEqual(result["status"], "failed")
+        self.assertEqual(result["slug"], "plan-cohort-mismatch")
+        self.assertEqual(result["classification"], BulkStudentScenario.NEW_USER.value)
+
+    def test_validate_draft_plan_returns_failed(self):
+        model = self.bc.database.create(
+            academy=1, cohort=OPEN_COHORT, cohort_set=1, cohort_set_cohort=1, plan={"status": "DRAFT"}
+        )
+        result = validate_bulk_student_row(
+            academy_id=model.academy.id,
+            cohort_id=model.cohort.id,
+            row_data={"email": "a@a.com"},
+            plans=[model.plan.id],
+        )
+        self.assertEqual(result["status"], "failed")
+        self.assertEqual(result["slug"], "plan-draft-not-assignable")
+
+    def test_validate_unknown_plan_and_payment_method_return_failed(self):
+        model = self.bc.database.create(academy=1, cohort=OPEN_COHORT)
+        cases = [
+            ({"plans": [999]}, "plan-not-found"),
+            ({"plans": ["not-an-id"]}, "plan-not-found"),
+            ({"payment_method": 999}, "payment-method-not-found"),
+        ]
+        for kwargs, slug in cases:
+            with self.subTest(slug=slug, kwargs=kwargs):
+                result = validate_bulk_student_row(
+                    academy_id=model.academy.id,
+                    cohort_id=model.cohort.id,
+                    row_data={"email": "a@a.com"},
+                    **kwargs,
+                )
+                self.assertEqual(result["status"], "failed")
+                self.assertEqual(result["slug"], slug)
+
+    def test_validate_cohort_id_from_spreadsheet_text(self):
+        model = self.bc.database.create(academy=1, cohort=OPEN_COHORT)
+        for value in (str(model.cohort.id), f"{model.cohort.id}.0"):
+            with self.subTest(value=value):
+                result = validate_bulk_student_row(
+                    academy_id=model.academy.id, cohort_id=value, row_data={"email": "a@a.com"}
+                )
+                self.assertEqual(result["status"], "created")
+
+        result = validate_bulk_student_row(academy_id=model.academy.id, cohort_id="abc", row_data={"email": "a@a.com"})
+        self.assertEqual(result["status"], "failed")
+        self.assertEqual(result["slug"], "cohort-not-found")
+
     def test_validate_cohort_not_found_returns_failed(self):
         """When cohort does not exist, validate returns failed with slug cohort-not-found."""
-        self.bc.database.create(academy=1, cohort=1)
+        self.bc.database.create(academy=1, cohort=OPEN_COHORT)
         row = {"email": "a@a.com", "first_name": "A", "last_name": "B"}
         result = validate_bulk_student_row(academy_id=1, cohort_id=999, row_data=row)
         self.assertEqual(result["status"], "failed")
@@ -148,7 +217,7 @@ class ProcessBulkStudentRowTestSuite(AuthTestCase):
         model = self.bc.database.create(
             user=1,
             academy=1,
-            cohort=1,
+            cohort=OPEN_COHORT,
             cohort_user=1,
         )
         row = {"email": model.user.email, "first_name": "A", "last_name": "B"}
@@ -166,10 +235,10 @@ class ProcessBulkStudentRowTestSuite(AuthTestCase):
         model = self.bc.database.create(
             user=1,
             academy=1,
-            cohort=2,
+            cohort=[OPEN_COHORT, OPEN_COHORT],
             profile_academy=1,
         )
-        cohort1 = self.bc.database.create(cohort=1, academy=model.academy).cohort
+        cohort1 = self.bc.database.create(cohort=OPEN_COHORT, academy=model.academy).cohort
         row = {"email": model.user.email, "first_name": "A", "last_name": "B"}
         result = process_bulk_student_row(
             academy_id=model.academy.id,
@@ -192,7 +261,7 @@ class ProcessBulkStudentRowTestSuite(AuthTestCase):
         academy2 = self.bc.database.create(academy=1).academy
         self.bc.database.create(profile_academy=1, user=user, academy=academy1)
         self.bc.database.create(profile_academy=1, user=user, academy=academy2)
-        cohort2 = self.bc.database.create(cohort=1, academy=academy2).cohort
+        cohort2 = self.bc.database.create(cohort=OPEN_COHORT, academy=academy2).cohort
         author = self.bc.database.create(user=1).user
         row = {"email": user.email, "first_name": "A", "last_name": "B"}
         result = process_bulk_student_row(
@@ -210,7 +279,7 @@ class ProcessBulkStudentRowTestSuite(AuthTestCase):
         self.assertIsNotNone(cu)
 
     def test_process_empty_email_returns_failed(self):
-        self.bc.database.create(academy=1, cohort=1, user=1)
+        self.bc.database.create(academy=1, cohort=OPEN_COHORT, user=1)
         row = {"email": "", "first_name": "A", "last_name": "B"}
         result = process_bulk_student_row(
             academy_id=1,
@@ -222,7 +291,7 @@ class ProcessBulkStudentRowTestSuite(AuthTestCase):
         self.assertEqual(result["slug"], "email-required")
 
     def test_process_cohort_not_found_returns_failed(self):
-        self.bc.database.create(academy=1, cohort=1, user=1)
+        self.bc.database.create(academy=1, cohort=OPEN_COHORT, user=1)
         row = {"email": "new@example.com", "first_name": "A", "last_name": "B"}
         result = process_bulk_student_row(
             academy_id=1,
@@ -239,15 +308,15 @@ class ProcessBulkStudentRowTestSuite(AuthTestCase):
         model = self.bc.database.create(
             user=1,
             academy=1,
-            cohort=2,
+            cohort=[OPEN_COHORT, OPEN_COHORT],
             profile_academy=1,
             currency=1,
             cohort_set=1,
             cohort_set_cohort=1,
-            financing_option={"how_many_months": 1, "monthly_price": 0},
-            plan=1,
+            financing_option={"how_many_months": 1, "monthly_price": 1},
+            plan={"status": "ACTIVE"},
         )
-        cohort1 = self.bc.database.create(cohort=1, academy=model.academy).cohort
+        cohort1 = self.bc.database.create(cohort=OPEN_COHORT, academy=model.academy).cohort
         from breathecode.payments.models import CohortSetCohort, Plan
 
         plan = Plan.objects.first()
@@ -282,11 +351,11 @@ class ProcessBulkStudentRowTestSuite(AuthTestCase):
         m3 = self.bc.database.create(
             academy=1,
             currency=1,
-            cohort={"available_as_saas": True},
+            cohort=OPEN_COHORT,
             cohort_set=1,
             cohort_set_cohort=1,
-            financing_option={"how_many_months": 1, "monthly_price": 0},
-            plan=1,
+            financing_option={"how_many_months": 1, "monthly_price": 1},
+            plan={"status": "ACTIVE"},
         )
         academy2 = m3.academy
         cohort2 = m3.cohort
@@ -315,10 +384,11 @@ class ProcessBulkStudentRowTestSuite(AuthTestCase):
         self.assertEqual(invoices.count(), 1)
 
     @patch("breathecode.notify.actions.send_email_message", MagicMock())
-    def test_process_new_user_creates_profile_academy_and_cohort_user(self):
+    def test_process_new_user_creates_profile_academy_and_cohort_invite(self):
+        """A user that does not exist yet gets an invited profile and a cohort invite, the CohortUser comes on accept."""
         model = self.bc.database.create(
             academy=1,
-            cohort=1,
+            cohort=OPEN_COHORT,
             user=1,
             role="student",
         )
@@ -333,11 +403,9 @@ class ProcessBulkStudentRowTestSuite(AuthTestCase):
         self.assertEqual(result["classification"], BulkStudentScenario.NEW_USER.value)
         self.assertEqual(result["status"], "created")
         self.assertIsNotNone(result.get("profile_academy_id"))
-        self.assertIsNotNone(result.get("cohort_user_id"))
-        from breathecode.authenticate.models import ProfileAcademy
-        from breathecode.admissions.models import CohortUser
+        from breathecode.authenticate.models import ProfileAcademy, UserInvite
 
         pa = ProfileAcademy.objects.filter(email="newuser@example.com", academy=model.academy).first()
         self.assertIsNotNone(pa)
-        cu = CohortUser.objects.filter(cohort=model.cohort, user=pa.user).first()
-        self.assertIsNotNone(cu)
+        self.assertEqual(pa.status, "INVITED")
+        self.assertTrue(UserInvite.objects.filter(email="newuser@example.com", cohort=model.cohort).exists())
