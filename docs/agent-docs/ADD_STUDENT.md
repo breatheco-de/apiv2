@@ -460,10 +460,26 @@ A single endpoint handles all five bulk-upload scenarios server-side. You send a
 ```
 - `students` (required): array of student objects. Each student has:
   - `email` (required), `first_name?`, `last_name?`, `phone?`
-  - `cohort_id` (required): target cohort for this student (must belong to academy).
-  - `payment_method` (optional): academy payment method ID; applied only when creating new users (Scenario 1).
-  - `plans` (optional): array of plan IDs; applied only when creating new users. Cannot be used for existing users.
+  - `cohort_id` (required): target cohort for this student (must belong to academy). Numeric text such as `"1429"` is accepted.
+  - `payment_method` (optional): academy payment method ID.
+  - `plans` (optional): array of plan IDs. Each plan must be published (not `DRAFT`) and its `cohort_set` must contain the row's `cohort_id`.
 - Invitations are always sent for new users; no `invite` field in the payload.
+
+**Validation is per row.** The request is only rejected with 400 when `students` is not a non-empty array of objects (`students-required`, `invalid-student-row`). Any other problem fails **that row only** (`status: "failed"` with `slug` and `message`) and the other rows are still processed, both in the soft run and in the job:
+
+| slug | Reason |
+|------|--------|
+| `email-required` | Row without email |
+| `cohort-id-required` | Row without `cohort_id` |
+| `cohort-not-found` | Cohort does not exist, is not from this academy, or the id is not numeric |
+| `cohort-not-available` | Cohort is `INACTIVE`, `DELETED` or `ENDED` |
+| `payment-method-not-found` | Payment method missing or from another academy |
+| `plan-not-found` | Plan id does not exist |
+| `plan-draft-not-assignable` | Plan is `DRAFT` |
+| `plan-cohort-mismatch` | The plan's `cohort_set` does not include the row's cohort; the message names both slugs |
+| `already-exists-with-this-email`, `already-invited` | New user already has a profile or invite in this academy |
+
+Plan financing errors (for example `ambiguous-financing-option` when a plan has several financing options for the same installments) are only detected when the job runs, not in the soft run.
 
 **POST response (normal):** 202 Accepted
 ```json
@@ -493,7 +509,7 @@ Each result includes student fields from the request, `classification` (NEW_USER
 1. Optional: `POST .../invite/bulk?soft=true` with same body to preview results without persisting.
 2. `POST .../invite/bulk` (no querystring) → 202 + `job_id`.
 3. Poll `GET .../invite/bulk/{job_id}` until `status === "completed"`.
-4. Use `results` (student fields + classification + status) to show success/skip/failure. For failed rows, fix data and retry via a new `POST .../invite/bulk` or single-student endpoints.
+4. Use `results` (student fields + classification + status) to show success/skip/failure. Rows that failed in the soft run can be left out of the real request; fix them and retry via a new `POST .../invite/bulk` or single-student endpoints.
 
 ---
 
