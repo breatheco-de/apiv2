@@ -10,7 +10,7 @@ from capyc.rest_framework.exceptions import ValidationException
 from dateutil.relativedelta import relativedelta
 from django.core.cache import cache
 from django.db import transaction
-from django.db.models import F, Max, Sum
+from django.db.models import F, Max
 from django.utils import timezone
 from django_redis import get_redis_connection
 from redis.exceptions import LockError
@@ -389,6 +389,7 @@ def renew_plan_financing_consumables(
     plan_financing_id: int,
     seat_id: Optional[int] = None,
     service_ids: Optional[list[int]] = None,
+    scheduler_ids: Optional[list[int]] = None,
     **_: Any,
 ):
     """Renew consumables belongs to a plan financing."""
@@ -432,6 +433,9 @@ def renew_plan_financing_consumables(
 
     if service_ids:
         scheduler_filters["plan_handler__handler__service_item__service_id__in"] = service_ids
+
+    if scheduler_ids is not None:
+        scheduler_filters["id__in"] = scheduler_ids
 
     schedulers = ServiceStockScheduler.objects.filter(**scheduler_filters)
 
@@ -1369,9 +1373,7 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                     from breathecode.payments import signals
 
                     signals.revoke_plan_permissions.send_robust(instance=plan_financing, sender=PlanFinancing)
-                    signals.sync_cohort_user_finantial_status.send_robust(
-                        instance=plan_financing, sender=PlanFinancing
-                    )
+                    signals.sync_cohort_user_finantial_status.send_robust(instance=plan_financing, sender=PlanFinancing)
                 raise AbortTask(
                     f"PlanFinancing with id {plan_financing_id} is in status {plan_financing.status} and cannot be charged"
                 )
@@ -1403,9 +1405,7 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                     hours=2
                 )
                 if needs_renew:
-                    transaction.on_commit(
-                        lambda pf_id=plan_financing.id: renew_plan_financing_consumables.delay(pf_id)
-                    )
+                    transaction.on_commit(lambda pf_id=plan_financing.id: renew_plan_financing_consumables.delay(pf_id))
 
                 actions.schedule_plan_financing_third_party_deprovision(plan_financing)
 
@@ -1605,7 +1605,6 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                 credit_balance = actions.get_credit_balance(plan_financing)
                 amount_owed = float(amount or 0)
                 _credit_to_consume = 0.0
-                credit_covered = False
 
                 if credit_balance >= amount_owed - 1e-9 and amount_owed > 0:
                     # Credit covers the full installment.
@@ -1620,7 +1619,6 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                         notes="Automatic charge covered by accumulated credit",
                     )
                     plan_financing.installments_paid += 1
-                    credit_covered = True
                     installment_closed = True
 
                 else:
@@ -1789,9 +1787,7 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                     plan_financing.status,
                 )
 
-                transaction.on_commit(
-                    lambda pf_id=plan_financing.id: renew_plan_financing_consumables.delay(pf_id)
-                )
+                transaction.on_commit(lambda pf_id=plan_financing.id: renew_plan_financing_consumables.delay(pf_id))
 
                 # Anchor next charge ETA to next_payment_at (+3s), not truncated ".days".
                 if remaining_installments > 0:
@@ -2026,13 +2022,17 @@ def build_service_stock_scheduler_from_plan_financing(
         if not seat_scope and not per_team_strategy:
             seat_scope = list(seat_queryset)
 
+    fully_paid = plan_financing.status == PlanFinancing.Status.FULLY_PAID
+    fully_paid_scheduler_ids: list[int] = []
+
     def upsert_scheduler(
         handler_obj: PlanServiceItemHandler,
         valid_until: datetime,
         *,
         seat: PlanFinancingSeat | None = None,
         team_owned: bool = False,
-    ) -> None:
+    ) -> int | None:
+        """Return the scheduler id when a FULLY_PAID rebuild should renew it."""
         scheduler_team = team if (team_owned and team) else None
         scheduler, created = ServiceStockScheduler.objects.get_or_create(
             plan_handler=handler_obj,
@@ -2042,7 +2042,12 @@ def build_service_stock_scheduler_from_plan_financing(
         )
 
         update_fields: list[str] = []
-        if not created and scheduler.valid_until != valid_until:
+        renew = True
+        if fully_paid and not created:
+            # No next_payment_at cap to undo the period renew adds. Skip stock that is still live.
+            # An expired consumable keeps its date so the renew loop walks to the next anniversary.
+            renew = not scheduler.consumables.filter(valid_until__gt=timezone.now()).exists()
+        elif not created and scheduler.valid_until != valid_until:
             scheduler.valid_until = valid_until
             update_fields.append("valid_until")
 
@@ -2052,6 +2057,10 @@ def build_service_stock_scheduler_from_plan_financing(
 
         if not created and update_fields:
             scheduler.save(update_fields=update_fields)
+
+        if fully_paid and renew:
+            return scheduler.id
+        return None
 
     def compute_valid_until(plan_service_item: PlanServiceItem) -> datetime:
         unit = plan_service_item.service_item.renew_at
@@ -2073,8 +2082,8 @@ def build_service_stock_scheduler_from_plan_financing(
             valid_until = plan_financing.valid_until
 
         if plan_financing.status == PlanFinancing.Status.FULLY_PAID:
-            utc_now = timezone.now()
-            valid_until = utc_now + delta
+            # renew_consumables adds one period after this scheduler is saved.
+            valid_until = timezone.now()
 
         return valid_until
 
@@ -2089,16 +2098,28 @@ def build_service_stock_scheduler_from_plan_financing(
             )
             valid_until = compute_valid_until(plan_service_item)
             is_team_allowed = plan_service_item.service_item.is_team_allowed
+            touched: list[int | None] = []
 
             if team and per_team_strategy and is_team_allowed:
-                upsert_scheduler(handler_obj, valid_until, team_owned=True)
+                touched.append(upsert_scheduler(handler_obj, valid_until, team_owned=True))
             elif seat_scope and is_team_allowed:
                 for seat in seat_scope:
-                    upsert_scheduler(handler_obj, valid_until, seat=seat)
+                    touched.append(upsert_scheduler(handler_obj, valid_until, seat=seat))
             else:
-                upsert_scheduler(handler_obj, valid_until)
+                touched.append(upsert_scheduler(handler_obj, valid_until))
 
-    if seat_id:
+            fully_paid_scheduler_ids.extend(scheduler_id for scheduler_id in touched if scheduler_id is not None)
+
+    if fully_paid:
+        if not fully_paid_scheduler_ids:
+            return
+        renew_kwargs: dict[str, Any] = {"scheduler_ids": fully_paid_scheduler_ids}
+        if service_ids:
+            renew_kwargs["service_ids"] = service_ids
+        if seat_id:
+            renew_kwargs["seat_id"] = seat_id
+        renew_plan_financing_consumables.delay(plan_financing.id, **renew_kwargs)
+    elif seat_id:
         renew_plan_financing_consumables.delay(plan_financing.id, seat_id=seat_id, service_ids=service_ids)
     else:
         renew_plan_financing_consumables.delay(plan_financing.id, service_ids=service_ids)
