@@ -198,6 +198,7 @@ Sample response (subset):
   - `Authorization: Token <staff_token>`
   - `Academy: 12`
   - Optional `Accept-Language: en|es`
+- Capability expectation: `crud_subscription`.
 - Required body fields:
   - `status` (for this use case, send `CANCELLED`)
 - Relevant response fields: success message.

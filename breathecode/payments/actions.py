@@ -976,6 +976,12 @@ def reschedule_billing_tasks(
     pf_charge_eta = _eta_for_schedule_at(pf_charge_at, utc_now)
     schedule_task(tasks.charge_plan_financing, pf_charge_eta).call(plan_financing_id)
 
+    # Staff-created financings are not collected by card. The installment reminder
+    # tells the student a charge is coming, so it is not scheduled for them.
+    # Pending notify tasks were already cancelled above.
+    if plan_financing.created_by_admin:
+        return
+
     if (plan_financing.next_payment_at - utc_now) > timedelta(days=2):
         notify_at = plan_financing.next_payment_at - timedelta(days=2)
         if notify_at > utc_now:
