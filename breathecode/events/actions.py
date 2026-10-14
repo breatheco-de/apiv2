@@ -21,7 +21,7 @@ from breathecode.services.google_calendar.google_calendar import GoogleCalendar
 from breathecode.services.livekit.client import LiveKitAdmin
 from breathecode.utils.datetime_integer import DatetimeInteger
 
-from .models import Event, EventType, Organization, Organizer, Venue
+from .models import Event, EventCheckin, EventType, Organization, Organizer, Venue
 from .utils import Eventbrite
 
 logger = logging.getLogger(__name__)
@@ -1077,6 +1077,29 @@ def is_luma_enabled():
 
 def build_room_name(event: Event) -> str:
     return f"event-{event.id}"
+
+
+def get_event_attendees_preview(event: Event, limit: int = 12) -> dict:
+    checkins = EventCheckin.objects.filter(event=event)
+    total = checkins.count()
+
+    recent = checkins.filter(attendee__isnull=False).select_related("attendee__profile").order_by("-created_at")[:limit]
+
+    attendees = []
+    for checkin in recent:
+        user = checkin.attendee
+        profile = getattr(user, "profile", None)
+        attendees.append(
+            {
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "avatar_url": profile.avatar_url if profile else None,
+            }
+        )
+
+    logger.info("event attendees preview event_id=%s total=%s shown=%s", event.id, total, len(attendees))
+
+    return {"total": total, "attendees": attendees}
 
 
 def is_event_host(user, event):

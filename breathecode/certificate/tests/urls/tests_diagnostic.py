@@ -40,7 +40,7 @@ class CertificateDiagnosticTestSuite(CertificateTestCase):
         url = reverse_lazy("certificate:diagnostic")
         response = self.client.get(url, {"cohort_user_id": 1})
         json = response.json()
-        self.assertEqual(json.get("slug"), "invalid-diagnostic-kind")
+        self.assertEqual(json.get("detail"), "invalid-diagnostic-kind")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_diagnostic__graduation_by_cohort_user_id(self):
@@ -131,7 +131,7 @@ class CertificateDiagnosticTestSuite(CertificateTestCase):
             {"kind": "graduation", "cohort_user_id": cu.id},
         )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.json().get("slug"), "cohort-user-not-found")
+        self.assertEqual(response.json().get("detail"), "cohort-user-not-found")
 
     def test_diagnostic__ambiguous_multi_cohort(self):
         self.headers(academy=1)
@@ -162,7 +162,7 @@ class CertificateDiagnosticTestSuite(CertificateTestCase):
             {"kind": "graduation", "user_id": user.id},
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.json().get("slug"), "ambiguous-cohort-user")
+        self.assertEqual(response.json().get("detail"), "ambiguous-cohort-user")
 
     def test_diagnostic__scope_cohort_limit(self):
         self.headers(academy=1)

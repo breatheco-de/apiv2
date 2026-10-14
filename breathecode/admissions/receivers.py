@@ -17,8 +17,16 @@ from breathecode.authenticate.models import CredentialsDiscord
 from breathecode.certificate.actions import get_assets_from_syllabus
 
 from ..activity import tasks as activity_tasks
+from .actions import sync_cohort_timeslots_timezone
 from .models import Academy, Cohort, CohortUser, Syllabus, SyllabusVersion
-from .signals import academy_saved, cohort_log_saved, cohort_user_created, student_edu_status_updated, syllabus_created
+from .signals import (
+    academy_saved,
+    cohort_log_saved,
+    cohort_saved,
+    cohort_user_created,
+    student_edu_status_updated,
+    syllabus_created,
+)
 
 # add your receives here
 logger = logging.getLogger(__name__)
@@ -50,6 +58,19 @@ def process_cohort_history_log(sender: Type[Cohort], instance: Cohort, **kwargs:
     logger.info("Processing Cohort history log for cohort: " + str(instance.id))
 
     activity_tasks.get_attendancy_log.delay(instance.id)
+
+
+@receiver(cohort_saved, sender=Cohort)
+def sync_timeslots_timezone_on_cohort_timezone_change(
+    sender: Type[Cohort], instance: Cohort, created: bool, **kwargs: Any
+):
+    if created or instance._old_timezone == instance.timezone:
+        return
+
+    logger.info(
+        "Cohort timezone changed cohort_id=%s old=%s new=%s", instance.id, instance._old_timezone, instance.timezone
+    )
+    sync_cohort_timeslots_timezone(instance)
 
 
 @sync_to_async

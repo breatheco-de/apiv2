@@ -86,6 +86,8 @@ class CertificateTestSuite(CertificateTestCase):
             syllabus=True,
             specialty=True,
         )
+        base = base.copy()
+        del base["user"]
 
         cohort_user_kwargs = {"role": "TEACHER"}
         teacher_model = self.generate_models(
@@ -177,6 +179,8 @@ class CertificateTestSuite(CertificateTestCase):
                 "schedule": {
                     "id": 1,
                     "name": model["syllabus_schedule"].name,
+                    "schedule_type": model["syllabus_schedule"].schedule_type,
+                    "description": model["syllabus_schedule"].description,
                     "syllabus": model["syllabus_schedule"].syllabus.id,
                 },
                 "syllabus_version": {
@@ -199,6 +203,7 @@ class CertificateTestSuite(CertificateTestCase):
                 "foot_note": model["layout_design"].foot_note,
             },
             "preview_url": model["user_specialty"].preview_url,
+            "pdf_url": f"https://certificate.4geeks.com/pdf/{model['user_specialty'].token}",
             "signed_by": teacher_model["user"].first_name + " " + teacher_model["user"].last_name,
             "signed_by_role": "Director",
             "specialty": {
@@ -229,20 +234,6 @@ class CertificateTestSuite(CertificateTestCase):
             "status": "PERSISTED",
             "status_text": "Certificate successfully queued for PDF generation",
             "user": {"first_name": model["user"].first_name, "id": 1, "last_name": model["user"].last_name},
-            "profile_academy": {
-                "first_name": model["profile_academy"].first_name,
-                "id": model["profile_academy"].id,
-                "last_name": model["profile_academy"].last_name,
-                "status": model["profile_academy"].status,
-                "phone": model["profile_academy"].phone,
-                "created_at": self.datetime_to_iso(model["profile_academy"].created_at),
-                "email": model["profile_academy"].email,
-                "academy": {
-                    "id": 1,
-                    "name": model["academy"].name,
-                    "slug": model["academy"].slug,
-                },
-            },
         }
 
         self.assertEqual(json, expected)

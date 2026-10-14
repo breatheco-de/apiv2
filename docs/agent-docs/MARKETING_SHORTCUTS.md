@@ -158,13 +158,13 @@ Update an existing short link.
 **Response:** 200 OK with updated short link object
 
 **Important Restrictions:**
-- **Can only update links created less than 1 day ago**
-- Cannot change `destination` or `slug` if link is older than 1 day
-- For older links, create a new link instead
+- `destination` can be updated at any time. The public slug stays the same, so an existing shortcut keeps working and points at the new URL.
+- Cannot change `slug` if the link is older than 1 day.
+- Other fields (UTM, notes, purpose, active) can be updated at any time.
 
 **Error Responses:**
 - `short-not-found`: Short link doesn't exist or doesn't belong to your academy
-- `update-days-ago`: Link is older than 1 day and cannot be modified
+- `update-days-ago`: Link is older than 1 day and the request changes its slug
 - Same validation errors as POST
 
 ### Delete Short Link

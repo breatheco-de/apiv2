@@ -9,7 +9,9 @@ from django.template import loader
 from django.urls.base import reverse_lazy
 from django.utils import timezone
 
+from breathecode.events.actions import get_event_attendees_preview
 from breathecode.events.caches import EventCache
+from breathecode.events.serializers import EventJoinSmallSerializer
 from breathecode.payments import tasks
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
@@ -54,10 +56,15 @@ def event_checkin_serializer(id, event, user):
         "attended_at": UTC_NOW,
         "attendee_id": user.id,
         "utm_campaign": None,
+        "utm_location": None,
         "utm_medium": None,
         "utm_source": None,
         "utm_url": None,
         "email": user.email,
+        "first_name": None,
+        "last_name": None,
+        "luma_guest_id": None,
+        "phone": None,
         "event_id": event.id,
         "id": id,
         "status": "DONE",
@@ -73,13 +80,7 @@ def render_message(message, data={}):
 
 
 def serializer(event):
-    return {
-        "id": event.id,
-        "starting_at": event.starting_at,
-        "ending_at": event.ending_at,
-        "live_stream_url": event.live_stream_url,
-        "title": event.title,
-    }
+    return EventJoinSmallSerializer(event).data
 
 
 # IMPORTANT: the loader.render_to_string in a function is inside of function render
@@ -88,6 +89,7 @@ def render_countdown(event, token, academy=None):
     context = {
         "event": serializer(event),
         "token": token.key,
+        "attendees_preview": get_event_attendees_preview(event),
     }
 
     if academy:
@@ -140,7 +142,12 @@ class AcademyEventTestSuite(EventTestCase):
         model = self.bc.database.create(
             user=1,
             token=1,
-            plan={"is_renewable": False, "event_type_set": event_type_model.event_type_set},
+            plan={
+                "is_renewable": False,
+                "time_of_life": 1,
+                "time_of_life_unit": "MONTH",
+                "event_type_set": event_type_model.event_type_set,
+            },
             service=1,
             subscription={"selected_event_type_set": event_type_model.event_type_set},
         )

@@ -1149,7 +1149,7 @@ class ShortLinkView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             days_ago = i.created_at + timedelta(days=1)
             if days_ago < utc_now:
                 raise ValidationException(
-                    "You cannot update or delete short links that have been created more than 1 day ago, create a new link instead",
+                    "You cannot delete short links that have been created more than 1 day ago",
                     slug="update-days-ago",
                 )
 

@@ -606,6 +606,7 @@ class Cohort(models.Model):
         super().__init__(*args, **kwargs)
         self._current_history_log = self.history_log
         self._old_stage = self.stage
+        self._old_timezone = self.timezone
 
     def clean(self):
         if self.stage:
@@ -653,6 +654,7 @@ class Cohort(models.Model):
             signals.cohort_stage_updated.send_robust(instance=self, sender=self.__class__)
 
         self._current_history_log = self.history_log
+        self._old_timezone = self.timezone
 
     def __str__(self):
         return f"{self.name} ({self.slug} - {self.id})"
