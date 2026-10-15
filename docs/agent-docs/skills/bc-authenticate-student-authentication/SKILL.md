@@ -1,6 +1,6 @@
 ---
 name: bc-authenticate-student-authentication
-description: Use when implementing or troubleshooting student authentication (token login, hosted login redirect, academy-scoped capabilities via ProfileAcademy, academy-less permissions via Django groups, GitHub connect/reconnect); do NOT use for staff-only academy admin, member/invite CRUD, or custom role management.
+description: Use when implementing or troubleshooting student authentication (token login, hosted login redirect, forgot/reset password, academy-scoped capabilities via ProfileAcademy, academy-less permissions via Django groups, GitHub connect/reconnect); do NOT use for staff-only academy admin, member/invite CRUD, or custom role management.
 requires: []
 ---
 
@@ -8,7 +8,7 @@ requires: []
 
 ## When to Use
 
-Use this skill when the user needs to authenticate a student, connect a third-party app to BreatheCode auth, inspect what a student **can do** (capabilities and permissions), or connect/reconnect GitHub. Use **universal hosted login** when a browser-based app (another BreatheCode / 4Geeks frontend) should not collect credentials locally and instead forwards the user to the API login form. Do not use it for staff academy administration (non-`student` roles — load [`bc-authenticate-staff-authentication`](../bc-authenticate-staff-authentication/SKILL.md)), academy role CRUD, member invitation administration, or payments/admissions onboarding logic.
+Use this skill when the user needs to authenticate a student, connect a third-party app to BreatheCode auth, let a student reset a forgotten password, inspect what a student **can do** (capabilities and permissions), or connect/reconnect GitHub. Use **universal hosted login** when a browser-based app (another BreatheCode / 4Geeks frontend) should not collect credentials locally and instead forwards the user to the API login form. Do not use it for staff academy administration (non-`student` roles — load [`bc-authenticate-staff-authentication`](../bc-authenticate-staff-authentication/SKILL.md)), academy role CRUD, member invitation administration, or payments/admissions onboarding logic.
 
 ## Concepts
 
@@ -24,6 +24,8 @@ Students use **two parallel authorization layers**. Both may appear on `GET /v1/
 
 - **Login token**: Main API token returned by login flows; send it as `Authorization: Token <token>`.
 - **Universal hosted login**: API-hosted HTML login for **cross-app browser authentication**. Other BreatheCode apps redirect users to `GET /v1/auth/view/login?url=<callback>` instead of building their own login UI. The `url` query param is the callback where the user returns after success (plain HTTPS or Base64-encoded — API auto-detects). Returns the same `login` token as `POST /v1/auth/login/`; successful auth redirects to `<callback>?token=<login_token>&attempt=1`. When `APPLY_CAPTCHA=true`, **both** hosted login and `POST /v1/auth/login/` require Cloudflare Turnstile (`cf-turnstile-response`). Clients that build their own login UI need `CLOUDFLARE_TURNSTILE_SITE_KEY` for the widget; the secret stays on the API. Both entrypoints share **failed-attempt rate limiting** when `LOGIN_RATE_LIMIT_ENABLED=true` (429 / form error after too many bad credentials).
+- **Allowed callbacks**: every browser flow that redirects back to a client-supplied URL (hosted login `url`, password reset `url`/`callback`, OAuth `url`, invite `callback`) only accepts `https` URLs on `4geeks.com`, `4geeksacademy.com`, `learnpack.co` (and any subdomain), the exact hosts of the API, app and site URLs, the exact hosts of an academy's `website_url` / `white_label_url`, or same-origin paths (`/...`). `http://localhost` works only on development servers. Anything else is rejected with `400` (`invalid-redirect-url`) before a token is issued.
+- **Session revocation**: setting a new password (reset link or invite form) deletes every `login`, `temporal` and `short` token of the user, so all devices are signed out. `permanent` and `one_time` tokens (integrations) are kept.
 - **ProfileAcademy**: Anchor for capabilities — every capability check resolves user + academy + role.
 - **Groups** (`Default`, `Student`, `Paid Student`, `Events`, `Classes`, `Mentorships`, `Legacy`, etc.): grant permission codenames independent of which academy the student belongs to. Membership changes as side effects of admissions, payments, and enrollment flows.
 - **Staff**: non-student academy roles use **capabilities only** — see [`bc-authenticate-staff-authentication`](../bc-authenticate-staff-authentication/SKILL.md).
@@ -38,11 +40,31 @@ Students use **two parallel authorization layers**. Both may appear on `GET /v1/
 
 Other BreatheCode apps authenticate users by redirecting the browser to the API login page instead of building their own login UI. OAuth (`/github`, `/google`) uses a different entrypoint but the same `url` callback pattern — see steps 8–9 below.
 
-1. App redirects user to `GET /v1/auth/view/login?url=<callback>` (`url` required; plain HTTPS or Base64-encoded).
+1. App redirects user to `GET /v1/auth/view/login?url=<callback>` (`url` required; plain HTTPS or Base64-encoded; must be an allowed callback, see Concepts).
 2. User submits email/password on the API HTML form (Turnstile widget present when `APPLY_CAPTCHA=true`).
 3. API redirects to `<callback>?token=<login_token>&attempt=1`.
 4. App reads `token` from the query string, stores it, and sends `Authorization: Token <token>` on API calls.
 5. Optionally validate with `GET /v1/auth/user/me`.
+
+### Forgot / reset password (HTML flow)
+
+Password reset is served by the API as HTML pages; there is no JSON endpoint for students. The hosted login form already links to it ("Forgot your password?"), so apps using hosted login get it for free. Apps with their own login UI link to the request page.
+
+1. Send the user to `GET /v1/auth/password/reset?url=<callback>` (`url` optional, plain or Base64, must be an allowed callback). The page asks for the email.
+2. The form posts `email` (and the hidden `callback`). The answer is the same whether or not the email exists: a "Check your email for a password reset!" page, or a redirect to `<callback>?msg=Check your email for a password reset!` when a callback was given.
+3. The user receives an email with `<API_URL>/v1/auth/password/<token>`. The token is a `short` token, valid for **15 minutes**.
+4. The user picks a new password on that page (`password1`, `password2`). Rules: at least 8 characters with a lowercase letter, an uppercase letter and a symbol.
+5. On success the password is saved, the reset link stops working and **every session is revoked** (see Concepts). The user is **not** logged in: the page redirects to `callback` (if the link had `?callback=<url>`) or shows a confirmation message. Send the user to hosted login (or your login form) afterwards and store the new token.
+
+Accounts created without a password (for example by `POST /v1/auth/subscribe/`) use the same flow to set their first password. Invite links (`/v1/auth/member/invite/<invite_token>`) can also set it, but only while the account has no password.
+
+Abuse limits (Redis, per window):
+
+| Step | Limit | When exceeded |
+|---|---|---|
+| Request email (`POST /password/reset`) | 10 per hour per IP | `429` page with `Retry-After` |
+| Request email (`POST /password/reset`) | 3 per hour per email | Same success response, but no email is sent (prevents enumeration) |
+| Set password (`POST /password/<token>`) | 10 per 15 minutes per IP, 5 per 15 minutes per link | `429` page with `Retry-After` |
 
 2. **Capture token and persist it securely.**
    - API login returns token in JSON body.
@@ -103,6 +125,10 @@ Send `Accept-Language` (`en`, `es`) for translated errors where applicable.
 | View current GitHub link | GET | `/v1/auth/github/me` | `Authorization` | None | `username`, `avatar_url`, `name`, `scopes`, `valid` |
 | Disconnect current GitHub link | DELETE | `/v1/auth/github/me` | `Authorization` | None | `204 No Content` |
 | Logout | POST | `/v1/auth/logout/` | `Authorization` | None | `message`; revokes every `login` token of the current user (all devices) plus the token used for the call; client must clear local auth data |
+| Password reset request page | GET | `/v1/auth/password/reset?url=<callback>` | None | None | HTML form asking for the email; `400` page when `url` is not an allowed callback |
+| Request reset email | POST | `/v1/auth/password/reset` | form-encoded | `email`, optional `callback` | same confirmation for known and unknown emails; redirect to `<callback>?msg=...` when `callback` is set |
+| Set new password page | GET | `/v1/auth/password/<token>?callback=<url>` | None | None | HTML form; "The link has expired." when the token is invalid or older than 15 minutes |
+| Set new password | POST | `/v1/auth/password/<token>` | form-encoded | `password1`, `password2`, optional `callback` | redirect to `callback` or confirmation page; revokes all sessions; no token is returned |
 
 ### API login request sample
 
@@ -255,6 +281,11 @@ https://4geeksacademy.com/?token=9944b09199c62bcf9418ad846dd0e4bbdfc6ee4b&attemp
 - **GitHub account not linked**: `GET /v1/auth/github/me` can return `404` with `slug: not-found`.
 - **GitHub scope mismatch**: callback retries with `scope_retry`; after retry limit, flow returns a user-facing error asking for required org scopes.
 - **Missing `url` in hosted login / GitHub OAuth start**: returns `no-callback-url`; always provide callback URL.
+- **Callback not allowed (`400`, `slug: invalid-redirect-url`)**: the `url`/`callback` host is not on the allowlist (or is `http` outside development). JSON endpoints (OAuth) return the slug; HTML pages show "The redirect url is not allowed". Use an allowed host or ask for the academy's `website_url` to be set.
+- **Too many requests (`429`, `slug: rate-limit-exceeded`)**: honor `Retry-After` (seconds). HTML pages show "Too many requests, please try again later".
+- **`401` right after a password change**: expected, every session token was revoked; log in again.
+- **Reset link reused or older than 15 minutes**: the page shows "The link has expired."; request a new email.
+- **Reset email never arrives**: after 3 requests per hour for the same email the API stops sending emails without telling the client; wait for the window to pass.
 
 ## Checklist
 
@@ -268,3 +299,5 @@ https://4geeksacademy.com/?token=9944b09199c62bcf9418ad846dd0e4bbdfc6ee4b&attemp
 8. For GitHub, start OAuth, finish callback redirect, then verify with `GET /v1/auth/github/me`.
 9. Use `DELETE /v1/auth/github/me` before reconnect when credentials are stale.
 10. On sign-out, call `POST /v1/auth/logout/` and clear local session/token state.
+11. Make sure every callback URL you pass (`url`, `callback`) is on an allowed host.
+12. For forgotten passwords, link to `GET /v1/auth/password/reset?url=<callback>` and send the user back to login after the reset (no token is returned).

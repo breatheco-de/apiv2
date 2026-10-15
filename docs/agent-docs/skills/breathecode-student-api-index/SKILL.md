@@ -43,7 +43,7 @@ These areas are primarily documented for **academy staff** in the staff index. I
 | **activity** | My engagement, daily summaries, login streaks | `bc-activity-*` |
 | **assessment** | My quizzes and attempts | `bc-assessment-*` |
 | **assignment** | My tasks, submissions, final project, LearnPack telemetry ingestion | `bc-assignment-*`, [`bc-assignment-diagnose-asset-telemetry`](../bc-assignment-diagnose-asset-telemetry/SKILL.md) (for `POST …/me/telemetry` and related learner diagnostics) |
-| **authenticate** | Login, token, hosted redirect, academy-scoped capabilities + academy-less permissions for the current user | `bc-authenticate-*`, [`bc-authenticate-student-authentication`](../bc-authenticate-student-authentication/SKILL.md) |
+| **authenticate** | Login, token, hosted redirect, forgot/reset password, academy-scoped capabilities + academy-less permissions for the current user | `bc-authenticate-*`, [`bc-authenticate-student-authentication`](../bc-authenticate-student-authentication/SKILL.md) |
 | **career** | Job listings and applications after graduation | `bc-career-*` |
 | **certificate** | My issued certificates | `bc-certificate-*` |
 | **events** | My workshops, RSVPs, check-ins, live class join | `bc-events-*`, [`bc-events-create-and-edit-event`](../bc-events-create-and-edit-event/SKILL.md) (where it documents student-facing paths) |
@@ -64,6 +64,7 @@ Some user requests touch multiple domains. Load ALL listed skills before proceed
 | User Request | Skills to Load |
 |---|---|
 | Log in or connect a third-party app using hosted student auth (redirect + callback token) | [`bc-authenticate-student-authentication`](../bc-authenticate-student-authentication/SKILL.md) |
+| Let a user reset a forgotten password | [`bc-authenticate-student-authentication`](../bc-authenticate-student-authentication/SKILL.md) (+ [`bc-authenticate-share-subdomain-session`](../bc-authenticate-share-subdomain-session/SKILL.md) to clear the revoked shared cookie) |
 | Sign up a new user from a frontend form (account + plan/course, then log them in) | [`bc-authenticate-signup-user`](../bc-authenticate-signup-user/SKILL.md) + [`bc-authenticate-share-subdomain-session`](../bc-authenticate-share-subdomain-session/SKILL.md) (persist the returned `access_token`) |
 | Keep a user logged in across 4Geeks subdomains (shared session cookie) | [`bc-authenticate-share-subdomain-session`](../bc-authenticate-share-subdomain-session/SKILL.md) + [`bc-authenticate-student-authentication`](../bc-authenticate-student-authentication/SKILL.md) (to obtain the token) |
 | List, request, or deprovision **my** VPS | [`bc-provisioning-manage-vps-server`](../bc-provisioning-manage-vps-server/SKILL.md) + `bc-authenticate-*` (token) |

@@ -1379,3 +1379,54 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(self.bc.database.list_of("authenticate.ProfileAcademy"), [])
         self.assertEqual(self.bc.database.list_of("admissions.CohortUser"), [])
+
+
+@pytest.fixture
+def skip_invite_email_validation(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr("breathecode.authenticate.tasks.async_validate_email_invite.delay", MagicMock())
+
+
+INVITE_FORM = {
+    "first_name": "abc",
+    "last_name": "xyz",
+    "password": "^3^3uUppppp",
+    "repeat_password": "^3^3uUppppp",
+}
+
+
+def test_member_invite_token__post__setting_password_revokes_sessions(
+    db, database, client, skip_invite_email_validation
+):
+    email = "user@dotdotdotdot.dot"
+    tokens = [
+        {"key": "old-login", "token_type": "login"},
+        {"key": "integration", "token_type": "permanent"},
+    ]
+    model = database.create(
+        user={"email": email},
+        token=tokens,
+        user_invite={"email": email, "status": "PENDING", "token": "invite-token"},
+    )
+
+    url = reverse_lazy("authenticate:member_invite_token", kwargs={"token": model.user_invite.token})
+    response = client.post(url, {**INVITE_FORM, "callback": "/1337"}, format="multipart")
+
+    assert response.status_code == status.HTTP_302_FOUND
+    assert response.url == "/1337"
+    assert [(x["key"], x["token_type"]) for x in database.list_of("authenticate.Token")] == [
+        ("integration", "permanent")
+    ]
+
+
+def test_member_invite_token__post__with_callback_not_allowed(db, database, client, skip_invite_email_validation):
+    model = database.create(
+        user_invite={"email": "user@dotdotdotdot.dot", "status": "PENDING", "token": "invite-token"},
+    )
+
+    url = reverse_lazy("authenticate:member_invite_token", kwargs={"token": model.user_invite.token})
+    response = client.post(url, {**INVITE_FORM, "callback": "https://evil.com/"}, format="multipart")
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert b"The redirect url is not allowed" in response.content
+    assert [x["status"] for x in database.list_of("authenticate.UserInvite")] == ["PENDING"]
+    assert database.list_of("auth.User") == []

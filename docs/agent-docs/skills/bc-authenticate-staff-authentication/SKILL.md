@@ -311,7 +311,8 @@ https://admin.example.com/auth/callback?token=9944b09199c62bcf9418ad846dd0e4bbdf
 - **User has no ProfileAcademy for academy**: capabilities list is empty `[]`; user cannot work in that academy.
 - **Multi-academy staff**: capability sets differ per academy; always re-fetch or re-probe when switching `Academy` header.
 - **Academy token not generated**: `GET /v1/auth/academy/token/` returns **400** `academy-token-not-found`; call `POST` first with `generate_academy_token`.
-- **Self-service password reset is HTML only**: `POST /v1/auth/password/reset` is an HTML form, not JSON. Staff JSON reset is `POST /v1/auth/member/<profileacademy_id>/password/reset`.
+- **Self-service password reset is HTML only**: `POST /v1/auth/password/reset` is an HTML form, not JSON; the full flow (15-minute link, password rules, callback allowlist, rate limits) is in [`bc-authenticate-student-authentication`](../bc-authenticate-student-authentication/SKILL.md) and applies to staff too. Staff JSON reset is `POST /v1/auth/member/<profileacademy_id>/password/reset`.
+- **Password change signs the member out everywhere**: completing any reset link (including `reset_password_url`) deletes the member's `login`, `temporal` and `short` tokens; academy `permanent` integration tokens are kept.
 - **Public role list hides some slugs**: `GET /v1/auth/role` does not list `student`, `academy_token`, or `admin` — see [`bc-authenticate-staff-invites`](../bc-authenticate-staff-invites/SKILL.md) when building invite UIs.
 
 ## Checklist

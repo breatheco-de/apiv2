@@ -2942,3 +2942,32 @@ def test__put__course_and_syllabus__waiting_list(bc: Breathecode, client: APICli
     assert verify_user_invite_email.delay.call_args_list == []
 
     assert Token.get_or_create.call_args_list == []
+
+
+def test_task__post__email_rate_limit(bc: Breathecode, client: APIClient):
+    url = reverse_lazy("authenticate:subscribe")
+    data = {"email": "pokemon@potato.io", "syllabus": "missing-syllabus"}
+
+    for _ in range(3):
+        response = client.post(url, data, format="json")
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    response = client.post(url, data, format="json")
+
+    assert response.json() == {"detail": "rate-limit-exceeded", "status_code": 429}
+    assert response.status_code == status.HTTP_429_TOO_MANY_REQUESTS
+    assert response["Retry-After"] == "3600"
+
+
+def test_task__post__ip_rate_limit(bc: Breathecode, client: APIClient):
+    url = reverse_lazy("authenticate:subscribe")
+
+    for i in range(10):
+        data = {"email": f"pokemon{i}@potato.io", "syllabus": "missing-syllabus"}
+        response = client.post(url, data, format="json", REMOTE_ADDR="203.0.113.7")
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    data = {"email": "pokemon11@potato.io", "syllabus": "missing-syllabus"}
+    response = client.post(url, data, format="json", REMOTE_ADDR="203.0.113.7")
+
+    assert response.status_code == status.HTTP_429_TOO_MANY_REQUESTS

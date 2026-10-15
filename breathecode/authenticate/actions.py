@@ -690,6 +690,15 @@ def reset_password(users=None, extra=None, academy=None):
     return True
 
 
+SESSION_TOKEN_TYPES = ("login", "temporal", "short")
+
+
+def revoke_user_sessions(user: User, token_types: tuple[str, ...] = SESSION_TOKEN_TYPES) -> int:
+    """Delete the user's session tokens, permanent and one_time tokens are kept because integrations use them."""
+    count, _ = Token.objects.filter(user=user, token_type__in=token_types).delete()
+    return count
+
+
 def _unslugify(slug: str) -> str:
     """Turn a slug into a readable fallback title without exposing raw slug form."""
     if not slug:
@@ -1714,6 +1723,7 @@ def accept_invite_action(data=None, token=None, lang="en"):
     if password1:
         user.set_password(password1)
         user.save()
+        revoke_user_sessions(user)
 
     if invite.academy is not None:
         profile = ProfileAcademy.objects.filter(email=invite.email, academy=invite.academy).first()

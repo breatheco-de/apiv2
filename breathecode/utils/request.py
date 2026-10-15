@@ -1,8 +1,33 @@
+import os
 from typing import Optional
 from urllib.parse import urlparse
 
 from django.core.handlers.wsgi import WSGIRequest
 from rest_framework.request import Request
+
+
+def _trusted_proxy_count() -> int:
+    try:
+        return max(1, int(os.getenv("TRUSTED_PROXY_COUNT", "1")))
+    except ValueError:
+        return 1
+
+
+def get_client_ip(request: WSGIRequest | Request) -> str:
+    """
+    Return the client IP from X-Forwarded-For.
+
+    Each trusted proxy appends the address it received the request from, so the client IP is the entry added by
+    the outermost proxy, `TRUSTED_PROXY_COUNT` positions from the end (Heroku's router is one proxy). Entries before
+    it are supplied by the client and can be spoofed.
+    """
+    forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
+    if forwarded:
+        hops = [hop.strip() for hop in forwarded.split(",") if hop.strip()]
+        if hops:
+            return hops[-min(_trusted_proxy_count(), len(hops))]
+
+    return request.META.get("REMOTE_ADDR") or "unknown"
 
 
 def get_current_academy(request: WSGIRequest | Request, return_id: bool = True) -> Optional[int | object]:

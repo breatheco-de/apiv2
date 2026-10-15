@@ -24,6 +24,7 @@ def setup(monkeypatch: pytest.MonkeyPatch, db):
     monkeypatch.setenv("GOOGLE_CLIENT_ID", "123456.apps.googleusercontent.com")
     monkeypatch.setenv("GOOGLE_SECRET", "123456")
     monkeypatch.setenv("GOOGLE_REDIRECT_URL", "https://breathecode.herokuapp.com/v1/auth/google/callback")
+    monkeypatch.setenv("API_URL", "https://breathecode.herokuapp.com")
     monkeypatch.setattr("breathecode.services.google_apps.GoogleApps.__init__", MagicMock(return_value=None))
     monkeypatch.setattr("breathecode.services.google_apps.GoogleApps.subscribe_meet_webhook", MagicMock())
     monkeypatch.setattr("breathecode.authenticate.views.get_user_info", mock_get_user_info)
@@ -227,3 +228,15 @@ def test_academysettings_inferred_as_none(
             "user_id": 1,
         },
     ]
+
+
+def test_url_not_allowed(database: capy.Database, client: capy.Client):
+    url = (
+        reverse_lazy("authenticate:google_callback")
+        + "?state=token%3D%26url%3Dhttps://evil.com/steal%26academysettings%3Dnone&code=12345"
+    )
+
+    response = client.get(url, format="json")
+
+    assert response.json() == {"detail": "invalid-redirect-url", "status_code": 400}
+    assert response.status_code == status.HTTP_400_BAD_REQUEST

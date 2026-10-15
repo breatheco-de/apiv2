@@ -32,6 +32,8 @@ Do NOT use it for apps on other registrable domains (e.g. `4geeksacademy.com`, `
 - **Host-only vs parent-domain cookies**: a cookie written without `Domain` is host-only and invisible to siblings. If both variants exist, the browser returns both under the same name and reads become ambiguous. Always clear both variants before writing and on logout.
 - **Local development**: omit `Domain` on `localhost`, `*.localhost`, and IP addresses; sharing across subdomains is not possible there. Omit `Secure` on `http:`.
 - **Logout scope**: `POST /v1/auth/logout/` deletes every `login` token of the current user, so the user is signed out on all devices and all subdomains, not only the current browser.
+- **Password change scope**: resetting or setting a password deletes every session token of the user, so a `4g_tok` written before the change returns `401` on its next use. The reset flow does not return a new token; send the user through login again.
+- **Hosted login callbacks are allowlisted**: the `url` passed to hosted login must be an `https` URL on `4geeks.com`, `4geeksacademy.com`, `learnpack.co` (or a subdomain), an academy website host, or the API/app/site host. Other hosts get a `400` page and no token. The full rule is in [`bc-authenticate-student-authentication`](../bc-authenticate-student-authentication/SKILL.md).
 
 ## Workflow
 
@@ -129,7 +131,8 @@ All endpoints are under `/v1/auth`. Responses are not paginated. Send `Accept-La
 - **Cookie written without `Domain`** (sibling subdomains do not see the login): clear both variants and rewrite with `domain=.4geeks.com` (Step 5).
 - **Two `4g_tok` values in `document.cookie`**: a stale host-only cookie shadows the shared one. Clear both variants, then re-run Steps 4–5 with the token that validates.
 - **`expires_at` already past or `GET /v1/auth/token/<token>` returns an error**: clear the cookie and redirect to login; do not retry with the same token.
-- **API returns `401` mid-session**: another subdomain logged out or the token expired. Clear the cookie and redirect to login.
+- **API returns `401` mid-session**: another subdomain logged out, the user changed their password, or the token expired. Clear the cookie and redirect to login.
+- **Hosted login shows "The redirect url is not allowed"**: the callback host is not allowlisted (for example a preview domain); use an allowed host.
 - **Logout returns `401`**: the token was already revoked or expired. Clear the cookie anyway (Step 7).
 - **App runs on `localhost`, a preview domain, or a non-4geeks.com domain**: the shared cookie cannot work there. Store the token host-only for development, or use hosted login on each load in production.
 - **Login returns `403` with `slug: email-not-validated`**: do not write a cookie; show the email-confirmation message.

@@ -31,7 +31,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
     def test_slack_without_user(self):
         """Test /slack without auth"""
-        original_url_callback = "https://google.co.ve"
+        original_url_callback = "https://4geeks.com"
         url = reverse_lazy("authenticate:slack")
         params = {
             "url": base64.b64encode(original_url_callback.encode("utf-8")),
@@ -49,7 +49,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
     def test_slack_without_a(self):
         """Test /slack without auth"""
-        original_url_callback = "https://google.co.ve"
+        original_url_callback = "https://4geeks.com"
         url = reverse_lazy("authenticate:slack")
         user = "1234567890"
         params = {"url": base64.b64encode(original_url_callback.encode("utf-8")), "user": user}
@@ -66,7 +66,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
     def test_slack(self):
         """Test /slack"""
-        original_url_callback = "https://google.co.ve"
+        original_url_callback = "https://4geeks.com"
         url = reverse_lazy("authenticate:slack")
         academy = "Team 7"
         user = "1234567890"

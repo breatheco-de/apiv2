@@ -13,7 +13,7 @@ from mixer.backend.django import mixer
 class SlackTestCase(APITestCase):
     """APITestCase with Slack methods"""
 
-    url_callback = "https://google.co.ve"
+    url_callback = "https://4geeks.com"
     academy = None
 
     def slack(self):

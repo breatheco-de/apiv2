@@ -183,12 +183,12 @@ def test_password_reset__post__with_callback__with_email__user_not_found(client,
     url = reverse_lazy("authenticate:password_reset")
     data = {
         "email": "konan@naturo.io",
-        "callback": "https://naturo.io/",
+        "callback": "https://4geeks.com/",
     }
     response = client.post(url, data)
 
     assert isinstance(response, HttpResponseRedirect)
-    assert response.url == "https://naturo.io/?msg=Check%20your%20email%20for%20a%20password%20reset!"
+    assert response.url == "https://4geeks.com/?msg=Check%20your%20email%20for%20a%20password%20reset!"
     assert response.status_code == status.HTTP_302_FOUND
     assert database.list_of("auth.User") == []
     mock_notify_email_message.assert_not_called()
@@ -200,13 +200,13 @@ def test_password_reset__post__with_callback__with_email__with_user(client, mock
     model = database.create(user=1)
     data = {
         "email": model.user.email,
-        "callback": "https://naturo.io/",
+        "callback": "https://4geeks.com/",
     }
     response = client.post(url, data)
     token, created = Token.get_or_create(model.user, token_type="short")
 
     assert isinstance(response, HttpResponseRedirect)
-    assert response.url == "https://naturo.io/?msg=Check%20your%20email%20for%20a%20password%20reset!"
+    assert response.url == "https://4geeks.com/?msg=Check%20your%20email%20for%20a%20password%20reset!"
     assert response.status_code == status.HTTP_302_FOUND
     db_users = database.list_of("auth.User")
     assert len(db_users) == 1
@@ -234,13 +234,13 @@ def test_password_reset__post__with_callback__with_email_in_uppercase__with_user
     model = database.create(user=1)
     data = {
         "email": model.user.email.upper(),
-        "callback": "https://naturo.io/",
+        "callback": "https://4geeks.com/",
     }
     response = client.post(url, data)
     token, created = Token.get_or_create(model.user, token_type="short")
 
     assert isinstance(response, HttpResponseRedirect)
-    assert response.url == "https://naturo.io/?msg=Check%20your%20email%20for%20a%20password%20reset!"
+    assert response.url == "https://4geeks.com/?msg=Check%20your%20email%20for%20a%20password%20reset!"
     assert response.status_code == status.HTTP_302_FOUND
     db_users = database.list_of("auth.User")
     assert len(db_users) == 1
@@ -258,3 +258,66 @@ def test_password_reset__post__with_callback__with_email_in_uppercase__with_user
             academy=None,
         )
     ]
+
+
+@pytest.mark.parametrize("param", ["callback", "url"])
+def test_password_reset__get__with_callback_not_allowed(client, param):
+    """Test GET /password/reset with a foreign callback. Expects 400 and no form."""
+    url = reverse_lazy("authenticate:password_reset") + f"?{param}=https://evil.com/"
+    response = client.get(url)
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert b"The redirect url is not allowed" in response.content
+
+
+def test_password_reset__post__with_callback_not_allowed(client, mock_notify_email_message, database):
+    """Test POST /password/reset with a foreign callback. Expects 400 and no email sent."""
+    url = reverse_lazy("authenticate:password_reset")
+    model = database.create(user=1)
+    data = {
+        "email": model.user.email,
+        "callback": "https://evil.com/",
+    }
+    response = client.post(url, data)
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert b"The redirect url is not allowed" in response.content
+    mock_notify_email_message.assert_not_called()
+
+
+def test_password_reset__post__email_limit_is_silent(client, mock_notify_email_message, database):
+    """After 3 requests for the same email the response is unchanged but no more emails are sent."""
+    url = reverse_lazy("authenticate:password_reset")
+    model = database.create(user=1)
+    data = {"email": model.user.email, "callback": "https://4geeks.com/"}
+
+    responses = [client.post(url, data) for _ in range(4)]
+
+    assert [x.status_code for x in responses] == [status.HTTP_302_FOUND] * 4
+    assert len({x.url for x in responses}) == 1
+    assert mock_notify_email_message.call_count == 3
+
+
+def test_password_reset__post__ip_limit(client, mock_notify_email_message, database):
+    """After 10 requests from the same IP the endpoint answers 429."""
+    url = reverse_lazy("authenticate:password_reset")
+
+    for i in range(10):
+        response = client.post(url, {"email": f"user{i}@naturo.io"}, REMOTE_ADDR="203.0.113.7")
+        assert response.status_code == status.HTTP_200_OK
+
+    response = client.post(url, {"email": "user11@naturo.io"}, REMOTE_ADDR="203.0.113.7")
+
+    assert response.status_code == status.HTTP_429_TOO_MANY_REQUESTS
+    assert response["Retry-After"] == "3600"
+
+
+def test_password_reset__post__rate_limit_disabled_scope(client, mock_notify_email_message, database, monkeypatch):
+    monkeypatch.setenv("RATE_LIMIT_DISABLED_SCOPES", "password-reset")
+    url = reverse_lazy("authenticate:password_reset")
+    model = database.create(user=1)
+
+    for _ in range(4):
+        client.post(url, {"email": model.user.email})
+
+    assert mock_notify_email_message.call_count == 4

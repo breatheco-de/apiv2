@@ -132,6 +132,7 @@ Error responses include a stable slug in `slug` or `silent_code`. Branch on the 
 - **`syllabus-not-belong-to-course`**: the `syllabus` does not belong to the `course`. Send only `course`, or a matching pair.
 - **`conversion-info-invalid-key`** or **`conversion-info-json-type`**: remove keys not listed in Step 2, and send `conversion_info` as a JSON object.
 - **`401` with a token in `Authorization`**: the token is invalid or expired. Clear the shared cookie (see the shared-session skill) and submit again without `Authorization`; expect `user-exists` if the account already exists.
+- **`429` with `rate-limit-exceeded`**: more than 3 submissions per hour for the same email, or 10 per hour from the same IP (failed submissions count too). Disable the submit button and tell the user to retry after `Retry-After` seconds; do not retry automatically.
 
 ## Checklist
 

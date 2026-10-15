@@ -7,7 +7,7 @@ from django.db.models.signals import post_delete, post_save, pre_delete, pre_sav
 from django.dispatch import receiver
 from task_manager.django.actions import schedule_task
 
-from breathecode.admissions.models import CohortUser
+from breathecode.admissions.models import Academy, CohortUser
 from breathecode.admissions.signals import student_edu_status_updated
 from breathecode.authenticate import tasks
 from breathecode.payments.models import Service
@@ -26,8 +26,15 @@ from breathecode.mentorship.models import MentorProfile
 from breathecode.payments.models import SubscriptionSeat
 
 from .tasks import async_add_to_organization, async_remove_from_organization
+from .utils.redirects import invalidate_academy_redirect_hosts
 
 logger = logging.getLogger(__name__)
+
+
+@receiver(post_save, sender=Academy)
+@receiver(post_delete, sender=Academy)
+def clear_academy_redirect_hosts(sender, **_):
+    invalidate_academy_redirect_hosts()
 
 
 @receiver(post_save, sender=User)

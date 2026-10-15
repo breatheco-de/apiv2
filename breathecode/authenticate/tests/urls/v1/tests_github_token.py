@@ -32,7 +32,7 @@ class AuthenticateTestSuite(AuthTestCase):
         """Test /github"""
         url = reverse_lazy("authenticate:github_token", kwargs={"token": "asdasd"})
         url = urllib.parse.quote(url.encode("utf-8"))
-        params = {"url": "https://google.co.ve"}
+        params = {"url": "https://4geeks.com"}
         response = self.client.get(f"{url}?{urllib.parse.urlencode(params)}")
         json = response.json()
         expected = {"detail": "invalid-token", "status_code": 400}
@@ -41,7 +41,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
     def test_github_with_auth(self):
         """Test /github"""
-        original_url_callback = "https://google.co.ve"
+        original_url_callback = "https://4geeks.com"
         model = self.generate_models(authenticate=True, token=True)
         token = self.get_token(1)
         url = reverse_lazy(
@@ -51,7 +51,7 @@ class AuthenticateTestSuite(AuthTestCase):
             },
         )
         url = urllib.parse.quote(url.encode("utf-8"))
-        params = {"url": "https://google.co.ve"}
+        params = {"url": "https://4geeks.com"}
         response = self.client.get(f"{url}?{urllib.parse.urlencode(params)}")
         params = {
             "client_id": os.getenv("GITHUB_CLIENT_ID", ""),
@@ -65,7 +65,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
     def test_github_with_auth__profile_academy(self):
         """Test /github"""
-        original_url_callback = "https://google.co.ve"
+        original_url_callback = "https://4geeks.com"
         model = self.generate_models(authenticate=True, token=True, profile_academy=True)
         token = self.get_token(1)
         url = reverse_lazy(
@@ -75,7 +75,7 @@ class AuthenticateTestSuite(AuthTestCase):
             },
         )
         url = urllib.parse.quote(url.encode("utf-8"))
-        params = {"url": "https://google.co.ve"}
+        params = {"url": "https://4geeks.com"}
         response = self.client.get(f"{url}?{urllib.parse.urlencode(params)}")
         params = {
             "client_id": os.getenv("GITHUB_CLIENT_ID", ""),
@@ -89,7 +89,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
     def test_github_with_auth__auth_settings(self):
         """Test /github"""
-        original_url_callback = "https://google.co.ve"
+        original_url_callback = "https://4geeks.com"
         model = self.generate_models(authenticate=True, token=True, academy_auth_settings=True)
         token = self.get_token(1)
         url = reverse_lazy(
@@ -99,7 +99,7 @@ class AuthenticateTestSuite(AuthTestCase):
             },
         )
         url = urllib.parse.quote(url.encode("utf-8"))
-        params = {"url": "https://google.co.ve"}
+        params = {"url": "https://4geeks.com"}
         response = self.client.get(f"{url}?{urllib.parse.urlencode(params)}")
         params = {
             "client_id": os.getenv("GITHUB_CLIENT_ID", ""),

@@ -30,6 +30,7 @@ from django.db.models import Q
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import redirect
 from django.utils import timezone
+from django.utils.html import escape
 from linked_services.django.models import AppUserAgreement
 from linked_services.django.service import Service
 from linked_services.rest_framework.decorators import scope
@@ -60,7 +61,7 @@ from breathecode.services.github import Github, GithubAuthException
 from breathecode.services.google_cloud import FunctionV1, FunctionV2
 from breathecode.utils import GenerateLookupsMixin, HeaderLimitOffsetPagination, capable_of
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
-from breathecode.utils.decorators import has_permission, superuser_required
+from breathecode.utils.decorators import has_permission, rate_limit, superuser_required
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from breathecode.utils.shorteners import C
 from breathecode.utils.request import get_current_academy
@@ -79,6 +80,7 @@ from .actions import (
     get_verify_email_copy,
     resend_invite,
     reset_password,
+    revoke_user_sessions,
     set_gitpod_user_expiration,
     sync_organization_members,
     update_gitpod_users,
@@ -91,6 +93,7 @@ from .utils.login_protection import (
     record_login_failure,
     verify_turnstile_if_enabled,
 )
+from .utils.redirects import decode_redirect_url, is_allowed_redirect_url, validate_redirect_url
 from .authentication import ExpiringTokenAuthentication
 from .forms import (
     InviteForm,
@@ -255,7 +258,7 @@ class LogoutView(APIView):
         return self._logout(request)
 
     def _logout(self, request):
-        Token.objects.filter(user=request.user, token_type="login").delete()
+        revoke_user_sessions(request.user, token_types=("login",))
         request.auth.delete()
         return Response(
             {
@@ -267,6 +270,8 @@ class LogoutView(APIView):
 class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     permission_classes = [AllowAny]
 
+    @rate_limit("subscribe", "10/h", key="ip")
+    @rate_limit("subscribe", "3/h", key="body:email")
     def post(self, request):
         data = {**request.data}
         lang = get_user_language(request)
@@ -2301,6 +2306,8 @@ def get_github_token(request, token=None):
     if url == None:
         raise ValidationException("No callback URL specified", slug="no-callback-url")
 
+    validate_redirect_url(decode_redirect_url(url), get_user_language(request))
+
     try:
         scope_retry = int(request.query_params.get("scope_retry", 0))
     except (ValueError, TypeError):
@@ -2376,6 +2383,8 @@ async def save_github_token(request):
         url = base64.b64decode(url.encode("utf-8")).decode("utf-8")
     except Exception:
         pass
+
+    await sync_to_async(validate_redirect_url)(url, await aget_user_language(request))
 
     try:
         scope_retry = int(request.query_params.get("scope_retry", 0))
@@ -2627,6 +2636,8 @@ def get_slack_token(request):
     except Exception:
         pass
 
+    validate_redirect_url(url, get_user_language(request))
+
     user_id = request.query_params.get("user", None)
     if user_id is None:
         raise ValidationError("No user specified on the URL")
@@ -2702,6 +2713,8 @@ def save_slack_token(request):
     if "url" not in payload:
         logger.exception(payload)
         raise ValidationError("No url specified from the slack payload")
+
+    validate_redirect_url(payload["url"][0], get_user_language(request))
 
     if "user" not in payload:
         logger.exception(payload)
@@ -2784,6 +2797,8 @@ def get_facebook_token(request):
     except Exception:
         pass
 
+    validate_redirect_url(url, get_user_language(request))
+
     user_id = request.query_params.get("user", None)
     if user_id is None:
         raise ValidationError("No user specified on the URL")
@@ -2843,6 +2858,8 @@ def save_facebook_token(request):
     if "url" not in payload:
         logger.exception(payload)
         raise ValidationError("No url specified from the slack payload")
+
+    validate_redirect_url(payload["url"][0], get_user_language(request))
 
     if "user" not in payload:
         logger.exception(payload)
@@ -2957,6 +2974,8 @@ def get_discord_token(request):
     except Exception:
         pass
 
+    validate_redirect_url(url, get_user_language(request))
+
     cohort_slug = request.query_params.get("cohort_slug", None)
     if cohort_slug is None:
         raise ValidationError("No cohort slug specified")
@@ -3022,6 +3041,8 @@ async def process_discord_token(request):
     if not url:
         logger.error("Missing redirect URL")
         raise ValidationError("Missing redirect URL")
+
+    await sync_to_async(validate_redirect_url)(url, await aget_user_language(request))
 
     code = request.query_params.get("code", None)
     if not code:
@@ -3145,6 +3166,18 @@ def sync_gitpod_users_view(request):
     return shortcuts.render(request, "form.html", {"form": form})
 
 
+def render_invalid_redirect_url(request, academy=None):
+    lang = get_user_language(request)
+    return render_message(
+        request,
+        translation(lang, en="The redirect url is not allowed", es="La url de redirección no está permitida"),
+        status=400,
+        academy=academy,
+    )
+
+
+@rate_limit("password-reset", "10/h", key="ip", methods=("POST",))
+@rate_limit("password-reset", "3/h", key="body:email", silent=True, methods=("POST",))
 def reset_password_view(request):
 
     def render_reset_password(form, redirect_url=None):
@@ -3162,6 +3195,10 @@ def reset_password_view(request):
         # Use ResetPasswordForm for POST to only handle email submission
         form = ResetPasswordForm(_dict)
 
+        callback = decode_redirect_url(_dict.get("callback", ""))
+        if callback and not is_allowed_redirect_url(callback):
+            return render_invalid_redirect_url(request)
+
         if "email" not in _dict or _dict["email"] == "":
             messages.error(request, "Email is required")
             return render_reset_password(form, request.POST.get("callback", None) or request.POST.get("url", None))
@@ -3172,22 +3209,30 @@ def reset_password_view(request):
             return render_reset_password(form, request.POST.get("callback", None) or request.POST.get("url", None))
 
         users = User.objects.filter(email__iexact=_dict["email"])
-        if users.exists():
+        if getattr(request, "rate_limited", False):
+            logger.debug("Too many password reset requests for this email, skipping the email")
+        elif users.exists():
             reset_password(users)
         else:
             logger.debug("No users with " + _dict["email"] + " email to reset password")
 
-        if "callback" in _dict and _dict["callback"] != "":
-            return HttpResponseRedirect(redirect_to=_dict["callback"] + "?msg=Check your email for a password reset!")
+        if callback:
+            return HttpResponseRedirect(redirect_to=callback + "?msg=Check your email for a password reset!")
         else:
             return shortcuts.render(request, "message.html", {"MESSAGE": "Check your email for a password reset!"})
     else:  # GET request
         _dict = request.GET.copy()
         _dict["callback"] = request.GET.get("callback", "") or request.GET.get("url", "")
+        callback = decode_redirect_url(_dict["callback"])
+        if callback and not is_allowed_redirect_url(callback):
+            return render_invalid_redirect_url(request)
+
         form = ResetPasswordForm(_dict)
         return render_reset_password(form)
 
 
+@rate_limit("pick-password", "10/15m", key="ip", methods=("POST",))
+@rate_limit("pick-password", "5/15m", key="kwarg:token", methods=("POST",))
 def pick_password(request, token):
     _dict = request.POST.copy()
     _dict["token"] = token
@@ -3212,6 +3257,10 @@ def pick_password(request, token):
         if invite:
             academy = invite.academy
         return render_message(request, "The link has expired.", academy=academy)
+
+    callback = request.POST.get("callback", "") if request.method == "POST" else _dict["callback"]
+    if callback and not is_allowed_redirect_url(callback):
+        return render_invalid_redirect_url(request, academy=invite.academy if invite else None)
 
     form = PickPasswordForm(_dict)
     if request.method == "POST":
@@ -3276,6 +3325,8 @@ def pick_password(request, token):
             if token_instance:
                 token_instance.delete()
 
+            revoke_user_sessions(user)
+
             UserInvite.objects.filter(email=user.email, is_email_validated=False).update(is_email_validated=True)
 
             # Add user to cohort when invite has a cohort (e.g. subscribe-with-cohort flow)
@@ -3293,9 +3344,8 @@ def pick_password(request, token):
                         finantial_status=UP_TO_DATE,
                     ).save()
 
-            callback = request.POST.get("callback", None)
-            if callback is not None and callback != "":
-                return HttpResponseRedirect(redirect_to=request.POST.get("callback"))
+            if callback:
+                return HttpResponseRedirect(redirect_to=callback)
             else:
                 obj = {}
                 if invite and invite.academy:
@@ -3420,10 +3470,9 @@ def render_invite(request, token, member_id=None):
     invite = UserInvite.objects.filter(token=token).first()
     if invite is None or invite.status != "PENDING":
         callback_msg = ""
-        if _dict["callback"] != "":
-            callback_msg = (
-                ". You can try and login at <a href='" + _dict["callback"] + "'>" + _dict["callback"] + "</a>"
-            )
+        if is_allowed_redirect_url(_dict["callback"]):
+            safe_callback = escape(_dict["callback"])
+            callback_msg = ". You can try and login at <a href='" + safe_callback + "'>" + safe_callback + "</a>"
 
         academy = None
         if invite and invite.academy:
@@ -3515,6 +3564,13 @@ def render_invite(request, token, member_id=None):
         return Response(serializer.data)
 
     if request.method == "POST":
+        callback_uri = request.POST.get("callback", None)
+        if callback_uri and callback_uri[0] == "[":
+            callback_uri = callback_uri[2:-2]
+
+        if callback_uri and not is_allowed_redirect_url(callback_uri):
+            return render_invalid_redirect_url(request, academy=invite.academy)
+
         try:
             accept_invite_action(_dict, token, lang)
         except Exception as e:
@@ -3561,15 +3617,11 @@ def render_invite(request, token, member_id=None):
                 },
             )
 
-        callback = request.POST.get("callback", None)
-        if callback:
-            uri = callback[0] if isinstance(callback, list) else callback
-            if len(uri) > 0 and uri[0] == "[":
-                uri = uri[2:-2]
+        if callback_uri:
             if settings.DEBUG:
-                return HttpResponse(f"Redirect to: <a href='{uri}'>{uri}</a>")
+                return HttpResponse(f"Redirect to: <a href='{escape(callback_uri)}'>{escape(callback_uri)}</a>")
             else:
-                return HttpResponseRedirect(redirect_to=uri)
+                return HttpResponseRedirect(redirect_to=callback_uri)
         elif invite and invite.academy:
             redirect_url = get_app_url(academy=invite.academy)
             if settings.DEBUG:
@@ -3654,21 +3706,18 @@ def login_html_view(request):
         )
 
     if request.method == "POST":
+        # the url may or may not be encoded
+        url = decode_redirect_url(request.POST.get("url", None))
+        if url and not is_allowed_redirect_url(url):
+            return render_invalid_redirect_url(request)
 
         try:
             email = request.POST.get("email", None)
             check_login_rate_limit(request, email)
             verify_turnstile_if_enabled(request)
 
-            url = request.POST.get("url", None)
             if url is None or url == "":
                 raise Exception("Invalid redirect url, you must specify a url to redirect to")
-
-            # the url may or may not be encoded
-            try:
-                url = base64.b64decode(url.encode("utf-8")).decode("utf-8")
-            except Exception:
-                pass
 
             password = request.POST.get("password", None)
 
@@ -3719,6 +3768,8 @@ def login_html_view(request):
         url = request.GET.get("url", None)
         if url is None or url == "":
             messages.error(request, "You must specify a 'url' (querystring) to redirect to after successful login")
+        elif not is_allowed_redirect_url(decode_redirect_url(url)):
+            return render_invalid_redirect_url(request)
 
     return render_login()
 
@@ -3735,6 +3786,8 @@ def get_google_token(request, token=None):
         url = base64.b64decode(url.encode("utf-8")).decode("utf-8")
     except Exception:
         pass
+
+    validate_redirect_url(url, get_user_language(request))
 
     if token is not None:
         # you can only connect to google with temporal short lasting tokens
@@ -3845,6 +3898,8 @@ async def save_google_token(request):
 
     if state.get("url") == None:
         raise ValidationException("No callback URL specified", slug="no-callback-url")
+
+    await sync_to_async(validate_redirect_url)(state["url"][0], await aget_user_language(request))
 
     code = request.query_params.get("code", None)
     if code == None:
