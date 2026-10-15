@@ -444,6 +444,10 @@ DELETE /v1/assignment/academy/learnpack/webhook?status=DONE
    Observation: telemetry appears missing for translated slug while existing for canonical slug.  
    Action: validate slug normalization/canonical translation and re-check using canonical asset context.
 
+6b. **Several assets share the same LearnPack package**  
+   Observation: webhook `ERROR` with "has not tasks with associated slug" while Rigobot shows 100% and `asset_id` is a CSV (e.g. `3286,3287,3314`).  
+   Action: `batch` must match the **student Task** among all package/translation candidates, not the lowest English asset id. Duplicate English assets with the same `learnpack_id` are discarded if the student has no task on that slug.
+
 7. **No cross-user telemetry list endpoint**  
    Observation: no public endpoint returns telemetry for multiple users by asset in one request.  
    Action: rely on per-user telemetry retrieval and asset-level precomputed stats (`Asset.telemetry_stats`) for aggregate diagnostics.
