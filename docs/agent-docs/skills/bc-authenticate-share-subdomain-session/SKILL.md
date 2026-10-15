@@ -43,7 +43,7 @@ Do NOT use it for apps on other registrable domains (e.g. `4geeksacademy.com`, `
 
 4. **Validate the token and get its expiry.** Call `GET /v1/auth/token/<token>`. Save `expires_at` from the response — Step 5 needs it to compute `Max-Age`. If the call fails or `expires_at` is in the past, clear the cookie (Step 7) and send the user to login.
 
-5. **Write the shared cookie.** First clear both variants (Step 7), then write the parent-domain cookie with `Max-Age = floor((expires_at - now) / 1000)`. Use the `expires_at` from Step 4, or from the `POST /v1/auth/login/` response when the app logged in directly.
+5. **Write the shared cookie.** First clear both variants (Step 7), then write the parent-domain cookie with `Max-Age = floor((expires_at - now) / 1000)`. Use the `expires_at` from Step 4, or from the `POST /v1/auth/login/` response when the app logged in directly. A non-null `access_token` from signup ([`bc-authenticate-signup-user`](../bc-authenticate-signup-user/SKILL.md)) is also a login token: run Step 4 on it to get `expires_at`, then write it here.
 
    ```ts
    const COOKIE = "4g_tok";

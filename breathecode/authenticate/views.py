@@ -373,6 +373,7 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
                 "cohort": cohort,
                 "academy": academy,
                 "syllabus": syllabus,
+                "request_user": request.user,
             },
         )
         if serializer.is_valid():
