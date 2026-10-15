@@ -109,7 +109,7 @@ All paths below are under `/v1/auth`. Unless noted, responses are not paginated.
 | Hosted login page | GET | `/v1/auth/view/login?url=<callback>` | None | None | HTML form, then redirect to callback with `?token=<login_token>&attempt=1` |
 | Token info | GET | `/v1/auth/token/<token>` | None | None | `token`, `token_type`, `expires_at`, `user_id` |
 | Current user | GET | `/v1/auth/user/me` | `Authorization` | None | `roles[]` (staff academies); ignore `permissions[]` for staff |
-| Logout | POST | `/v1/auth/logout/` | `Authorization` | None | success; clear client token |
+| Logout | POST | `/v1/auth/logout/` | `Authorization` | None | `message`; revokes every `login` token of the current user (all devices) plus the token used for the call; clear client token |
 
 ### Track B — capability lookup
 

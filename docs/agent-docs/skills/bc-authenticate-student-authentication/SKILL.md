@@ -102,7 +102,7 @@ Send `Accept-Language` (`en`, `es`) for translated errors where applicable.
 | Callback from GitHub OAuth | GET | `/v1/auth/github/callback/` | None | None | updates/creates GitHub credentials and redirects with `token` |
 | View current GitHub link | GET | `/v1/auth/github/me` | `Authorization` | None | `username`, `avatar_url`, `name`, `scopes`, `valid` |
 | Disconnect current GitHub link | DELETE | `/v1/auth/github/me` | `Authorization` | None | `204 No Content` |
-| Logout | POST | `/v1/auth/logout/` | `Authorization` | None | success status; client must clear local auth data |
+| Logout | POST | `/v1/auth/logout/` | `Authorization` | None | `message`; revokes every `login` token of the current user (all devices) plus the token used for the call; client must clear local auth data |
 
 ### API login request sample
 

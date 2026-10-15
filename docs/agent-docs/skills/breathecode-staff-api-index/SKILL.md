@@ -90,6 +90,7 @@ Some user requests touch multiple domains. Load ALL listed skills before proceed
 | Rebuild a staff frontend for GitHub org membership sync | [`bc-authenticate-manage-github-org-users`](../bc-authenticate-manage-github-org-users/SKILL.md) + [`bc-authenticate-staff-authentication`](../bc-authenticate-staff-authentication/SKILL.md) |
 | Authenticate staff via hosted login in an external admin app (redirect + callback token) | [`bc-authenticate-staff-authentication`](../bc-authenticate-staff-authentication/SKILL.md) (Track A — universal hosted login) |
 | Connect a third-party app to student authentication (hosted login redirect + callback token) | [`bc-authenticate-student-authentication`](../bc-authenticate-student-authentication/SKILL.md) |
+| Keep a staff user logged in across 4Geeks subdomains (shared session cookie) | [`bc-authenticate-share-subdomain-session`](../bc-authenticate-share-subdomain-session/SKILL.md) + [`bc-authenticate-staff-authentication`](../bc-authenticate-staff-authentication/SKILL.md) (to obtain the token) |
 | Provision a resource for a student | `bc-provisioning-*` + `bc-admissions-*` (verify enrollment status first) |
 | Create and run an NPS-style cohort satisfaction study | `bc-feedback-create-manage-nps-survey` + `bc-admissions-*` (resolve target cohorts before configuration scope or `send_emails`) |
 | Configure academy VPS provisioning (profiles, credentials, settings) | `bc-provisioning-settings-and-credentials` |

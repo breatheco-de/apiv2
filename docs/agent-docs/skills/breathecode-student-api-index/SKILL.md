@@ -64,6 +64,7 @@ Some user requests touch multiple domains. Load ALL listed skills before proceed
 | User Request | Skills to Load |
 |---|---|
 | Log in or connect a third-party app using hosted student auth (redirect + callback token) | [`bc-authenticate-student-authentication`](../bc-authenticate-student-authentication/SKILL.md) |
+| Keep a user logged in across 4Geeks subdomains (shared session cookie) | [`bc-authenticate-share-subdomain-session`](../bc-authenticate-share-subdomain-session/SKILL.md) + [`bc-authenticate-student-authentication`](../bc-authenticate-student-authentication/SKILL.md) (to obtain the token) |
 | List, request, or deprovision **my** VPS | [`bc-provisioning-manage-vps-server`](../bc-provisioning-manage-vps-server/SKILL.md) + `bc-authenticate-*` (token) |
 | List, create, or delete **my** LiteLLM API keys; check LLM budget entitlement or key spend | [`bc-provisioning-manage-my-llm-keys`](../bc-provisioning-manage-my-llm-keys/SKILL.md) + [`bc-authenticate-student-authentication`](../bc-authenticate-student-authentication/SKILL.md) |
 | View or cancel **my** subscription (and optional refund flow when applicable) | [`bc-payments-cancel-subscription-and-refund`](../bc-payments-cancel-subscription-and-refund/SKILL.md) + `bc-authenticate-*` |

@@ -249,7 +249,13 @@ class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        Token.objects.filter(token_type="login").delete()
+        return self._logout(request)
+
+    def post(self, request):
+        return self._logout(request)
+
+    def _logout(self, request):
+        Token.objects.filter(user=request.user, token_type="login").delete()
         request.auth.delete()
         return Response(
             {
