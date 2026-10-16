@@ -1047,6 +1047,8 @@ class AcademyCohortUserView(APIView, GenerateLookupsMixin):
         if cache is not None:
             return cache
 
+        skip_completion = request.GET.get("completion", "").strip().lower() in {"0", "false"}
+
         # Handle direct cohort_user_id lookup
         if cohort_user_id is not None:
             item = CohortUser.objects.filter(
@@ -1055,6 +1057,8 @@ class AcademyCohortUserView(APIView, GenerateLookupsMixin):
             if item is None:
                 raise ValidationException("Cohort user not found", 404)
 
+            if skip_completion:
+                item._skip_completion = True
             serializer = GetCohortUserBigSerializer(item, many=False)
             return Response(serializer.data)
 
@@ -1065,11 +1069,12 @@ class AcademyCohortUserView(APIView, GenerateLookupsMixin):
             if item is None:
                 raise ValidationException("Cohort user not found", 404)
             tasks = request.GET.get("tasks", None)
-            serializer = (
-                GetCohortUserTasksSerializer(item, many=False)
-                if tasks is not None and tasks == "True"
-                else GetCohortUserSerializer(item, many=False)
-            )
+            if skip_completion:
+                item._skip_completion = True
+            if tasks is not None and tasks == "True":
+                serializer = GetCohortUserTasksSerializer(item, many=False)
+            else:
+                serializer = GetCohortUserSerializer(item, many=False)
             return Response(serializer.data)
 
         items = CohortUser.objects.filter(cohort__academy__id=academy_id)
@@ -1125,6 +1130,10 @@ class AcademyCohortUserView(APIView, GenerateLookupsMixin):
 
         plans = request.GET.get("plans", None)
         items = handler.queryset(items)
+        if skip_completion:
+            items = list(items)
+            for row in items:
+                row._skip_completion = True
 
         if plans is not None:
             serializer = GetCohortUserPlansSerializer(items, many=True)
