@@ -1,4 +1,4 @@
----
+d---
 name: bc-assignment-review-submit-task-revision
 description: Use when staff or teachers review **PROJECT** syllabus tasks via the API (discover queue, load asset `config` from the registry, submit `PUT` with `revision_status` and feedback). Do NOT use for `EXERCISE`, `LESSON`, or `QUIZ` tasks, for capstone `FinalProject` flows, for implementing assignment code, or for Rigobot CodeRevision-only workflows.
 requires: []
@@ -89,7 +89,7 @@ Academy: 1
 
 - **Method / path:** **`GET /v1/assignment/academy/cohort/{cohort_id}/task`**
 - **Headers:** **`Authorization`**, **`Academy`** (same as academy task list).
-- **Query:** Same discovery pattern: **`task_type=PROJECT`**, **`task_status=DONE`**, **`revision_status=PENDING`**, **`sort=delivered_at`**, **`limit`**, **`offset`**. Optional: **`student`**, **`educational_status`**, **`like`**, **`cohort_live_meeting`** (**`true|false`**, checks **`cohort.online_meeting_url`**), etc.
+- **Query:** Same discovery pattern: **`task_type=PROJECT`**, **`task_status=DONE`**, **`revision_status=PENDING`**, **`sort=delivered_at`**, **`limit`**, **`offset`**. Optional: **`student`**, **`educational_status`**, **`like`**, **`cohort_live_meeting`** (**`true|false`**, checks **`cohort.online_meeting_url`**), etc. **`educational_status`** matches a `CohortUser` of that user in any cohort. **`educational_status`** matches a `CohortUser` of that user in any cohort.
 - **Response:** Same paginated shape as (1).
 
 ### 3. Teacher task list — not paginated

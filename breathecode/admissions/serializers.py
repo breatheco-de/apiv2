@@ -666,6 +666,8 @@ class GetCohortUserSerializer(serpy.Serializer):
         return GetProfileAcademySmallSerializer(profile).data if profile else None
 
     def get_completion(self, obj):
+        if getattr(obj, "_skip_completion", False):
+            return None
         return evaluate_cohort_user_completion(obj)
 
     def get_source_macro_cohort(self, obj):
@@ -702,6 +704,8 @@ class GetCohortUserBigSerializer(serpy.Serializer):
         return TaskGETSmallSerializer(tasks, many=True).data
 
     def get_completion(self, obj):
+        if getattr(obj, "_skip_completion", False):
+            return None
         return evaluate_cohort_user_completion(obj)
 
     def get_source_macro_cohort(self, obj):
