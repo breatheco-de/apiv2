@@ -32,7 +32,7 @@ import breathecode.activity.tasks as tasks_activity
 import breathecode.events.tasks as tasks_events
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser, Syllabus
 from breathecode.authenticate.actions import get_user_language, server_id
-from breathecode.authenticate.models import ACTIVE, Profile, ProfileAcademy
+from breathecode.authenticate.models import Profile, ProfileAcademy
 from breathecode.events import actions
 from breathecode.events.caches import EventCache, LiveClassCache
 from breathecode.renderers import PlainTextRenderer
@@ -1716,7 +1716,18 @@ def join_event(request, token, event):
             },
         )
 
-    # if the event is happening right now and I have not joined yet
+    # Ensure group membership check-ins exist, then mark attendance on this event only
+    if event.event_group:
+        actions.register_to_event_or_group(
+            {
+                "event": event,
+                "email": token.user.email,
+                "attendee": token.user,
+                "first_name": token.user.first_name,
+                "last_name": token.user.last_name,
+            }
+        )
+
     checkin = EventCheckin.objects.filter(Q(email=token.user.email) | Q(attendee=token.user), event=event).first()
     if checkin is None:
         checkin = EventCheckin(event=event, attendee=token.user, email=token.user.email)
@@ -2006,6 +2017,10 @@ class AcademyEventCheckinView(APIView):
         if "event" in self.request.GET:
             value = self.request.GET.get("event")
             lookup["event__id"] = value
+
+        if "event_group" in self.request.GET:
+            value = self.request.GET.get("event_group")
+            lookup["event__event_group"] = value
 
         like = self.request.GET.get("like")
         if "like" in self.request.GET:

@@ -198,6 +198,7 @@ class AcademyEventTestSuite(EventTestCase):
                 "eventbrite_sync_status": model["event"].eventbrite_sync_status,
                 "is_public": model["event"].is_public,
                 "recording_url": model["event"].recording_url,
+                "event_group": model["event"].event_group,
             }
         ]
 
@@ -273,6 +274,7 @@ class AcademyEventTestSuite(EventTestCase):
                 "eventbrite_sync_status": model["event"].eventbrite_sync_status,
                 "is_public": model["event"].is_public,
                 "recording_url": model["event"].recording_url,
+                "event_group": model["event"].event_group,
             }
         ]
 
@@ -348,6 +350,7 @@ class AcademyEventTestSuite(EventTestCase):
                 "eventbrite_sync_status": model["event"].eventbrite_sync_status,
                 "is_public": model["event"].is_public,
                 "recording_url": model["event"].recording_url,
+                "event_group": model["event"].event_group,
             }
         ]
 
@@ -404,6 +407,7 @@ class AcademyEventTestSuite(EventTestCase):
                 "eventbrite_sync_status": model["event"].eventbrite_sync_status,
                 "is_public": model["event"].is_public,
                 "recording_url": model["event"].recording_url,
+                "event_group": model["event"].event_group,
             }
         ]
 
@@ -694,6 +698,7 @@ class AcademyEventTestSuite(EventTestCase):
                 "eventbrite_sync_status": model["event"].eventbrite_sync_status,
                 "is_public": model["event"].is_public,
                 "recording_url": model["event"].recording_url,
+                "event_group": model["event"].event_group,
             }
         ]
         self.assertEqual(json, expected)
@@ -749,6 +754,7 @@ class AcademyEventTestSuite(EventTestCase):
                 "eventbrite_sync_status": model["event"].eventbrite_sync_status,
                 "is_public": model["event"].is_public,
                 "recording_url": model["event"].recording_url,
+                "event_group": model["event"].event_group,
             }
         ]
         self.assertEqual(json, expected)
@@ -803,6 +809,7 @@ class AcademyEventTestSuite(EventTestCase):
                 "eventbrite_sync_status": model["event"].eventbrite_sync_status,
                 "is_public": model["event"].is_public,
                 "recording_url": model["event"].recording_url,
+                "event_group": model["event"].event_group,
             }
         ]
 

@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 import pytz
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.db import transaction
 from django.db.models import QuerySet
 from django.db.models.query_utils import Q
 from django.utils import timezone
@@ -25,6 +26,118 @@ from .models import Event, EventCheckin, EventType, Organization, Organizer, Ven
 from .utils import Eventbrite
 
 logger = logging.getLogger(__name__)
+
+
+def events_in_group(event_group: str):
+    """Events that share the same event_group key (any academy)."""
+    return Event.objects.filter(event_group=event_group).order_by("starting_at")
+
+
+def upcoming_group_events(event_group: str, *, now=None):
+    """Events in the group that have not ended yet (ending_at in the future)."""
+    if now is None:
+        now = timezone.now()
+    return events_in_group(event_group).filter(ending_at__gte=now)
+
+
+def canonical_group_event(event_group: str, *, now=None):
+    """
+    Event shown on the public listing card for a group:
+    in progress, else next upcoming, else the last session.
+    """
+    if now is None:
+        now = timezone.now()
+
+    events = events_in_group(event_group)
+    if not events.exists():
+        return None
+
+    in_progress = events.filter(starting_at__lte=now, ending_at__gt=now).first()
+    if in_progress:
+        return in_progress
+
+    upcoming = events.filter(starting_at__gt=now).first()
+    if upcoming:
+        return upcoming
+
+    return events.last()
+
+
+def registration_targets(event: Event, now=None):
+    """The event itself, or every not-yet-ended session that shares its event_group."""
+    if now is None:
+        now = timezone.now()
+    event_ended = event.ending_at is not None and event.ending_at < now
+    if event_ended or not event.event_group:
+        return [event]
+    targets = list(upcoming_group_events(event.event_group, now=now))
+    return targets or [event]
+
+
+def register_to_event_or_group(data: dict):
+    """
+    Create PENDING check-ins the same way a single-event POST did: one row with the
+    request fields. A group repeats that insert for each session that has not ended.
+    Returns (primary_checkin, already_fully_registered).
+    """
+    event = data["event"]
+    email = data["email"]
+    fields = {key: value for key, value in data.items() if key != "event"}
+    targets = registration_targets(event)
+
+    primary = None
+    all_existed = True
+
+    with transaction.atomic():
+        for target in targets:
+            existing = EventCheckin.objects.filter(email__iexact=email, event=target).first()
+            if existing:
+                if primary is None or target.id == event.id:
+                    primary = existing
+                continue
+
+            all_existed = False
+            checkin = EventCheckin.objects.create(event=target, **fields)
+            if primary is None or target.id == event.id:
+                primary = checkin
+
+    return primary, all_existed and primary is not None
+
+
+def backfill_checkins_for_new_group_event(event: Event):
+    """
+    When a not-yet-ended event is added to a group, create PENDING check-ins for
+    every email already registered on another session of that group.
+    """
+    if not event.event_group:
+        return
+
+    now = timezone.now()
+    if event.ending_at is not None and event.ending_at < now:
+        return
+
+    sibling_filter = {"event__event_group": event.event_group}
+    emails = (
+        EventCheckin.objects.filter(**sibling_filter)
+        .exclude(event_id=event.id)
+        .values_list("email", flat=True)
+        .distinct()
+    )
+
+    for email in emails:
+        if EventCheckin.objects.filter(email__iexact=email, event=event).exists():
+            continue
+        source = EventCheckin.objects.filter(email__iexact=email, **sibling_filter).exclude(event_id=event.id).first()
+        upsert_event_checkin(
+            event=event,
+            email=email,
+            first_name=source.first_name if source else None,
+            last_name=source.last_name if source else None,
+            utm_source=source.utm_source if source else None,
+            utm_medium=source.utm_medium if source else None,
+            utm_campaign=source.utm_campaign if source else None,
+            utm_url=source.utm_url if source else None,
+        )
 
 
 def ensure_calendar_event_for_event(event: Event, private: bool = True) -> str:
@@ -1037,14 +1150,19 @@ def register_event_attendee_from_external(
         raise Exception("Organization not have one Academy")
 
     email = (email or "").strip().lower()
-    checkin, _, _ = upsert_event_checkin(
-        event=event,
-        email=email,
-        first_name=first_name,
-        last_name=last_name,
-        utm_source=utm_source,
-    )
-    local_attendee = checkin.attendee
+    primary = None
+    for target in registration_targets(event):
+        checkin, _, _ = upsert_event_checkin(
+            event=target,
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            utm_source=utm_source,
+        )
+        if primary is None or target.id == event.id:
+            primary = checkin
+    checkin = primary
+    local_attendee = checkin.attendee if checkin else None
 
     run_event_checkin_marketing(
         event=event,

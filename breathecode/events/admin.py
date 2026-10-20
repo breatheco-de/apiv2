@@ -79,6 +79,7 @@ class EventAdmin(admin.ModelAdmin, AdminExportCsvMixin):
         "ending_at",
         "eventbrite_sync_description",
         "sync_with_eventbrite",
+        "event_group",
     )
     list_filter = [
         "status",
@@ -91,8 +92,9 @@ class EventAdmin(admin.ModelAdmin, AdminExportCsvMixin):
         "organization",
         "online_event",
         "event_type",
+        "event_group",
     ]
-    search_fields = ["slug", "title", "eventbrite_id", "eventbrite_organizer_id", "luma_id"]
+    search_fields = ["slug", "title", "eventbrite_id", "eventbrite_organizer_id", "luma_id", "event_group"]
     raw_id_fields = ["host_user"]
     actions = ["export_as_csv", reattempt_add_event_slug_as_acp_tag]
 
@@ -125,7 +127,18 @@ class EventTypeAdmin(admin.ModelAdmin):
 # Register your models here.
 @admin.register(EventCheckin)
 class EventCheckinAdmin(admin.ModelAdmin):
-    list_display = ("id", "email", "first_name", "last_name", "attendee", "event", "status", "created_at", "attended_at", "utm_source")
+    list_display = (
+        "id",
+        "email",
+        "first_name",
+        "last_name",
+        "attendee",
+        "event",
+        "status",
+        "created_at",
+        "attended_at",
+        "utm_source",
+    )
     list_filter = ["status", "utm_source", "utm_medium"]
     search_fields = ["email", "first_name", "last_name", "event__title", "event__slug"]
     raw_id_fields = ["event", "attendee"]
