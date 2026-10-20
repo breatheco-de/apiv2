@@ -20,7 +20,16 @@ from breathecode.registry.models import Asset
 from breathecode.registry.serializers import AssetSmallSerializer
 from breathecode.utils import serpy
 
-from .models import Event, EventbriteWebhook, EventCheckin, EventType, LiveClass, LumaWebhook, Organization, Venue
+from .models import (
+    Event,
+    EventbriteWebhook,
+    EventCheckin,
+    EventType,
+    LiveClass,
+    LumaWebhook,
+    Organization,
+    Venue,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +66,7 @@ class ProfileSerializer(serpy.Serializer):
     def get_translations(self, obj):
         translations = ProfileTranslation.objects.filter(profile=obj)
         return ProfileTranslationSerializer(translations, many=True).data
+
 
 class CohortTimeSlotSmallSerializer(serpy.Serializer):
     id = serpy.Field()
@@ -202,6 +212,7 @@ class EventSmallSerializer(EventTinySerializer):
     asset = serpy.MethodField()
     is_public = serpy.Field()
     recording_url = serpy.Field()
+    event_group = serpy.Field()
 
     def get_asset(self, obj):
         if obj.asset_slug is not None:
@@ -259,6 +270,7 @@ class EventSmallSerializerNoAcademy(serpy.Serializer):
     tags = serpy.Field()
     is_public = serpy.Field()
     recording_url = serpy.Field()
+    event_group = serpy.Field()
 
 
 class EventPublicBigSerializer(EventSmallSerializer):
@@ -320,6 +332,7 @@ class AcademyEventSmallSerializer(serpy.Serializer):
     asset = serpy.MethodField()
     is_public = serpy.Field()
     recording_url = serpy.Field()
+    event_group = serpy.Field()
 
     def get_asset(self, obj):
         if obj.asset_slug is not None:
@@ -347,6 +360,7 @@ class GetLiveClassSerializer(serpy.Serializer):
         elif obj.cohort_time_slot:
             return CohortSmallSerializer(obj.cohort_time_slot.cohort).data
         return None
+
 
 class GetLiveClassBigSerializer(serpy.Serializer):
     id = serpy.Field()
@@ -557,7 +571,12 @@ class EventSerializer(serializers.ModelSerializer):
             )
 
         # Only validate event_type.lang if event_type exists and lang is provided
-        if "event_type" in data and data["event_type"] and "lang" in data and data["event_type"].lang != data.get("lang", "en"):
+        if (
+            "event_type" in data
+            and data["event_type"]
+            and "lang" in data
+            and data["event_type"].lang != data.get("lang", "en")
+        ):
             raise ValidationException(
                 translation(
                     lang,
@@ -690,7 +709,9 @@ class EventPUTSerializer(serializers.ModelSerializer):
                 )
             )
 
-        event_type = data["event_type"] if "event_type" in data else (self.instance.event_type if self.instance else None)
+        event_type = (
+            data["event_type"] if "event_type" in data else (self.instance.event_type if self.instance else None)
+        )
         # Only require event_type if status is not DRAFT
         if status != "DRAFT" and not event_type:
             raise ValidationException(
@@ -849,24 +870,26 @@ class POSTEventCheckinSerializer(serializers.ModelSerializer):
         exclude = ("created_at", "updated_at", "attended_at", "status")
 
     def validate(self, data):
+        event = data["event"]
+        email = data["email"]
+        attendee = data.get("attendee")
 
-        event_checkin = EventCheckin.objects.filter(
-            Q(attendee=data["attendee"]) | Q(email=data["email"]), event=data["event"]
-        ).first()
+        event_checkin = EventCheckin.objects.filter(Q(attendee=attendee) | Q(email=email), event=event).first()
         if event_checkin is not None:
             if event_checkin.attendee is None:
                 event_checkin.attendee = self.context["user"]
                 event_checkin.save()
 
-            raise ValidationException(
-                translation(
-                    self.context["lang"],
-                    en="This user already has an event checkin associated to this event",
-                    es="Este usuario ya esta registrado en este evento",
-                    slug="user-registered-in-event",
-                ),
-                code=400,
-            )
+            if not event.event_group:
+                raise ValidationException(
+                    translation(
+                        self.context["lang"],
+                        en="This user already has an event checkin associated to this event",
+                        es="Este usuario ya esta registrado en este evento",
+                        slug="user-registered-in-event",
+                    ),
+                    code=400,
+                )
 
         return data
 
@@ -887,10 +910,7 @@ class POSTEventCheckinSerializer(serializers.ModelSerializer):
 
             if not validated_data.get("phone") and attendee is not None:
                 profile_academy = (
-                    ProfileAcademy.objects.filter(user=attendee)
-                    .exclude(phone__isnull=True)
-                    .exclude(phone="")
-                    .first()
+                    ProfileAcademy.objects.filter(user=attendee).exclude(phone__isnull=True).exclude(phone="").first()
                 )
                 if profile_academy:
                     validated_data["phone"] = profile_academy.phone
@@ -900,16 +920,20 @@ class POSTEventCheckinSerializer(serializers.ModelSerializer):
                 if profile and profile.phone:
                     validated_data["phone"] = profile.phone
 
-        event_checkin = super().create(validated_data)
+        checkin, already_fully_registered = events_actions.register_to_event_or_group(validated_data)
 
-        tasks_activity.add_activity.delay(
-            event_checkin.attendee.id,
-            "event_checkin_created",
-            related_type="events.EventCheckin",
-            related_id=event_checkin.id,
-        )
+        if already_fully_registered:
+            raise ValidationException(
+                translation(
+                    self.context["lang"],
+                    en="This user already has an event checkin associated to this event",
+                    es="Este usuario ya esta registrado en este evento",
+                    slug="user-registered-in-event",
+                ),
+                code=400,
+            )
 
-        return event_checkin
+        return checkin
 
 
 class PostEventTypeSerializer(EventTypeSerializerMixin):

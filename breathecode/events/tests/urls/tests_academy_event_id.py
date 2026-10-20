@@ -44,7 +44,7 @@ def get_serializer(event, academy, asset=None, data={}):
     return {
         "id": event.id,
         "author": user_serializer(event.author),
-        "host_user": user_serializer(event.host_user),
+        "host_user": {**user_serializer(event.host_user), "profile": None},
         "capacity": event.capacity,
         "description": event.description,
         "excerpt": event.excerpt,
@@ -72,6 +72,7 @@ def get_serializer(event, academy, asset=None, data={}):
         "asset": asset_serializer(asset) if asset else None,
         "is_public": event.is_public,
         "recording_url": event.recording_url,
+        "event_group": event.event_group,
         **data,
     }
 

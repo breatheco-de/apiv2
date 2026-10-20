@@ -47,6 +47,8 @@ Do NOT use for:
 | List check-ins | GET | `/v1/events/academy/checkin?event=<event_id>` | `read_eventcheckin` |
 | Export CSV | GET | `/v1/events/academy/checkin.csv?event=<event_id>` | `read_eventcheckin` |
 
+Bulk CSV import does **not** fan out across an event group — each row applies only to the `event_id` in the URL. Staff list check-ins per event as usual (`?event=`). Group-wide registration fan-out is learner/self-service and webhook only.
+
 **POST body:**
 
 ```json

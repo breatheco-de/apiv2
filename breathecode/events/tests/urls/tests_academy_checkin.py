@@ -2,6 +2,8 @@ import re
 
 from breathecode.events.caches import EventCache
 from django.urls.base import reverse_lazy
+
+from breathecode.events.models import EventCheckin
 from unittest.mock import MagicMock, call, patch
 
 from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
@@ -242,6 +244,34 @@ class AcademyEventTestSuite(EventTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(self.all_event_checkin_dict(), [{**self.model_to_dict(model, "event_checkin")}])
+
+    def test_academy_checkin_with_event_group_returns_each_session(self):
+        self.headers(academy=1)
+        base = self.generate_models(
+            authenticate=True, profile_academy=True, capability="read_eventcheckin", role="potato"
+        )
+        model = self.generate_models(
+            event=[
+                {"title": "Day 1", "event_group": "python-intensive"},
+                {"title": "Day 2", "event_group": "python-intensive"},
+                {"title": "Other", "event_group": "solo"},
+            ],
+            event_kwargs={"academy": base["academy"]},
+            models=base,
+        )
+        events = model["event"]
+        for event in events[:2]:
+            EventCheckin.objects.create(event=event, email="student@example.com", status="PENDING")
+        EventCheckin.objects.create(event=events[2], email="other@example.com", status="PENDING")
+
+        url = reverse_lazy("events:academy_checkin") + "?event_group=python-intensive"
+        response = self.client.get(url)
+        json = response.json()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(json), 2)
+        self.assertEqual({row["email"] for row in json}, {"student@example.com"})
+        self.assertEqual({row["event"]["id"] for row in json}, {events[0].id, events[1].id})
 
     def test_academy_checkin_with_bad_start(self):
         self.headers(academy=1)

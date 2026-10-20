@@ -84,6 +84,7 @@ def serialize_event(event):
             }
         ),
         "asset": None,
+        "event_group": None,
     }
 
 

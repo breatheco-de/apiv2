@@ -43,7 +43,8 @@ Do NOT use for:
 
 5. Export or review the guest list.
    - JSON: `GET /v1/events/academy/checkin?event=<event_id>`
-   - CSV (async): `GET /v1/events/academy/checkin.csv?event=<event_id>` → poll `GET /v1/monitoring/download/<download_id>?raw=true`
+   - Whole series in this academy: `GET /v1/events/academy/checkin?event_group=<string>`. Returns every check-in, one row per person per day.
+   - CSV (async): `GET /v1/events/academy/checkin.csv?event=<event_id>` or `?event_group=<string>` → poll `GET /v1/monitoring/download/<download_id>?raw=true`
 
 6. Import outside registrations.
    - Manual/batch: [`bc-events-bulk-import-checkins`](../bc-events-bulk-import-checkins/SKILL.md) with `attended: false` for RSVPs or `attended: true` if they already joined.
@@ -66,8 +67,8 @@ Do NOT use for:
 | Get event | GET | `/v1/events/academy/event/<event_id>` | `read_event` | Verify status and dates |
 | Reschedule | PUT | `/v1/events/academy/event/<event_id>` | `crud_event` | Update `starting_at`, `ending_at` |
 | Suspend upcoming | PUT | `/v1/events/academy/event/<event_id>/suspend` | `crud_event` | Optional `suspension_reason`; emails all guests |
-| List check-ins | GET | `/v1/events/academy/checkin?event=<event_id>` | `read_eventcheckin` | Filter `status`, `like`, dates |
-| Export check-ins CSV | GET | `/v1/events/academy/checkin.csv?event=<event_id>` | `read_eventcheckin` | Async — poll monitoring download |
+| List check-ins | GET | `/v1/events/academy/checkin?event=<event_id>` | `read_eventcheckin` | Also `?event_group=<string>` for every session of that series in this academy. One row per person per day |
+| Export check-ins CSV | GET | `/v1/events/academy/checkin.csv?event=<event_id>` | `read_eventcheckin` | Same filters, including `event_group`. Async — poll monitoring download |
 | Bulk import check-ins | POST | `/v1/events/academy/event/<event_id>/checkin/bulk` | `crud_eventcheckin` | See bulk-import skill |
 | Create promo short link | POST | `/v1/marketing/academy/short` | `crud_shortlink` | Tie to event via `event` field |
 | List promo short links | GET | `/v1/marketing/academy/short?event=<event_id>` | `read_shortlink` | Filter by event |
