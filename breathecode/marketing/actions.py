@@ -933,6 +933,8 @@ def register_new_lead(form_entry=None):
     contact = set_optional(contact, "gclid", form_entry, crm_vendor=send_academy.crm_vendor)
     contact = set_optional(contact, "current_download", form_entry, crm_vendor=send_academy.crm_vendor)
     contact = set_optional(contact, "referral_key", form_entry, crm_vendor=send_academy.crm_vendor)
+    for field in ("variant", "experiment_id", "product", "persona"):
+        contact = set_optional(contact, field, form_entry, crm_vendor=send_academy.crm_vendor)
 
     # only for brevo
     if send_academy.crm_vendor == "BREVO":

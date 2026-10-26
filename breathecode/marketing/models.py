@@ -512,6 +512,15 @@ class FormEntry(models.Model):
         default=None,
         help_text="If its applying for a scholarship, upfront, isa, financing, etc.",
     )
+    variant = models.CharField(
+        max_length=50, null=True, default=None, blank=True, help_text="A/B test variant shown to the lead"
+    )
+    experiment_id = models.CharField(
+        max_length=100, null=True, default=None, blank=True, help_text="A/B experiment identifier"
+    )
+    product = models.CharField(max_length=100, null=True, default=None, blank=True)
+    persona = models.CharField(max_length=100, null=True, default=None, blank=True)
+    product_persona = models.CharField(max_length=150, null=True, default=None, blank=True)
 
     custom_fields = models.JSONField(
         blank=True,
@@ -747,6 +756,11 @@ class FormEntry(models.Model):
             "current_download": self.current_download,
             "latitude": self.longitude,
             "longitude": self.latitude,
+            "variant": self.variant,
+            "experiment_id": self.experiment_id,
+            "product": self.product,
+            "persona": self.persona,
+            "product_persona": self.product_persona,
         }
         return _entry
 

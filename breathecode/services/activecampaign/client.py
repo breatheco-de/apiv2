@@ -33,6 +33,10 @@ acp_ids = {
     "utm_country": "19",
     "gclid": "26",
     "referral_key": "27",
+    "experiment_id": "160",
+    "variant": "161",  # page_variant
+    "persona": "162",  # buyer_personas
+    "product": "163",  # buyer_products
     "deal": {
         "expected_cohort": "10",
         "expected_cohort_date": "21",
@@ -50,6 +54,10 @@ acp_ids = {
         "referral_key": "34",
         "scheudule": "35",
         "reservation_form_of_payment": "51",
+        "variant": "120",  # page_variant
+        "experiment_id": "121",
+        "persona": "122",  # buyer_personas
+        "product": "123",  # buyer_products
     },
 }
 
@@ -67,6 +75,10 @@ def map_ids(contact_customfield_id):
         "26": "4",
         "27": "34",
         "35": "70",  # utm_content
+        "160": "121",  # experiment_id
+        "161": "120",  # page_variant
+        "162": "122",  # buyer_personas
+        "163": "123",  # buyer_products
     }
 
     if contact_customfield_id in contact_to_deal:

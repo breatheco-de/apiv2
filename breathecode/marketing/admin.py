@@ -229,7 +229,16 @@ class PPCFilter(SimpleListFilter):
 
 @admin.register(FormEntry)
 class FormEntryAdmin(admin.ModelAdmin, AdminExportCsvMixin):
-    search_fields = ["email", "first_name", "last_name", "phone", "utm_campaign", "utm_url", "attribution_id"]
+    search_fields = [
+        "email",
+        "first_name",
+        "last_name",
+        "phone",
+        "utm_campaign",
+        "utm_url",
+        "attribution_id",
+        "experiment_id",
+    ]
     list_display = (
         "id",
         "_attribution_id",
@@ -258,6 +267,10 @@ class FormEntryAdmin(admin.ModelAdmin, AdminExportCsvMixin):
         "utm_medium",
         "utm_campaign",
         "utm_source",
+        "experiment_id",
+        "variant",
+        "product",
+        "persona",
     ]
     actions = (
         [

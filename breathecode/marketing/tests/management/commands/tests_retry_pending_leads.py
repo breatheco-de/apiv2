@@ -29,6 +29,11 @@ def serialize_form_entry(form_entry):
         "current_download": form_entry["current_download"],
         "latitude": form_entry["latitude"],
         "longitude": form_entry["longitude"],
+        "variant": form_entry["variant"],
+        "experiment_id": form_entry["experiment_id"],
+        "product": form_entry["product"],
+        "persona": form_entry["persona"],
+        "product_persona": form_entry["product_persona"],
     }
 
 
