@@ -311,6 +311,15 @@ class Event(models.Model):
         db_index=True,
         help_text="Group this event belongs to. Events with the same value share check-in while they have not ended.",
     )
+    variant = models.CharField(
+        max_length=50, null=True, default=None, blank=True, help_text="A/B test variant shown to the lead"
+    )
+    experiment_id = models.CharField(
+        max_length=150, null=True, default=None, blank=True, help_text="A/B experiment identifier"
+    )
+    product = models.CharField(max_length=100, null=True, default=None, blank=True)
+    persona = models.CharField(max_length=100, null=True, default=None, blank=True)
+    product_persona = models.CharField(max_length=150, null=True, default=None, blank=True)
 
     online_event = models.BooleanField(default=False)
     venue = models.ForeignKey(Venue, on_delete=models.CASCADE, null=True, default=None)

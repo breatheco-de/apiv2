@@ -1,3 +1,4 @@
+import hmac
 import logging
 import os
 from hashlib import sha256
@@ -508,6 +509,24 @@ def process_stripe_webhook(request):
         logger.info("Sent stripe_webhook signal")
 
     logger.info("Webhook processed successfully")
+    return Response({"success": True})
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def process_caxton_webhook(request):
+    """Accept a Caxton pipeline webhook when the shared secret header matches."""
+    expected = os.getenv("CAXTON_WEBHOOK_SECRET") or ""
+    provided = request.headers.get("X-Caxton-Secret") or ""
+    if not expected or not hmac.compare_digest(provided, expected):
+        raise ValidationException("Not allowed", code=403, slug="not-allowed")
+
+    try:
+        signals.caxton_webhook.send(sender=process_caxton_webhook, payload=request.data)
+    except Exception:
+        logger.exception("Caxton webhook receiver failed")
+        raise ValidationException("Caxton webhook failed", code=500, slug="caxton-webhook-failed")
+
     return Response({"success": True})
 
 
