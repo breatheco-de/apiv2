@@ -83,6 +83,11 @@ class EventTestCase(
                 "is_public": model["event"].is_public,
                 "recording_url": model["event"].recording_url,
                 "event_group": model["event"].event_group,
+                "variant": model["event"].variant,
+                "experiment_id": model["event"].experiment_id,
+                "product": model["event"].product,
+                "persona": model["event"].persona,
+                "product_persona": model["event"].product_persona,
             }
             for model in models
         ]

@@ -213,6 +213,11 @@ class EventSmallSerializer(EventTinySerializer):
     is_public = serpy.Field()
     recording_url = serpy.Field()
     event_group = serpy.Field()
+    variant = serpy.Field()
+    experiment_id = serpy.Field()
+    product = serpy.Field()
+    persona = serpy.Field()
+    product_persona = serpy.Field()
 
     def get_asset(self, obj):
         if obj.asset_slug is not None:
@@ -271,6 +276,11 @@ class EventSmallSerializerNoAcademy(serpy.Serializer):
     is_public = serpy.Field()
     recording_url = serpy.Field()
     event_group = serpy.Field()
+    variant = serpy.Field()
+    experiment_id = serpy.Field()
+    product = serpy.Field()
+    persona = serpy.Field()
+    product_persona = serpy.Field()
 
 
 class EventPublicBigSerializer(EventSmallSerializer):
@@ -333,6 +343,11 @@ class AcademyEventSmallSerializer(serpy.Serializer):
     is_public = serpy.Field()
     recording_url = serpy.Field()
     event_group = serpy.Field()
+    variant = serpy.Field()
+    experiment_id = serpy.Field()
+    product = serpy.Field()
+    persona = serpy.Field()
+    product_persona = serpy.Field()
 
     def get_asset(self, obj):
         if obj.asset_slug is not None:

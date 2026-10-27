@@ -73,6 +73,11 @@ def get_serializer(event, academy, asset=None, data={}):
         "is_public": event.is_public,
         "recording_url": event.recording_url,
         "event_group": event.event_group,
+        "variant": event.variant,
+        "experiment_id": event.experiment_id,
+        "product": event.product,
+        "persona": event.persona,
+        "product_persona": event.product_persona,
         **data,
     }
 
@@ -221,6 +226,12 @@ class AcademyEventIdTestSuite(EventTestCase):
             "uuid": str(uuid),
             "is_public": True,
             "recording_url": None,
+            "event_group": None,
+            "variant": None,
+            "experiment_id": None,
+            "product": None,
+            "persona": None,
+            "product_persona": None,
             **data,
         }
 
@@ -320,6 +331,12 @@ class AcademyEventIdTestSuite(EventTestCase):
             "uuid": str(uuid),
             "is_public": False,
             "recording_url": None,
+            "event_group": None,
+            "variant": None,
+            "experiment_id": None,
+            "product": None,
+            "persona": None,
+            "product_persona": None,
             **data,
         }
 
@@ -671,6 +688,12 @@ class AcademyEventIdTestSuite(EventTestCase):
             "uuid": str(uuid),
             "is_public": True,
             "recording_url": None,
+            "event_group": None,
+            "variant": None,
+            "experiment_id": None,
+            "product": None,
+            "persona": None,
+            "product_persona": None,
             **data,
         }
 
@@ -906,6 +929,12 @@ class AcademyEventIdTestSuite(EventTestCase):
             "uuid": str(uuid),
             "is_public": True,
             "recording_url": None,
+            "event_group": None,
+            "variant": None,
+            "experiment_id": None,
+            "product": None,
+            "persona": None,
+            "product_persona": None,
             **data,
         }
 
@@ -1008,6 +1037,12 @@ class AcademyEventIdTestSuite(EventTestCase):
             "uuid": str(uuid),
             "is_public": True,
             "recording_url": None,
+            "event_group": None,
+            "variant": None,
+            "experiment_id": None,
+            "product": None,
+            "persona": None,
+            "product_persona": None,
             **data,
         }
 
