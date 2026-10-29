@@ -7,7 +7,7 @@ from breathecode.marketing.actions import register_new_lead
 from breathecode.marketing.models import CrmLeadOverride, FormEntry
 from breathecode.marketing.tasks import track_lead_on_cdp
 from breathecode.marketing.tests.tasks.tests_persist_single_lead import generate_form_entry_kwargs
-from breathecode.services.cdp import TRACK_URL, CdpTrackError, build_track_body, track_form_entry
+from breathecode.services.cdp import TRACK_URL, CdpTrackError, build_track_body, get_event_name, track_form_entry
 
 from ..mixins import MarketingTestCase
 
@@ -39,7 +39,7 @@ LEAD_FIELDS = {
 
 
 class BuildTrackBodyTestSuite(MarketingTestCase):
-    def test_body_uses_tags_as_event_and_keeps_the_comma_string(self):
+    def test_body_uses_first_allowlisted_tag_as_event_and_keeps_the_comma_string(self):
         model = self.generate_models(form_entry=generate_form_entry_kwargs(LEAD_FIELDS))
         entry = model.form_entry
 
@@ -48,7 +48,7 @@ class BuildTrackBodyTestSuite(MarketingTestCase):
         self.assertEqual(
             body,
             {
-                "event": "request-more-info,newsletter",
+                "event": "newsletter",
                 "eventId": str(entry.id),
                 "source": "breathecode",
                 "email": "ana@ejemplo.com",
@@ -77,6 +77,18 @@ class BuildTrackBodyTestSuite(MarketingTestCase):
                 },
             },
         )
+
+    def test_no_allowlisted_tag_has_no_body(self):
+        model = self.generate_models(form_entry=generate_form_entry_kwargs({**LEAD_FIELDS, "tags": "foo, bar"}))
+
+        self.assertIsNone(build_track_body(model.form_entry))
+
+    def test_event_name_is_a_single_allowlisted_tag(self):
+        self.assertEqual(get_event_name("request_more_info"), "request_more_info")
+        self.assertEqual(get_event_name(" foo , website-lead , newsletter"), "website-lead")
+        self.assertIsNone(get_event_name('"request_more_info"'))
+        self.assertIsNone(get_event_name(""))
+        self.assertIsNone(get_event_name(None))
 
     def test_empty_tags_have_no_body(self):
         model = self.generate_models(form_entry=generate_form_entry_kwargs({**LEAD_FIELDS, "tags": ""}))
@@ -108,6 +120,14 @@ class TrackFormEntryTestSuite(MarketingTestCase):
 
     @patch.dict(os.environ, {"CDP_API_KEY": "cdp-test-key"})
     @patch("breathecode.services.cdp.requests.post")
+    def test_not_allowlisted_tags_do_not_post(self, mock_post):
+        entry = self._entry(tags="some-random-tag")
+
+        self.assertFalse(track_form_entry(entry))
+        mock_post.assert_not_called()
+
+    @patch.dict(os.environ, {"CDP_API_KEY": "cdp-test-key"})
+    @patch("breathecode.services.cdp.requests.post")
     def test_posts_bearer_token_to_the_fixed_url(self, mock_post):
         mock_post.return_value = MagicMock(status_code=202)
         entry = self._entry()
@@ -118,7 +138,7 @@ class TrackFormEntryTestSuite(MarketingTestCase):
         self.assertEqual(args[0], TRACK_URL)
         self.assertEqual(kwargs["headers"]["Authorization"], "Bearer cdp-test-key")
         self.assertEqual(kwargs["headers"]["Content-Type"], "application/json")
-        self.assertEqual(kwargs["json"]["event"], "request-more-info,newsletter")
+        self.assertEqual(kwargs["json"]["event"], "newsletter")
         self.assertEqual(kwargs["json"]["properties"]["tags"], "request-more-info,newsletter")
         self.assertEqual(kwargs["json"]["eventId"], str(entry.id))
         self.assertNotIn("event", kwargs["json"]["properties"])

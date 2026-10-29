@@ -7,22 +7,45 @@ logger = logging.getLogger(__name__)
 
 TRACK_URL = "https://cdp.4geeks.us/v1/track"
 
+# Only these FormEntry tags are sent to the CDP as the event name (from historical form entries).
+CDP_EVENT_ALLOWLIST = frozenset(
+    {
+        "request_more_info",
+        "website-lead",
+        "newsletter",
+        "contact-us",
+        "request_downloadable",
+        "job-application",
+        "financing_guide_download",
+    }
+)
+
 
 class CdpTrackError(Exception):
     pass
 
 
+def get_event_name(tags) -> str | None:
+    """First allowlisted tag from a comma-separated tags string, or None."""
+    for tag in str(tags or "").split(","):
+        tag = tag.strip()
+        if tag in CDP_EVENT_ALLOWLIST:
+            return tag
+    return None
+
+
 def build_track_body(entry) -> dict | None:
-    """Build the CDP track payload from a FormEntry. None when there is no event tag."""
+    """Build the CDP track payload from a FormEntry. None when no tag is allowlisted."""
     tags = entry.tags or ""
-    if not str(tags).strip():
+    event = get_event_name(tags)
+    if event is None:
         return None
 
     first_name = entry.first_name or ""
     last_name = entry.last_name or ""
 
     return {
-        "event": tags,
+        "event": event,
         "eventId": str(entry.id),
         "source": "breathecode",
         "email": entry.email,
@@ -64,7 +87,7 @@ def track_form_entry(entry) -> bool:
 
     body = build_track_body(entry)
     if body is None:
-        logger.info("FormEntry %s has no tags, skipping lead track", entry.id)
+        logger.info("FormEntry %s has no allowlisted tag (%r), skipping lead track", entry.id, entry.tags)
         return False
 
     response = requests.post(
