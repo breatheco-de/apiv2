@@ -120,7 +120,9 @@ class CrmLeadOverride(models.Model):
     """Replace the academy CRM destination when a FormEntry field matches."""
 
     match_field = models.CharField(max_length=30, choices=CRM_LEAD_OVERRIDE_MATCH_FIELDS)
-    match_value = models.CharField(max_length=255, help_text="Case-insensitive exact match against the FormEntry payload")
+    match_value = models.CharField(
+        max_length=255, help_text="Case-insensitive exact match against the FormEntry payload"
+    )
     academy = models.ForeignKey(
         Academy,
         on_delete=models.CASCADE,
@@ -180,7 +182,9 @@ class CrmLeadOverride(models.Model):
         vendor = (self.destination_crm_vendor or "").strip()
         filled = [bool(url), bool(key), bool(vendor)]
         if any(filled) and not all(filled):
-            raise ValidationError("destination_ac_url, destination_ac_key and destination_crm_vendor must all be set or all empty")
+            raise ValidationError(
+                "destination_ac_url, destination_ac_key and destination_crm_vendor must all be set or all empty"
+            )
         self.destination_ac_url = url or None
         self.destination_ac_key = key or None
         self.destination_crm_vendor = vendor or None
@@ -273,16 +277,10 @@ class Tag(models.Model):
         help_text="The STRONG tags in a lead will determine to witch automation it does unless there is an 'automation' property on the lead JSON",
     )
     acp_id = models.IntegerField(
-        null=True,
-        blank=True,
-        default=None,
-        help_text="The id coming from active campaign (optional)"
+        null=True, blank=True, default=None, help_text="The id coming from active campaign (optional)"
     )
     subscribers = models.IntegerField(
-        null=True,
-        blank=True,
-        default=0,
-        help_text="Number of subscribers in ActiveCampaign (optional)"
+        null=True, blank=True, default=0, help_text="Number of subscribers in ActiveCampaign (optional)"
     )
 
     # For better maintance the tags can be disputed for deletion
@@ -519,8 +517,8 @@ class FormEntry(models.Model):
         max_length=100, null=True, default=None, blank=True, help_text="A/B experiment identifier"
     )
     product = models.CharField(max_length=100, null=True, default=None, blank=True)
-    persona = models.CharField(max_length=100, null=True, default=None, blank=True)
-    product_persona = models.CharField(max_length=150, null=True, default=None, blank=True)
+    persona = models.CharField(max_length=1000, null=True, default=None, blank=True)
+    product_persona = models.CharField(max_length=1000, null=True, default=None, blank=True)
 
     custom_fields = models.JSONField(
         blank=True,
@@ -822,28 +820,28 @@ class ShortLink(models.Model):
         null=True,
         blank=True,
         default=None,
-        help_text="Event reference in format '<id:slug>' (e.g., '<3434:event_slug>')"
+        help_text="Event reference in format '<id:slug>' (e.g., '<3434:event_slug>')",
     )
     course = models.CharField(
         max_length=200,
         null=True,
         blank=True,
         default=None,
-        help_text="Course reference in format '<id:slug>' (e.g., '<123:course_slug>')"
+        help_text="Course reference in format '<id:slug>' (e.g., '<123:course_slug>')",
     )
     downloadable = models.CharField(
         max_length=200,
         null=True,
         blank=True,
         default=None,
-        help_text="Downloadable reference in format '<id:slug>' (e.g., '<567:downloadable_slug>')"
+        help_text="Downloadable reference in format '<id:slug>' (e.g., '<567:downloadable_slug>')",
     )
     plan = models.CharField(
         max_length=200,
         null=True,
         blank=True,
         default=None,
-        help_text="Plan reference in format '<id:slug>' (e.g., '<789:plan_slug>')"
+        help_text="Plan reference in format '<id:slug>' (e.g., '<789:plan_slug>')",
     )
     referrer_user = models.ForeignKey(
         User,
@@ -851,22 +849,18 @@ class ShortLink(models.Model):
         null=True,
         blank=True,
         default=None,
-        related_name='referral_shortlinks',
-        help_text="User who referred this link (for affiliate tracking)"
+        related_name="referral_shortlinks",
+        help_text="User who referred this link (for affiliate tracking)",
     )
     purpose = models.TextField(
         max_length=500,
         null=True,
         blank=True,
         default=None,
-        help_text="Internal description of what this link is used for"
+        help_text="Internal description of what this link is used for",
     )
     notes = models.TextField(
-        max_length=1000,
-        null=True,
-        blank=True,
-        default=None,
-        help_text="Internal notes about this short link"
+        max_length=1000, null=True, blank=True, default=None, help_text="Internal notes about this short link"
     )
 
     lastclick_at = models.DateTimeField(
@@ -1133,7 +1127,7 @@ class EmailDomainValidation(models.Model):
     """
     Almacena resultados de validación de DNS para dominios de email.
     Incluye validaciones de MX, SPF, DMARC y detección de correos temporales.
-    
+
     Los registros expirados se pueden limpiar periódicamente.
     """
 
@@ -1151,9 +1145,7 @@ class EmailDomainValidation(models.Model):
     disposable = models.BooleanField(
         default=False, help_text="True si el dominio está en la lista de correos temporales"
     )
-    last_checked_at = models.DateTimeField(
-        auto_now=True, db_index=True, help_text="Fecha de la última verificación"
-    )
+    last_checked_at = models.DateTimeField(auto_now=True, db_index=True, help_text="Fecha de la última verificación")
     next_check_at = models.DateTimeField(
         db_index=True, help_text="Fecha de la próxima verificación recomendada", null=True, blank=True
     )
@@ -1181,10 +1173,10 @@ class EmailDomainValidation(models.Model):
     def get_or_create_domain(cls, domain):
         """
         Obtiene o crea un registro de validación para el dominio.
-        
+
         Args:
             domain: Dominio a verificar
-        
+
         Returns:
             tuple: (EmailDomainValidation, created) - El objeto y si fue creado
         """
@@ -1195,10 +1187,10 @@ class EmailDomainValidation(models.Model):
     def get_valid_domain(cls, domain):
         """
         Obtiene un resultado de validación válido (no expirado) si existe.
-        
+
         Args:
             domain: Dominio a verificar
-        
+
         Returns:
             EmailDomainValidation o None si no existe o está expirado
         """
@@ -1228,7 +1220,7 @@ class EmailDomainValidation(models.Model):
     ):
         """
         Actualiza o crea un registro de validación para el dominio.
-        
+
         Args:
             domain: Dominio validado
             has_mx: True si el dominio tiene registros MX válidos
@@ -1237,7 +1229,7 @@ class EmailDomainValidation(models.Model):
             dmarc: Registro DMARC encontrado
             disposable: True si el dominio está en la lista de correos temporales
             valid_days: Días de validez del resultado (default: 180, 6 meses)
-        
+
         Returns:
             EmailDomainValidation creado o actualizado
         """
@@ -1282,12 +1274,12 @@ class CourseResaleSettings(models.Model):
     """
     Allows an academy to resell a course from another academy.
     This model stores reseller-specific settings while keeping the original course data intact.
-    
+
     The reseller can customize almost everything except:
     - slug: Unique identifier (belongs to original course)
     - syllabus: Course content (belongs to original owner)
     - cohort: Cohort configuration (belongs to original owner)
-    
+
     All resale_* fields override the original course values when set.
     If a resale_* field is null/blank, the original course value is used.
     """
@@ -1304,7 +1296,7 @@ class CourseResaleSettings(models.Model):
 
     # Reseller-specific overrides (same field names as Course model for consistency)
     # If null/blank, the original course value is used
-    
+
     # Pricing and plans
     plan_slug = models.SlugField(
         max_length=150,
@@ -1319,7 +1311,7 @@ class CourseResaleSettings(models.Model):
         default=None,
         help_text="Custom plan mapping by country code for the reseller (overrides course.plan_by_country_code)",
     )
-    
+
     # Visual customization
     icon_url = models.URLField(
         null=True,
@@ -1347,7 +1339,7 @@ class CourseResaleSettings(models.Model):
         default=None,
         help_text="Custom technologies list for the reseller (overrides course.technologies)",
     )
-    
+
     # Status and visibility
     status = models.CharField(
         max_length=15,
@@ -1376,7 +1368,7 @@ class CourseResaleSettings(models.Model):
         default=None,
         help_text="Controls inclusion in reseller's listings and sitemaps (overrides course.is_listed)",
     )
-    
+
     # Features
     has_waiting_list = models.BooleanField(
         null=True,
@@ -1384,7 +1376,7 @@ class CourseResaleSettings(models.Model):
         default=None,
         help_text="Whether the reseller has a waiting list (overrides course.has_waiting_list)",
     )
-    
+
     # Control
     is_active = models.BooleanField(default=True, help_text="Whether the resale is currently active")
 
@@ -1411,14 +1403,14 @@ class CourseResaleSettings(models.Model):
 
         if has_feature_flag(self.academy, "commerce.reseller", default=False) is False:
             raise ValidationError(
-                {
-                    "academy": "Academy must have the 'reseller' feature enabled in academy_features to resell courses"
-                }
+                {"academy": "Academy must have the 'reseller' feature enabled in academy_features to resell courses"}
             )
 
         if self.course.academy == self.academy:
             raise ValidationError(
-                {"academy": "An academy cannot resell its own courses. The reseller academy must be different from the course owner."}
+                {
+                    "academy": "An academy cannot resell its own courses. The reseller academy must be different from the course owner."
+                }
             )
 
     def save(self, *args, **kwargs):
