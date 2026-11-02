@@ -976,6 +976,11 @@ def reschedule_billing_tasks(
     pf_charge_eta = _eta_for_schedule_at(pf_charge_at, utc_now)
     schedule_task(tasks.charge_plan_financing, pf_charge_eta).call(plan_financing_id)
 
+    # Staff-managed financings are collected by the academy, not the student card.
+    # Cancel any leftover notify tasks above, but do not schedule a "pay now" email.
+    if plan_financing.created_by_admin:
+        return
+
     if (plan_financing.next_payment_at - utc_now) > timedelta(days=2):
         notify_at = plan_financing.next_payment_at - timedelta(days=2)
         if notify_at > utc_now:

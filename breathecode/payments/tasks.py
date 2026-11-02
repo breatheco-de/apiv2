@@ -906,6 +906,13 @@ def notify_plan_financing_renewal(self, plan_financing_id: int, **_: Any):
     if not (plan_financing := PlanFinancing.objects.filter(id=plan_financing_id).first()):
         raise AbortTask(f"PlanFinancing {plan_financing_id} not found")
 
+    if plan_financing.created_by_admin:
+        logger.info(
+            "notify_plan_financing_renewal: plan financing %s created_by_admin, skipping",
+            plan_financing_id,
+        )
+        raise AbortTask(f"PlanFinancing {plan_financing_id} is admin-managed, skipping notification")
+
     no_charge_statuses = [
         PlanFinancing.Status.CANCELLED,
         PlanFinancing.Status.DEPRECATED,
