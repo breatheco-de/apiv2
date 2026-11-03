@@ -3,6 +3,7 @@ Bulk student upload: scenario classification and single-row processing.
 
 Used by POST /v1/auth/academy/student/invite/bulk (async task) and POST .../invite/bulk?soft=true (sync validate).
 """
+
 import logging
 from enum import Enum
 from typing import Any, Optional
@@ -63,6 +64,69 @@ class BulkStudentManager:
         return " ".join(parts) if parts else str(errors)
 
     @staticmethod
+    def _to_id(value: Any) -> Optional[int]:
+        """Spreadsheet cells can carry ids as text ("12", "12.0") or garbage; return None when not an id."""
+        try:
+            return int(float(value))
+        except (TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _get_cohort(academy_id: int, cohort_id: Any) -> Optional[Cohort]:
+        cohort_id = BulkStudentManager._to_id(cohort_id)
+        if cohort_id is None:
+            return None
+        return Cohort.objects.filter(id=cohort_id, academy_id=academy_id).first()
+
+    @staticmethod
+    def check_row_config(
+        academy_id: int,
+        cohort_id: Any,
+        payment_method: Any = None,
+        plans: Optional[list] = None,
+    ) -> Optional[tuple[str, str]]:
+        """
+        Check the cohort, payment method and plans of one row.
+
+        Returns (slug, message) when the row cannot be processed, None when it is fine. It never raises,
+        one badly configured row must be reported on its own instead of cancelling the whole upload.
+        """
+        from breathecode.payments.models import PaymentMethod, Plan
+
+        cohort = BulkStudentManager._get_cohort(academy_id, cohort_id)
+        if not cohort:
+            return "cohort-not-found", "Cohort not found or does not belong to this academy"
+
+        if cohort.stage in ("INACTIVE", "DELETED", "ENDED"):
+            return "cohort-not-available", f"Cannot add students to a cohort that is {cohort.stage}"
+
+        if payment_method is not None:
+            payment_method_id = BulkStudentManager._to_id(payment_method)
+            if (
+                payment_method_id is None
+                or not PaymentMethod.objects.filter(id=payment_method_id, academy_id=academy_id).exists()
+            ):
+                return "payment-method-not-found", "Payment method not found or does not belong to this academy"
+
+        for plan_id in plans or []:
+            plan_pk = BulkStudentManager._to_id(plan_id)
+            plan = Plan.objects.filter(id=plan_pk).select_related("cohort_set").first() if plan_pk else None
+            if not plan:
+                return "plan-not-found", f"Plan {plan_id} not found"
+
+            if plan.status == Plan.Status.DRAFT:
+                return "plan-draft-not-assignable", f"Plan '{plan.slug}' is a draft. Publish the plan first."
+
+            if not plan.cohort_set or not plan.cohort_set.cohorts.filter(id=cohort.id).exists():
+                return (
+                    "plan-cohort-mismatch",
+                    f"Plan '{plan.slug}' does not include cohort '{cohort.slug}'. "
+                    "The plan's cohort_set must contain the cohort.",
+                )
+
+        return None
+
+    @staticmethod
     def classify_row(academy_id: int, cohort_id: int, email: str) -> "BulkStudentManager.Scenario":
         """
         Classify a row into one of the five bulk-upload scenarios.
@@ -76,7 +140,14 @@ class BulkStudentManager:
                 code=400,
             )
 
-        cohort = Cohort.objects.filter(id=cohort_id, academy_id=academy_id).first()
+        if not cohort_id:
+            raise ValidationException(
+                "Each student must have a cohort_id",
+                slug="cohort-id-required",
+                code=400,
+            )
+
+        cohort = BulkStudentManager._get_cohort(academy_id, cohort_id)
         if not cohort:
             raise ValidationException(
                 "Cohort not found or does not belong to this academy",
@@ -168,24 +239,10 @@ class BulkStudentManager:
                 message="User is already in this cohort",
             )
 
-        cohort = Cohort.objects.filter(id=cohort_id, academy_id=academy_id).first()
-        if not cohort:
-            return BulkStudentManager._row_result(
-                classification,
-                row_data,
-                "failed",
-                message="Cohort not found or does not belong to this academy",
-                slug="cohort-not-found",
-            )
-
-        if cohort.stage in ("INACTIVE", "DELETED", "ENDED"):
-            return BulkStudentManager._row_result(
-                classification,
-                row_data,
-                "failed",
-                message=f"Cohort is {cohort.stage}",
-                slug="cohort-not-available",
-            )
+        config_error = BulkStudentManager.check_row_config(academy_id, cohort_id, payment_method, plans)
+        if config_error:
+            slug, message = config_error
+            return BulkStudentManager._row_result(classification, row_data, "failed", message=message, slug=slug)
 
         if classification == BulkStudentManager.Scenario.NEW_USER:
             existing = ProfileAcademy.objects.filter(email__iexact=email, academy_id=academy_id).first()
@@ -265,24 +322,14 @@ class BulkStudentManager:
                 slug="author-not-found",
             )
 
-        cohort = Cohort.objects.filter(id=cohort_id, academy_id=academy_id).first()
-        if not cohort:
-            return BulkStudentManager._row_result(
-                classification,
-                row_data,
-                "failed",
-                message="Cohort not found or does not belong to this academy",
-                slug="cohort-not-found",
-            )
+        config_error = BulkStudentManager.check_row_config(academy_id, cohort_id, payment_method, plans)
+        if config_error:
+            slug, message = config_error
+            logger.warning("Bulk student row rejected email=%s cohort_id=%s slug=%s", email, cohort_id, slug)
+            return BulkStudentManager._row_result(classification, row_data, "failed", message=message, slug=slug)
 
-        if cohort.stage in ("INACTIVE", "DELETED", "ENDED"):
-            return BulkStudentManager._row_result(
-                classification,
-                row_data,
-                "failed",
-                message=f"Cannot add to cohort that is {cohort.stage}",
-                slug="adding-student-to-a-closed-cohort",
-            )
+        cohort = BulkStudentManager._get_cohort(academy_id, cohort_id)
+        cohort_id = cohort.id
 
         if classification in (
             BulkStudentManager.Scenario.SAME_ACADEMY_DIFFERENT_COHORT,
@@ -351,7 +398,10 @@ class BulkStudentManager:
                 cohort_user_id=cohort_user.id,
             )
 
-        if classification in (BulkStudentManager.Scenario.NEW_USER, BulkStudentManager.Scenario.DIFFERENT_ACADEMY_NO_PROFILE):
+        if classification in (
+            BulkStudentManager.Scenario.NEW_USER,
+            BulkStudentManager.Scenario.DIFFERENT_ACADEMY_NO_PROFILE,
+        ):
             data = {
                 "email": email,
                 "first_name": row_data.get("first_name") or "",
