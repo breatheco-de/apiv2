@@ -121,7 +121,7 @@ class Task(models.Model):
     task_type = models.CharField(max_length=15, choices=TaskType, db_index=True)
     github_url = models.CharField(max_length=150, blank=True, default=None, null=True)
     live_url = models.CharField(max_length=150, blank=True, default=None, null=True)
-    description = models.TextField(max_length=450, blank=True)
+    description = models.TextField(max_length=800, blank=True)
     opened_at = models.DateTimeField(null=True, blank=True, default=None, db_index=True)
 
     delivered_flags = models.JSONField(

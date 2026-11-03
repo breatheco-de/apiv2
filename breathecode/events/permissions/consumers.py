@@ -8,6 +8,7 @@ from django.utils import timezone
 from breathecode.admissions.actions import is_no_saas_student_up_to_date_in_any_cohort
 from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.actions import get_user_language
+from breathecode.events.actions import user_has_denied_plan_for_event
 from breathecode.events.models import Event, LiveClass
 from breathecode.utils.decorators import ServiceContext
 
@@ -62,6 +63,17 @@ def event_by_url_param(context: ServiceContext, args: tuple, kwargs: dict) -> tu
     event_type = event.event_type
 
     is_host = event.host_user == request.user
+    if not is_host and user_has_denied_plan_for_event(request.user, event):
+        raise ValidationException(
+            translation(
+                lang,
+                en="Your current plan does not allow access to this event",
+                es="Tu plan actual no te permite acceder a este evento",
+                slug="event-plan-denied",
+            ),
+            code=403,
+        )
+
     is_free_for_all = event.free_for_all
     is_free_for_bootcamps = is_free_for_all or (
         (event.free_for_bootcamps) or (event.free_for_bootcamps is None and event_type.free_for_bootcamps)

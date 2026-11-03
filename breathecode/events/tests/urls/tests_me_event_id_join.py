@@ -1703,3 +1703,53 @@ def test__post__auth__no_saas__finantial_status_late(bc: Breathecode, client: ca
     assert bc.database.list_of("events.EventCheckin") == []
 
     bc.check.calls(tasks.end_the_consumption_session.apply_async.call_args_list, [])
+
+
+# Given: free_for_all event with denied_plans matching the user's plan financing
+# When: user tries to join
+# Then: 403 event-plan-denied
+@patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+@patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+@patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
+@patch("breathecode.payments.tasks.end_the_consumption_session.apply_async", MagicMock(return_value=None))
+def test_join_denied_by_plan_even_if_free_for_all(bc: Breathecode, client: capy.Client):
+    delta = timedelta(hours=2)
+    event = {
+        "host_user_id": None,
+        "starting_at": UTC_NOW - delta,
+        "ending_at": UTC_NOW + delta,
+        "live_stream_url": bc.fake.url(),
+        "free_for_all": True,
+        "free_for_bootcamps": True,
+    }
+    model = bc.database.create(
+        user=1,
+        token=1,
+        event=event,
+        event_type={"icon_url": bc.fake.url()},
+        plan={"slug": "plan-apoyo-profesional-aie"},
+        plan_financing={
+            "status": "FULLY_PAID",
+            "plan_expires_at": UTC_NOW + timedelta(days=30),
+        },
+    )
+    model.event.denied_plans.add(model.plan)
+    model.plan_financing.plans.add(model.plan)
+
+    querystring = bc.format.to_querystring({"token": model.token.key})
+    url = reverse_lazy("events:me_event_id_join", kwargs={"event_id": model.event.id}) + f"?{querystring}"
+    response = client.get(url)
+
+    content = bc.format.from_bytes(response.content)
+    expected = render_message("event-plan-denied")
+
+    if content != expected:
+        with open("content.html", "w") as f:
+            f.write(content)
+        with open("expected.html", "w") as f:
+            f.write(expected)
+
+    assert content == expected
+    assert response.status_code == 403
+    assert bc.database.list_of("events.EventCheckin") == []
+    bc.check.calls(tasks.end_the_consumption_session.apply_async.call_args_list, [])
