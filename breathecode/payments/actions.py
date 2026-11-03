@@ -635,6 +635,23 @@ def align_consumer_vps_stock_with_active_machines(consumable: Consumable) -> Non
     if pre_consume_units > 0:
         consume_service.send_robust(sender=Consumable, instance=current_consumable, how_many=pre_consume_units)
 
+        # Point the covered ACTIVE VPS of this same billing scope to the consumable that was just charged,
+        # so a mid-cycle delete reimburses a current consumable instead of an expired one.
+        if vps_scope_kwargs:
+            vps_to_rotate = (
+                ProvisioningVPS.objects.filter(
+                    user_id=user_id,
+                    status=active_vps_status,
+                    **vps_scope_kwargs,
+                )
+                .exclude(consumed_consumable_id=current_consumable.id)
+                .order_by("provisioned_at", "id")
+                .values("id")[:pre_consume_units]
+            )
+            ProvisioningVPS.objects.filter(id__in=vps_to_rotate).update(
+                consumed_consumable=current_consumable, updated_at=timezone.now()
+            )
+
 
 def sync_llm_member_budget_to_llm_provider(
     provisioning_llm,
@@ -975,6 +992,12 @@ def reschedule_billing_tasks(
     pf_charge_at = plan_financing.next_payment_at + SCHEDULE_CHARGE_LAG_AFTER_NEXT_PAYMENT
     pf_charge_eta = _eta_for_schedule_at(pf_charge_at, utc_now)
     schedule_task(tasks.charge_plan_financing, pf_charge_eta).call(plan_financing_id)
+
+    # Staff-created financings are not collected by card. The installment reminder
+    # tells the student a charge is coming, so it is not scheduled for them.
+    # Pending notify tasks were already cancelled above.
+    if plan_financing.created_by_admin:
+        return
 
     if (plan_financing.next_payment_at - utc_now) > timedelta(days=2):
         notify_at = plan_financing.next_payment_at - timedelta(days=2)

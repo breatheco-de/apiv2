@@ -43,10 +43,10 @@ These areas are primarily documented for **academy staff** in the staff index. I
 | **activity** | My engagement, daily summaries, login streaks | `bc-activity-*` |
 | **assessment** | My quizzes and attempts | `bc-assessment-*` |
 | **assignment** | My tasks, submissions, final project, LearnPack telemetry ingestion | `bc-assignment-*`, [`bc-assignment-diagnose-asset-telemetry`](../bc-assignment-diagnose-asset-telemetry/SKILL.md) (for `POST …/me/telemetry` and related learner diagnostics) |
-| **authenticate** | Login, token, hosted redirect, academy-scoped capabilities + academy-less permissions for the current user | `bc-authenticate-*`, [`bc-authenticate-student-authentication`](../bc-authenticate-student-authentication/SKILL.md) |
+| **authenticate** | Login, token, hosted redirect, forgot/reset password, academy-scoped capabilities + academy-less permissions for the current user | `bc-authenticate-*`, [`bc-authenticate-student-authentication`](../bc-authenticate-student-authentication/SKILL.md) |
 | **career** | Job listings and applications after graduation | `bc-career-*` |
 | **certificate** | My issued certificates | `bc-certificate-*` |
-| **events** | My workshops, RSVPs, check-ins, live class join | `bc-events-*`, [`bc-events-create-and-edit-event`](../bc-events-create-and-edit-event/SKILL.md) (where it documents student-facing paths) |
+| **events** | My workshops, RSVPs, check-ins, live class join; public events include optional `event_group` string (same string = same series) | `bc-events-*`, [`bc-events-create-and-edit-event`](../bc-events-create-and-edit-event/SKILL.md) (where it documents student-facing paths) |
 | **feedback** | Surveys assigned to me, responses | `bc-feedback-*`, [`bc-feedback-create-manage-feedback-survey`](../bc-feedback-create-manage-feedback-survey/SKILL.md) |
 | **media** | Media used in learning content | `bc-media-*` |
 | **mentorship** | Book/join mentors via short links; my mentorship sessions | `bc-mentorship-*`, [`bc-mentorship-book-and-join-session`](../bc-mentorship-book-and-join-session/SKILL.md), [`bc-mentorship-review-session-activity`](../bc-mentorship-review-session-activity/SKILL.md) |
@@ -64,10 +64,14 @@ Some user requests touch multiple domains. Load ALL listed skills before proceed
 | User Request | Skills to Load |
 |---|---|
 | Log in or connect a third-party app using hosted student auth (redirect + callback token) | [`bc-authenticate-student-authentication`](../bc-authenticate-student-authentication/SKILL.md) |
+| Let a user reset a forgotten password | [`bc-authenticate-student-authentication`](../bc-authenticate-student-authentication/SKILL.md) (+ [`bc-authenticate-share-subdomain-session`](../bc-authenticate-share-subdomain-session/SKILL.md) to clear the revoked shared cookie) |
+| Sign up a new user from a frontend form (account + plan/course, then log them in) | [`bc-authenticate-signup-user`](../bc-authenticate-signup-user/SKILL.md) + [`bc-authenticate-share-subdomain-session`](../bc-authenticate-share-subdomain-session/SKILL.md) (persist the returned `access_token`) |
+| Keep a user logged in across 4Geeks subdomains (shared session cookie) | [`bc-authenticate-share-subdomain-session`](../bc-authenticate-share-subdomain-session/SKILL.md) + [`bc-authenticate-student-authentication`](../bc-authenticate-student-authentication/SKILL.md) (to obtain the token) |
 | List, request, or deprovision **my** VPS | [`bc-provisioning-manage-vps-server`](../bc-provisioning-manage-vps-server/SKILL.md) + `bc-authenticate-*` (token) |
 | List, create, or delete **my** LiteLLM API keys; check LLM budget entitlement or key spend | [`bc-provisioning-manage-my-llm-keys`](../bc-provisioning-manage-my-llm-keys/SKILL.md) + [`bc-authenticate-student-authentication`](../bc-authenticate-student-authentication/SKILL.md) |
 | View or cancel **my** subscription (and optional refund flow when applicable) | [`bc-payments-cancel-subscription-and-refund`](../bc-payments-cancel-subscription-and-refund/SKILL.md) + `bc-authenticate-*` |
 | See **my** events, join, check in, or live class | [`bc-events-create-and-edit-event`](../bc-events-create-and-edit-event/SKILL.md) + `bc-authenticate-*` (student-facing event paths) |
+| Browse public workshops or register for a multi-day series | Public `GET /v1/events/all` / `GET /v1/events/event/<slug>` return `event_group` when applicable; learner `POST /v1/events/me/event/<id>/checkin` fans out `PENDING` to remaining sessions — use [`bc-events-create-and-edit-event`](../bc-events-create-and-edit-event/SKILL.md) for group concepts + `bc-authenticate-*` for `/me/` |
 | Send LearnPack / package telemetry as the current user | [`bc-assignment-diagnose-asset-telemetry`](../bc-assignment-diagnose-asset-telemetry/SKILL.md) + `bc-authenticate-*` |
 | See **my** joined cohorts and progress (including self-paced `never_ends`) | [`bc-admissions-read-student-my-cohorts-and-progress`](../bc-admissions-read-student-my-cohorts-and-progress/SKILL.md) + `bc-authenticate-*` |
 | Book or join a mentorship session | [`bc-mentorship-book-and-join-session`](../bc-mentorship-book-and-join-session/SKILL.md) + [`bc-authenticate-student-authentication`](../bc-authenticate-student-authentication/SKILL.md); on join credit failure also `bc-payments-*` |

@@ -202,6 +202,12 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             "uuid": uuid,
             "is_public": True,
             "recording_url": None,
+            "event_group": None,
+            "variant": None,
+            "experiment_id": None,
+            "product": None,
+            "persona": None,
+            "product_persona": None,
         }
 
         self.assertEqual(self.bc.database.list_of("events.Event"), [kwargs])
@@ -296,6 +302,12 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             "uuid": uuid,
             "is_public": True,
             "recording_url": None,
+            "event_group": None,
+            "variant": None,
+            "experiment_id": None,
+            "product": None,
+            "persona": None,
+            "product_persona": None,
         }
 
         self.assertEqual(self.bc.database.list_of("events.Event"), [kwargs])

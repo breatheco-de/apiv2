@@ -26,6 +26,10 @@ AC_MAPS = {
     "utm_language": "LANGUAGE",
     "utm_landing": "LANDING_URL",
     "referral_key": "REFERRAL_KEY",
+    "variant": "VARIANT",
+    "experiment_id": "EXPERIMENT_ID",
+    "product": "BUYER_PRODUCTS",
+    "persona": "BUYER_PERSONAS",
     "client_comments": None,  # It will be ignored because its none
     "current_download": None,  # It will be ignored because its none
 }

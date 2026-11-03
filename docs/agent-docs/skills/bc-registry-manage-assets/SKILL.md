@@ -26,6 +26,8 @@ Full field meanings: [reference/asset-fields.md](reference/asset-fields.md).
 - Role `content_writer` may only change `status`, and not to `PUBLISHED`.
 - **`graded` is deprecated.** All assets are graded with AI. Do not set it to enable grading or telemetry. LearnPack `config.grading` (`isolated`/`incremental`) is step mode, not this flag.
 - For PROJECT/EXERCISE, a GitHub pull can overwrite `interactive`, `gitpod`, `with_video`, `with_solutions`, `title`, `description`, `technologies`, delivery fields, and `agent`.
+- **`skills` are read only through the API.** They come from the asset source file on every GitHub pull (`learn.json` `skills`, lesson frontmatter `skills`, quiz JSON `info.skills`). POST/PUT ignore `skills` and `skills_source`. To change them, edit the source file and pull. Each entry is a skill slug from the talent catalog ([`bc-talentdevelopment-manage-skills`](../bc-talentdevelopment-manage-skills/SKILL.md)) or `{ "slug": "...", "level": "foundation|core|applied" }`. Max **5** skills per asset.
+- **`skills_source`:** `FILE` (the source file declares skills), `INHERITED` (copied from a translation whose file declares them), or `null` (never declared). A translation without `skills` in its file inherits from a translation that has them.
 - GitHub actions (`pull`, `push`, `test`, `clean`, `create_repo`), SEO, thumbnail, and originality exist under `/academy/asset/{slug}/action/{action}` and related routes. Do not use this skill to run them.
 
 ```mermaid
@@ -140,7 +142,7 @@ Use the returned **`id`** as asset `category`. Do not send that slug as `categor
 
 - **Method / path:** `GET /v1/registry/academy/asset`
 - **Capability:** `read_asset`
-- **Query:** `like` (title/slug/url), `asset_type` (exact), `status` (comma-separated; default excludes a leftover `DELETED` value), `visibility` (default `PUBLIC`), `lang`/`language`, `technologies` (slugs), `category` (**slugs**, not ids), `external` (`true`/`false`/`both`; default internal only), `superseded_by` (`null` for latest), `test_status`, `sync_status`, `interactive=true`, `graded=true` (legacy filter; do not use as a grading workflow), `video=true`. **Pagination:** yes.
+- **Query:** `like` (title/slug/url), `asset_type` (exact), `status` (comma-separated; default excludes a leftover `DELETED` value), `visibility` (default `PUBLIC`), `lang`/`language`, `technologies` (slugs), `skills` (comma-separated skill slugs; matches assets with **any** of them), `category` (**slugs**, not ids), `external` (`true`/`false`/`both`; default internal only), `superseded_by` (`null` for latest), `test_status`, `sync_status`, `interactive=true`, `graded=true` (legacy filter; do not use as a grading workflow), `video=true`. **Pagination:** yes.
 
 **Response `200`:** paginated `AcademyAssetSerializer` rows (same shape as Get asset below).
 
@@ -162,6 +164,10 @@ Use the returned **`id`** as asset `category`. Do not send that slug as `categor
   "visibility": "PUBLIC",
   "category": { "id": 12, "slug": "web-development", "title": "Web Development" },
   "technologies": ["python"],
+  "skills": [
+    { "slug": "python-loops", "name": "Python loops", "domain": "programming", "level": "core" }
+  ],
+  "skills_source": "FILE",
   "academy": 4,
   "test_status": null,
   "sync_status": null,
@@ -236,6 +242,9 @@ Bulk update: `PUT /v1/registry/academy/asset` with a JSON array. Each object mus
 - **Unclaimed asset:** PUT from this academy claims it (`academy` was null).
 - **`readme` vs `readme_raw`:** sending `readme` → 400. Write `readme_raw`.
 - **`graded`:** ignore for grading and telemetry. Do not set it on create.
+- **`skills` did not change after PUT:** expected; PUT ignores them. Edit the source file (`learn.json`, lesson frontmatter, or quiz `info.skills`) and run a GitHub pull.
+- **`skills` did not change after a pull:** list asset errors for the asset ([`bc-registry-asset-comments-and-issues`](../bc-registry-asset-comments-and-issues/SKILL.md)). `too-many-skills` (more than 5) and `deprecated-skill-slug` (a renamed skill slug; the message shows `"old" -> "new"`) reject the whole list and keep the previous skills. `invalid-skill` means unknown slugs were dropped and the rest applied. `skills-translation-mismatch` warns that translations declare different skills. Fix the source file and pull again; the errors are marked `FIXED` automatically.
+- **Skill slug missing from the catalog:** skills are never auto-created on pull. Create the skill first with [`bc-talentdevelopment-manage-skills`](../bc-talentdevelopment-manage-skills/SKILL.md), then pull again.
 
 ## Checklist
 

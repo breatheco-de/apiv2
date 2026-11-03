@@ -2,7 +2,9 @@
 Test cases for GET/POST /v1/auth/view/login (hosted HTML login).
 """
 
+import base64
 from unittest.mock import MagicMock, patch
+from urllib.parse import urlencode
 
 import pytest
 from django.contrib.auth.hashers import make_password
@@ -26,7 +28,7 @@ def test_login_view__get__without_url(client):
 
 
 def test_login_view__get__with_url(client):
-    url = reverse_lazy("authenticate:login_view") + "?url=https://example.com/callback"
+    url = reverse_lazy("authenticate:login_view") + "?url=https://4geeks.com/callback"
     response = client.get(url)
 
     assert response.status_code == status.HTTP_200_OK
@@ -35,11 +37,70 @@ def test_login_view__get__with_url(client):
     assert b'name="password"' in response.content
 
 
+@pytest.mark.parametrize(
+    "callback",
+    [
+        "https://evil.com/callback",
+        "https://4geeks.com.evil.com/callback",
+        base64.b64encode(b"https://evil.com/callback").decode("utf-8"),
+    ],
+)
+def test_login_view__get__with_url_not_allowed(client, callback):
+    url = reverse_lazy("authenticate:login_view") + "?" + urlencode({"url": callback})
+    response = client.get(url)
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert b"The redirect url is not allowed" in response.content
+    assert b'name="password"' not in response.content
+
+
+def test_login_view__post__with_url_not_allowed__does_not_issue_token(client, database):
+    password = "Pain!$%"
+    user = {"email": "konan@naruto.io", "password": make_password(password)}
+    user_invite = {"email": "konan@naruto.io", "status": "ACCEPTED", "is_email_validated": True}
+    model = database.create(user=user, user_invite=user_invite)
+
+    url = reverse_lazy("authenticate:login_view")
+    response = client.post(
+        url,
+        {
+            "email": model.user.email,
+            "password": password,
+            "url": base64.b64encode(b"https://evil.com/callback").decode("utf-8"),
+        },
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert b"The redirect url is not allowed" in response.content
+    assert database.list_of("authenticate.Token") == []
+
+
+def test_login_view__post__with_encoded_url(client, database):
+    password = "Pain!$%"
+    user = {"email": "konan@naruto.io", "password": make_password(password)}
+    user_invite = {"email": "konan@naruto.io", "status": "ACCEPTED", "is_email_validated": True}
+    model = database.create(user=user, user_invite=user_invite)
+
+    url = reverse_lazy("authenticate:login_view")
+    response = client.post(
+        url,
+        {
+            "email": model.user.email,
+            "password": password,
+            "url": base64.b64encode(b"https://app.4geeks.com/callback").decode("utf-8"),
+        },
+    )
+
+    assert response.status_code == status.HTTP_302_FOUND
+    assert response.url.startswith("https://app.4geeks.com/callback?")
+    assert "token=" in response.url
+
+
 def test_login_view__get__with_captcha_enabled(client, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("APPLY_CAPTCHA", "TRUE")
     monkeypatch.setenv("CLOUDFLARE_TURNSTILE_SITE_KEY", "test-site-key")
 
-    url = reverse_lazy("authenticate:login_view") + "?url=https://example.com/callback"
+    url = reverse_lazy("authenticate:login_view") + "?url=https://4geeks.com/callback"
     response = client.get(url)
 
     assert response.status_code == status.HTTP_200_OK
@@ -60,13 +121,13 @@ def test_login_view__post__success(client, database):
         {
             "email": model.user.email,
             "password": password,
-            "url": "https://example.com/callback",
+            "url": "https://4geeks.com/callback",
         },
     )
 
     assert response.status_code == status.HTTP_302_FOUND
     assert isinstance(response, HttpResponseRedirect)
-    assert response.url.startswith("https://example.com/callback?")
+    assert response.url.startswith("https://4geeks.com/callback?")
     assert "token=" in response.url
     assert "attempt=1" in response.url
 
@@ -83,7 +144,7 @@ def test_login_view__post__bad_credentials(client, database):
         {
             "email": model.user.email,
             "password": "wrong-password",
-            "url": "https://example.com/callback",
+            "url": "https://4geeks.com/callback",
         },
     )
 
@@ -107,7 +168,7 @@ def test_login_view__post__captcha_disabled_skips_turnstile(client, database):
         {
             "email": model.user.email,
             "password": password,
-            "url": "https://example.com/callback",
+            "url": "https://4geeks.com/callback",
         },
     )
 
@@ -129,7 +190,7 @@ def test_login_view__post__captcha_enabled_missing_token(client, database, monke
         {
             "email": model.user.email,
             "password": password,
-            "url": "https://example.com/callback",
+            "url": "https://4geeks.com/callback",
         },
     )
 
@@ -156,7 +217,7 @@ def test_login_view__post__captcha_enabled_with_mocked_verify(client, database, 
             {
                 "email": model.user.email,
                 "password": password,
-                "url": "https://example.com/callback",
+                "url": "https://4geeks.com/callback",
                 "cf-turnstile-response": "fake-token",
             },
         )
@@ -180,7 +241,7 @@ def test_login_view__post__rate_limited(client, database, monkeypatch: pytest.Mo
     payload = {
         "email": model.user.email,
         "password": "wrong-password",
-        "url": "https://example.com/callback",
+        "url": "https://4geeks.com/callback",
     }
 
     assert client.post(url, payload).status_code == status.HTTP_200_OK

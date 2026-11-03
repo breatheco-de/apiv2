@@ -8,7 +8,7 @@ from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from circuitbreaker import CircuitBreakerError
 from django.contrib import messages
-from django.db.models import Q
+from django.db.models import Exists, OuterRef, Q
 from django.http import HttpResponseRedirect, QueryDict
 from django.shortcuts import render
 from django.utils import timezone
@@ -65,6 +65,7 @@ from .serializers import (
     TaskAttachmentSerializer,
     TaskGETDeliverSerializer,
     TaskGETSerializer,
+    prefetch_assignment_telemetry,
     UserAttachmentSerializer,
     TaskUserSmallSerializer,
     RepositoryDeletionOrderSerializer,
@@ -829,26 +830,26 @@ class CohortTaskView(APIView, GenerateLookupsMixin):
         if revision_status is not None:
             lookup["revision_status__in"] = revision_status.split(",")
 
-        educational_status = request.GET.get("educational_status", None)
-        if educational_status is not None:
-            lookup["user__cohortuser__educational_status__in"] = educational_status.split(",")
-
         like = request.GET.get("like", None)
         if like is not None and like != "undefined" and like != "":
             items = items.filter(Q(associated_slug__icontains=slugify(like)) | Q(title__icontains=like))
 
-        # tasks from users that belong to these cohort
+        # Match CohortUser with EXISTS so one student in many cohorts does not duplicate each task.
+        # The rule stays the same: ACTIVE in any cohort still matches.
+        educational_status = request.GET.get("educational_status", None)
         student = request.GET.get("student", None)
-        if student is not None:
-            lookup["user__cohortuser__user__id__in"] = student.split(",")
-            lookup["user__cohortuser__role"] = "STUDENT"
-
         if educational_status is not None or student is not None:
-            items = items.distinct()
+            cohort_users = CohortUser.objects.filter(user_id=OuterRef("user_id"))
+            if educational_status is not None:
+                cohort_users = cohort_users.filter(educational_status__in=educational_status.split(","))
+            if student is not None:
+                cohort_users = cohort_users.filter(user_id__in=student.split(","), role="STUDENT")
+            items = items.filter(Exists(cohort_users))
 
-        items = items.filter(**lookup)
+        items = items.filter(**lookup).select_related("user", "cohort", "telemetry")
         items = _apply_cohort_live_meeting_filter(items, request)
         items = handler.queryset(items)
+        items = prefetch_assignment_telemetry(items)
 
         serializer = TaskGETSerializer(items, many=True)
         return handler.response(serializer.data)

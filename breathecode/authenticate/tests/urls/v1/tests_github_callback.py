@@ -185,7 +185,7 @@ def test_without_code(
 ):
     """Test /github/callback without auth"""
     url = reverse_lazy("authenticate:github_callback")
-    params = {"url": "https://google.co.ve"}
+    params = {"url": "https://4geeks.com"}
     response = client.get(f"{url}?{urllib.parse.urlencode(params)}")
 
     data = response.json()
@@ -221,7 +221,7 @@ def test_user_not_exist(
         status=200,
     )
 
-    original_url_callback = "https://google.co.ve"
+    original_url_callback = "https://4geeks.com"
     code = "Konan"
 
     url = reverse_lazy("authenticate:github_callback")
@@ -279,7 +279,7 @@ def test_user_not_exist_but_waiting_list(
     user_invite = {"status": "WAITING_LIST", "email": github_user_emails[0]["email"]}
     bc.database.create(user_invite=user_invite)
 
-    original_url_callback = "https://google.co.ve"
+    original_url_callback = "https://4geeks.com"
     code = "Konan"
 
     url = reverse_lazy("authenticate:github_callback")
@@ -320,7 +320,7 @@ def test_with_user(
     role_kwargs = {"slug": "student", "name": "Student"}
     model = bc.database.create(role=True, user=True, user_kwargs=user_kwargs, role_kwargs=role_kwargs)
 
-    original_url_callback = "https://google.co.ve"
+    original_url_callback = "https://4geeks.com"
     token_pattern = re.compile("^" + original_url_callback.replace(".", r"\.") + r"\?token=[0-9a-zA-Z]{,40}$")
     code = "Konan"
 
@@ -374,7 +374,7 @@ def test_with_user__with_email_in_uppercase(
     role_kwargs = {"slug": "student", "name": "Student"}
     model = bc.database.create(role=True, user=True, user_kwargs=user_kwargs, role_kwargs=role_kwargs, token=True)
 
-    original_url_callback = "https://google.co.ve"
+    original_url_callback = "https://4geeks.com"
     token_pattern = re.compile("^" + original_url_callback.replace(".", r"\.") + r"\?token=[0-9a-zA-Z]{,40}$")
     code = "Konan"
 
@@ -441,7 +441,7 @@ def test_with_bad_user_in_querystring(
         role=True, user=True, profile_academy=True, user_kwargs=user_kwargs, role_kwargs=role_kwargs, token=True
     )
 
-    original_url_callback = "https://google.co.ve"
+    original_url_callback = "https://4geeks.com"
     code = "Konan"
 
     url = reverse_lazy("authenticate:github_callback")
@@ -489,7 +489,7 @@ def test_with_user(
         role=True, user=True, profile_academy=True, user_kwargs=user_kwargs, role_kwargs=role_kwargs, token=True
     )
 
-    original_url_callback = "https://google.co.ve"
+    original_url_callback = "https://4geeks.com"
     token_pattern = re.compile("^" + original_url_callback.replace(".", r"\.") + r"\?token=[0-9a-zA-Z]{,40}$")
     code = "Konan"
 
@@ -563,7 +563,7 @@ def test_with_user__profile_without_avatar_url(
         token=True,
     )
 
-    original_url_callback = "https://google.co.ve"
+    original_url_callback = "https://4geeks.com"
     token_pattern = re.compile("^" + original_url_callback.replace(".", r"\.") + r"\?token=[0-9a-zA-Z]{,40}$")
     code = "Konan"
 
@@ -640,7 +640,7 @@ def test_with_user__profile_with_avatar_url(
         token=True,
     )
 
-    original_url_callback = "https://google.co.ve"
+    original_url_callback = "https://4geeks.com"
     token_pattern = re.compile("^" + original_url_callback.replace(".", r"\.") + r"\?token=[0-9a-zA-Z]{,40}$")
     code = "Konan"
 
@@ -708,7 +708,7 @@ def test_with_user_different_email__without_credetials_of_github__without_cohort
     role = {"slug": "student", "name": "Student"}
     model = bc.database.create(role=role, user=user, profile_academy=True, token=True)
 
-    original_url_callback = "https://google.co.ve"
+    original_url_callback = "https://4geeks.com"
     token_pattern = re.compile("^" + original_url_callback.replace(".", r"\.") + r"\?token=[0-9a-zA-Z]{,40}$")
     code = "Konan"
 
@@ -774,7 +774,7 @@ def test_with_user_different_email__without_credetials_of_github__with_cohort_us
     role = {"slug": "student", "name": "Student"}
     model = bc.database.create(role=role, user=user, profile_academy=True, cohort_user=1, token=True)
 
-    original_url_callback = "https://google.co.ve"
+    original_url_callback = "https://4geeks.com"
     token_pattern = re.compile("^" + original_url_callback.replace(".", r"\.") + r"\?token=[0-9a-zA-Z]{,40}$")
     code = "Konan"
 
@@ -844,7 +844,7 @@ def test_with_user_different_email__with_credentials_of_github__without_cohort_u
         role=role, user=users, profile_academy=True, credentials_github=credentials_github, token=token
     )
 
-    original_url_callback = "https://google.co.ve"
+    original_url_callback = "https://4geeks.com"
     token_pattern = re.compile("^" + original_url_callback.replace(".", r"\.") + r"\?token=[0-9a-zA-Z]{,40}$")
     code = "Konan"
 
@@ -932,7 +932,7 @@ def test_with_user_different_email__with_credentials_of_github__with_cohort_user
         status=200,
     )
 
-    original_url_callback = "https://google.co.ve"
+    original_url_callback = "https://4geeks.com"
     token_pattern = re.compile("^" + original_url_callback.replace(".", r"\.") + r"\?token=[0-9a-zA-Z]{,40}$")
     code = "Konan"
 
@@ -1031,7 +1031,7 @@ def test_no_token(
     #     status=200,
     # )
 
-    original_url_callback = "https://google.co.ve"
+    original_url_callback = "https://4geeks.com"
     code = "Konan"
 
     url = reverse_lazy("authenticate:github_callback")
@@ -1041,7 +1041,7 @@ def test_no_token(
     assert response.status_code == status.HTTP_302_FOUND
 
     token = bc.database.get("authenticate.Token", pk=1, dict=False)
-    assert response.url == f"/v1/auth/github/{token.key}?scope=repo%20user&url=https://google.co.ve"
+    assert response.url == f"/v1/auth/github/{token.key}?scope=repo%20user&url=https://4geeks.com"
 
     assert bc.database.list_of("auth.User") == bc.format.to_dict(model.user)
 
@@ -1113,7 +1113,7 @@ def test_scopes_does_not_match(
         status=200,
     )
 
-    original_url_callback = "https://google.co.ve"
+    original_url_callback = "https://4geeks.com"
     code = "Konan"
 
     token = model.token
@@ -1123,7 +1123,7 @@ def test_scopes_does_not_match(
     response = client.get(f"{url}?{urllib.parse.urlencode(params)}")
 
     assert response.status_code == status.HTTP_302_FOUND
-    assert response.url == f"/v1/auth/github/{model.token.key}?scope=repo&url=https://google.co.ve"
+    assert response.url == f"/v1/auth/github/{model.token.key}?scope=repo&url=https://4geeks.com"
 
     assert bc.database.list_of("auth.User") == bc.format.to_dict(model.user)
 
@@ -1195,7 +1195,7 @@ def test_scopes_not_granted(
         status=200,
     )
 
-    original_url_callback = "https://google.co.ve"
+    original_url_callback = "https://4geeks.com"
     token_pattern = re.compile("^" + original_url_callback.replace(".", r"\.") + r"\?token=[0-9a-zA-Z]{,40}$")
     code = "Konan"
 

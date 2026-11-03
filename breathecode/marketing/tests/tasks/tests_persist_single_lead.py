@@ -1095,3 +1095,74 @@ class AnswerIdTestSuite(MarketingTestCase):
         self.assertEqual(requests.get.call_args_list, [])
         self.assertEqual(requests.post.call_args_list, [])
         self.assertEqual(requests.request.call_args_list, [])
+
+    """
+    🔽🔽🔽 Sibling still PENDING (race: two POSTs, neither persisted yet)
+    """
+
+    @patch("requests.get", apply_requests_get_mock([(200, GOOGLE_MAPS_URL, GOOGLE_MAPS_OK)]))
+    @patch("requests.post", apply_requests_post_mock([(201, MAILGUN_URL, "ok")]))
+    @patch("requests.request", apply_old_breathecode_requests_request_mock())
+    @patch("logging.Logger.info", MagicMock())
+    @patch("logging.Logger.error", MagicMock())
+    def test_second_pending_form_entry_same_email_course_is_duplicated(self):
+        form_entries = [
+            generate_form_entry_kwargs(
+                {
+                    "email": "pokemon@potato.io",
+                    "course": "asdasd",
+                    "storage_status": "PENDING",
+                }
+            ),
+            generate_form_entry_kwargs(
+                {
+                    "email": "pokemon@potato.io",
+                    "course": "asdasd",
+                    "storage_status": "PENDING",
+                }
+            ),
+        ]
+
+        model = self.generate_models(
+            academy=True,
+            active_campaign_academy=True,
+            tag=True,
+            tag_kwargs={"tag_type": "STRONG"},
+            automation=True,
+            automation_kwargs={"slug": "they-killed-kenny"},
+            form_entry=form_entries,
+            active_campaign_academy_kwargs={"ac_url": "https://old.hardcoded.breathecode.url"},
+        )
+
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
+        second_id = model["form_entry"][1].id
+        data = {
+            "location": model["academy"].slug,
+            "tags": model["tag"].slug,
+            "automations": model["automation"].slug,
+            "email": "pokemon@potato.io",
+            "first_name": "Konan",
+            "last_name": "Amegakure",
+            "phone": "123123123",
+            "course": "asdasd",
+            "id": second_id,
+        }
+
+        persist_single_lead.delay(data)
+
+        second = self.bc.database.get("marketing.FormEntry", second_id, dict=False)
+        self.assertEqual(second.storage_status, "DUPLICATED")
+        self.assertEqual(
+            logging.Logger.info.call_args_list,
+            [
+                call("Starting persist_single_lead"),
+                call("found automations"),
+                call([model.automation]),
+                call("found tags"),
+                call({model.tag.slug}),
+                call("FormEntry is considered a duplicate, not sent to CRM and no automations or tags added"),
+            ],
+        )
+        self.assertEqual(requests.request.call_args_list, [])

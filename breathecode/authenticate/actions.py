@@ -690,6 +690,15 @@ def reset_password(users=None, extra=None, academy=None):
     return True
 
 
+SESSION_TOKEN_TYPES = ("login", "temporal", "short")
+
+
+def revoke_user_sessions(user: User, token_types: tuple[str, ...] = SESSION_TOKEN_TYPES) -> int:
+    """Delete the user's session tokens, permanent and one_time tokens are kept because integrations use them."""
+    count, _ = Token.objects.filter(user=user, token_type__in=token_types).delete()
+    return count
+
+
 def _unslugify(slug: str) -> str:
     """Turn a slug into a readable fallback title without exposing raw slug form."""
     if not slug:
@@ -1714,6 +1723,7 @@ def accept_invite_action(data=None, token=None, lang="en"):
     if password1:
         user.set_password(password1)
         user.save()
+        revoke_user_sessions(user)
 
     if invite.academy is not None:
         profile = ProfileAcademy.objects.filter(email=invite.email, academy=invite.academy).first()
@@ -1843,6 +1853,18 @@ def accept_invite_action(data=None, token=None, lang="en"):
         access = payments_actions.resolve_student_plan_access_from_invite(ui)
         primary = cohorts_list[0]
         joined = cohorts_list[1:] if len(cohorts_list) > 1 else None
+
+        # Staff or N8N may already have created this plan before the student opens the invite.
+        # Accepting must still validate the email. A second financing is rejected.
+        if payments_actions.user_blocking_plan_financings(invite_user, plan).exists():
+            logger.warning(
+                "accept_invite_action skipped financing because one is already active "
+                "user_id=%s plan_id=%s invite_id=%s",
+                invite_user.id,
+                plan.id,
+                ui.id,
+            )
+            continue
 
         payments_actions.create_invited_plan_financing_for_user(
             user=invite_user,

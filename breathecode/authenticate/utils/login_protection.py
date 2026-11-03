@@ -6,9 +6,9 @@ import logging
 import os
 from typing import Optional
 
-from django.core.cache import cache
-
 from breathecode.services.cloudflare import Turnstile
+from breathecode.utils.decorators.rate_limit import RateLimiter
+from breathecode.utils.request import get_client_ip
 
 logger = logging.getLogger(__name__)
 
@@ -41,13 +41,6 @@ def is_captcha_enabled() -> bool:
 def is_login_rate_limit_enabled() -> bool:
     enabled = os.getenv("LOGIN_RATE_LIMIT_ENABLED", "FALSE").lower()
     return bool(enabled) and enabled != "false"
-
-
-def get_client_ip(request) -> str:
-    forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.META.get("REMOTE_ADDR") or "unknown"
 
 
 def get_login_captcha_context() -> dict:
@@ -96,35 +89,20 @@ def _normalize_email(email: Optional[str]) -> Optional[str]:
     return email.strip().lower()
 
 
-def _ip_cache_key(ip: str) -> str:
-    return f"login_fail:ip:{ip}"
-
-
-def _email_cache_key(email: str) -> str:
-    return f"login_fail:email:{email}"
-
-
-def _get_failure_count(key: str) -> int:
-    value = cache.get(key)
-    if value is None:
-        return 0
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return 0
+def _login_failure_limiter() -> RateLimiter:
+    return RateLimiter("login-failure", f"{_rate_limit_max_attempts()}/{_rate_limit_window_seconds()}s")
 
 
 def is_login_rate_limited(request, email: Optional[str] = None) -> bool:
     if not is_login_rate_limit_enabled():
         return False
 
-    max_attempts = _rate_limit_max_attempts()
-    ip = get_client_ip(request)
-    if _get_failure_count(_ip_cache_key(ip)) >= max_attempts:
+    limiter = _login_failure_limiter()
+    if limiter.is_limited("ip", get_client_ip(request)):
         return True
 
     normalized = _normalize_email(email)
-    if normalized and _get_failure_count(_email_cache_key(normalized)) >= max_attempts:
+    if normalized and limiter.is_limited("email", normalized):
         return True
 
     return False
@@ -140,22 +118,20 @@ def record_login_failure(request, email: Optional[str] = None) -> None:
     if not is_login_rate_limit_enabled():
         return
 
-    window = _rate_limit_window_seconds()
-    ip = get_client_ip(request)
-    ip_key = _ip_cache_key(ip)
-    cache.set(ip_key, _get_failure_count(ip_key) + 1, timeout=window)
+    limiter = _login_failure_limiter()
+    limiter.hit("ip", get_client_ip(request))
 
     normalized = _normalize_email(email)
     if normalized:
-        email_key = _email_cache_key(normalized)
-        cache.set(email_key, _get_failure_count(email_key) + 1, timeout=window)
+        limiter.hit("email", normalized)
 
 
 def clear_login_rate_limit(request, email: Optional[str] = None) -> None:
     if not is_login_rate_limit_enabled():
         return
 
-    cache.delete(_ip_cache_key(get_client_ip(request)))
+    limiter = _login_failure_limiter()
+    limiter.reset("ip", get_client_ip(request))
     normalized = _normalize_email(email)
     if normalized:
-        cache.delete(_email_cache_key(normalized))
+        limiter.reset("email", normalized)

@@ -30,9 +30,9 @@ class AuthenticateTestSuite(AuthTestCase):
 
     def test_github(self):
         """Test /github"""
-        original_url_callback = "https://google.co.ve"
+        original_url_callback = "https://4geeks.com"
         url = reverse_lazy("authenticate:github")
-        params = {"url": "https://google.co.ve"}
+        params = {"url": "https://4geeks.com"}
         response = self.client.get(f"{url}?{urllib.parse.urlencode(params)}")
         params = {
             "client_id": os.getenv("GITHUB_CLIENT_ID", ""),
@@ -44,3 +44,12 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertEqual(response.url, redirect)
+
+    def test_github__with_url_not_allowed(self):
+        """Test /github with a callback outside the allowlist"""
+        url = reverse_lazy("authenticate:github")
+        for callback in ["https://evil.com", "https://4geeks.com.evil.com/callback"]:
+            response = self.client.get(f"{url}?{urllib.parse.urlencode({'url': callback})}")
+
+            self.assertEqual(response.data, {"detail": "invalid-redirect-url", "status_code": 400})
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

@@ -492,6 +492,20 @@ if IS_TEST_ENV:
 
             return self._cache[key]["value"]
 
+        def add(self, key, value, *args, timeout=None, **kwargs):
+            if key in self._cache.keys():
+                return False
+
+            self.set(key, value, timeout=timeout)
+            return True
+
+        def incr(self, key, delta=1, *args, **kwargs):
+            if not self._cache.get(key):
+                raise ValueError(f"Key '{key}' not found")
+
+            self._cache[key]["value"] += delta
+            return self._cache[key]["value"]
+
     CACHES["default"] = {
         **CACHES["default"],
         "LOCATION": "breathecode",

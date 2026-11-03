@@ -592,6 +592,82 @@ def test_task__post__with_user_invite__user_exists(bc: Breathecode, client: APIC
     assert verify_user_invite_email.delay.call_args_list == []
 
 
+USER_EXISTS_ERROR = {
+    "detail": "user-exists",
+    "silent": True,
+    "silent_code": "user-exists",
+    "status_code": 400,
+}
+OPEN_PLAN = {"time_of_life": None, "time_of_life_unit": None, "has_waiting_list": False, "invites": []}
+
+
+@patch("django.utils.timezone.now", MagicMock(return_value=now))
+@patch("breathecode.authenticate.models.Token.get_or_create", MagicMock(wraps=Token.get_or_create))
+def test_task__post__user_exists__with_plan__anonymous(bc: Breathecode, client: APIClient):
+    model = bc.database.create(user={"email": "pokemon@potato.io"}, plan=OPEN_PLAN)
+
+    url = reverse_lazy("authenticate:subscribe")
+    response = client.post(url, {"email": "pokemon@potato.io", "plan": 1}, format="json")
+
+    assert response.json() == USER_EXISTS_ERROR
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert bc.database.list_of("authenticate.UserInvite") == []
+    assert bc.database.list_of("authenticate.Token") == []
+    assert Token.get_or_create.call_args_list == []
+    bc.check.queryset_with_pks(model.plan.invites.all(), [])
+
+
+@patch("django.utils.timezone.now", MagicMock(return_value=now))
+@patch("breathecode.authenticate.models.Token.get_or_create", MagicMock(wraps=Token.get_or_create))
+def test_task__post__user_exists__with_plan__authenticated_as_another_user(bc: Breathecode, client: APIClient):
+    model = bc.database.create(
+        user=[{"email": "pokemon@potato.io"}, {"email": "attacker@potato.io"}],
+        plan=OPEN_PLAN,
+        token={"key": "attacker-token", "token_type": "login", "user_id": 2},
+    )
+
+    url = reverse_lazy("authenticate:subscribe")
+    response = client.post(
+        url, {"email": "pokemon@potato.io", "plan": 1}, format="json", HTTP_AUTHORIZATION="Token attacker-token"
+    )
+
+    assert response.json() == USER_EXISTS_ERROR
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert bc.database.list_of("authenticate.UserInvite") == []
+    assert [x["key"] for x in bc.database.list_of("authenticate.Token")] == ["attacker-token"]
+    assert Token.get_or_create.call_args_list == []
+    bc.check.queryset_with_pks(model.plan.invites.all(), [])
+
+
+@patch("django.utils.timezone.now", MagicMock(return_value=now))
+@patch("breathecode.authenticate.models.Token.get_or_create", MagicMock(wraps=Token.get_or_create))
+def test_task__post__user_exists__with_plan__authenticated_as_same_user(
+    bc: Breathecode, client: APIClient, validation_res
+):
+    model = bc.database.create(
+        user={"email": "pokemon@potato.io"},
+        plan=OPEN_PLAN,
+        token={"key": "owner-token", "token_type": "login"},
+    )
+
+    url = reverse_lazy("authenticate:subscribe")
+    response = client.post(
+        url, {"email": "pokemon@potato.io", "plan": 1}, format="json", HTTP_AUTHORIZATION="Token owner-token"
+    )
+    json = response.json()
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert json["access_token"] is None
+    assert json["user"] == model.user.id
+    assert json["status"] == "ACCEPTED"
+
+    invites = bc.database.list_of("authenticate.UserInvite")
+    assert [(x["id"], x["user_id"], x["status"]) for x in invites] == [(1, model.user.id, "ACCEPTED")]
+    assert [x["key"] for x in bc.database.list_of("authenticate.Token")] == ["owner-token"]
+    assert Token.get_or_create.call_args_list == []
+    bc.check.queryset_with_pks(model.plan.invites.all(), [1])
+
+
 # """
 # 🔽🔽🔽 Post with UserInvite with other email
 # """
@@ -2866,3 +2942,32 @@ def test__put__course_and_syllabus__waiting_list(bc: Breathecode, client: APICli
     assert verify_user_invite_email.delay.call_args_list == []
 
     assert Token.get_or_create.call_args_list == []
+
+
+def test_task__post__email_rate_limit(bc: Breathecode, client: APIClient):
+    url = reverse_lazy("authenticate:subscribe")
+    data = {"email": "pokemon@potato.io", "syllabus": "missing-syllabus"}
+
+    for _ in range(3):
+        response = client.post(url, data, format="json")
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    response = client.post(url, data, format="json")
+
+    assert response.json() == {"detail": "rate-limit-exceeded", "status_code": 429}
+    assert response.status_code == status.HTTP_429_TOO_MANY_REQUESTS
+    assert response["Retry-After"] == "3600"
+
+
+def test_task__post__ip_rate_limit(bc: Breathecode, client: APIClient):
+    url = reverse_lazy("authenticate:subscribe")
+
+    for i in range(10):
+        data = {"email": f"pokemon{i}@potato.io", "syllabus": "missing-syllabus"}
+        response = client.post(url, data, format="json", REMOTE_ADDR="203.0.113.7")
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    data = {"email": "pokemon11@potato.io", "syllabus": "missing-syllabus"}
+    response = client.post(url, data, format="json", REMOTE_ADDR="203.0.113.7")
+
+    assert response.status_code == status.HTTP_429_TOO_MANY_REQUESTS

@@ -369,6 +369,20 @@ def _serialize_github_activity_logs(obj):
     return normalize_github_activity_log(obj.github_activity_log)
 
 
+def _serialize_asset_skills(obj):
+    """Skills synced from the asset source file, uses `asset_skills__skill__domain` when prefetched."""
+    items = sorted(obj.asset_skills.all(), key=lambda x: x.skill.slug)
+    return [
+        {
+            "slug": x.skill.slug,
+            "name": x.skill.name,
+            "domain": x.skill.domain.slug,
+            "level": x.level,
+        }
+        for x in items
+    ]
+
+
 class AcademyAssetSerializer(AssetSerializer):
     test_status = serpy.Field()
     last_test_at = serpy.Field()
@@ -408,9 +422,14 @@ class AcademyAssetSerializer(AssetSerializer):
     previous_versions = serpy.MethodField()
 
     academy = serpy.MethodField()
+    skills = serpy.MethodField()
+    skills_source = serpy.Field()
 
     def get_github_activity_logs(self, obj):
         return _serialize_github_activity_logs(obj)
+
+    def get_skills(self, obj):
+        return _serialize_asset_skills(obj)
 
     def get_academy(self, obj):
         return obj.academy.id if obj.academy else None
@@ -502,10 +521,15 @@ class AssetBigAndTechnologySerializer(AssetBigSerializer):
 
     technologies = serpy.MethodField()
     aliases = serpy.MethodField()
+    skills = serpy.MethodField()
+    skills_source = serpy.Field()
 
     def get_technologies(self, obj):
         techs = AssetTechnology.objects.filter(id__in=obj.technologies.filter(is_deprecated=False))
         return ParentAssetTechnologySerializer(techs, many=True).data
+
+    def get_skills(self, obj):
+        return _serialize_asset_skills(obj)
 
     def get_aliases(self, obj):
         aliases = []
@@ -524,12 +548,17 @@ class AssetBigAndTechnologyPublishedSerializer(AssetBigSerializer):
     technologies = serpy.MethodField()
     translations = serpy.MethodField()
     aliases = serpy.MethodField()
+    skills = serpy.MethodField()
+    skills_source = serpy.Field()
 
     def get_translations(self, obj):
         result = {}
         for t in obj.all_translations.filter(status="PUBLISHED"):
             result[t.lang] = t.slug
         return result
+
+    def get_skills(self, obj):
+        return _serialize_asset_skills(obj)
 
     def get_technologies(self, obj):
         techs = AssetTechnology.objects.filter(
@@ -728,6 +757,7 @@ class PostAssetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Asset
         exclude = ("academy",)
+        read_only_fields = ("skills", "skills_source")
 
     def validate(self, data):
 
@@ -828,6 +858,7 @@ class PostAcademyAssetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Asset
         exclude = ("academy",)
+        read_only_fields = ("skills", "skills_source")
 
     def validate(self, data):
 
@@ -1182,6 +1213,7 @@ class AssetPUTSerializer(serializers.ModelSerializer):
     class Meta:
         model = Asset
         exclude = ("academy",)
+        read_only_fields = ("skills", "skills_source")
         list_serializer_class = AssetListSerializer
 
     def validate(self, data):
@@ -1397,6 +1429,7 @@ class AssetPUTMeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Asset
         exclude = ("academy",)
+        read_only_fields = ("skills", "skills_source")
         list_serializer_class = AssetListSerializer
 
     def validate(self, data):

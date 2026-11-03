@@ -488,7 +488,7 @@ class AuthenticateTestSuite(AuthTestCase):
             password = "".join(password_characters)
             model = self.bc.database.create(**kwargs)
 
-            redirect_url = self.bc.fake.url()
+            redirect_url = "https://4geeks.com/" + self.bc.fake.slug()
             url = reverse_lazy("authenticate:password_token", kwargs={"token": token})
             data = {"password1": password, "password2": password, "callback": redirect_url}
             response = self.client.post(url, data)
@@ -520,3 +520,83 @@ class AuthenticateTestSuite(AuthTestCase):
             # teardown
             self.bc.database.delete("auth.User")
             self.bc.database.delete("authenticate.UserInvite")
+
+
+STRONG_PASSWORD = "Pain!$%Konan1"
+
+
+def remaining_tokens(database) -> list[tuple[str, str]]:
+    return sorted((token["key"], token["token_type"]) for token in database.list_of("authenticate.Token"))
+
+
+def test_post__resetting_password_revokes_sessions(db, database, client):
+    tokens = [
+        {"key": "reset-token", "token_type": "short"},
+        {"key": "old-login", "token_type": "login"},
+        {"key": "old-temporal", "token_type": "temporal"},
+        {"key": "integration", "token_type": "permanent"},
+        {"key": "service", "token_type": "one_time"},
+    ]
+    model = database.create(user=1, token=tokens)
+
+    url = reverse_lazy("authenticate:password_token", kwargs={"token": "reset-token"})
+    response = client.post(url, {"password1": STRONG_PASSWORD, "password2": STRONG_PASSWORD})
+
+    assert response.status_code == status.HTTP_200_OK
+    assert remaining_tokens(database) == [("integration", "permanent"), ("service", "one_time")]
+
+    model.user.refresh_from_db()
+    assert model.user.check_password(STRONG_PASSWORD)
+
+    response = client.get(reverse_lazy("authenticate:user_me"), HTTP_AUTHORIZATION="Token old-login")
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+def test_post__reset_link_cannot_be_reused(db, database, client):
+    database.create(user=1, token={"key": "reset-token", "token_type": "short"})
+
+    url = reverse_lazy("authenticate:password_token", kwargs={"token": "reset-token"})
+    client.post(url, {"password1": STRONG_PASSWORD, "password2": STRONG_PASSWORD})
+    response = client.post(url, {"password1": STRONG_PASSWORD + "x", "password2": STRONG_PASSWORD + "x"})
+
+    assert b"The link has expired." in response.content
+
+
+def test_post__with_callback_not_allowed(db, database, client):
+    model = database.create(user=1, token={"key": "reset-token", "token_type": "short"})
+    original_password = model.user.password
+
+    url = reverse_lazy("authenticate:password_token", kwargs={"token": "reset-token"})
+    data = {"password1": STRONG_PASSWORD, "password2": STRONG_PASSWORD, "callback": "https://evil.com/"}
+    response = client.post(url, data)
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert b"The redirect url is not allowed" in response.content
+
+    model.user.refresh_from_db()
+    assert model.user.password == original_password
+    assert remaining_tokens(database) == [("reset-token", "short")]
+
+
+def test_get__with_callback_not_allowed(db, database, client):
+    database.create(user=1, token={"key": "reset-token", "token_type": "short"})
+
+    url = reverse_lazy("authenticate:password_token", kwargs={"token": "reset-token"}) + "?callback=https://evil.com/"
+    response = client.get(url)
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert b"The redirect url is not allowed" in response.content
+
+
+def test_post__token_limit(db, database, client):
+    database.create(user=1, token={"key": "reset-token", "token_type": "short"})
+    url = reverse_lazy("authenticate:password_token", kwargs={"token": "reset-token"})
+
+    for _ in range(5):
+        response = client.post(url, {"password1": "weak", "password2": "weak"})
+        assert response.status_code == status.HTTP_200_OK
+
+    response = client.post(url, {"password1": STRONG_PASSWORD, "password2": STRONG_PASSWORD})
+
+    assert response.status_code == status.HTTP_429_TOO_MANY_REQUESTS
+    assert remaining_tokens(database) == [("reset-token", "short")]

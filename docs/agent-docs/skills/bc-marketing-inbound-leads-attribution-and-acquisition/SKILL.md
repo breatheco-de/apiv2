@@ -118,7 +118,7 @@ Drill down from acquisition report to lead detail → manage skill (`GET /v1/mar
 
 ## Workflow
 
-1. **Capture** → [`bc-marketing-create-form-entry`](../bc-marketing-create-form-entry/SKILL.md) for `POST /v1|v2/marketing/lead*`, `app/lead`, staff POST, bulk CSV. Use `POST /v1/auth/subscribe/` for invite/waitlist capture.
+1. **Capture** → [`bc-marketing-create-form-entry`](../bc-marketing-create-form-entry/SKILL.md) for `POST /v1|v2/marketing/lead*`, `app/lead`, staff POST, bulk CSV. Use `POST /v1/auth/subscribe/` for invite/waitlist capture ([`bc-authenticate-signup-user`](../bc-authenticate-signup-user/SKILL.md)).
 
 2. **Store attribution at write time.** Populate `utm_*`, `referral_key`, `custom_fields` (FormEntry) or `conversion_info` (UserInvite).
 

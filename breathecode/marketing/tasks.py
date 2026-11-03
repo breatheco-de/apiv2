@@ -13,6 +13,7 @@ from breathecode.events.models import Event
 from breathecode.monitoring.actions import test_link
 from breathecode.monitoring.models import CSVUpload
 from breathecode.services.activecampaign import ActiveCampaign
+from breathecode.services.cdp import CdpTrackError, track_form_entry
 from breathecode.utils import getLogger
 from breathecode.utils.decorators import TaskPriority
 
@@ -52,6 +53,15 @@ def persist_single_lead(form_data, **_: Any):
                 entry.storage_status_text = str(e)
                 entry.storage_status = "PENDING"
                 entry.save()
+                # Keep retrying so tags can finish. send_to_active_campaign
+                # skips Soft/STRONG if this same row already has ac_contact_id.
+                if entry.ac_contact_id:
+                    logger.info(
+                        "Timeout after FormEntry %s already has ac_contact_id %s; "
+                        "retry will skip automations and only finish tags",
+                        entry.id,
+                        entry.ac_contact_id,
+                    )
                 raise RetryTask(f"Timeout processing lead for form_entry {str(entry.id)}")
 
     except Exception as e:
@@ -76,6 +86,24 @@ def persist_single_lead(form_data, **_: Any):
         save_get_geolocal(entry, form_data)
 
     return True
+
+
+@task(priority=TaskPriority.MARKETING.value)
+def track_lead_on_cdp(form_entry_id, **_: Any):
+    """Send a lead to the CDP. Failures retry and do not change CRM storage status."""
+    logger.info("Starting track_lead_on_cdp")
+
+    entry = FormEntry.objects.filter(id=form_entry_id).first()
+    if entry is None:
+        raise AbortTask(f"FormEntry {form_entry_id} not found")
+
+    try:
+        track_form_entry(entry)
+    except CdpTrackError as error:
+        raise RetryTask(str(error))
+    except Exception as error:
+        logger.exception("CDP track failed for FormEntry %s", form_entry_id)
+        raise RetryTask(str(error))
 
 
 @task(priority=TaskPriority.MARKETING.value)

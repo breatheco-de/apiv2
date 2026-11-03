@@ -49,6 +49,11 @@ def post_serializer(data={}):
         "utm_placement": None,
         "utm_term": None,
         "utm_plan": None,
+        "variant": None,
+        "experiment_id": None,
+        "product": None,
+        "persona": None,
+        "product_persona": None,
         "sex": None,
         "custom_fields": None,
         "referral_key": None,
@@ -112,6 +117,11 @@ def form_entry_field(data={}):
         "utm_placement": None,
         "utm_term": None,
         "utm_plan": None,
+        "variant": None,
+        "experiment_id": None,
+        "product": None,
+        "persona": None,
+        "product_persona": None,
         "sex": None,
         "custom_fields": None,
         "referral_key": None,
@@ -324,6 +334,36 @@ def test_lead__with__data(bc: Breathecode, client: APIClient):
             }
         )
     ]
+
+
+# When: Passing the tracking fields
+def test_lead__with__tracking_fields(bc: Breathecode, client: APIClient):
+    url = reverse_lazy("marketing:lead")
+
+    tracking = {
+        "variant": "B",
+        "experiment_id": "exp-12",
+        "product": "full-stack",
+        "persona": "career-changer",
+        "product_persona": "full-stack-career-changer",
+    }
+    data = generate_form_entry_kwargs(
+        {
+            "phone": "123456789",
+            "language": "en",
+            **tracking,
+        }
+    )
+
+    response = client.post(url, data, format="json")
+    json = response.json()
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert {key: json[key] for key in tracking} == tracking
+
+    form_entries = bc.database.list_of("marketing.FormEntry")
+    assert len(form_entries) == 1
+    assert {key: form_entries[0][key] for key in tracking} == tracking
 
 
 # When: Passing slug of Academy or AcademyAlias

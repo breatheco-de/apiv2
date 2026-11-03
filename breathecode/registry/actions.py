@@ -5,9 +5,12 @@ import logging
 import os
 import pathlib
 import re
+import time
 from typing import Optional
 import requests
 from asgiref.sync import sync_to_async
+from django.core.cache import cache
+from django.db import transaction
 from django.db.models import Q
 from django.template.loader import get_template
 from django.utils import timezone
@@ -15,12 +18,28 @@ from github import Github
 
 from breathecode.assessment.actions import create_from_asset
 from breathecode.authenticate.models import CredentialsGithub
+from breathecode.commons.signals import update_cache
 from breathecode.media.models import Media, MediaResolution
 from breathecode.services.cloudflare import BrowserRun
 from breathecode.services.google_cloud.storage import Storage
+from breathecode.talent_development.models import Skill, SkillAlias, StageCompetency
 from breathecode.utils.views import set_query_parameter
 
-from .models import ASSET_STATUS, Asset, AssetImage, AssetTechnology, ContentSite, ContentVariable, OriginalityScan
+from .models import (
+    ASSET_STATUS,
+    ERROR,
+    FIXED,
+    SKILLS_SOURCE_FILE,
+    SKILLS_SOURCE_INHERITED,
+    Asset,
+    AssetErrorLog,
+    AssetImage,
+    AssetSkill,
+    AssetTechnology,
+    ContentSite,
+    ContentVariable,
+    OriginalityScan,
+)
 from .serializers import AssetBigSerializer
 from .utils import (
     ArticleValidator,
@@ -564,6 +583,10 @@ def pull_github_lesson(github, asset: Asset, override_meta=False):
 
                 asset.technologies.add(technology)
 
+    # skills are read on every sync because the source file is their source of truth
+    frontmatter_meta = dict((readme.get("frontmatter") or {}).items())
+    set_asset_skills(asset, frontmatter_meta.get("skills"))
+
     return asset
 
 
@@ -1088,6 +1111,220 @@ def sync_asset_fields_to_config(asset: Asset, updated_fields: dict) -> dict:
     return Asset.sync_fields_to_learn_config(asset, updated_fields)
 
 
+MAX_SKILLS_PER_ASSET = 5
+SKILLS_GENERATION_KEY = "asset-skills-generation"
+SKILL_LEVELS = set(StageCompetency.RequiredLevel.values)
+
+
+def get_skills_generation() -> int:
+    """Return a counter that changes every time the skills of any asset change, used to version caches."""
+
+    generation = cache.get(SKILLS_GENERATION_KEY)
+    if generation is None:
+        # starts from the current time so an evicted counter never matches stale cache keys
+        generation = time.time_ns()
+        cache.set(SKILLS_GENERATION_KEY, generation, timeout=None)
+
+    return generation
+
+
+def bump_skills_generation() -> None:
+    try:
+        cache.incr(SKILLS_GENERATION_KEY)
+    except ValueError:
+        cache.set(SKILLS_GENERATION_KEY, time.time_ns(), timeout=None)
+
+
+def notify_skills_changed() -> None:
+    bump_skills_generation()
+    # skills are written with bulk operations that don't emit post_save, the asset caches must be cleaned by hand
+    update_cache.send_robust(sender=Asset)
+
+
+def _parse_raw_skills(raw_skills: list) -> tuple[dict[str, str | None], list[str]]:
+    """Return the declared skills as {slug: level} (deduplicated, in order) and the unparseable entries."""
+
+    declared: dict[str, str | None] = {}
+    invalid_entries: list[str] = []
+
+    for item in raw_skills:
+        slug = None
+        level = None
+
+        if isinstance(item, str):
+            slug = item.strip()
+        elif isinstance(item, dict) and isinstance(item.get("slug"), str):
+            slug = item["slug"].strip()
+            level = item.get("level") if item.get("level") in SKILL_LEVELS else None
+
+        if not slug:
+            invalid_entries.append(str(item))
+            continue
+
+        if slug not in declared:
+            declared[slug] = level
+
+    return declared, invalid_entries
+
+
+def _get_asset_skills_map(asset_id: int) -> dict[int, str | None]:
+    return dict(AssetSkill.objects.filter(asset_id=asset_id).values_list("skill_id", "level"))
+
+
+def _replace_asset_skills(asset: Asset, new_skills: dict[int, str | None], source: str) -> bool:
+    """Replace the skills of an asset, return True if the skills changed."""
+
+    current = _get_asset_skills_map(asset.id)
+    skills_changed = current != new_skills
+
+    with transaction.atomic():
+        if skills_changed:
+            AssetSkill.objects.filter(asset_id=asset.id).delete()
+            AssetSkill.objects.bulk_create(
+                [AssetSkill(asset_id=asset.id, skill_id=skill_id, level=level) for skill_id, level in new_skills.items()]
+            )
+
+        if asset.skills_source != source:
+            # update() avoids triggering the asset save signals
+            Asset.objects.filter(id=asset.id).update(skills_source=source)
+            asset.skills_source = source
+
+    return skills_changed
+
+
+def _mark_skill_errors_fixed(asset_ids: list[int], error_slugs: list[str]) -> None:
+    AssetErrorLog.objects.filter(asset_id__in=asset_ids, slug__in=error_slugs, status=ERROR).update(status=FIXED)
+
+
+def _propagate_skills_to_translations(asset: Asset) -> None:
+    if asset.skills_source != SKILLS_SOURCE_FILE:
+        return
+
+    skills = _get_asset_skills_map(asset.id)
+    translations = asset.all_translations.exclude(id=asset.id).exclude(skills_source=SKILLS_SOURCE_FILE)
+    for translation in translations:
+        _replace_asset_skills(translation, skills, SKILLS_SOURCE_INHERITED)
+
+
+def _check_skills_translation_mismatch(asset: Asset) -> None:
+    """Warn when the asset and a translation declare different skills in their source files."""
+
+    translations = []
+    if asset.skills_source == SKILLS_SOURCE_FILE:
+        translations = list(
+            asset.all_translations.exclude(id=asset.id).filter(skills_source=SKILLS_SOURCE_FILE).only("id", "slug")
+        )
+
+    if not translations:
+        _mark_skill_errors_fixed([asset.id], [AssetErrorLogType.SKILLS_TRANSLATION_MISMATCH])
+        return
+
+    slugs_by_asset: dict[int, set[str]] = {x.id: set() for x in [asset, *translations]}
+    for asset_id, skill_slug in AssetSkill.objects.filter(asset_id__in=slugs_by_asset.keys()).values_list(
+        "asset_id", "skill__slug"
+    ):
+        slugs_by_asset[asset_id].add(skill_slug)
+
+    own = slugs_by_asset[asset.id]
+    different = [x for x in translations if slugs_by_asset[x.id] != own]
+
+    if not different:
+        _mark_skill_errors_fixed(
+            [asset.id, *[x.id for x in translations]], [AssetErrorLogType.SKILLS_TRANSLATION_MISMATCH]
+        )
+        return
+
+    details = "; ".join(f"{x.slug}: {sorted(slugs_by_asset[x.id])}" for x in different)
+    asset.log_error(
+        AssetErrorLogType.SKILLS_TRANSLATION_MISMATCH,
+        status_text=f"{asset.slug}: {sorted(own)} differs from {details}",
+    )
+
+
+def inherit_asset_skills(asset: Asset) -> bool:
+    """Copy the skills of the first translation whose source file declares them, return True if they changed."""
+
+    source = (
+        asset.all_translations.exclude(id=asset.id).filter(skills_source=SKILLS_SOURCE_FILE).order_by("id").first()
+    )
+    if source is None:
+        return False
+
+    changed = _replace_asset_skills(asset, _get_asset_skills_map(source.id), SKILLS_SOURCE_INHERITED)
+    _mark_skill_errors_fixed([asset.id], [AssetErrorLogType.SKILLS_TRANSLATION_MISMATCH])
+
+    if changed:
+        notify_skills_changed()
+
+    return changed
+
+
+def set_asset_skills(asset: Asset, raw_skills: Optional[list]) -> bool:
+    """
+    Sync the `skills` declared in the asset source file (learn.json, frontmatter or quiz json).
+
+    - `None` means the source file does not declare skills, they are inherited from a translation if possible.
+    - More than MAX_SKILLS_PER_ASSET skills or an old slug (alias) rejects the whole list.
+    - Unknown slugs are ignored and the rest is applied.
+
+    Return True if the skills of the asset changed.
+    """
+
+    if raw_skills is None:
+        return inherit_asset_skills(asset)
+
+    if not isinstance(raw_skills, list):
+        asset.log_error(
+            AssetErrorLogType.INVALID_SKILL,
+            status_text="`skills` must be a list of skill slugs, the skills were not updated",
+        )
+        return False
+
+    declared, invalid_entries = _parse_raw_skills(raw_skills)
+
+    if len(declared) > MAX_SKILLS_PER_ASSET:
+        asset.log_error(
+            AssetErrorLogType.TOO_MANY_SKILLS,
+            status_text=f"{len(declared)} skills declared, the limit is {MAX_SKILLS_PER_ASSET}. "
+            "The skills were not updated",
+        )
+        return False
+
+    skills_by_slug = {x.slug: x for x in Skill.objects.filter(slug__in=declared.keys())}
+    missing = [slug for slug in declared if slug not in skills_by_slug]
+
+    aliases = dict(SkillAlias.objects.filter(slug__in=missing).values_list("slug", "skill__slug"))
+    if aliases:
+        renames = ", ".join(f'"{old}" -> "{new}"' for old, new in aliases.items())
+        asset.log_error(
+            AssetErrorLogType.DEPRECATED_SKILL_SLUG,
+            status_text=f"These skills were renamed, update the source file: {renames}. The skills were not updated",
+        )
+        return False
+
+    invalid = invalid_entries + missing
+    if invalid:
+        asset.log_error(
+            AssetErrorLogType.INVALID_SKILL,
+            status_text=f"Unknown skills were ignored: {', '.join(invalid)}",
+        )
+
+    new_skills = {skills_by_slug[slug].id: level for slug, level in declared.items() if slug in skills_by_slug}
+    changed = _replace_asset_skills(asset, new_skills, SKILLS_SOURCE_FILE)
+
+    fixed = [AssetErrorLogType.TOO_MANY_SKILLS, AssetErrorLogType.DEPRECATED_SKILL_SLUG]
+    if not invalid:
+        fixed.append(AssetErrorLogType.INVALID_SKILL)
+    _mark_skill_errors_fixed([asset.id], fixed)
+
+    if changed:
+        _propagate_skills_to_translations(asset)
+        notify_skills_changed()
+
+    _check_skills_translation_mismatch(asset)
+    return changed
+
+
 def pull_learnpack_asset(github, asset: Asset, override_meta):
 
     if asset.readme_url is None:
@@ -1545,6 +1782,12 @@ def pull_quiz_asset(github, asset: Asset):
     # "badges": [
     #     { "slug": "cybersecurity_guru", "points": 5 }
     # ]
+    raw_skills = None
+    if isinstance(_config.get("info"), dict) and "skills" in _config["info"]:
+        raw_skills = _config["info"]["skills"]
+    elif "skills" in _config:
+        raw_skills = _config["skills"]
+
     if "info" in _config:
         _config = _config["info"]
         if "name" in _config and _config["name"] != "":
@@ -1565,6 +1808,7 @@ def pull_quiz_asset(github, asset: Asset):
             asset.difficulty = _config["difficulty"]
 
     asset.save()
+    set_asset_skills(asset, raw_skills)
 
     if asset.assessment is None:
         asset = create_from_asset(asset)

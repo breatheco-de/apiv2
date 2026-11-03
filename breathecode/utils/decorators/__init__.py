@@ -9,3 +9,4 @@ from .validate_captcha import *  # noqa: F401
 from .validate_captcha_challenge import *  # noqa: F401
 from .superuser_required import *  # noqa: F401
 from .service_deprovisioner import *  # noqa: F401
+from .rate_limit import *  # noqa: F401

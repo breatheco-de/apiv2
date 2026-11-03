@@ -2800,6 +2800,7 @@ class AcademySubscriptionView(APIView):
 
         return handler.response(serializer.data)
 
+    @capable_of("crud_subscription")
     def put(self, request, subscription_id, academy_id=None):
         lang = get_user_language(request)
 
@@ -2842,6 +2843,7 @@ class AcademyPlanFinancingView(APIView):
 
     extensions = APIViewExtensions(sort="-id", paginate=True, cache=PlanFinancingCache, cache_per_user=True)
 
+    @capable_of("read_subscription")
     def get(self, request, financing_id=None, academy_id=None):
         handler = self.extensions(request)
         lang = get_user_language(request)
@@ -2920,6 +2922,7 @@ class AcademyPlanFinancingView(APIView):
 
         return handler.response(serializer.data)
 
+    @capable_of("crud_subscription")
     def put(self, request, financing_id, academy_id=None):
         lang = get_user_language(request)
 

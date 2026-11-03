@@ -41,7 +41,7 @@ def test_discord_without_cohort_slug_authenticated(bc: Breathecode, client: APIC
     client.force_authenticate(model.user)
 
     url = reverse_lazy("authenticate:discord")
-    params = {"url": "https://google.co.ve"}
+    params = {"url": "https://4geeks.com"}
     response = client.get(f"{url}?{urllib.parse.urlencode(params)}")
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -54,7 +54,7 @@ def test_discord_without_cohort_slug_authenticated(bc: Breathecode, client: APIC
 def test_discord_without_auth(client: APIClient):
     """Test /discord without authentication"""
     url = reverse_lazy("authenticate:discord")
-    params = {"url": "https://google.co.ve", "cohort_slug": "test-cohort"}
+    params = {"url": "https://4geeks.com", "cohort_slug": "test-cohort"}
     response = client.get(f"{url}?{urllib.parse.urlencode(params)}")
 
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -68,7 +68,7 @@ def test_discord_without_subscription(bc: Breathecode, client: APIClient):
     model = bc.database.create(user=1)
     client.force_authenticate(model.user)
     url = reverse_lazy("authenticate:discord")
-    params = {"url": "https://google.co.ve", "cohort_slug": "test-cohort"}
+    params = {"url": "https://4geeks.com", "cohort_slug": "test-cohort"}
     response = client.get(f"{url}?{urllib.parse.urlencode(params)}")
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -82,7 +82,7 @@ def test_discord_without_plan_financing(bc: Breathecode, client: APIClient):
     model = bc.database.create(user=1)
     client.force_authenticate(model.user)
     url = reverse_lazy("authenticate:discord")
-    params = {"url": "https://google.co.ve", "cohort_slug": "test-cohort"}
+    params = {"url": "https://4geeks.com", "cohort_slug": "test-cohort"}
     response = client.get(f"{url}?{urllib.parse.urlencode(params)}")
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -107,7 +107,7 @@ def test_discord_with_subscription(bc: Breathecode, client: APIClient):
     client.force_authenticate(model.user)
 
     url = reverse_lazy("authenticate:discord")
-    params = {"url": "https://google.co.ve", "cohort_slug": "test-cohort"}
+    params = {"url": "https://4geeks.com", "cohort_slug": "test-cohort"}
     response = client.get(f"{url}?{urllib.parse.urlencode(params)}")
 
     assert response.status_code == status.HTTP_200_OK
@@ -148,7 +148,7 @@ def test_discord_with_plan_financing(bc: Breathecode, client: APIClient):
     client.force_authenticate(model.user)
 
     url = reverse_lazy("authenticate:discord")
-    params = {"url": "https://google.co.ve", "cohort_slug": "test-cohort"}
+    params = {"url": "https://4geeks.com", "cohort_slug": "test-cohort"}
     response = client.get(f"{url}?{urllib.parse.urlencode(params)}")
 
     assert response.status_code == status.HTTP_200_OK
@@ -187,7 +187,7 @@ def test_discord_creates_temporal_token(bc: Breathecode, client: APIClient):
     initial_token_count = Token.objects.filter(user=model.user, token_type="temporal").count()
 
     url = reverse_lazy("authenticate:discord")
-    params = {"url": "https://google.co.ve", "cohort_slug": "test-cohort"}
+    params = {"url": "https://4geeks.com", "cohort_slug": "test-cohort"}
     response = client.get(f"{url}?{urllib.parse.urlencode(params)}")
 
     assert response.status_code == status.HTTP_200_OK

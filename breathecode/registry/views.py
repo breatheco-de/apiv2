@@ -977,6 +977,7 @@ class AssetView(APIView, GenerateLookupsMixin):
                     "asset_type",
                     "category__slug",
                     "technologies__slug",
+                    "skills__slug",
                     "seo_keywords__slug",
                 ],
             },
@@ -987,6 +988,7 @@ class AssetView(APIView, GenerateLookupsMixin):
             overwrite={
                 "category": "category__slug",
                 "technologies": "technologies__slug",
+                "skills": "skills__slug",
                 "seo_keywords": "seo_keywords__slug",
             },
         )
@@ -1135,6 +1137,7 @@ class AssetMeView(APIView, GenerateLookupsMixin):
                     "asset_type",
                     "category__slug",
                     "technologies__slug",
+                    "skills__slug",
                     "seo_keywords__slug",
                 ],
             },
@@ -1145,6 +1148,7 @@ class AssetMeView(APIView, GenerateLookupsMixin):
             overwrite={
                 "category": "category__slug",
                 "technologies": "technologies__slug",
+                "skills": "skills__slug",
                 "seo_keywords": "seo_keywords__slug",
             },
         )
@@ -2007,6 +2011,10 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
             param = self.request.GET.get("technologies")
             lookup["technologies__slug__in"] = [p.lower() for p in param.split(",")]
 
+        if "skills" in self.request.GET:
+            param = self.request.GET.get("skills")
+            lookup["skills__slug__in"] = [p.strip() for p in param.split(",") if p.strip()]
+
         if "keywords" in self.request.GET:
             param = self.request.GET.get("keywords")
             items = items.filter(seo_keywords__slug__in=[p.lower() for p in param.split(",")])
@@ -2087,6 +2095,7 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
                 expand_fields = list(set(expand_fields + expand.split(",")))
             serializer = AssetExpandableSerializer(items, many=True, expand=expand_fields)
         else:
+            items = items.prefetch_related("asset_skills__skill__domain")
             serializer = AcademyAssetSerializer(items, many=True)
 
         return handler.response(serializer.data)

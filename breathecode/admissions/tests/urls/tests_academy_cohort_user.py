@@ -990,6 +990,31 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.get_cohort_user_dict(1), model_dict)
 
+    @patch("breathecode.admissions.serializers.evaluate_cohort_user_completion", return_value={"is_complete": True})
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock())
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
+    def test__tasks_true__completion_false_skips_evaluation(self, evaluate):
+        """completion=false returns null and does not evaluate syllabus completion."""
+
+        self.headers(academy=1)
+        model = self.generate_models(
+            authenticate=True,
+            cohort_user=True,
+            profile_academy=True,
+            capability="read_all_cohort",
+            role="potato",
+        )
+        base_url = reverse_lazy("admissions:academy_cohort_user")
+        url = f"{base_url}?cohorts={model['cohort_user'].cohort.slug}&tasks=True&completion=false"
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        body = response.json()
+        self.assertEqual(body[0]["completion"], None)
+        self.assertEqual(body[0]["tasks"], [])
+        evaluate.assert_not_called()
+
     @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock())
     @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
     @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))

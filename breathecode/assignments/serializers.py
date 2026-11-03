@@ -101,7 +101,10 @@ class TaskGETSerializer(serpy.Serializer):
     updated_at = serpy.Field()
 
     def get_assignment_telemetry(self, obj):
-        telemetry = AssignmentTelemetry.objects.filter(user=obj.user, asset_slug=obj.associated_slug).first()
+        if hasattr(obj, "_prefetched_assignment_telemetry"):
+            telemetry = obj._prefetched_assignment_telemetry
+        else:
+            telemetry = AssignmentTelemetry.objects.filter(user=obj.user, asset_slug=obj.associated_slug).first()
         if telemetry is not None:
             return telemetry.telemetry
         # Fallback: LearnPack stores telemetry under the canonical translation slug,
@@ -109,6 +112,27 @@ class TaskGETSerializer(serpy.Serializer):
         if obj.telemetry_id is not None and obj.telemetry is not None:
             return obj.telemetry.telemetry
         return None
+
+
+def prefetch_assignment_telemetry(tasks):
+    """Attach AssignmentTelemetry rows so TaskGETSerializer does not query once per task."""
+
+    page = list(tasks)
+    if not page:
+        return page
+
+    user_ids = {task.user_id for task in page}
+    slugs = {task.associated_slug for task in page if task.associated_slug}
+    found = {}
+    if user_ids and slugs:
+        rows = AssignmentTelemetry.objects.filter(user_id__in=user_ids, asset_slug__in=slugs).order_by("id")
+        for row in rows:
+            found.setdefault((row.user_id, row.asset_slug), row)
+
+    for task in page:
+        task._prefetched_assignment_telemetry = found.get((task.user_id, task.associated_slug))
+    return page
+
 
 class TaskUserSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""

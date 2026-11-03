@@ -19,6 +19,12 @@ Use this skill when the user needs to create or edit an event through the academ
 - `tags` are validated against marketing tags of type `DISCOVERY` for the academy.
 - `asset_slug` is optional workshop linkage. Only use assets with `asset_type` `PROJECT` or `EXERCISE`.
 - For online events, room automation is controlled by `create_meet` and optional `meeting_provider` (`daily` or `livekit`). A custom provider is handled by passing `live_stream_url` directly.
+- An **event group** is a shared string on `Event.event_group`. Events with the same string are the same series and share registration fan-out. There is no group object, sessions payload, or CRUD endpoint.
+- Sessions in a group may differ in academy, lang, `event_type`, free flags, etc. Check-in fans out `PENDING` to remaining non-ended sessions without checking consumable/event-type access (join still enforces that per session).
+- `GET /v1/events/all` returns every public session. `event_group` is the string (or null). Clients that want one catalog card match events with the same string.
+- `GET /v1/events/academy/event` and `GET /v1/events/academy/event/<event_id>` also return `event_group` as that string or null.
+- `GET /v1/events/academy/checkin?event_group=<string>` and the `.csv` export return every check-in of that series in the academy, one row per person per day.
+- Adding a not-yet-ended session with a key already used by registrants backfills `PENDING` check-ins for those emails. A grouped event can still sync with Eventbrite like any other event.
 
 ## Workflow
 
@@ -43,12 +49,15 @@ Use this skill when the user needs to create or edit an event through the academ
 5. Resolve optional venue for in-person events.
    - Call `GET /v1/events/academy/venues` and pick `venue` id when `online_event=false`.
 
+5b. Optional multi-day series: pick a shared string key (e.g. `python-intensive-apr`) and set the same `event_group` on every session event create/update.
+
 6. Create the event.
    - Call `POST /v1/events/academy/event`.
    - Include required fields: `banner`, `capacity`, `starting_at`, `ending_at`.
    - Include `event_type`, `tags`, and (for online non-draft) `live_stream_url` or `create_meet=true`.
    - For room automation, set `create_meet=true` and optionally `meeting_provider` (`daily`/`livekit`).
    - If `meeting_provider` is omitted, backend uses academy default provider, then env default (`daily`).
+   - Optional: `event_group` string key to attach the session to a series.
 
 ### Import attendees (bulk)
 
@@ -205,7 +214,8 @@ After the event exists, use [`bc-events-bulk-import-checkins`](../bc-events-bulk
   "is_public": true,
   "free_for_all": true,
   "free_for_bootcamps": true,
-  "asset_slug": "react-todo"
+  "asset_slug": "react-todo",
+  "event_group": "python-intensive-apr"
 }
 ```
 
@@ -230,6 +240,7 @@ After the event exists, use [`bc-events-bulk-import-checkins`](../bc-events-bulk
   "free_for_all": true,
   "free_for_bootcamps": true,
   "asset_slug": "react-todo",
+  "event_group": "python-intensive-apr",
   "eventbrite_sync_status": "PENDING",
   "created_at": "2026-03-31T14:05:00Z",
   "updated_at": "2026-03-31T14:05:00Z"

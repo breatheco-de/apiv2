@@ -73,6 +73,8 @@ For **job family**, **job role**, **career path**, and **career stage** lists, r
 - **StageSkill** links a **CareerStage** to a **Skill** with `required_level` (`foundation` | `core` | `applied`) and `is_core`. Use this to add skills “on the go” for a stage without requiring competency wiring first.
 - **Competency**, **CompetencySkill**, **StageCompetency** connect broader competencies to skills and stages (list/filter via existing GET endpoints).
 
+**Skill slugs are stable identifiers.** Registry assets reference skills by slug in their source files (`learn.json`, lesson frontmatter, quiz JSON), and a syllabus's skills are the union of its assets' skills. When a skill slug changes, the old slug is kept as an **alias**: `GET /v1/talent/academy/skill/<old-slug>` still returns the skill (with the new `slug`), but asset syncs that still use the old slug are rejected until the source file is updated. Avoid renaming slugs; a skill linked to any asset cannot be deleted.
+
 **Global vs academy-owned:** `JobFamily`, `JobRole`, and `CareerPath` may have `academy` null (shared). Mutating those rows requires Django permission `crud_career_path` on the user when `academy` is null; when `academy` is set, it must match the request `Academy` header.
 
 ## Workflows
@@ -97,7 +99,7 @@ For **job family**, **job role**, **career path**, and **career stage** lists, r
 | Create career stage | POST | `/v1/talent/academy/career_path/<career_path_id>/career_stage` |
 | Delete career stage | DELETE | `/v1/talent/academy/career_path/<career_path_id>/career_stage/<career_stage_id>` |
 | List skills | GET | `/v1/talent/academy/skill` |
-| Skill detail | GET | `/v1/talent/academy/skill/<id>` or `.../<slug>` |
+| Skill detail | GET | `/v1/talent/academy/skill/<id>` or `.../<slug>` (an old slug alias resolves to the current skill) |
 | Stage-anchored skill create/update | POST | `/v1/talent/academy/stage_skill` |
 | List/create skill domains | GET, POST | `/v1/talent/academy/skill_domain` |
 | Delete skill domain | DELETE | `/v1/talent/academy/skill_domain/<id>` or `.../<slug>` |
@@ -149,4 +151,4 @@ Content-Type: application/json
 
 ## Cross-domain note
 
-Syllabus versions and cohort syllabi live under **admissions** (`bc-admissions-*`). Align syllabus content with this framework by resolving the right **job role / career path / stage** here first, then linking syllabus design in admissions as your product flow requires.
+Syllabus versions and cohort syllabi live under **admissions** (`bc-admissions-*`). Align syllabus content with this framework by resolving the right **job role / career path / stage** here first, then linking syllabus design in admissions as your product flow requires. To see which catalog skills a syllabus version actually teaches (computed from its assets), or to check whether it covers the stage skills of a career path, use [`bc-admissions-read-syllabus-skills`](../bc-admissions-read-syllabus-skills/SKILL.md). The API does not link syllabi to career paths; that comparison is a diff by skill slug.

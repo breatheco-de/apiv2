@@ -168,6 +168,11 @@ class FormEntrySerializer(serpy.Serializer):
     utm_placement = serpy.Field()
     utm_term = serpy.Field()
     utm_plan = serpy.Field()
+    variant = serpy.Field()
+    experiment_id = serpy.Field()
+    product = serpy.Field()
+    persona = serpy.Field()
+    product_persona = serpy.Field()
     sex = serpy.Field()
     custom_fields = serpy.Field()
     tags = serpy.Field()
@@ -337,6 +342,11 @@ class FormEntryBigSerializer(serpy.Serializer):
     utm_placement = serpy.Field()
     utm_term = serpy.Field()
     utm_plan = serpy.Field()
+    variant = serpy.Field()
+    experiment_id = serpy.Field()
+    product = serpy.Field()
+    persona = serpy.Field()
+    product_persona = serpy.Field()
     referral_key = serpy.Field()
     tags = serpy.Field()
     automations = serpy.Field()
@@ -1150,6 +1160,11 @@ class FormEntrySerializerV2(serpy.Serializer):
     utm_placement = serpy.Field()
     utm_term = serpy.Field()
     utm_plan = serpy.Field()
+    variant = serpy.Field()
+    experiment_id = serpy.Field()
+    product = serpy.Field()
+    persona = serpy.Field()
+    product_persona = serpy.Field()
     sex = serpy.Field()
     tags = serpy.Field()
     storage_status = serpy.Field()
@@ -1188,9 +1203,6 @@ class PostFormEntrySerializerV2(serializers.ModelSerializer):
         model = FormEntry
         exclude = ()
         read_only_fields = ["id"]
-        extra_kwargs = {
-            "gclid": {"write_only": True},  # Hide gclid from input, we use ppc_tracking_id instead
-        }
 
     def to_internal_value(self, data):
         """Map ppc_tracking_id to gclid before validation"""

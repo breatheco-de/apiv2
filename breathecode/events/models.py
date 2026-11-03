@@ -216,6 +216,7 @@ class Event(models.Model):
         self.__old_status = self.status
         self.__old_starting_at = self.starting_at
         self.__old_recording_url = self.recording_url
+        self.__old_event_group = self.event_group
 
     slug = models.SlugField(max_length=150, blank=True, default=None, null=True)
     uuid = models.UUIDField(default=uuid_lib.uuid4, editable=False, unique=True)
@@ -302,6 +303,23 @@ class Event(models.Model):
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True)
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, blank=True, null=True)
     author = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True)
+    event_group = models.CharField(
+        max_length=150,
+        blank=True,
+        null=True,
+        default=None,
+        db_index=True,
+        help_text="Group this event belongs to. Events with the same value share check-in while they have not ended.",
+    )
+    variant = models.CharField(
+        max_length=50, null=True, default=None, blank=True, help_text="A/B test variant shown to the lead"
+    )
+    experiment_id = models.CharField(
+        max_length=150, null=True, default=None, blank=True, help_text="A/B experiment identifier"
+    )
+    product = models.CharField(max_length=100, null=True, default=None, blank=True)
+    persona = models.CharField(max_length=1000, null=True, default=None, blank=True)
+    product_persona = models.CharField(max_length=1000, null=True, default=None, blank=True)
 
     online_event = models.BooleanField(default=False)
     venue = models.ForeignKey(Venue, on_delete=models.CASCADE, null=True, default=None)
@@ -364,8 +382,10 @@ class Event(models.Model):
             starting_at_updated = True
 
         recording_url_set = not self.__old_recording_url and bool(self.recording_url)
-
         created = not self.id
+        event_group_joined = self.event_group and (
+            created or self.event_group != getattr(self, "__old_event_group", None)
+        )
 
         if self.title and not self.slug:
             self.slug = f"{slugify(self.title).lower()}-{self.uuid}"
@@ -381,11 +401,16 @@ class Event(models.Model):
             event_rescheduled.send_robust(instance=self, sender=Event)
 
         if recording_url_set:
-            event_finished = self.status == FINISHED or (
-                self.ending_at is not None and self.ending_at < timezone.now()
-            )
+            event_finished = self.status == FINISHED or (self.ending_at is not None and self.ending_at < timezone.now())
             if event_finished:
                 events_tasks.send_event_recording_notification.delay(self.id)
+
+        if event_group_joined and self.event_group:
+            from breathecode.events.actions import backfill_checkins_for_new_group_event
+
+            backfill_checkins_for_new_group_event(self)
+
+        self.__old_event_group = self.event_group
 
 
 PENDING = "PENDING"

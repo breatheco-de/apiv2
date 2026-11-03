@@ -111,14 +111,29 @@ class SkillDomainAdmin(admin.ModelAdmin):
     readonly_fields = ("created_at", "updated_at")
 
 
+class SkillAliasInline(admin.TabularInline):
+    model = models.SkillAlias
+    extra = 0
+    fields = ("slug", "created_at")
+    readonly_fields = ("created_at",)
+
+
 @admin.register(models.Skill)
 class SkillAdmin(admin.ModelAdmin):
-    list_display = ("name", "domain", "updated_at")
+    list_display = ("name", "slug", "domain", "updated_at")
     list_filter = ("domain",)
-    search_fields = ("name", "description")
+    search_fields = ("name", "slug", "description", "aliases__slug")
     autocomplete_fields = ("domain",)
-    inlines = (StageSkillInline,)
+    inlines = (StageSkillInline, SkillAliasInline)
     readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(models.SkillAlias)
+class SkillAliasAdmin(admin.ModelAdmin):
+    list_display = ("slug", "skill", "created_at")
+    search_fields = ("slug", "skill__slug", "skill__name")
+    autocomplete_fields = ("skill",)
+    readonly_fields = ("created_at",)
 
 
 @admin.register(models.StageCompetency)

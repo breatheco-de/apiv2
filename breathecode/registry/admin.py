@@ -28,6 +28,7 @@ from .models import (
     AssetErrorLog,
     AssetImage,
     AssetKeyword,
+    AssetSkill,
     AssetTechnology,
     ContentSite,
     ContentVariable,
@@ -532,6 +533,19 @@ class SyncStatusFilter(admin.SimpleListFilter):
         return queryset
 
 
+class AssetSkillInline(admin.TabularInline):
+    """Skills are synced from the asset source file, editing them here would be overwritten."""
+
+    model = AssetSkill
+    extra = 0
+    can_delete = False
+    fields = ("skill", "level", "updated_at")
+    readonly_fields = ("skill", "level", "updated_at")
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
 # Register your models here.
 @admin.register(Asset)
 class AssetAdmin(admin.ModelAdmin):
@@ -539,7 +553,8 @@ class AssetAdmin(admin.ModelAdmin):
     search_fields = ["title", "slug", "author__email", "url"]
     filter_horizontal = ("technologies", "all_translations", "seo_keywords", "assets_related")
     list_display = ("main", "current_status", "alias", "techs", "url_path")
-    readonly_fields = ["flag_seed", "github_activity_log"]
+    readonly_fields = ["flag_seed", "github_activity_log", "skills_source"]
+    inlines = (AssetSkillInline,)
     list_filter = [
         "asset_type",
         "status",

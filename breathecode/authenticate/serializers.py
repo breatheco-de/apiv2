@@ -1987,7 +1987,12 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                 i.user = user
                 i.save()
 
-        if not self.instance and user and invites.exists():
+        request_user = self.context.get("request_user")
+        is_request_user = bool(user and request_user and request_user.is_authenticated and request_user.id == user.id)
+
+        # Without proof of ownership (the user's own token), an existing account must log in instead;
+        # issuing an invite or a token here would hand the account to anyone who knows the email.
+        if not self.instance and user and not is_request_user:
             raise ValidationException(
                 translation(
                     lang,
@@ -1998,6 +2003,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                 silent=True,
             )
 
+        self.withhold_access_token = not self.instance and user is not None
         self.user = user
         self.email = data["email"]
         self.plan = plan
@@ -2170,6 +2176,9 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
 
         self.instance.user = self.user
         self.instance.save()
+
+        if getattr(self, "withhold_access_token", False):
+            return None
 
         token, _ = Token.get_or_create(user=self.user, token_type="login")
         async_to_sync(sync_with_rigobot)(token.key, organization=organization)

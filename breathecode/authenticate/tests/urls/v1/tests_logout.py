@@ -1,40 +1,70 @@
 """
-Test cases for /user
+Test /v1/auth/logout/
 """
 
+import capyc.pytest as capy
+import pytest
 from django.urls.base import reverse_lazy
 from rest_framework import status
 
-from ...mixins import AuthTestCase
+
+@pytest.fixture(autouse=True)
+def setup(db):
+    yield
 
 
-class AuthenticateTestSuite(AuthTestCase):
-    """Authentication test suite"""
+def remaining_token_keys(database: capy.Database) -> list[str]:
+    return sorted(token["key"] for token in database.list_of("authenticate.Token"))
 
-    def test_logout_without_token(self):
-        """Test /logout without token"""
-        self.create_user()
 
-        url = reverse_lazy("authenticate:logout")
-        response = self.client.get(url)
+@pytest.mark.parametrize("method", ["get", "post"])
+def test_without_auth(database: capy.Database, client: capy.Client, method: str):
+    url = reverse_lazy("authenticate:logout")
+    database.create(user=1)
 
-        detail = str(response.data["detail"])
-        status_code = int(response.data["status_code"])
+    response = getattr(client, method)(url, format="json")
+    json = response.json()
 
-        self.assertEqual(len(response.data), 2)
-        self.assertEqual(detail, "Authentication credentials were not provided.")
-        self.assertEqual(status_code, 401)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+    assert json == {"detail": "Authentication credentials were not provided.", "status_code": 401}
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    # def test_logout(self):
-    #     """Test /logout"""
-    #     url = reverse_lazy('authenticate:logout')
 
-    #     self.client.force_authenticate(user=self.user)
+@pytest.mark.parametrize("method", ["get", "post"])
+def test_only_deletes_tokens_of_the_requesting_user(database: capy.Database, client: capy.Client, method: str):
+    url = reverse_lazy("authenticate:logout")
+    database.create(
+        user=2,
+        token=[
+            {"key": "user1-login-a", "token_type": "login", "user_id": 1},
+            {"key": "user1-login-b", "token_type": "login", "user_id": 1},
+            {"key": "user1-permanent", "token_type": "permanent", "user_id": 1},
+            {"key": "user2-login", "token_type": "login", "user_id": 2},
+            {"key": "user2-permanent", "token_type": "permanent", "user_id": 2},
+        ],
+    )
 
-    #     response = self.client.get(url)
-    #     message = str(response.data['message'])
+    response = getattr(client, method)(url, format="json", HTTP_AUTHORIZATION="Token user1-login-a")
+    json = response.json()
 
-    #     self.assertEqual(len(response.data), 1)
-    #     self.assertEqual(message, 'User tokens successfully deleted')
-    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
+    assert json == {"message": "User tokens successfully deleted"}
+    assert response.status_code == status.HTTP_200_OK
+    assert remaining_token_keys(database) == ["user1-permanent", "user2-login", "user2-permanent"]
+
+
+def test_deletes_the_non_login_token_used_to_authenticate(database: capy.Database, client: capy.Client):
+    url = reverse_lazy("authenticate:logout")
+    database.create(
+        user=2,
+        token=[
+            {"key": "user1-login", "token_type": "login", "user_id": 1},
+            {"key": "user1-permanent", "token_type": "permanent", "user_id": 1},
+            {"key": "user2-login", "token_type": "login", "user_id": 2},
+        ],
+    )
+
+    response = client.post(url, format="json", HTTP_AUTHORIZATION="Token user1-permanent")
+    json = response.json()
+
+    assert json == {"message": "User tokens successfully deleted"}
+    assert response.status_code == status.HTTP_200_OK
+    assert remaining_token_keys(database) == ["user2-login"]

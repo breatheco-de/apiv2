@@ -20,6 +20,26 @@ For PROJECT/EXERCISE, a GitHub pull of `learn.json` can overwrite `interactive`,
 | `category` | Required (numeric **id**, or `"uncategorized"`) | Numeric **id** only; not null | Academy-scoped grouping. Get ids from `GET /v1/registry/academy/category`. `"uncategorized"` is **POST only**. PUT cannot null category; langs must match. List filter `?category=` uses **slugs**, not ids. Read: `{ id, slug, title }`. |
 | `technologies` | Optional slug array | **Full replace** | Tech stack tags. Slugs from `GET /v1/registry/academy/technology`. `[]` clears. Omit to leave unchanged. Unknown slug → 400. No API to create a technology. Read: **parent slugs only**. Prefer parent slugs. `learn.json` can overwrite. |
 | `seo_keywords` | Optional slugs | Yes | SEO keywords from `GET /v1/registry/academy/keyword`. Prefer at most two. Not the same as `technologies`. |
+| `skills` | Ignored | Ignored | Skills the asset teaches. **Read only**: synced from the source file on every GitHub pull. Read: `[{ slug, name, domain, level }]`. List filter `?skills=` uses skill **slugs** (any match). |
+| `skills_source` | Ignored | Ignored | `FILE`, `INHERITED` (copied from a translation) or `null` (never declared). |
+
+### Declaring skills in the source file
+
+Slugs must exist in the talent skills catalog (`GET /v1/talent/academy/skill`). Each entry is a slug or `{ "slug": "...", "level": "foundation|core|applied" }`. Max 5 per asset. Omitting `skills` keeps the current skills (or inherits from a translation); `[]` clears them.
+
+- PROJECT/EXERCISE `learn.json`: `"skills": ["python-loops", { "slug": "python-functions", "level": "core" }]`
+- LESSON/ARTICLE markdown frontmatter (read on every pull, even after the first sync):
+
+```yaml
+skills:
+  - python-loops
+  - slug: python-functions
+    level: core
+```
+
+- QUIZ JSON: `"info": { "skills": ["python-loops"] }` (a root `skills` key is also accepted).
+
+More than 5 skills or a renamed (alias) slug rejects the whole list and keeps the previous skills. Unknown slugs are dropped and the rest is applied. Each case logs an asset error (`too-many-skills`, `deprecated-skill-slug`, `invalid-skill`).
 
 ## Publication
 
@@ -128,7 +148,7 @@ For PROJECT/EXERCISE, a GitHub pull of `learn.json` can overwrite `interactive`,
 
 ## System (read; do not send on a normal create)
 
-`id`, `readme`, `html`, `config`, `manifest`, `flag_seed`, `sync_status`, `test_status`, `status_text`, `telemetry_stats`, `github_activity_logs`, `learnpack_id`, `dependencies`, `graded`, `assessment` (linked quiz for `QUIZ`), `cleaning_status`, `cleaning_status_details`, `last_cleaning_at`, `created_at`, `updated_at`, `published_at`, and all `last_*` timestamps.
+`id`, `readme`, `html`, `config`, `manifest`, `skills`, `skills_source`, `flag_seed`, `sync_status`, `test_status`, `status_text`, `telemetry_stats`, `github_activity_logs`, `learnpack_id`, `dependencies`, `graded`, `assessment` (linked quiz for `QUIZ`), `cleaning_status`, `cleaning_status_details`, `last_cleaning_at`, `created_at`, `updated_at`, `published_at`, and all `last_*` timestamps.
 
 Bulk PUT to the collection URL requires each object’s `id`. PUT by slug also binds to that id.
 

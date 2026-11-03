@@ -933,6 +933,8 @@ def register_new_lead(form_entry=None):
     contact = set_optional(contact, "gclid", form_entry, crm_vendor=send_academy.crm_vendor)
     contact = set_optional(contact, "current_download", form_entry, crm_vendor=send_academy.crm_vendor)
     contact = set_optional(contact, "referral_key", form_entry, crm_vendor=send_academy.crm_vendor)
+    for field in ("variant", "experiment_id", "product", "persona"):
+        contact = set_optional(contact, field, form_entry, crm_vendor=send_academy.crm_vendor)
 
     # only for brevo
     if send_academy.crm_vendor == "BREVO":
@@ -957,6 +959,11 @@ def register_new_lead(form_entry=None):
             },
             academy=ac_academy.academy,
         )
+
+    # Parallel to the CRM. Runs before duplicate, SAVE_LEADS and skip-crm returns.
+    from breathecode.marketing.tasks import track_lead_on_cdp
+
+    track_lead_on_cdp.delay(entry.id)
 
     is_duplicate = entry.is_duplicate(form_entry)
     if is_duplicate:
@@ -1005,6 +1012,10 @@ def register_new_lead(form_entry=None):
 
 def send_to_active_campaign(form_entry, ac_academy, contact, automations, tags):
 
+    # Capture before create_contact overwrites the field. A retry/admin resend
+    # already created the CRM contact and may have enrolled Soft/STRONG.
+    already_in_crm = bool(form_entry.ac_contact_id)
+
     old_client = ACOldClient(ac_academy.ac_url, ac_academy.ac_key)
     response = old_client.contacts.create_contact(contact)
     contact_id = response["subscriber_id"]
@@ -1021,7 +1032,7 @@ def send_to_active_campaign(form_entry, ac_academy, contact, automations, tags):
         return form_entry
 
     client = ActiveCampaignClient(ac_academy.ac_url, ac_academy.ac_key)
-    if automations:
+    if automations and not already_in_crm:
         for automation_id in automations:
             data = {"contactAutomation": {"contact": contact_id, "automation": automation_id}}
             response = client.contacts.add_a_contact_to_an_automation(data)
@@ -1032,6 +1043,12 @@ def send_to_active_campaign(form_entry, ac_academy, contact, automations, tags):
             logger.debug(f"Triggered automation with id {str(automation_id)} " + str(response))
 
         logger.info("automations was executed successfully")
+    elif automations and already_in_crm:
+        logger.info(
+            "Skipping automations because FormEntry %s already has ac_contact_id %s",
+            form_entry.id,
+            contact_id,
+        )
 
     if tags:
         for t in tags:

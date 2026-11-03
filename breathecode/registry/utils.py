@@ -65,6 +65,10 @@ class AssetErrorLogType:
     INVALID_TELEMETRY = "invalid-telemetry"
     INVALID_TEMPLATE_SUBDIRECTORY = "invalid-template-subdirectory"
     MISSING_PREVIEW = "missing-preview"
+    INVALID_SKILL = "invalid-skill"
+    DEPRECATED_SKILL_SLUG = "deprecated-skill-slug"
+    TOO_MANY_SKILLS = "too-many-skills"
+    SKILLS_TRANSLATION_MISMATCH = "skills-translation-mismatch"
 
 
 ASSET_ERROR_LOG_CATALOG_METADATA = {
@@ -245,6 +249,44 @@ ASSET_ERROR_LOG_CATALOG_METADATA = {
         ],
         "severity_hint": "low",
         "status_notes": "Set FIXED after setting preview and revalidating asset.",
+    },
+    AssetErrorLogType.INVALID_SKILL: {
+        "label": "Invalid skill",
+        "description": "The asset source file declares a skill slug that does not exist in the skills catalog.",
+        "common_trigger_situations": [
+            "Typo in the `skills` list of learn.json, frontmatter or quiz json.",
+            "The skill was never created in the talent development catalog.",
+        ],
+        "severity_hint": "medium",
+        "status_notes": "The rest of the skills were applied. It is set FIXED automatically on the next sync without invalid slugs.",
+    },
+    AssetErrorLogType.DEPRECATED_SKILL_SLUG: {
+        "label": "Deprecated skill slug",
+        "description": "The asset source file uses an old skill slug (alias), the whole skills list was rejected.",
+        "common_trigger_situations": [
+            "A skill was renamed and the source file still uses the previous slug.",
+        ],
+        "severity_hint": "high",
+        "status_notes": "Replace the old slugs listed in status_text and sync again, it is set FIXED automatically.",
+    },
+    AssetErrorLogType.TOO_MANY_SKILLS: {
+        "label": "Too many skills",
+        "description": "The asset source file declares more skills than allowed, the whole skills list was rejected.",
+        "common_trigger_situations": [
+            "The `skills` list has more than 5 unique slugs.",
+        ],
+        "severity_hint": "high",
+        "status_notes": "Keep only the main skills of the asset and sync again, it is set FIXED automatically.",
+    },
+    AssetErrorLogType.SKILLS_TRANSLATION_MISMATCH: {
+        "label": "Skills translation mismatch",
+        "description": "The asset and one of its translations declare different skills in their source files.",
+        "common_trigger_situations": [
+            "A lesson frontmatter was updated in one language but not in the other.",
+        ],
+        "severity_hint": "low",
+        "status_notes": "Align both source files or remove `skills` from the translation so it inherits them. "
+        "It is set FIXED automatically when they match.",
     },
 }
 
