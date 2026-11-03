@@ -241,6 +241,12 @@ class Event(models.Model):
         null=True,
         help_text="Determines if users that belong to an academy not available as saas can join the event for free.",
     )
+    denied_plans = models.ManyToManyField(
+        "payments.Plan",
+        blank=True,
+        related_name="denied_events",
+        help_text="Users with an active subscription or plan financing for these plans cannot join or check in, even if the event is free_for_all.",
+    )
 
     url = models.URLField(
         max_length=255,

@@ -16,7 +16,7 @@ import breathecode.notify.actions as notify_actions
 from breathecode.admissions.models import Cohort, CohortTimeSlot, CohortUser, TimeSlot
 from breathecode.authenticate.actions import get_app_url, get_invite_url
 from breathecode.authenticate.models import AcademyAuthSettings, Profile, UserInvite
-from breathecode.payments.models import AbstractIOweYou, PlanFinancing, Subscription
+from breathecode.payments.models import AbstractIOweYou, PlanFinancing, Subscription, SubscriptionSeat
 from breathecode.services.google_calendar.google_calendar import GoogleCalendar
 from breathecode.services.livekit.client import LiveKitAdmin
 from breathecode.utils.datetime_integer import DatetimeInteger
@@ -25,6 +25,71 @@ from .models import Event, EventCheckin, EventType, Organization, Organizer, Ven
 from .utils import Eventbrite
 
 logger = logging.getLogger(__name__)
+
+# Statuses that still mean the user "has" the plan for access-control purposes.
+_DENIED_PLAN_ACTIVE_STATUSES = (
+    AbstractIOweYou.Status.ACTIVE,
+    AbstractIOweYou.Status.FULLY_PAID,
+    AbstractIOweYou.Status.FREE_TRIAL,
+    AbstractIOweYou.Status.PAYMENT_ISSUE,
+)
+
+
+def _user_active_plan_ids(user: User) -> set[int]:
+    """Plan ids the user currently owns or sits on (for denied_plans access control)."""
+    plan_ids: set[int] = set(
+        Subscription.objects.filter(
+            user=user,
+            status__in=_DENIED_PLAN_ACTIVE_STATUSES,
+        ).values_list("plans__id", flat=True)
+    )
+    plan_ids.update(
+        PlanFinancing.objects.filter(
+            user=user,
+            status__in=_DENIED_PLAN_ACTIVE_STATUSES,
+        ).values_list("plans__id", flat=True)
+    )
+    plan_ids.update(
+        SubscriptionSeat.objects.filter(
+            user=user,
+            is_active=True,
+            billing_team__subscription__status__in=_DENIED_PLAN_ACTIVE_STATUSES,
+        ).values_list("billing_team__subscription__plans__id", flat=True)
+    )
+    plan_ids.discard(None)
+    return plan_ids
+
+
+def user_has_denied_plan_for_event(user: User, event: Event) -> bool:
+    """
+    True when the user owns (or sits on) a plan listed in event.denied_plans.
+
+    This gate runs even if the event is free_for_all / free_for_bootcamps.
+    """
+    if not user or not user.is_authenticated or not event or not event.pk:
+        return False
+
+    denied_plan_ids = set(event.denied_plans.values_list("id", flat=True))
+    if not denied_plan_ids:
+        return False
+
+    return bool(_user_active_plan_ids(user) & denied_plan_ids)
+
+
+def exclude_events_denied_for_user(queryset: QuerySet, user: User | None) -> QuerySet:
+    """
+    Drop events whose denied_plans intersect the user's active plans.
+
+    Anonymous / unauthenticated callers see the full queryset (public catalogs, SSR).
+    """
+    if not user or not getattr(user, "is_authenticated", False):
+        return queryset
+
+    plan_ids = _user_active_plan_ids(user)
+    if not plan_ids:
+        return queryset
+
+    return queryset.exclude(denied_plans__id__in=plan_ids).distinct()
 
 
 def ensure_calendar_event_for_event(event: Event, private: bool = True) -> str:
