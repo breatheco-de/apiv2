@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0010_eventcheckin_first_name_last_name'),
+        ('events', '0013_alter_event_persona_alter_event_product_persona'),
         ('payments', '0056_planfinancing_created_by_admin'),
     ]
 
