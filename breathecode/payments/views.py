@@ -2725,7 +2725,11 @@ class AcademySubscriptionView(APIView):
 
         if subscription_id:
             item = (
-                Subscription.objects.filter(Q(valid_until__gte=now) | Q(valid_until=None), id=subscription_id)
+                Subscription.objects.filter(
+                    Q(valid_until__gte=now) | Q(valid_until=None),
+                    id=subscription_id,
+                    academy_id=academy_id,
+                )
                 .exclude(status="DEPRECATED")
                 .exclude(status="PAYMENT_ISSUE")
                 .exclude(status="ERROR")
@@ -2745,7 +2749,7 @@ class AcademySubscriptionView(APIView):
             serializer = GetSubscriptionSerializer(item, many=False)
             return handler.response(serializer.data)
 
-        items = Subscription.objects.filter(Q(valid_until__gte=now) | Q(valid_until=None))
+        items = Subscription.objects.filter(Q(valid_until__gte=now) | Q(valid_until=None), academy_id=academy_id)
 
         if status := request.GET.get("status"):
             items = items.filter(status__in=status.split(","))
@@ -2804,7 +2808,9 @@ class AcademySubscriptionView(APIView):
     def put(self, request, subscription_id, academy_id=None):
         lang = get_user_language(request)
 
-        if not (subscription := Subscription.objects.filter(id=subscription_id).first()):
+        if not (
+            subscription := Subscription.objects.filter(id=subscription_id, academy_id=academy_id).first()
+        ):
             raise ValidationException(
                 translation(lang, en="Subscription not found", es="No existe la suscripción", slug="not-found"),
                 code=404,
@@ -2860,7 +2866,7 @@ class AcademyPlanFinancingView(APIView):
 
         if financing_id:
             item = (
-                PlanFinancing.objects.filter(id=financing_id)
+                PlanFinancing.objects.filter(id=financing_id, academy_id=academy_id)
                 .annotate(fulfilled_invoices_count=Count("invoices", filter=Q(invoices__status="FULFILLED")))
                 .filter(
                     Q(valid_until__gte=now)
@@ -2887,7 +2893,10 @@ class AcademyPlanFinancingView(APIView):
             PlanFinancing.objects.select_related("user", "plan", "currency")
             .prefetch_related("invoices")
             .annotate(fulfilled_invoices_count=Count("invoices", filter=Q(invoices__status="FULFILLED")))
-            .filter(Q(valid_until__gte=now) | Q(fulfilled_invoices_count__gte=F("how_many_installments")))
+            .filter(
+                Q(valid_until__gte=now) | Q(fulfilled_invoices_count__gte=F("how_many_installments")),
+                academy_id=academy_id,
+            )
         )
 
         if user_id := request.GET.get("users"):
@@ -2932,7 +2941,7 @@ class AcademyPlanFinancingView(APIView):
                 code=400,
             )
 
-        financing = PlanFinancing.objects.filter(id=financing_id).first()
+        financing = PlanFinancing.objects.filter(id=financing_id, academy_id=academy_id).first()
 
         if not financing:
             raise ValidationException(
