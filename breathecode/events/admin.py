@@ -94,7 +94,14 @@ class EventAdmin(admin.ModelAdmin, AdminExportCsvMixin):
         "event_type",
         "event_group",
     ]
-    search_fields = ["slug", "title", "eventbrite_id", "eventbrite_organizer_id", "luma_id", "event_group"]
+    search_fields = [
+        "slug",
+        "title",
+        "eventbrite_id",
+        "eventbrite_organizer_id",
+        "luma_id",
+        "event_group",
+    ]
     raw_id_fields = ["host_user"]
     actions = ["export_as_csv", reattempt_add_event_slug_as_acp_tag]
 

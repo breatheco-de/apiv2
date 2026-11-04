@@ -68,6 +68,7 @@ from .views import (
     get_download,
     get_endpoints,
     get_upload,
+    process_caxton_webhook,
     process_github_webhook,
     process_stripe_webhook,
 )
@@ -96,4 +97,5 @@ urlpatterns = [
     path("reposubscription/<int:subscription_id>", RepositorySubscriptionView.as_view()),
     path("github/webhook/<str:subscription_token>", process_github_webhook),
     path("stripe/webhook", process_stripe_webhook, name="stripe_webhook"),
+    path("caxton/webhook", process_caxton_webhook, name="caxton_webhook"),
 ]

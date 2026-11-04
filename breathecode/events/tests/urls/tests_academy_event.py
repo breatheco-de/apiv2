@@ -55,6 +55,11 @@ def post_serializer(data={}):
         "host_user": None,
         "is_public": True,
         "recording_url": None,
+        "variant": None,
+        "experiment_id": None,
+        "product": None,
+        "persona": None,
+        "product_persona": None,
         **data,
     }
 
@@ -99,6 +104,11 @@ def event_table(data={}):
         "currency": "",
         "is_public": True,
         "recording_url": None,
+        "variant": None,
+        "experiment_id": None,
+        "product": None,
+        "persona": None,
+        "product_persona": None,
         **data,
     }
 
@@ -199,6 +209,11 @@ class AcademyEventTestSuite(EventTestCase):
                 "is_public": model["event"].is_public,
                 "recording_url": model["event"].recording_url,
                 "event_group": model["event"].event_group,
+                "variant": model["event"].variant,
+                "experiment_id": model["event"].experiment_id,
+                "product": model["event"].product,
+                "persona": model["event"].persona,
+                "product_persona": model["event"].product_persona,
             }
         ]
 
@@ -275,6 +290,11 @@ class AcademyEventTestSuite(EventTestCase):
                 "is_public": model["event"].is_public,
                 "recording_url": model["event"].recording_url,
                 "event_group": model["event"].event_group,
+                "variant": model["event"].variant,
+                "experiment_id": model["event"].experiment_id,
+                "product": model["event"].product,
+                "persona": model["event"].persona,
+                "product_persona": model["event"].product_persona,
             }
         ]
 
@@ -351,6 +371,11 @@ class AcademyEventTestSuite(EventTestCase):
                 "is_public": model["event"].is_public,
                 "recording_url": model["event"].recording_url,
                 "event_group": model["event"].event_group,
+                "variant": model["event"].variant,
+                "experiment_id": model["event"].experiment_id,
+                "product": model["event"].product,
+                "persona": model["event"].persona,
+                "product_persona": model["event"].product_persona,
             }
         ]
 
@@ -408,6 +433,11 @@ class AcademyEventTestSuite(EventTestCase):
                 "is_public": model["event"].is_public,
                 "recording_url": model["event"].recording_url,
                 "event_group": model["event"].event_group,
+                "variant": model["event"].variant,
+                "experiment_id": model["event"].experiment_id,
+                "product": model["event"].product,
+                "persona": model["event"].persona,
+                "product_persona": model["event"].product_persona,
             }
         ]
 
@@ -699,6 +729,11 @@ class AcademyEventTestSuite(EventTestCase):
                 "is_public": model["event"].is_public,
                 "recording_url": model["event"].recording_url,
                 "event_group": model["event"].event_group,
+                "variant": model["event"].variant,
+                "experiment_id": model["event"].experiment_id,
+                "product": model["event"].product,
+                "persona": model["event"].persona,
+                "product_persona": model["event"].product_persona,
             }
         ]
         self.assertEqual(json, expected)
@@ -755,6 +790,11 @@ class AcademyEventTestSuite(EventTestCase):
                 "is_public": model["event"].is_public,
                 "recording_url": model["event"].recording_url,
                 "event_group": model["event"].event_group,
+                "variant": model["event"].variant,
+                "experiment_id": model["event"].experiment_id,
+                "product": model["event"].product,
+                "persona": model["event"].persona,
+                "product_persona": model["event"].product_persona,
             }
         ]
         self.assertEqual(json, expected)
@@ -810,6 +850,11 @@ class AcademyEventTestSuite(EventTestCase):
                 "is_public": model["event"].is_public,
                 "recording_url": model["event"].recording_url,
                 "event_group": model["event"].event_group,
+                "variant": model["event"].variant,
+                "experiment_id": model["event"].experiment_id,
+                "product": model["event"].product,
+                "persona": model["event"].persona,
+                "product_persona": model["event"].product_persona,
             }
         ]
 

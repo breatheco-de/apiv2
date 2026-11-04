@@ -242,6 +242,12 @@ class Event(models.Model):
         null=True,
         help_text="Determines if users that belong to an academy not available as saas can join the event for free.",
     )
+    denied_plans = models.ManyToManyField(
+        "payments.Plan",
+        blank=True,
+        related_name="denied_events",
+        help_text="Users with an active subscription or plan financing for these plans cannot join or check in, even if the event is free_for_all.",
+    )
 
     url = models.URLField(
         max_length=255,
@@ -311,6 +317,15 @@ class Event(models.Model):
         db_index=True,
         help_text="Group this event belongs to. Events with the same value share check-in while they have not ended.",
     )
+    variant = models.CharField(
+        max_length=50, null=True, default=None, blank=True, help_text="A/B test variant shown to the lead"
+    )
+    experiment_id = models.CharField(
+        max_length=150, null=True, default=None, blank=True, help_text="A/B experiment identifier"
+    )
+    product = models.CharField(max_length=100, null=True, default=None, blank=True)
+    persona = models.CharField(max_length=1000, null=True, default=None, blank=True)
+    product_persona = models.CharField(max_length=1000, null=True, default=None, blank=True)
 
     online_event = models.BooleanField(default=False)
     venue = models.ForeignKey(Venue, on_delete=models.CASCADE, null=True, default=None)

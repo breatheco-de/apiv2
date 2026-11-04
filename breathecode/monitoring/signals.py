@@ -6,4 +6,5 @@ emisor = Emisor("breathecode.monitoring")
 
 github_webhook = emisor.signal("github_webhook")
 stripe_webhook = emisor.signal("stripe_webhook")
+caxton_webhook = emisor.signal("caxton_webhook")
 application_created = emisor.signal("application_created")

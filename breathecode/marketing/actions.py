@@ -960,6 +960,11 @@ def register_new_lead(form_entry=None):
             academy=ac_academy.academy,
         )
 
+    # Parallel to the CRM. Runs before duplicate, SAVE_LEADS and skip-crm returns.
+    from breathecode.marketing.tasks import track_lead_on_cdp
+
+    track_lead_on_cdp.delay(entry.id)
+
     is_duplicate = entry.is_duplicate(form_entry)
     if is_duplicate:
         entry.storage_status = "DUPLICATED"

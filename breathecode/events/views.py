@@ -186,6 +186,7 @@ def get_events(request):
             lookup.pop("starting_at__lte")
 
     items = items.filter(**lookup).order_by("starting_at")
+    items = actions.exclude_events_denied_for_user(items, request.user)
 
     serializer = EventSmallSerializer(items, many=True)
     return Response(serializer.data)
@@ -212,6 +213,8 @@ class EventPublicView(APIView):
                     code=404,
                 )
 
+            # Keep the public detail visible so the frontend can disable join via denied_plans.
+            # Join / live-stream still enforce user_has_denied_plan_for_event.
             include_context_info = request.query_params.get("context") == "true"
             serializer = EventPublicBigSerializer(event, many=False, context={"include_context": include_context_info})
             return Response(serializer.data)
@@ -346,6 +349,7 @@ class EventMeView(APIView):
 
         items = items.order_by("starting_at")
         items = items.filter(**lookup)
+        items = actions.exclude_events_denied_for_user(items, request.user)
         items = handler.queryset(items)
         serializer = EventBigSerializer(items, many=True, context={})
 
@@ -1841,6 +1845,17 @@ class EventMeCheckinView(APIView):
                     code=404,
                 )
 
+        if actions.user_has_denied_plan_for_event(request.user, event):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Your current plan does not allow access to this event",
+                    es="Tu plan actual no te permite acceder a este evento",
+                    slug="event-plan-denied",
+                ),
+                code=403,
+            )
+
         serializer = PUTEventCheckinSerializer(event, request.data)
         if serializer.is_valid():
             serializer.save()
@@ -1875,6 +1890,17 @@ class EventMeCheckinView(APIView):
                     ),
                     code=404,
                 )
+
+        if actions.user_has_denied_plan_for_event(request.user, event):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Your current plan does not allow access to this event",
+                    es="Tu plan actual no te permite acceder a este evento",
+                    slug="event-plan-denied",
+                ),
+                code=403,
+            )
 
         serializer = POSTEventCheckinSerializer(
             data={**request.data, "email": request.user.email, "attendee": request.user.id, "event": event.id},
@@ -2776,15 +2802,25 @@ class ICalEventView(APIView):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def live_workshop_status(request):
-    cache_key = "live_workshop_status"
+    """
+    Public live-workshop badge payload.
+
+    Anonymous callers share a global cache. Authenticated callers get a short
+    per-user cache that excludes events blocked by denied_plans.
+    """
+    now_dt = timezone.now()
+    user = request.user if getattr(request.user, "is_authenticated", False) else None
+    cache_key = f"live_workshop_status:u:{user.id}" if user else "live_workshop_status"
+
     result = cache.get(cache_key)
     if result is None:
-        now_dt = timezone.now()
-        live_event = Event.objects.filter(
+        live_qs = Event.objects.filter(
             status=ACTIVE,
             starting_at__lte=now_dt,
             ending_at__gte=now_dt,
-        ).first()
+        ).order_by("starting_at")
+        live_qs = actions.exclude_events_denied_for_user(live_qs, user)
+        live_event = live_qs.first()
         if live_event is not None:
             result = {
                 "title": live_event.title,
@@ -2793,7 +2829,10 @@ def live_workshop_status(request):
                 "ending_at": live_event.ending_at,
                 "lang": live_event.lang,
             }
+            # Auth cache stays short so denied_plans changes apply quickly.
             timeout = max(30, int((live_event.ending_at - now_dt).total_seconds()))
+            if user:
+                timeout = min(timeout, 60)
         else:
             next_event = (
                 Event.objects.filter(
@@ -2805,8 +2844,10 @@ def live_workshop_status(request):
             )
             if next_event:
                 timeout = max(30, int((next_event.starting_at - now_dt).total_seconds()))
+                if user:
+                    timeout = min(timeout, 60)
             else:
-                timeout = None
+                timeout = 30 if user else None
             result = None
         cache.set(cache_key, result, timeout=timeout)
     return Response(result)

@@ -147,6 +147,11 @@ def get_serializer(
         "recording_url": event.recording_url,
         "recap": event.context.recap if hasattr(event, "context") and event.context else None,
         "event_group": None,
+        "variant": event.variant,
+        "experiment_id": event.experiment_id,
+        "product": event.product,
+        "persona": event.persona,
+        "product_persona": event.product_persona,
         **data,
     }
 

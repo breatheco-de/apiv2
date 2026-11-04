@@ -84,6 +84,11 @@ def serialize_event(event):
         ),
         "asset": None,
         "event_group": None,
+        "variant": event.variant,
+        "experiment_id": event.experiment_id,
+        "product": event.product,
+        "persona": event.persona,
+        "product_persona": event.product_persona,
     }
 
 

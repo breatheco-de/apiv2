@@ -16,6 +16,7 @@ from breathecode.admissions.serializers import UserPublicSerializer
 from breathecode.authenticate.models import Profile, ProfileAcademy, ProfileTranslation
 from breathecode.events import actions as events_actions
 from breathecode.marketing.actions import validate_marketing_tags
+from breathecode.payments.models import Plan
 from breathecode.registry.models import Asset
 from breathecode.registry.serializers import AssetSmallSerializer
 from breathecode.utils import serpy
@@ -213,6 +214,11 @@ class EventSmallSerializer(EventTinySerializer):
     is_public = serpy.Field()
     recording_url = serpy.Field()
     event_group = serpy.Field()
+    variant = serpy.Field()
+    experiment_id = serpy.Field()
+    product = serpy.Field()
+    persona = serpy.Field()
+    product_persona = serpy.Field()
 
     def get_asset(self, obj):
         if obj.asset_slug is not None:
@@ -271,6 +277,11 @@ class EventSmallSerializerNoAcademy(serpy.Serializer):
     is_public = serpy.Field()
     recording_url = serpy.Field()
     event_group = serpy.Field()
+    variant = serpy.Field()
+    experiment_id = serpy.Field()
+    product = serpy.Field()
+    persona = serpy.Field()
+    product_persona = serpy.Field()
 
 
 class EventPublicBigSerializer(EventSmallSerializer):
@@ -279,9 +290,13 @@ class EventPublicBigSerializer(EventSmallSerializer):
     host_user = UserBigSerializer(required=False)
     free_for_bootcamps = serpy.Field()
     free_for_all = serpy.Field()
+    denied_plans = serpy.MethodField()
     published_at = serpy.Field()
     created_at = serpy.Field()
     updated_at = serpy.Field()
+
+    def get_denied_plans(self, obj):
+        return list(obj.denied_plans.values_list("slug", flat=True))
 
     def get_recap(self, obj):
         if self.context.get("include_context") and hasattr(obj, "context") and obj.context:
@@ -329,10 +344,19 @@ class AcademyEventSmallSerializer(serpy.Serializer):
     host_user = UserBigSerializer(required=False)
     author = UserSerializer(required=False)
     free_for_all = serpy.Field()
+    denied_plans = serpy.MethodField()
     asset = serpy.MethodField()
     is_public = serpy.Field()
     recording_url = serpy.Field()
     event_group = serpy.Field()
+    variant = serpy.Field()
+    experiment_id = serpy.Field()
+    product = serpy.Field()
+    persona = serpy.Field()
+    product_persona = serpy.Field()
+
+    def get_denied_plans(self, obj):
+        return list(obj.denied_plans.values_list("slug", flat=True))
 
     def get_asset(self, obj):
         if obj.asset_slug is not None:
@@ -467,6 +491,12 @@ class EventHookCheckinSerializer(serpy.Serializer):
 
 
 class EventSerializer(serializers.ModelSerializer):
+    denied_plans = serializers.SlugRelatedField(
+        many=True,
+        slug_field="slug",
+        queryset=Plan.objects.all(),
+        required=False,
+    )
 
     class Meta:
         model = Event
@@ -613,6 +643,12 @@ class EventPUTSerializer(serializers.ModelSerializer):
     online_event = serializers.BooleanField(required=False)
     status = serializers.CharField(required=False)
     recording_url = serializers.URLField(required=False)
+    denied_plans = serializers.SlugRelatedField(
+        many=True,
+        slug_field="slug",
+        queryset=Plan.objects.all(),
+        required=False,
+    )
 
     class Meta:
         model = Event

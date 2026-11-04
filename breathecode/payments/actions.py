@@ -635,6 +635,23 @@ def align_consumer_vps_stock_with_active_machines(consumable: Consumable) -> Non
     if pre_consume_units > 0:
         consume_service.send_robust(sender=Consumable, instance=current_consumable, how_many=pre_consume_units)
 
+        # Point the covered ACTIVE VPS of this same billing scope to the consumable that was just charged,
+        # so a mid-cycle delete reimburses a current consumable instead of an expired one.
+        if vps_scope_kwargs:
+            vps_to_rotate = (
+                ProvisioningVPS.objects.filter(
+                    user_id=user_id,
+                    status=active_vps_status,
+                    **vps_scope_kwargs,
+                )
+                .exclude(consumed_consumable_id=current_consumable.id)
+                .order_by("provisioned_at", "id")
+                .values("id")[:pre_consume_units]
+            )
+            ProvisioningVPS.objects.filter(id__in=vps_to_rotate).update(
+                consumed_consumable=current_consumable, updated_at=timezone.now()
+            )
+
 
 def sync_llm_member_budget_to_llm_provider(
     provisioning_llm,
