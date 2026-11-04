@@ -461,6 +461,19 @@ curl -X PUT \
 
 ---
 
+## LearnPack `batch`: which asset is used
+
+LearnPack may send many registry asset ids for one package (`asset_id: "3286,3287,3314"`): translations plus accidental duplicates.
+
+`batch` does **not** pick the lowest English id. It:
+
+1. Collects every candidate from `asset_id` / slug / `package_id` (`learnpack_id` siblings).
+2. Expands translation slugs for all of them.
+3. Finds this student's `Task` rows in that slug set.
+4. Stores `AssignmentTelemetry` under the **canonical slug of the group that actually has those tasks**, and always sets `Task.telemetry`.
+
+If Rigobot shows 100% but the task has empty telemetry, inspect `LearnPackWebhook.status_text` for a slug that is not the syllabus task.
+
 ## Task status and LearnPack telemetry (anti-downgrade)
 
 When LearnPack sends a `batch` webhook, `calculate_telemetry_indicator` recalculates `completion_rate` and may update linked `Task` rows for graded EXERCISE assets:
