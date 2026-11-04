@@ -14,6 +14,7 @@ requires:
 - Do NOT use for creating new leads — load [`bc-marketing-create-form-entry`](../bc-marketing-create-form-entry/SKILL.md).
 - Do NOT use for diagnosing `storage_status` / CRM failures — load [`bc-marketing-debug-form-entry`](../bc-marketing-debug-form-entry/SKILL.md).
 - Do NOT use for attribution funnel analytics — load [`bc-monitoring-read-report-acquisition`](../bc-monitoring-read-report-acquisition/SKILL.md).
+- Do NOT use for lead counts or breakdowns (by status, course, UTM, date) — use `GET /v1/marketing/report/lead` from the Lead report section of [`bc-marketing-inbound-leads-attribution-and-acquisition`](../bc-marketing-inbound-leads-attribution-and-acquisition/SKILL.md#lead-report) instead of paging through the lead list.
 
 ## Concepts
 
