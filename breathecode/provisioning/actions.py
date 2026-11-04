@@ -156,14 +156,39 @@ def format_deprovision_service_labels(services, lang: str | None = None) -> str:
             continue
         seen.add(label)
         labels.append(label)
-    if not labels:
+    return _join_for_sentence(labels, lang)
+
+
+def _join_for_sentence(items: list[str], lang: str | None = None) -> str:
+    if not items:
         return ""
     conjunction = "y" if (lang or "").lower().startswith("es") else "and"
-    if len(labels) == 1:
-        return labels[0]
-    if len(labels) == 2:
-        return f"{labels[0]} {conjunction} {labels[1]}"
-    return f"{', '.join(labels[:-1])} {conjunction} {labels[-1]}"
+    if len(items) == 1:
+        return items[0]
+    if len(items) == 2:
+        return f"{items[0]} {conjunction} {items[1]}"
+    return f"{', '.join(items[:-1])} {conjunction} {items[-1]}"
+
+
+_DEPROVISION_SERVICE_NAMES = {
+    "vps_server": {"en": "your server", "es": "tu servidor"},
+    "llm-budget": {"en": "your AI credits", "es": "tus créditos de IA"},
+    "github-copilot": {"en": "GitHub Copilot", "es": "GitHub Copilot"},
+}
+
+
+def format_deprovision_service_names(services, lang: str | None = None) -> str:
+    """Third-party services the way a student calls them (your server, your AI credits), ready for a sentence."""
+    language = "es" if (lang or "").lower().startswith("es") else "en"
+    names: list[str] = []
+    for service in services:
+        slug = getattr(service, "slug", None)
+        if not slug:
+            continue
+        name = _DEPROVISION_SERVICE_NAMES.get(slug, {}).get(language) or deprovision_service_label(service)
+        if name not in names:
+            names.append(name)
+    return _join_for_sentence(names, lang)
 
 
 def sync_machine_types(provisioning_academy, assignment):
