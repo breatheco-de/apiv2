@@ -291,12 +291,20 @@ class EventPublicBigSerializer(EventSmallSerializer):
     free_for_bootcamps = serpy.Field()
     free_for_all = serpy.Field()
     denied_plans = serpy.MethodField()
+    recording_url = serpy.MethodField()
     published_at = serpy.Field()
     created_at = serpy.Field()
     updated_at = serpy.Field()
 
     def get_denied_plans(self, obj):
         return list(obj.denied_plans.values_list("slug", flat=True))
+
+    def get_recording_url(self, obj):
+        """Hide recording from users whose plan is on the event deny list."""
+        user = self.context.get("user")
+        if user and getattr(user, "is_authenticated", False) and events_actions.user_has_denied_plan_for_event(user, obj):
+            return None
+        return obj.recording_url
 
     def get_recap(self, obj):
         if self.context.get("include_context") and hasattr(obj, "context") and obj.context:
