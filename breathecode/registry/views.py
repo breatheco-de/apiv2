@@ -52,6 +52,7 @@ from .actions import (
     apush_to_github,
     apush_project_or_exercise_to_github,
     ascan_asset_originality,
+    assert_user_can_claim_asset,
     atest_asset,
     test_asset,
 )
@@ -1541,6 +1542,7 @@ class AcademyAssetActionView(APIView):
                             slug="asset-already-claimed",
                         )
                     )
+                await sync_to_async(assert_user_can_claim_asset)(asset, user, academy_id=academy_id)
                 academy = await Academy.objects.filter(id=academy_id).afirst()
                 asset.academy = academy
                 await asset.asave()
@@ -1720,6 +1722,7 @@ class AcademyAssetActionView(APIView):
                             slug="asset-already-claimed",
                         )
                     )
+                await sync_to_async(assert_user_can_claim_asset)(asset, user, academy_id=academy_id)
                 academy = await Academy.objects.filter(id=academy_id).afirst()
                 asset.academy = academy
                 await asset.asave()

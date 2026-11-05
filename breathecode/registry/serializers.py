@@ -1304,6 +1304,12 @@ class AssetPUTSerializer(serializers.ModelSerializer):
         # Scoped academy PUT implies claiming an unclaimed (global) asset for this academy.
         academy_id = self.context.get("academy_id")
         if instance.academy_id is None and academy_id is not None:
+            from breathecode.registry.actions import assert_user_can_claim_asset
+
+            request = self.context.get("request")
+            assert_user_can_claim_asset(
+                instance, request.user, validated_data=validated_data, academy_id=academy_id
+            )
             instance.academy_id = int(academy_id)
 
         data = {}
@@ -1532,6 +1538,12 @@ class AssetPUTMeSerializer(serializers.ModelSerializer):
 
         claim_academy_id = validated_data.pop("academy_id", None)
         if instance.academy_id is None and claim_academy_id is not None:
+            from breathecode.registry.actions import assert_user_can_claim_asset
+
+            request = self.context.get("request")
+            assert_user_can_claim_asset(
+                instance, request.user, validated_data=validated_data, academy_id=claim_academy_id
+            )
             instance.academy_id = int(claim_academy_id)
 
         data = {}
