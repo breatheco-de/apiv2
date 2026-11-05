@@ -15,8 +15,9 @@ from rest_framework.views import APIView
 from breathecode.activity.actions import ALLOWED_TYPES
 from breathecode.activity.models import ACTIVITY_TABLE_NAME, StudentActivity
 from breathecode.activity.serializers import ActivitySerializer
-from breathecode.admissions.models import Cohort, CohortUser
+from breathecode.admissions.models import Academy, Cohort, CohortUser
 from breathecode.authenticate.actions import get_user_language
+from breathecode.authenticate.models import ProfileAcademy
 from breathecode.services.google_cloud.big_query import BigQuery
 from breathecode.utils import HeaderLimitOffsetPagination, capable_of, getLogger
 from breathecode.utils.request import get_current_academy
@@ -585,7 +586,8 @@ class V2MeActivityReportView(APIView):
             related_type = "auth.User"
             related_id = request.user.id
             related_slug = None
-            academy_id = None
+            if not Academy.objects.filter(id=academy_id, white_labeled=True).exists():
+                academy_id = None
 
         elif activity_slug == "read_cohort_dashboard":
             cache_key = f"read_cohort_dashboard_reported_at-{related_id}"
@@ -892,12 +894,19 @@ class V3ActivityKindView(APIView):
         return Response(result)
 
 
+def _user_belongs_to_academy(user_id, academy_id):
+    academy_id = int(academy_id)
+    if ProfileAcademy.objects.filter(user_id=user_id, academy_id=academy_id).exists():
+        return True
+
+    return CohortUser.objects.filter(user_id=user_id, cohort__academy_id=academy_id).exists()
+
+
 class V3AcademyActivityView(APIView):
 
     @capable_of("read_activity")
     def get(self, request, activity_id=None, academy_id=None):
         lang = get_user_language(request)
-        client, project_id, dataset = BigQuery.client()
 
         user_id = request.GET.get("user_id", None)
         if user_id:
@@ -906,6 +915,19 @@ class V3AcademyActivityView(APIView):
             except (ValueError, TypeError):
                 raise ValidationException("user_id is not an integer", slug="bad-user-id")
 
+            if not _user_belongs_to_academy(user_id, academy_id):
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="User not found in this academy",
+                        es="Usuario no encontrado en esta academia",
+                        slug="user-not-in-academy",
+                    ),
+                    code=404,
+                )
+
+        client, project_id, dataset = BigQuery.client()
+
         if activity_id:
             # Define a query
             query = f"""
@@ -913,7 +935,7 @@ class V3AcademyActivityView(APIView):
                 FROM `{project_id}.{dataset}.{ACTIVITY_TABLE_NAME}`
                 WHERE id = @activity_id
                     {'AND user_id = @user_id' if user_id else ''}
-                    AND (meta.academy = @academy_id OR meta.academy IS NULL)
+                    AND meta.academy = @academy_id
                 ORDER BY id DESC
                 LIMIT 1
             """
@@ -957,7 +979,7 @@ class V3AcademyActivityView(APIView):
         query = f"""
             SELECT *
             FROM `{project_id}.{dataset}.{ACTIVITY_TABLE_NAME}`
-            WHERE (meta.academy = @academy_id OR meta.academy IS NULL)
+            WHERE meta.academy = @academy_id
                 {'AND user_id = @user_id' if user_id else ''}
                 {'AND kind IN UNNEST(@kinds)' if kinds else ''}
                 {'AND timestamp >= @date_start' if date_start else ''}
