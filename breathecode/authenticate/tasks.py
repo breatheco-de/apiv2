@@ -464,3 +464,26 @@ def reconcile_github_copilot_seats_nightly(**_):
     )
 
     return run_reconcile_github_copilot_seats()
+
+
+@task(priority=TaskPriority.MARKETING.value)
+def identify_user_on_cdp(user_id: int, **_: Any):
+    """Send user identity traits to the CDP after a profile update."""
+    from breathecode.authenticate.models import Profile
+    from breathecode.services.cdp import CdpTrackError, identify_user
+
+    logger.info("Starting identify_user_on_cdp for user %s", user_id)
+
+    user = User.objects.filter(id=user_id).first()
+    if user is None:
+        raise AbortTask(f"User {user_id} not found")
+
+    profile = Profile.objects.filter(user_id=user_id).first()
+
+    try:
+        identify_user(user, profile=profile)
+    except CdpTrackError as error:
+        raise RetryTask(str(error))
+    except Exception as error:
+        logger.exception("CDP identify failed for user %s", user_id)
+        raise RetryTask(str(error))

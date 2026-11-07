@@ -3,11 +3,21 @@
 import os
 from unittest.mock import MagicMock, patch
 
+from breathecode.authenticate.tasks import identify_user_on_cdp
 from breathecode.marketing.actions import register_new_lead
 from breathecode.marketing.models import CrmLeadOverride, FormEntry
 from breathecode.marketing.tasks import track_lead_on_cdp
 from breathecode.marketing.tests.tasks.tests_persist_single_lead import generate_form_entry_kwargs
-from breathecode.services.cdp import TRACK_URL, CdpTrackError, build_track_body, get_event_name, track_form_entry
+from breathecode.services.cdp import (
+    IDENTIFY_URL,
+    TRACK_URL,
+    CdpTrackError,
+    build_identify_body,
+    build_track_body,
+    get_event_name,
+    identify_user,
+    track_form_entry,
+)
 
 from ..mixins import MarketingTestCase
 
@@ -249,3 +259,136 @@ class RegisterNewLeadCdpEnqueueTestSuite(MarketingTestCase):
         mock_send.assert_not_called()
         self.assertEqual(result.storage_status, "PERSISTED")
         task.delay.assert_called_once_with(model.form_entry.id)
+
+
+class BuildIdentifyBodyTestSuite(MarketingTestCase):
+    def test_body_matches_identify_input_schema(self):
+        model = self.generate_models(
+            user={"first_name": "Ana", "last_name": "Pérez", "email": "ana@ejemplo.com", "username": "ana"},
+            profile={
+                "phone": "+573001112233",
+                "bio": "Hello",
+                "github_username": "ana-gh",
+            },
+        )
+
+        body = build_identify_body(model.user, profile=model.profile)
+
+        self.assertEqual(
+            body,
+            {
+                "source": "breathecode",
+                "userId": str(model.user.id),
+                "email": "ana@ejemplo.com",
+                "phone": "+573001112233",
+                "traits": {
+                    "name": "Ana Pérez",
+                },
+            },
+        )
+        self.assertNotIn("first_name", body["traits"])
+        self.assertNotIn("last_name", body["traits"])
+        self.assertNotIn("bio", body["traits"])
+        self.assertNotIn("anonymousId", body)
+        self.assertNotIn("properties", body)
+        self.assertNotIn("event", body)
+
+    def test_no_email_has_no_body(self):
+        model = self.generate_models(user={"email": ""})
+
+        self.assertIsNone(build_identify_body(model.user))
+
+    def test_omits_empty_phone_and_empty_traits(self):
+        model = self.generate_models(
+            user={"first_name": "", "last_name": "", "email": "ana@ejemplo.com", "username": "ana"},
+            profile={"phone": ""},
+        )
+
+        body = build_identify_body(model.user, profile=model.profile)
+
+        self.assertEqual(
+            body,
+            {
+                "source": "breathecode",
+                "userId": str(model.user.id),
+                "email": "ana@ejemplo.com",
+            },
+        )
+        self.assertNotIn("phone", body)
+        self.assertNotIn("traits", body)
+
+    def test_without_profile_still_sends_user_traits(self):
+        model = self.generate_models(
+            user={"first_name": "Ana", "last_name": "Pérez", "email": "ana@ejemplo.com", "username": "ana"}
+        )
+
+        body = build_identify_body(model.user, profile=None)
+
+        self.assertEqual(body["email"], "ana@ejemplo.com")
+        self.assertNotIn("phone", body)
+        self.assertEqual(body["traits"], {"name": "Ana Pérez"})
+
+    def test_phone_falls_back_to_user_invite(self):
+        model = self.generate_models(
+            user={"email": "ana@ejemplo.com", "first_name": "Ana"},
+            profile={"phone": ""},
+            user_invite={"phone": "+573009998877", "email": "ana@ejemplo.com"},
+        )
+
+        body = build_identify_body(model.user, profile=model.profile)
+
+        self.assertEqual(body["phone"], "+573009998877")
+
+
+class IdentifyUserTestSuite(MarketingTestCase):
+    @patch.dict(os.environ, {"CDP_API_KEY": ""}, clear=False)
+    @patch("breathecode.services.cdp.requests.post")
+    def test_missing_api_key_does_not_post(self, mock_post):
+        os.environ.pop("CDP_API_KEY", None)
+        model = self.generate_models(user=1, profile=1)
+
+        self.assertFalse(identify_user(model.user, profile=model.profile))
+        mock_post.assert_not_called()
+
+    @patch.dict(os.environ, {"CDP_API_KEY": "cdp-test-key"})
+    @patch("breathecode.services.cdp.requests.post")
+    def test_posts_bearer_token_to_the_fixed_url(self, mock_post):
+        mock_post.return_value = MagicMock(status_code=202)
+        model = self.generate_models(
+            user={"first_name": "Ana", "email": "ana@ejemplo.com"},
+            profile={"phone": "+573001112233"},
+        )
+
+        self.assertTrue(identify_user(model.user, profile=model.profile))
+        mock_post.assert_called_once()
+        args, kwargs = mock_post.call_args
+        self.assertEqual(args[0], IDENTIFY_URL)
+        self.assertEqual(kwargs["headers"]["Authorization"], "Bearer cdp-test-key")
+        self.assertEqual(kwargs["headers"]["Content-Type"], "application/json")
+        self.assertEqual(kwargs["json"]["email"], "ana@ejemplo.com")
+        self.assertEqual(kwargs["json"]["userId"], str(model.user.id))
+        self.assertEqual(kwargs["json"]["phone"], "+573001112233")
+        self.assertEqual(kwargs["json"]["source"], "breathecode")
+        self.assertNotIn("properties", kwargs["json"])
+
+    @patch.dict(os.environ, {"CDP_API_KEY": "cdp-test-key"})
+    @patch("breathecode.services.cdp.requests.post")
+    def test_failed_status_raises(self, mock_post):
+        mock_post.return_value = MagicMock(status_code=500)
+        model = self.generate_models(user={"email": "ana@ejemplo.com"}, profile=1)
+
+        with self.assertRaises(CdpTrackError):
+            identify_user(model.user, profile=model.profile)
+
+
+class IdentifyUserOnCdpTaskTestSuite(MarketingTestCase):
+    @patch("breathecode.services.cdp.identify_user", return_value=True)
+    def test_success_calls_identify(self, mock_identify):
+        model = self.generate_models(user=1, profile=1)
+
+        identify_user_on_cdp(model.user.id)
+
+        mock_identify.assert_called_once()
+        args, kwargs = mock_identify.call_args
+        self.assertEqual(args[0].id, model.user.id)
+        self.assertEqual(kwargs["profile"].id, model.profile.id)
