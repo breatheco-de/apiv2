@@ -23,6 +23,13 @@ CDP_EVENT_ALLOWLIST = frozenset(
     }
 )
 
+# FormEntry.custom_fields booleans → CDP consent_granted channels.
+CONSENT_FIELD_TO_CHANNEL = {
+    "consent_email": "email",
+    "consent_sms": "sms",
+    "consent_whatsapp": "whatsapp",
+}
+
 
 class CdpTrackError(Exception):
     pass
@@ -44,6 +51,24 @@ def get_event_name(tags) -> str | None:
     return None
 
 
+def properties_from_custom_fields(custom_fields: dict) -> dict:
+    """Merge extras for CDP properties; map consent_* flags to consent_granted."""
+    extras = dict(custom_fields)
+    granted: list[str] = []
+    for key, channel in CONSENT_FIELD_TO_CHANNEL.items():
+        if key not in extras:
+            continue
+        value = extras.pop(key)
+        truthy = (
+            value.strip().lower() in {"true", "1", "yes"} if isinstance(value, str) else value is True or value == 1
+        )
+        if truthy and channel not in granted:
+            granted.append(channel)
+    if granted:
+        extras["consent_granted"] = granted
+    return extras
+
+
 def build_track_body(entry) -> dict | None:
     """Build the CDP track payload from a FormEntry. None when no tag is allowlisted."""
     tags = entry.tags or ""
@@ -53,6 +78,8 @@ def build_track_body(entry) -> dict | None:
 
     first_name = entry.first_name or ""
     last_name = entry.last_name or ""
+    custom_fields = entry.custom_fields if isinstance(entry.custom_fields, dict) else {}
+    extras = properties_from_custom_fields(custom_fields)
 
     return {
         "event": event,
@@ -64,6 +91,7 @@ def build_track_body(entry) -> dict | None:
             "name": f"{first_name} {last_name}".strip(),
             "country": entry.country,
         },
+        # custom_fields wins on key clashes; consent_* become consent_granted.
         "properties": {
             "first_name": entry.first_name,
             "last_name": entry.last_name,
@@ -84,6 +112,7 @@ def build_track_body(entry) -> dict | None:
             "product_persona": entry.product_persona,
             "variant": entry.variant,
             "experiment_id": entry.experiment_id,
+            **extras,
         },
     }
 

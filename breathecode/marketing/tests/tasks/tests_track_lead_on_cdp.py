@@ -105,6 +105,77 @@ class BuildTrackBodyTestSuite(MarketingTestCase):
 
         self.assertIsNone(build_track_body(model.form_entry))
 
+    def test_custom_fields_are_merged_into_properties(self):
+        model = self.generate_models(
+            form_entry=generate_form_entry_kwargs(
+                {
+                    **LEAD_FIELDS,
+                    "custom_fields": {
+                        "course": "from-custom-fields",
+                        "foo": "bar",
+                    },
+                }
+            )
+        )
+
+        body = build_track_body(model.form_entry)
+
+        self.assertEqual(body["properties"]["course"], "from-custom-fields")
+        self.assertEqual(body["properties"]["foo"], "bar")
+        self.assertNotIn("consent_granted", body["properties"])
+
+    def test_consent_flags_map_to_consent_granted(self):
+        model = self.generate_models(
+            form_entry=generate_form_entry_kwargs(
+                {
+                    **LEAD_FIELDS,
+                    "custom_fields": {
+                        "consent_email": True,
+                        "consent_sms": "yes",
+                        "consent_whatsapp": False,
+                        "foo": "bar",
+                    },
+                }
+            )
+        )
+
+        body = build_track_body(model.form_entry)
+        props = body["properties"]
+
+        self.assertEqual(props["consent_granted"], ["email", "sms"])
+        self.assertEqual(props["foo"], "bar")
+        self.assertNotIn("consent_email", props)
+        self.assertNotIn("consent_sms", props)
+        self.assertNotIn("consent_whatsapp", props)
+        self.assertNotIn("consent_granted", body["traits"])
+
+    def test_false_consent_flags_do_not_set_consent_granted(self):
+        model = self.generate_models(
+            form_entry=generate_form_entry_kwargs(
+                {
+                    **LEAD_FIELDS,
+                    "custom_fields": {
+                        "consent_email": False,
+                        "consent_sms": "",
+                        "consent_whatsapp": None,
+                    },
+                }
+            )
+        )
+
+        body = build_track_body(model.form_entry)
+
+        self.assertNotIn("consent_granted", body["properties"])
+        self.assertNotIn("consent_email", body["properties"])
+
+    def test_null_custom_fields_leave_hardcoded_properties(self):
+        model = self.generate_models(form_entry=generate_form_entry_kwargs({**LEAD_FIELDS, "custom_fields": None}))
+
+        body = build_track_body(model.form_entry)
+
+        self.assertEqual(body["properties"]["course"], "full-stack-ft")
+        self.assertNotIn("consent_granted", body["properties"])
+
 
 class TrackFormEntryTestSuite(MarketingTestCase):
     def _entry(self, **overrides):
