@@ -3445,8 +3445,8 @@ def render_invite(request, token, member_id=None):
         return Response(serializer.data)
 
     if request.method == "GET":
-        if invite and invite.academy and invite.academy.white_labeled and invite.academy.website_url:
-            redirect_url = f"{invite.academy.website_url.rstrip('/')}/accept-invite?inviteToken={token}"
+        if invite and invite.academy and invite.academy.white_labeled and invite.academy.white_label_url:
+            redirect_url = f"{invite.academy.white_label_url.rstrip('/')}/accept-invite?inviteToken={token}"
             return HttpResponseRedirect(redirect_to=redirect_url)
 
         form = InviteForm(
