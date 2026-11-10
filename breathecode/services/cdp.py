@@ -3,9 +3,12 @@ import os
 
 import requests
 
+from breathecode.authenticate.actions import get_user_phone
+
 logger = logging.getLogger(__name__)
 
 TRACK_URL = "https://cdp.4geeks.us/v1/track"
+IDENTIFY_URL = "https://cdp.4geeks.us/v1/identify"
 
 # Only these FormEntry tags are sent to the CDP as the event name (from historical form entries).
 CDP_EVENT_ALLOWLIST = frozenset(
@@ -20,9 +23,23 @@ CDP_EVENT_ALLOWLIST = frozenset(
     }
 )
 
+# FormEntry.custom_fields booleans → CDP consent_granted channels.
+CONSENT_FIELD_TO_CHANNEL = {
+    "consent_email": "email",
+    "consent_sms": "sms",
+    "consent_whatsapp": "whatsapp",
+}
+
 
 class CdpTrackError(Exception):
     pass
+
+
+def _auth_headers(api_key: str) -> dict[str, str]:
+    return {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
 
 
 def get_event_name(tags) -> str | None:
@@ -34,6 +51,24 @@ def get_event_name(tags) -> str | None:
     return None
 
 
+def properties_from_custom_fields(custom_fields: dict) -> dict:
+    """Merge extras for CDP properties; map consent_* flags to consent_granted."""
+    extras = dict(custom_fields)
+    granted: list[str] = []
+    for key, channel in CONSENT_FIELD_TO_CHANNEL.items():
+        if key not in extras:
+            continue
+        value = extras.pop(key)
+        truthy = (
+            value.strip().lower() in {"true", "1", "yes"} if isinstance(value, str) else value is True or value == 1
+        )
+        if truthy and channel not in granted:
+            granted.append(channel)
+    if granted:
+        extras["consent_granted"] = granted
+    return extras
+
+
 def build_track_body(entry) -> dict | None:
     """Build the CDP track payload from a FormEntry. None when no tag is allowlisted."""
     tags = entry.tags or ""
@@ -43,6 +78,8 @@ def build_track_body(entry) -> dict | None:
 
     first_name = entry.first_name or ""
     last_name = entry.last_name or ""
+    custom_fields = entry.custom_fields if isinstance(entry.custom_fields, dict) else {}
+    extras = properties_from_custom_fields(custom_fields)
 
     return {
         "event": event,
@@ -54,6 +91,7 @@ def build_track_body(entry) -> dict | None:
             "name": f"{first_name} {last_name}".strip(),
             "country": entry.country,
         },
+        # custom_fields wins on key clashes; consent_* become consent_granted.
         "properties": {
             "first_name": entry.first_name,
             "last_name": entry.last_name,
@@ -74,8 +112,35 @@ def build_track_body(entry) -> dict | None:
             "product_persona": entry.product_persona,
             "variant": entry.variant,
             "experiment_id": entry.experiment_id,
+            **extras,
         },
     }
+
+
+def build_identify_body(user, profile=None) -> dict | None:
+    """Build CDP IdentifyInput from a User. None without email.
+
+    Matches IdentifyInputSchema: userId, email, phone, anonymousId, traits, source, isTest.
+    `profile` is unused; phone is resolved via get_user_phone.
+    """
+    email = (getattr(user, "email", None) or "").strip()
+    if not email:
+        return None
+
+    body = {
+        "source": "breathecode",
+        "userId": str(user.id),
+        "email": email,
+    }
+
+    if name := f"{(user.first_name or '').strip()} {(user.last_name or '').strip()}".strip():
+        body["traits"] = {"name": name}
+
+    phone = (get_user_phone(user) or "").strip()
+    if len(phone) >= 3:
+        body["phone"] = phone
+
+    return body
 
 
 def track_form_entry(entry) -> bool:
@@ -93,13 +158,34 @@ def track_form_entry(entry) -> bool:
     response = requests.post(
         TRACK_URL,
         json=body,
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        },
+        headers=_auth_headers(api_key),
         timeout=10,
     )
     if response.status_code < 200 or response.status_code >= 300:
         raise CdpTrackError(f"CDP track failed with status {response.status_code}")
+
+    return True
+
+
+def identify_user(user, profile=None) -> bool:
+    """POST the user identity to the CDP. Returns False when there is nothing to send."""
+    api_key = os.getenv("CDP_API_KEY") or ""
+    if not api_key:
+        logger.info("CDP_API_KEY is empty, skipping identify")
+        return False
+
+    body = build_identify_body(user, profile=profile)
+    if body is None:
+        logger.info("User %s has no email, skipping identify", getattr(user, "id", None))
+        return False
+
+    response = requests.post(
+        IDENTIFY_URL,
+        json=body,
+        headers=_auth_headers(api_key),
+        timeout=10,
+    )
+    if response.status_code < 200 or response.status_code >= 300:
+        raise CdpTrackError(f"CDP identify failed with status {response.status_code}")
 
     return True

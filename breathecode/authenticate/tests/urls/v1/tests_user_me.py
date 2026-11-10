@@ -2,6 +2,8 @@
 Test cases for /user
 """
 
+from unittest.mock import MagicMock, patch
+
 from django.urls.base import reverse_lazy
 from rest_framework import status
 
@@ -423,3 +425,18 @@ class AuthenticateTestSuite(AuthTestCase):
         json = response.json()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(json["phone"], "+15551111111")
+
+    @patch("breathecode.authenticate.tasks.identify_user_on_cdp.delay", MagicMock())
+    def test_user_me__put__enqueues_cdp_identify(self):
+        model = self.generate_models(authenticate=True, profile=True)
+
+        url = reverse_lazy("authenticate:user_me")
+        response = self.client.put(url, {"first_name": "Ana", "last_name": "Pérez"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["first_name"], "Ana")
+        self.assertEqual(response.json()["last_name"], "Pérez")
+
+        from breathecode.authenticate.tasks import identify_user_on_cdp as task
+
+        task.delay.assert_called_once_with(model.user.id)

@@ -540,7 +540,7 @@ class MemberView(APIView, GenerateLookupsMixin):
         include = request.GET.get("include", "").split()
         if not "student" in include:
             items = items.exclude(role__slug="student")
-        
+
         # Exclude deleted members by default unless explicitly included
         if "deleted" not in include:
             items = items.exclude(status="DELETED")
@@ -570,7 +570,7 @@ class MemberView(APIView, GenerateLookupsMixin):
     def post(self, request, academy_id=None):
         lang = get_user_language(request)
         request_data = request.data.copy()
-        
+
         # Check if trying to create with student role
         if "role" in request_data:
             role_value = request_data["role"]
@@ -617,7 +617,7 @@ class MemberView(APIView, GenerateLookupsMixin):
 
             # Normalize slug -> id for serializers expecting PK
             request_data["role"] = role_obj.pk
-        
+
         serializer = MemberPOSTSerializer(data=request_data, context={"academy_id": academy_id, "request": request})
         if serializer.is_valid():
             serializer.save()
@@ -630,12 +630,16 @@ class MemberView(APIView, GenerateLookupsMixin):
 
         already = None
         if user_id_or_email.isnumeric():
-            already = ProfileAcademy.objects.filter(user__id=user_id_or_email, academy_id=academy_id).exclude(role__slug="student").first()
+            already = (
+                ProfileAcademy.objects.filter(user__id=user_id_or_email, academy_id=academy_id)
+                .exclude(role__slug="student")
+                .first()
+            )
         else:
             raise ValidationException("User id must be a numeric value", code=400, slug="user-id-is-not-numeric")
 
         request_data = {**request.data, "user": user_id_or_email, "academy": academy_id}
-        
+
         # Check if trying to create or update with student role
         if "role" in request_data:
             role_value = request_data["role"]
@@ -682,7 +686,7 @@ class MemberView(APIView, GenerateLookupsMixin):
 
             # Normalize slug -> id for serializers expecting PK
             request_data["role"] = role_obj.pk
-        
+
         if already:
             serializer = MemberPUTSerializer(already, data=request_data)
             if serializer.is_valid():
@@ -1039,9 +1043,7 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         if request.GET.get("academy") == "null":
             invites = UserInvite.objects.filter(academy__isnull=True)
         else:
-            academy_slug = (
-                Academy.objects.filter(id=academy_id).values_list("slug", flat=True).first()
-            )
+            academy_slug = Academy.objects.filter(id=academy_id).values_list("slug", flat=True).first()
             if academy_slug == "4geeks-com":
                 invites = UserInvite.objects.filter(Q(academy_id=academy_id) | Q(academy__isnull=True))
             else:
@@ -1273,11 +1275,7 @@ class AcademyInviteClaimView(APIView):
             course_academy = invite.course.academy if invite.course_id else None
 
             # Detect a FK-implied conflict between cohort and course
-            if (
-                cohort_academy is not None
-                and course_academy is not None
-                and cohort_academy.id != course_academy.id
-            ):
+            if cohort_academy is not None and course_academy is not None and cohort_academy.id != course_academy.id:
                 raise ValidationException(
                     translation(
                         en=(
@@ -1298,7 +1296,9 @@ class AcademyInviteClaimView(APIView):
             implied_academy = cohort_academy or course_academy
 
             # If already owned by this academy (or implicitly) — idempotent 200
-            if invite.academy_id == academy.id or (invite.academy_id is None and implied_academy and implied_academy.id == academy.id):
+            if invite.academy_id == academy.id or (
+                invite.academy_id is None and implied_academy and implied_academy.id == academy.id
+            ):
                 if invite.academy_id is None:
                     invite.academy = academy
                     invite.save()
@@ -1830,6 +1830,7 @@ class UserMeView(APIView):
         serializer = UserMeSerializer(request.user, data=request.data, context={"request": request})
         if serializer.is_valid():
             serializer.save()
+            auth_tasks.identify_user_on_cdp.delay(request.user.id)
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1935,8 +1936,7 @@ class AcademyRoleView(APIView):
     def get(self, request, academy_id=None):
         academy = _get_academy_or_404(academy_id)
         roles = list(
-            Role.objects.filter(Q(academy__isnull=True) | Q(academy_id=academy_id))
-            .prefetch_related("capabilities")
+            Role.objects.filter(Q(academy__isnull=True) | Q(academy_id=academy_id)).prefetch_related("capabilities")
         )
         # Custom roles (academy-owned) first, then native; within each group order by name
         roles.sort(key=lambda r: (r.academy_id is None, (r.name or r.slug or "").lower()))
@@ -2229,8 +2229,8 @@ def get_user_by_id_or_email(request, id_or_email):
 @permission_classes([AllowAny])
 def get_roles(request, role_slug=None):
 
-    hidden_roles = ['academy_token', 'read_only', 'student']
-    
+    hidden_roles = ["academy_token", "read_only", "student"]
+
     if role_slug is not None:
         role = Role.objects.filter(slug=role_slug).exclude(slug__in=hidden_roles).first()
         if role is None:
@@ -2239,7 +2239,7 @@ def get_roles(request, role_slug=None):
         serializer = RoleBigSerializer(role)
         return Response(serializer.data)
 
-    queryset = Role.objects.all().exclude(slug__in=hidden_roles + ['admin']).order_by('slug')
+    queryset = Role.objects.all().exclude(slug__in=hidden_roles + ["admin"]).order_by("slug")
     serializer = RoleSmallSerializer(queryset, many=True)
     return Response(serializer.data)
 
@@ -3445,8 +3445,8 @@ def render_invite(request, token, member_id=None):
         return Response(serializer.data)
 
     if request.method == "GET":
-        if invite and invite.academy and invite.academy.white_labeled and invite.academy.website_url:
-            redirect_url = f"{invite.academy.website_url.rstrip('/')}/accept-invite?inviteToken={token}"
+        if invite and invite.academy and invite.academy.white_labeled and invite.academy.white_label_url:
+            redirect_url = f"{invite.academy.white_label_url.rstrip('/')}/accept-invite?inviteToken={token}"
             return HttpResponseRedirect(redirect_to=redirect_url)
 
         form = InviteForm(
@@ -4650,9 +4650,7 @@ class GithubUserByIdView(APIView):
 
     @capable_of("read_student")
     def get(self, request, user_id, academy_id=None):
-        profile = ProfileAcademy.objects.filter(
-            academy_id=academy_id, user_id=user_id, role__slug="student"
-        ).first()
+        profile = ProfileAcademy.objects.filter(academy_id=academy_id, user_id=user_id, role__slug="student").first()
         if not profile:
             raise ValidationException(
                 "Student not found in this academy",
