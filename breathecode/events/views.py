@@ -17,6 +17,7 @@ from django.db.models.query_utils import Q
 from django.http.response import HttpResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
+from django.utils.dateparse import parse_date, parse_datetime
 from icalendar import Calendar as iCalendar
 from icalendar import Event as iEvent
 from icalendar import vCalAddress, vText
@@ -116,6 +117,57 @@ SATURDAY = 5
 SUNDAY = 6
 
 
+def _parse_event_range_param(value, lang, slug):
+    """Parse a `start`/`end` query param, returning `(aware_datetime, is_date_only)`."""
+
+    is_date_only = False
+    try:
+        parsed_date = parse_date(value)
+        if parsed_date is not None:
+            parsed = datetime(parsed_date.year, parsed_date.month, parsed_date.day)
+            is_date_only = True
+        else:
+            parsed = parse_datetime(value)
+    except ValueError:
+        parsed = None
+
+    if parsed is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Invalid date, use YYYY-MM-DD or an ISO 8601 datetime",
+                es="Fecha inválida, usa YYYY-MM-DD o una fecha ISO 8601",
+                slug=slug,
+            ),
+            code=400,
+        )
+
+    if timezone.is_naive(parsed):
+        parsed = parsed.replace(tzinfo=pytz.UTC)
+
+    return parsed, is_date_only
+
+
+def _parse_ago_ms(value, lang, now):
+    """Parse the `ago` query param (milliseconds) and return the window start `now - ago`."""
+
+    try:
+        milliseconds = int(value)
+        if milliseconds <= 0:
+            raise ValueError
+        return now - timedelta(milliseconds=milliseconds)
+    except (ValueError, OverflowError):
+        raise ValidationException(
+            translation(
+                lang,
+                en="The ago param must be a positive integer number of milliseconds",
+                es="El parámetro ago debe ser un número entero positivo de milisegundos",
+                slug="invalid-ago",
+            ),
+            code=400,
+        ) from None
+
+
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def get_events(request):
@@ -184,6 +236,58 @@ def get_events(request):
             lookup.pop("ending_at__gte")
         if "starting_at__lte" in lookup:
             lookup.pop("starting_at__lte")
+
+    start = request.GET.get("start")
+    end = request.GET.get("end")
+    ago = request.GET.get("ago")
+
+    if start is not None or end is not None or ago is not None:
+        lang = get_user_language(request)
+        lookup.pop("ending_at__gte", None)
+        lookup.pop("starting_at__lte", None)
+
+        if ago is not None:
+            if start is not None or end is not None:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="The ago param cannot be combined with start or end",
+                        es="El parámetro ago no se puede combinar con start o end",
+                        slug="ago-with-start-or-end",
+                    ),
+                    code=400,
+                )
+
+            now = timezone.now()
+            lookup["ending_at__gte"] = _parse_ago_ms(ago, lang, now)
+            lookup["starting_at__lte"] = now
+
+        else:
+            start_value = None
+            if start is not None:
+                start_value, _ = _parse_event_range_param(start, lang, "invalid-start-date")
+                lookup["ending_at__gte"] = start_value
+
+            if end is not None:
+                end_value, end_is_date_only = _parse_event_range_param(end, lang, "invalid-end-date")
+                if end_is_date_only:
+                    end_value += timedelta(days=1)
+                    lookup["starting_at__lt"] = end_value
+                    start_after_end = start_value is not None and start_value >= end_value
+                else:
+                    lookup["starting_at__lte"] = end_value
+                    start_after_end = start_value is not None and start_value > end_value
+
+                if start_after_end:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en="The start date must be before the end date",
+                            es="La fecha de inicio debe ser anterior a la fecha de fin",
+                            slug="start-after-end",
+                        ),
+                        code=400,
+                    )
 
     items = items.filter(**lookup).order_by("starting_at")
     items = actions.exclude_events_denied_for_user(items, request.user)

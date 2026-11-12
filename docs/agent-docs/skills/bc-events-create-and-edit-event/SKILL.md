@@ -22,6 +22,12 @@ Use this skill when the user needs to create or edit an event through the academ
 - An **event group** is a shared string on `Event.event_group`. Events with the same string are the same series and share registration fan-out. There is no group object, sessions payload, or CRUD endpoint.
 - Sessions in a group may differ in academy, lang, `event_type`, free flags, etc. Check-in fans out `PENDING` to remaining non-ended sessions without checking consumable/event-type access (join still enforces that per session).
 - `GET /v1/events/all` returns every public session. `event_group` is the string (or null). Clients that want one catalog card match events with the same string.
+- `GET /v1/events/all` time window filters. By default it returns events that have not ended. `past=true` returns events that already started, and `all_time=true` removes the time filter.
+  - `start` / `end` take `YYYY-MM-DD` or an ISO 8601 datetime (`2026-11-17T18:30:00Z`). A datetime without a timezone is treated as UTC. A date-only `end` includes that whole day. Either one can be sent on its own.
+  - `ago` is a positive integer number of milliseconds and covers the window from `now - ago` to now. For example, `?ago=604800000` is the last 7 days.
+  - Both return events that overlap the window: `ending_at >= window start` and `starting_at <= window end`, so in-progress events are included.
+  - When `start`, `end`, or `ago` is present, it overrides `past` and `all_time`.
+  - Errors return 400: `invalid-start-date`, `invalid-end-date`, `start-after-end`, `invalid-ago`, and `ago-with-start-or-end` (`ago` can't be combined with `start` or `end`).
 - `GET /v1/events/academy/event` and `GET /v1/events/academy/event/<event_id>` also return `event_group` as that string or null.
 - `GET /v1/events/academy/checkin?event_group=<string>` and the `.csv` export return every check-in of that series in the academy, one row per person per day.
 - Adding a not-yet-ended session with a key already used by registrants backfills `PENDING` check-ins for those emails. A grouped event can still sync with Eventbrite like any other event.
