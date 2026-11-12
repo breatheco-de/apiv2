@@ -560,13 +560,13 @@ def get_app_url(academy=None):
     
     Args:
         academy: Optional Academy instance. If provided and white_labeled=True,
-                 returns the academy's website_url instead of the default APP_URL.
+                 returns the academy's white_label_url instead of the default APP_URL.
     
     Returns:
         str: The URL to redirect to (without trailing slash)
     """
-    if academy and academy.white_labeled and academy.website_url:
-        url = academy.website_url
+    if academy and academy.white_labeled and academy.white_label_url:
+        url = academy.white_label_url
     else:
         url = os.getenv("APP_URL", "https://4geeks.com")
     
@@ -580,8 +580,8 @@ def get_invite_url(invite_token, academy=None, callback_url=None):
     """
     Get the invitation URL for email links.
     
-    If academy is white_labeled and has website_url, returns:
-        {website_url}/accept-invite?inviteToken={token}
+    If academy is white_labeled and has white_label_url, returns:
+        {white_label_url}/accept-invite?inviteToken={token}
     Otherwise, returns the API URL with callback parameter.
     
     Args:
@@ -592,9 +592,9 @@ def get_invite_url(invite_token, academy=None, callback_url=None):
     Returns:
         str: The invitation URL
     """
-    if academy and academy.white_labeled and academy.website_url:
-        website_url = academy.website_url.rstrip('/')
-        return f"{website_url}/accept-invite?inviteToken={invite_token}"
+    if academy and academy.white_labeled and academy.white_label_url:
+        white_label_url = academy.white_label_url.rstrip('/')
+        return f"{white_label_url}/accept-invite?inviteToken={invite_token}"
     
     api_url = os.getenv("API_URL", "https://breathecode.herokuapp.com")
     if callback_url:

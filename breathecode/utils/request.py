@@ -3,6 +3,7 @@ from typing import Optional
 from urllib.parse import urlparse
 
 from django.core.handlers.wsgi import WSGIRequest
+from django.db.models import Q
 from rest_framework.request import Request
 
 
@@ -36,7 +37,7 @@ def get_current_academy(request: WSGIRequest | Request, return_id: bool = True) 
     1. Academy header (case-insensitive)
     2. academy field in request body/payload
     3. academy query parameter
-    4. HTTP_ORIGIN/HTTP_REFERER matching Academy.website_url (for white label academies)
+    4. HTTP_ORIGIN/HTTP_REFERER matching Academy.white_label_url or Academy.website_url
     
     Args:
         request: Django WSGIRequest or DRF Request object
@@ -85,15 +86,11 @@ def get_current_academy(request: WSGIRequest | Request, return_id: bool = True) 
                 parsed_origin = urlparse(origin)
                 origin_base = f"{parsed_origin.scheme}://{parsed_origin.netloc}"
                 
-                # Try to find an academy with matching website_url
+                # Try to find an academy with matching white_label_url or website_url
                 academy = Academy.objects.filter(
-                    website_url__isnull=False
-                ).exclude(
-                    website_url=""
-                ).filter(
-                    website_url__icontains=origin_base
+                    Q(white_label_url__icontains=origin_base) | Q(website_url__icontains=origin_base)
                 ).first()
-                
+
                 if academy:
                     academy_id = academy.id
             except Exception:

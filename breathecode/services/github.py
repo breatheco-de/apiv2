@@ -119,15 +119,18 @@ class Github:
         """
         Parse various GitHub URL patterns to extract repository information and
         detect whether the target is a file (and if it's an image).
-    
+
         Supported URL patterns:
         - https://github.com/owner/repo/blob/branch/path/to/file
+        - https://github.com/owner/repo/blob/refs/heads/branch/path/to/file
         - https://github.com/owner/repo/issues/123
         - https://github.com/owner/repo/pull/456
         - https://raw.githubusercontent.com/owner/repo/branch/path/to/file
+        - https://raw.githubusercontent.com/owner/repo/refs/heads/branch/path/to/file
+        - https://raw.githubusercontent.com/owner/repo/refs/tags/tag/path/to/file
         - https://raw.githubusercontent.com/owner/repo/branch/path/to/file?token=...
         - https://api.github.com/repos/owner/repo/contents/path/to/file
-    
+
         Returns dict or None:
             {
                 'owner': str,
@@ -142,109 +145,141 @@ class Github:
         """
         if not url:
             return None
-    
+
         # Known image extensions (lowercase, no dot)
         image_exts = {
-            "png", "jpg", "jpeg", "gif", "bmp", "tif", "tiff", "webp",
-            "svg", "ico", "heic", "heif", "avif", "jfif"
+            "png",
+            "jpg",
+            "jpeg",
+            "gif",
+            "bmp",
+            "tif",
+            "tiff",
+            "webp",
+            "svg",
+            "ico",
+            "heic",
+            "heif",
+            "avif",
+            "jfif",
         }
-    
+
         def strip_query_fragment(p: str) -> str:
             # Remove ?query and #fragment
             p = p.split("?", 1)[0]
             p = p.split("#", 1)[0]
             return p
-    
+
         def ext_from_path(p: str) -> str | None:
             if not p:
                 return None
             p = strip_query_fragment(p)
             _, ext = os.path.splitext(p)
             return ext[1:].lower() if ext else None
-    
+
+        def parse_ref_and_path(segments: list[str]) -> tuple[str | None, str | None]:
+            """
+            Parse branch/tag + file path from URL segments after owner/repo[/blob].
+
+            Supports classic refs (`main/...`) and fully-qualified refs
+            (`refs/heads/main/...`, `refs/tags/v1.0.0/...`).
+            """
+            if not segments:
+                return None, None
+
+            if len(segments) >= 3 and segments[0] == "refs" and segments[1] in ("heads", "tags"):
+                ref = segments[2]
+                path = "/".join(segments[3:]) if len(segments) > 3 else None
+                return ref, path or None
+
+            ref = segments[0]
+            path = "/".join(segments[1:]) if len(segments) > 1 else None
+            return ref, path or None
+
         def finalize(result: dict) -> dict:
             # Derive is_file/is_image/ext from path + url_type
             path = result.get("path")
             url_type = result.get("url_type")
-    
+
             # Heuristic: blob/raw/api contents with a non-empty path are files.
             is_file = bool(path) and url_type in {"blob", "raw", "api"}
             ext = ext_from_path(path) if is_file else None
             is_image = bool(ext and ext in image_exts)
-    
+
             result["is_file"] = is_file
             result["is_image"] = is_image
             result["ext"] = ext
             return result
-    
+
         try:
             # github.com paths
             if "github.com" in url and "raw.githubusercontent.com" not in url and "api.github.com" not in url:
                 parts = url.split("/")
                 if len(parts) < 5:
                     return None
-    
+
                 owner = parts[3]
                 repo = parts[4]
-    
+
                 result = {"owner": owner, "repo": repo, "branch": None, "path": None, "url_type": "repo"}
-    
+
                 if len(parts) > 5:
                     if parts[5] == "blob" and len(parts) > 6:
                         result["url_type"] = "blob"
-                        result["branch"] = parts[6]
-                        if len(parts) > 7:
-                            # Join remaining as path (keep potential ?raw, we'll strip later)
-                            result["path"] = "/".join(parts[7:])
+                        branch, path = parse_ref_and_path(parts[6:])
+                        result["branch"] = branch
+                        # Keep potential ?raw on path; strip later when needed
+                        result["path"] = path
                     elif parts[5] == "issues":
                         result["url_type"] = "issue"
                     elif parts[5] == "pull":
                         result["url_type"] = "pull"
-    
+
                 return finalize(result)
-    
+
             # raw.githubusercontent.com
             elif "raw.githubusercontent.com" in url:
                 clean_url = url.split("?")[0]
                 parts = clean_url.split("/")
                 if len(parts) < 6:
                     return None
-    
+
                 owner = parts[3]
                 repo = parts[4]
-                branch = parts[5]
-                path = "/".join(parts[6:]) if len(parts) > 6 else None
-    
-                return finalize({
-                    "owner": owner,
-                    "repo": repo,
-                    "branch": branch,
-                    "path": path,
-                    "url_type": "raw",
-                })
-    
+                branch, path = parse_ref_and_path(parts[5:])
+
+                return finalize(
+                    {
+                        "owner": owner,
+                        "repo": repo,
+                        "branch": branch,
+                        "path": path,
+                        "url_type": "raw",
+                    }
+                )
+
             # api.github.com/repos/.../contents/...
             elif "api.github.com" in url and "/repos/" in url:
                 parts = url.split("/")
                 repo_index = parts.index("repos")
                 if len(parts) < repo_index + 3:
                     return None
-    
+
                 owner = parts[repo_index + 1]
                 repo = parts[repo_index + 2]
-    
+
                 result = {"owner": owner, "repo": repo, "branch": None, "path": None, "url_type": "api"}
-    
+
                 # contents/path/to/file (may be omitted if listing a dir or repo)
                 if len(parts) > repo_index + 3 and parts[repo_index + 3] == "contents":
                     raw_path = "/".join(parts[repo_index + 4 :])
                     result["path"] = strip_query_fragment(raw_path) if raw_path else None
-    
+
                 return finalize(result)
-    
+
         except (IndexError, ValueError):
             return None
-    
+
         return None
 
 
