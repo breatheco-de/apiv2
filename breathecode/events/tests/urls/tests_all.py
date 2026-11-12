@@ -570,7 +570,7 @@ def test_filter_by_ago(client: capy.Client, database: capy.Database, fake: capy.
     response = client.get(f"{url}?ago=86400000")
 
     assert response.status_code == 200
-    assert get_ids(response) == [1, 2]
+    assert get_ids(response) == [1, 2, 4]
 
 
 def test_ago_overrides_past(client: capy.Client, database: capy.Database, fake: capy.Fake):

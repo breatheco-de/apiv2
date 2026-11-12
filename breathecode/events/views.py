@@ -260,7 +260,6 @@ def get_events(request):
 
             now = timezone.now()
             lookup["ending_at__gte"] = _parse_ago_ms(ago, lang, now)
-            lookup["starting_at__lte"] = now
 
         else:
             start_value = None
