@@ -158,6 +158,50 @@ class SyncGithubUsersTestSuite(AuthTestCase):
 
         self.assertEqual(context.exception.slug, "still-active")
 
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock())
+    @patch("django.db.models.signals.post_save.send_robust", MagicMock())
+    def test_remove_from_organization__force_does_not_skip_still_active(self):
+        """
+        A forced removal (scheduled when a CohortUser is deleted) must not remove someone
+        that is still ACTIVE in a cohort of the same academy
+        """
+
+        models = self.bc.database.create(
+            user=True,
+            cohort=True,
+            cohort_user=True,
+            cohort_user_kwargs={"educational_status": "ACTIVE"},
+            github_academy_user={"storage_status": "SYNCHED", "storage_action": "ADD"},
+        )
+
+        result = remove_from_organization(models.cohort.id, models.user.id, force=True)
+
+        self.assertEqual(result, False)
+        users = self.bc.database.list_of("authenticate.GithubAcademyUser")
+        self.assertEqual("SYNCHED", users[0]["storage_status"])
+        self.assertEqual("ADD", users[0]["storage_action"])
+
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock())
+    @patch("django.db.models.signals.post_save.send_robust", MagicMock())
+    def test_remove_from_organization__force_after_cohort_user_deleted(self):
+        """
+        When the CohortUser no longer exists and the user is not active anywhere else, it is scheduled for deletion
+        """
+
+        models = self.bc.database.create(
+            user=True,
+            cohort=True,
+            github_academy_user={"storage_status": "SYNCHED", "storage_action": "ADD"},
+        )
+
+        result = remove_from_organization(models.cohort.id, models.user.id, force=True)
+
+        self.assertEqual(result, True)
+        users = self.bc.database.list_of("authenticate.GithubAcademyUser")
+        self.assertEqual("PENDING", users[0]["storage_status"])
+        self.assertEqual("DELETE", users[0]["storage_action"])
+        self.assertIn(f"was removed from cohort={models.cohort.slug}", users[0]["storage_log"][0]["msg"])
+
     @patch("breathecode.services.github.Github.get_org_members", MagicMock(side_effect=get_org_members))
     def test_sync_organization_members__no_sync(self):
         """ """
