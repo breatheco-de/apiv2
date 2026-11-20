@@ -24,6 +24,7 @@ __all__ = [
     "SlackUserTeam",
     "SlackChannel",
     "Hook",
+    "InboxNotification",
     "AcademyNotifySettings",
 ]
 AUTH_USER_MODEL = getattr(settings, "AUTH_USER_MODEL", "auth.User")
@@ -383,6 +384,59 @@ class Notification(models.Model):
     @classmethod
     def error(cls, message: str) -> tuple[Literal["INFO", "WARNING", "ERROR"], str]:
         return ("ERROR", message)
+
+
+class InboxNotification(models.Model):
+    """
+    A message kept in the inbox of a user, the frontend lists them in the navbar bell.
+
+    Unlike Notification, which follows the progress of one async operation, these are written once
+    (see notify.actions.send_inbox_notification) and stay until the user reads them.
+    """
+
+    class Level(models.TextChoices):
+        INFO = "INFO", "Info"
+        WARNING = "WARNING", "Warning"
+        ERROR = "ERROR", "Error"
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="inbox_notifications")
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, blank=True, default=None)
+
+    slug = models.SlugField(max_length=60, help_text="Kind of notification, like plan-expired")
+    title = models.CharField(max_length=150)
+    message = models.TextField(blank=True, default="", help_text="Plain text, already in the language of the user")
+    level = models.CharField(max_length=10, choices=Level.choices, default=Level.INFO)
+    link = models.CharField(
+        max_length=500,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Where the frontend sends the user on click, a path of the app or a full URL",
+    )
+    meta = models.JSONField(blank=True, null=True, default=None)
+    dedupe_key = models.CharField(
+        max_length=120,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="When set, the user gets at most one notification per slug and key",
+    )
+
+    read_at = models.DateTimeField(blank=True, null=True, default=None)
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+
+    class Meta:
+        indexes = [models.Index(fields=["user", "read_at"], name="inbox_notification_user_read")]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "slug", "dedupe_key"],
+                condition=models.Q(dedupe_key__isnull=False),
+                name="unique_inbox_notification_per_dedupe_key",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.slug} ({self.user_id})"
 
 
 class AcademyNotifySettings(models.Model):

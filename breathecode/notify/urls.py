@@ -61,6 +61,8 @@ from .views import (
     AcademyNotifySettingsView,
     AcademyNotifyVariablesView,
     HooksView,
+    MeInboxUnreadView,
+    MeInboxView,
     NotificationTemplatePreviewView,
     NotificationTemplatesView,
     NotificationTemplateView,
@@ -146,4 +148,8 @@ urlpatterns = [
     path("hook/me/sample/<int:hook_id>", get_sample_data, name="hook_me_sample_id"),
     # User notification endpoints
     path("me/notification", NotificationsView.as_view(), name="me_notification"),
+    # User inbox, the navbar bell of the frontend
+    path("me/inbox", MeInboxView.as_view(), name="me_inbox"),
+    path("me/inbox/unread", MeInboxUnreadView.as_view(), name="me_inbox_unread"),
+    path("me/inbox/<int:notification_id>", MeInboxView.as_view(), name="me_inbox_id"),
 ]

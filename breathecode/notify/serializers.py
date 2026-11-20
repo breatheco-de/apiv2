@@ -101,6 +101,19 @@ class NotificationSerializer(serpy.Serializer):
     seen_at = serpy.Field()
 
 
+class InboxNotificationSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    title = serpy.Field()
+    message = serpy.Field()
+    level = serpy.Field()
+    link = serpy.Field()
+    meta = serpy.Field()
+    academy = GetSmallAcademySerializer(required=False)
+    read_at = serpy.Field()
+    created_at = serpy.Field()
+
+
 class AcademyNotifySettingsSerializer(serializers.ModelSerializer):
     """Serializer for managing academy notification settings."""
 

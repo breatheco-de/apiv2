@@ -871,8 +871,14 @@ def deprovision_plan_financing_third_party(plan_financing_id: int, **_: Any):
     After the global grace window, tear down third-party resources of a FULLY_PAID plan.
 
     Does not change financing status. Does not send email. Does not schedule itself.
-    Emits ``deprovision_service`` for each plan service that already has a deprovisioner.
+    Emits ``deprovision_service`` for each plan service that already has a deprovisioner,
+    and tells the student in their inbox which ones are gone.
     """
+    from capyc.core.i18n import translation
+
+    from breathecode.authenticate.actions import get_user_settings
+    from breathecode.notify.actions import send_inbox_notification
+
     plan_financing = PlanFinancing.objects.filter(id=plan_financing_id).first()
     if not plan_financing:
         logger.info("deprovision_plan_financing_third_party: plan financing %s not found", plan_financing_id)
@@ -907,13 +913,45 @@ def deprovision_plan_financing_third_party(plan_financing_id: int, **_: Any):
         "plan_financing_id": plan_financing.id,
     }
 
+    removed = []
     for service in actions.iter_plan_financing_services_with_deprovisioner(plan_financing):
-        deprovision_service.send_robust(
+        responses = deprovision_service.send_robust(
             sender=Service,
             instance=service,
             user_id=plan_financing.user_id,
             context=context,
         )
+        if not any(isinstance(response, Exception) for _, response in responses):
+            removed.append(service)
+
+    if not removed:
+        return
+
+    lang = get_user_settings(plan_financing.user_id).lang
+    plan = plan_financing.plans.first()
+    plan_title = (plan.title or plan.slug) if plan else "plan"
+    names = actions.format_deprovision_service_names(removed, lang)
+    send_inbox_notification(
+        plan_financing.user_id,
+        "services-removed",
+        translation(lang, en="The services of your plan have ended", es="Los servicios de tu plan terminaron"),
+        translation(
+            lang,
+            en=(
+                f'Your "{plan_title}" plan expired and the time to renew it has passed, so you no longer have '
+                f"access to {names}. You can still open your course content as usual."
+            ),
+            es=(
+                f'Tu plan "{plan_title}" venció y el plazo para renovarlo terminó, por eso ya no tienes '
+                f"acceso a {names}. Puedes seguir entrando al contenido de tu curso como siempre."
+            ),
+        ),
+        level="WARNING",
+        link="/profile/subscriptions",
+        academy=plan_financing.academy,
+        meta={"plan_financing_id": plan_financing.id},
+        dedupe_key=f"plan-financing-{plan_financing.id}-{plan_financing.plan_expires_at:%Y%m%d}",
+    )
 
 
 @task(priority=TaskPriority.STUDENT.value)
@@ -923,8 +961,14 @@ def power_off_plan_financing_third_party(plan_financing_id: int, **_: Any):
 
     Does not change financing status. Does not send email. Does not schedule itself.
     Calls ``get_service_power_off`` for each plan service that has a handler, always
-    with ``plan_financing_id`` in the context.
+    with ``plan_financing_id`` in the context, and tells the student in their inbox.
     """
+    from capyc.core.i18n import translation
+
+    from breathecode.authenticate.actions import get_user_settings
+    from breathecode.notify.actions import send_inbox_notification
+    from breathecode.payments.tasks import _format_notice_date, _notice_deadline
+
     plan_financing = PlanFinancing.objects.filter(id=plan_financing_id).first()
     if not plan_financing:
         logger.info("power_off_plan_financing_third_party: plan financing %s not found", plan_financing_id)
@@ -959,8 +1003,45 @@ def power_off_plan_financing_third_party(plan_financing_id: int, **_: Any):
         "plan_financing_id": plan_financing.id,
     }
 
+    powered_off = []
     for service in actions.iter_plan_financing_services_with_power_off(plan_financing):
         handler = actions.get_service_power_off(service.slug)
         if not handler:
             continue
         handler(user_id=plan_financing.user_id, context=context)
+        powered_off.append(service)
+
+    if not powered_off:
+        return
+
+    lang = get_user_settings(plan_financing.user_id).lang
+    plan = plan_financing.plans.first()
+    plan_title = (plan.title or plan.slug) if plan else "plan"
+    names = actions.format_deprovision_service_names(powered_off, lang)
+    end_date = _format_notice_date(
+        _notice_deadline(
+            plan_financing.plan_expires_at, actions.get_deprovision_grace_days(), plan_financing.academy.timezone
+        ),
+        lang,
+    )
+    send_inbox_notification(
+        plan_financing.user_id,
+        "services-powered-off",
+        translation(lang, en=f"We turned off {names}", es=f"Apagamos {names}"),
+        translation(
+            lang,
+            en=(
+                f'Your "{plan_title}" plan expired, so we turned off {names}. Nothing has been deleted yet. '
+                f"Renew your plan before {end_date}, after that date it will be removed for good."
+            ),
+            es=(
+                f'Tu plan "{plan_title}" venció, por eso apagamos {names}. Todavía no se ha borrado nada. '
+                f"Renueva tu plan antes del {end_date}, después de esa fecha se eliminará de forma definitiva."
+            ),
+        ),
+        level="WARNING",
+        link="/profile/subscriptions",
+        academy=plan_financing.academy,
+        meta={"plan_financing_id": plan_financing.id},
+        dedupe_key=f"plan-financing-{plan_financing.id}-{plan_financing.plan_expires_at:%Y%m%d}",
+    )

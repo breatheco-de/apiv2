@@ -72,6 +72,15 @@ def test_calls_power_off_when_fully_paid_and_window_passed(bc):
         },
     )
 
+    notifications = bc.database.list_of("notify.InboxNotification")
+    assert len(notifications) == 1
+    assert notifications[0]["user_id"] == model.user.id
+    assert notifications[0]["slug"] == "services-powered-off"
+    assert notifications[0]["title"] == "We turned off your server"
+    assert "so we turned off your server. Nothing has been deleted yet. Renew your plan before " in (
+        notifications[0]["message"]
+    )
+
 
 @pytest.mark.django_db
 def test_skips_when_not_fully_paid(bc):
