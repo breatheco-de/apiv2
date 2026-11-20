@@ -609,3 +609,121 @@ def test_ago_with_start_or_end(client: capy.Client, database: capy.Database, ext
 
     assert response.status_code == 400
     assert response.json() == {"detail": "ago-with-start-or-end", "status_code": 400}
+
+
+def test_filter_by_recording_url_true(client: capy.Client, database: capy.Database, fake: capy.Fake):
+    url = reverse_lazy("events:all")
+    now = timezone.now()
+
+    model = database.create(
+        city=1,
+        country=1,
+        academy={
+            "slug": fake.slug(),
+            "name": fake.name(),
+            "logo_url": "https://example.com/logo.jpg",
+            "street_address": "Address",
+        },
+        event_type={
+            "slug": fake.slug(),
+            "name": fake.name(),
+            "description": "description",
+            "technologies": "python",
+        },
+        event=[
+            {
+                "title": "With recording",
+                "capacity": 100,
+                "banner": "https://example.com/banner.jpg",
+                "starting_at": now,
+                "ending_at": now + timedelta(hours=2),
+                "status": "ACTIVE",
+                "event_type_id": 1,
+                "recording_url": "https://example.com/recording",
+            },
+            {
+                "title": "Without recording null",
+                "capacity": 100,
+                "banner": "https://example.com/banner.jpg",
+                "starting_at": now,
+                "ending_at": now + timedelta(hours=2),
+                "status": "ACTIVE",
+                "event_type_id": 1,
+                "recording_url": None,
+            },
+            {
+                "title": "Without recording empty",
+                "capacity": 100,
+                "banner": "https://example.com/banner.jpg",
+                "starting_at": now,
+                "ending_at": now + timedelta(hours=2),
+                "status": "ACTIVE",
+                "event_type_id": 1,
+                "recording_url": "",
+            },
+        ],
+    )
+
+    response = client.get(f"{url}?recording_url=true")
+
+    assert response.status_code == 200
+    assert get_ids(response) == [model.event[0].id]
+
+
+def test_filter_by_recording_url_false(client: capy.Client, database: capy.Database, fake: capy.Fake):
+    url = reverse_lazy("events:all")
+    now = timezone.now()
+
+    model = database.create(
+        city=1,
+        country=1,
+        academy={
+            "slug": fake.slug(),
+            "name": fake.name(),
+            "logo_url": "https://example.com/logo.jpg",
+            "street_address": "Address",
+        },
+        event_type={
+            "slug": fake.slug(),
+            "name": fake.name(),
+            "description": "description",
+            "technologies": "python",
+        },
+        event=[
+            {
+                "title": "With recording",
+                "capacity": 100,
+                "banner": "https://example.com/banner.jpg",
+                "starting_at": now,
+                "ending_at": now + timedelta(hours=2),
+                "status": "ACTIVE",
+                "event_type_id": 1,
+                "recording_url": "https://example.com/recording",
+            },
+            {
+                "title": "Without recording null",
+                "capacity": 100,
+                "banner": "https://example.com/banner.jpg",
+                "starting_at": now,
+                "ending_at": now + timedelta(hours=2),
+                "status": "ACTIVE",
+                "event_type_id": 1,
+                "recording_url": None,
+            },
+            {
+                "title": "Without recording empty",
+                "capacity": 100,
+                "banner": "https://example.com/banner.jpg",
+                "starting_at": now,
+                "ending_at": now + timedelta(hours=2),
+                "status": "ACTIVE",
+                "event_type_id": 1,
+                "recording_url": "",
+            },
+        ],
+    )
+
+    response = client.get(f"{url}?recording_url=false")
+
+    assert response.status_code == 200
+    assert get_ids(response) == [model.event[1].id, model.event[2].id]

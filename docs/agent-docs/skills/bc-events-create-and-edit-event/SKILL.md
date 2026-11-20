@@ -28,6 +28,7 @@ Use this skill when the user needs to create or edit an event through the academ
   - `start` / `end` return events that overlap the window: `ending_at >= start` and `starting_at <= end`, so in-progress events are included.
   - When `start`, `end`, or `ago` is present, it overrides `past` and `all_time`.
   - Errors return 400: `invalid-start-date`, `invalid-end-date`, `start-after-end`, `invalid-ago`, and `ago-with-start-or-end` (`ago` can't be combined with `start` or `end`).
+  - `recording_url=true` returns events with a non-empty recording URL. `recording_url=false` returns events with a null or empty recording URL.
 - `GET /v1/events/academy/event` and `GET /v1/events/academy/event/<event_id>` also return `event_group` as that string or null.
 - `GET /v1/events/academy/checkin?event_group=<string>` and the `.csv` export return every check-in of that series in the academy, one row per person per day.
 - Adding a not-yet-ended session with a key already used by registrants backfills `PENDING` check-ins for those emails. A grouped event can still sync with Eventbrite like any other event.

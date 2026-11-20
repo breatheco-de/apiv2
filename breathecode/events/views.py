@@ -214,9 +214,9 @@ def get_events(request):
 
     recording_url = request.GET.get("recording_url", None)
     if recording_url == "true":
-        lookup["recording_url"] = True
+        items = items.exclude(Q(recording_url__isnull=True) | Q(recording_url=""))
     elif recording_url == "false":
-        lookup["recording_url"] = False
+        items = items.filter(Q(recording_url__isnull=True) | Q(recording_url=""))
 
     if "technologies" in request.GET:
         values = request.GET.get("technologies").split(",")
