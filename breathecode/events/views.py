@@ -215,8 +215,17 @@ class EventPublicView(APIView):
 
             # Keep the public detail visible so the frontend can disable join via denied_plans.
             # Join / live-stream still enforce user_has_denied_plan_for_event.
+            # Authenticated denied users get recording_url stripped in the serializer.
             include_context_info = request.query_params.get("context") == "true"
-            serializer = EventPublicBigSerializer(event, many=False, context={"include_context": include_context_info})
+            serializer = EventPublicBigSerializer(
+                event,
+                many=False,
+                context={
+                    "include_context": include_context_info,
+                    "user": request.user,
+                    "request": request,
+                },
+            )
             return Response(serializer.data)
 
 
@@ -328,7 +337,11 @@ class EventMeView(APIView):
                     return render_message(request, "Event live stream URL is not found", academy=single_event.academy)
                 return redirect(single_event.live_stream_url)
 
-            serializer = EventBigSerializer(single_event, many=False, context={})
+            serializer = EventBigSerializer(
+                single_event,
+                many=False,
+                context={"user": request.user, "request": request},
+            )
             return Response(serializer.data)
 
         # TODO: Add filter for my event types again
@@ -351,7 +364,11 @@ class EventMeView(APIView):
         items = items.filter(**lookup)
         items = actions.exclude_events_denied_for_user(items, request.user)
         items = handler.queryset(items)
-        serializer = EventBigSerializer(items, many=True, context={})
+        serializer = EventBigSerializer(
+            items,
+            many=True,
+            context={"user": request.user, "request": request},
+        )
 
         return handler.response(serializer.data)
 
