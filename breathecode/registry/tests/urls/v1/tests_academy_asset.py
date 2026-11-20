@@ -752,3 +752,152 @@ def test_asset__put_many_rejects_invalid_test_status(bc: Breathecode, client: AP
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert "Invalid test_status" in json["detail"]
+
+
+def test_asset__put_claim_requires_owner_or_author(bc: Breathecode, client: APIClient):
+    from breathecode.registry.models import Asset
+
+    model = bc.database.create(
+        user=1,
+        profile_academy=True,
+        capability="crud_asset",
+        role="potato",
+        asset_category={"lang": "us"},
+        asset={"slug": "orphan-asset", "lang": "us"},
+    )
+    Asset.objects.filter(id=model.asset.id).update(
+        academy=None, owner=None, author=None, category=model.asset_category.id
+    )
+    model.asset.refresh_from_db()
+    client.force_authenticate(user=model.user)
+
+    url = f"/v1/registry/academy/asset/{model.asset.slug}"
+    response = client.put(
+        url, {"category": model.asset_category.id}, format="json", HTTP_ACADEMY=model.academy.id
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json()["detail"] == "asset-claim-requires-owner-or-author"
+    model.asset.refresh_from_db()
+    assert model.asset.academy_id is None
+
+
+def test_asset__put_claim_forbidden_for_non_owner_author(bc: Breathecode, client: APIClient):
+    from breathecode.admissions.models import Academy
+    from breathecode.registry.models import Asset
+    from django.contrib.auth.models import User
+
+    model = bc.database.create(
+        user=1,
+        profile_academy=True,
+        capability="crud_asset",
+        role="potato",
+        asset_category={"lang": "us"},
+        asset={"slug": "owned-by-other", "lang": "us"},
+    )
+    other_owner = User.objects.create(username="other-asset-owner", email="other-owner@example.com")
+    Asset.objects.filter(id=model.asset.id).update(
+        academy=None, owner=other_owner.id, author=None, category=model.asset_category.id
+    )
+    Academy.objects.filter(id=model.academy.id).update(owner=None)
+    model.asset.refresh_from_db()
+    client.force_authenticate(user=model.user)
+
+    url = f"/v1/registry/academy/asset/{model.asset.slug}"
+    response = client.put(
+        url, {"category": model.asset_category.id}, format="json", HTTP_ACADEMY=model.academy.id
+    )
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.json()["detail"] == "asset-claim-forbidden"
+    model.asset.refresh_from_db()
+    assert model.asset.academy_id is None
+
+
+def test_asset__put_claim_allowed_when_academy_owner_matches_asset_owner(bc: Breathecode, client: APIClient):
+    from breathecode.admissions.models import Academy
+    from breathecode.registry.models import Asset
+    from django.contrib.auth.models import User
+
+    model = bc.database.create(
+        user=1,
+        profile_academy=True,
+        capability="crud_asset",
+        role="potato",
+        asset_category={"lang": "us"},
+        asset={"slug": "owned-by-academy-owner", "lang": "us"},
+    )
+    academy_owner = User.objects.create(username="academy-owner-user", email="academy-owner-user@example.com")
+    Asset.objects.filter(id=model.asset.id).update(
+        academy=None, owner=academy_owner.id, author=None, category=model.asset_category.id
+    )
+    Academy.objects.filter(id=model.academy.id).update(owner=academy_owner.id)
+    model.asset.refresh_from_db()
+    client.force_authenticate(user=model.user)
+
+    url = f"/v1/registry/academy/asset/{model.asset.slug}"
+    response = client.put(
+        url, {"category": model.asset_category.id}, format="json", HTTP_ACADEMY=model.academy.id
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    model.asset.refresh_from_db()
+    assert model.asset.academy_id == model.academy.id
+
+
+def test_asset__put_claim_allowed_for_owner(bc: Breathecode, client: APIClient):
+    from breathecode.registry.models import Asset
+
+    model = bc.database.create(
+        user=1,
+        profile_academy=True,
+        capability="crud_asset",
+        role="potato",
+        asset_category={"lang": "us"},
+        asset={"slug": "owned-by-me", "lang": "us"},
+    )
+    Asset.objects.filter(id=model.asset.id).update(
+        academy=None, owner=model.user.id, author=None, category=model.asset_category.id
+    )
+    model.asset.refresh_from_db()
+    client.force_authenticate(user=model.user)
+
+    url = f"/v1/registry/academy/asset/{model.asset.slug}"
+    response = client.put(
+        url, {"category": model.asset_category.id}, format="json", HTTP_ACADEMY=model.academy.id
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    model.asset.refresh_from_db()
+    assert model.asset.academy_id == model.academy.id
+
+
+def test_asset__put_claim_allowed_when_setting_self_as_owner(bc: Breathecode, client: APIClient):
+    from breathecode.registry.models import Asset
+
+    model = bc.database.create(
+        user=1,
+        profile_academy=True,
+        capability="crud_asset",
+        role="potato",
+        asset_category={"lang": "us"},
+        asset={"slug": "bootstrap-owner", "lang": "us"},
+    )
+    Asset.objects.filter(id=model.asset.id).update(
+        academy=None, owner=None, author=None, category=model.asset_category.id
+    )
+    model.asset.refresh_from_db()
+    client.force_authenticate(user=model.user)
+
+    url = f"/v1/registry/academy/asset/{model.asset.slug}"
+    response = client.put(
+        url,
+        {"category": model.asset_category.id, "owner": model.user.id},
+        format="json",
+        HTTP_ACADEMY=model.academy.id,
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    model.asset.refresh_from_db()
+    assert model.asset.owner_id == model.user.id
+    assert model.asset.academy_id == model.academy.id

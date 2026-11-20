@@ -129,6 +129,74 @@ def get_user_from_github_username(username):
     return github_users
 
 
+def _person_id_from_claim_value(value):
+    if value is None:
+        return None
+    if hasattr(value, "id"):
+        return value.id
+    return int(value)
+
+
+def assert_user_can_claim_asset(asset, user, lang="en", validated_data=None, academy_id=None):
+    """
+    An asset may be claimed for an academy when:
+
+    1. The request user is the asset owner or author, or
+    2. The asset owner is the same user as Academy.owner for the target academy
+       (staff of that academy may claim on behalf of the academy owner).
+
+    If neither owner nor author is set (after optional pending values in validated_data),
+    claim is blocked until someone assigns an owner or author.
+    """
+    from capyc.core.i18n import translation
+    from capyc.rest_framework.exceptions import ValidationException
+
+    from breathecode.admissions.models import Academy
+
+    validated_data = validated_data or {}
+
+    if "owner" in validated_data:
+        owner_id = _person_id_from_claim_value(validated_data["owner"])
+    else:
+        owner_id = asset.owner_id
+
+    if "author" in validated_data:
+        author_id = _person_id_from_claim_value(validated_data["author"])
+    else:
+        author_id = asset.author_id
+
+    if owner_id is None and author_id is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="This asset has no owner or author. Assign an owner or author before claiming it for an academy.",
+                es="Este asset no tiene owner ni author. Asigna un owner o author antes de reclamarlo para una academia.",
+            ),
+            slug="asset-claim-requires-owner-or-author",
+            code=400,
+        )
+
+    if user.id == owner_id or user.id == author_id:
+        return
+
+    academy_owner_id = None
+    if academy_id is not None:
+        academy_owner_id = Academy.objects.filter(id=int(academy_id)).values_list("owner_id", flat=True).first()
+
+    if owner_id is not None and academy_owner_id is not None and owner_id == academy_owner_id:
+        return
+
+    raise ValidationException(
+        translation(
+            lang,
+            en="Only the asset owner or author can claim this asset for an academy, or staff of an academy whose owner matches the asset owner.",
+            es="Solo el owner o el author del asset pueden reclamarlo para una academia, o staff de una academia cuyo owner coincida con el owner del asset.",
+        ),
+        slug="asset-claim-forbidden",
+        code=403,
+    )
+
+
 def pull_from_github(asset_slug, author_id=None, override_meta=False):
 
     logger.debug(f"Sync with github asset {asset_slug}")
