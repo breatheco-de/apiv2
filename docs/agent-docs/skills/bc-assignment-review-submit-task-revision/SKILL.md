@@ -1,4 +1,4 @@
-d---
+---
 name: bc-assignment-review-submit-task-revision
 description: Use when staff or teachers review **PROJECT** syllabus tasks via the API (discover queue, load asset `config` from the registry, submit `PUT` with `revision_status` and feedback). Do NOT use for `EXERCISE`, `LESSON`, or `QUIZ` tasks, for capstone `FinalProject` flows, for implementing assignment code, or for Rigobot CodeRevision-only workflows.
 requires: []
