@@ -14,7 +14,8 @@ from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from circuitbreaker import CircuitBreakerError
 from django.contrib.auth.models import AnonymousUser
-from django.db.models import CharField, Count, F, Func, Q, Value
+from django.db.models import CharField, Count, DateField, Q, Value
+from django.db.models.functions import TruncDay, TruncMonth, TruncWeek
 from django.http import HttpResponse, HttpResponseNotFound, HttpResponseRedirect
 from django.utils import timezone
 from rest_framework import status
@@ -35,7 +36,8 @@ from breathecode.monitoring.models import CSVUpload
 from breathecode.renderers import PlainTextRenderer
 from breathecode.services.activecampaign import ActiveCampaign
 from breathecode.utils import GenerateLookupsMixin, HeaderLimitOffsetPagination, capable_of, capable_of_many, localize_query
-from breathecode.utils.decorators.capable_of import academy_scope_response_meta
+from breathecode.utils.decorators.capable_of import academy_scope_response_meta, get_academy_from_capability
+from breathecode.utils.decorators.rate_limit import rate_limit
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import academy_has_feature, validate_captcha, validate_captcha_challenge
 from breathecode.utils.find_by_full_name import query_like_by_full_name
@@ -55,7 +57,11 @@ from .models import (
     Tag,
     UTMField,
     ACTIVE,
+    DEAL_STATUS,
     DELETED,
+    LEAD_TYPE,
+    MANUAL,
+    STORAGE_STATUS,
     UNLISTED,
     PUBLIC,
 )
@@ -461,43 +467,178 @@ def get_leads(request, id=None):
     return Response(serializer.data)
 
 
-@api_view(["GET"])
-def get_leads_report(request, id=None):
+# `by` is passed to `.values()`, which follows relations, so anything outside this list could expose personal data
+# or credentials (e.g. `user__password`, `academy__activecampaignacademy__ac_key`).
+LEAD_REPORT_GROUP_BY_FIELDS = (
+    "location",
+    "course",
+    "created_at__date",
+    "storage_status",
+    "deal_status",
+    "utm_source",
+    "utm_medium",
+    "utm_campaign",
+    "lead_type",
+)
+LEAD_REPORT_DEFAULT_GROUP_BY = ("location", "created_at__date", "course")
+LEAD_REPORT_CHOICE_FILTERS = {
+    "storage_status": {x for x, _ in STORAGE_STATUS} | {MANUAL},
+    "deal_status": {x for x, _ in DEAL_STATUS},
+    "lead_type": {x for x, _ in LEAD_TYPE},
+}
+LEAD_REPORT_TEXT_FILTERS = ("location", "utm_source", "utm_campaign")
+LEAD_REPORT_INTERVALS = {"day": TruncDay, "week": TruncWeek, "month": TruncMonth}
+LEAD_REPORT_MAX_DAYS = 366
+LEAD_REPORT_DEFAULT_LIMIT = 1000
+LEAD_REPORT_MAX_LIMIT = 5000
 
-    items = FormEntry.objects.all()
 
-    if isinstance(request.user, AnonymousUser) == False:
-        # filter only to the local academy
-        items = localize_query(items, request)
+def _lead_report_error(lang, en, es, slug):
+    return ValidationException(translation(lang, en=en, es=es, slug=slug), code=400, slug=slug)
 
-    group_by = request.GET.get("by", "location,created_at__date,course")
-    if group_by != "":
-        group_by = group_by.split(",")
-    else:
-        group_by = ["location", "created_at__date", "course"]
 
-    academy = request.GET.get("academy", None)
-    if academy is not None:
-        items = items.filter(location__in=academy.split(","))
+def _lead_report_list_param(request, name):
+    return [x.strip() for x in request.GET.get(name, "").split(",") if x.strip()]
 
-    start = request.GET.get("start", None)
-    if start is not None:
-        start_date = datetime.datetime.strptime(start, "%Y-%m-%d").date()
-        items = items.filter(created_at__gte=start_date)
 
-    end = request.GET.get("end", None)
-    if end is not None:
-        end_date = datetime.datetime.strptime(end, "%Y-%m-%d").date()
-        items = items.filter(created_at__lte=end_date)
+def _lead_report_date_param(request, name, lang):
+    value = request.GET.get(name)
+    if not value:
+        return None
 
-    items = items.values(*group_by).annotate(total_leads=Count("location"))
-
-    if "created_at__date" in group_by:
-        items = items.annotate(
-            created_date=Func(F("created_at"), Value("YYYYMMDD"), function="to_char", output_field=CharField())
+    try:
+        return datetime.datetime.strptime(value, "%Y-%m-%d").date()
+    except ValueError:
+        raise _lead_report_error(
+            lang,
+            en=f"{name} must be a date with the format YYYY-MM-DD",
+            es=f"{name} debe ser una fecha con el formato YYYY-MM-DD",
+            slug="invalid-date-format",
         )
-    # items = items.order_by('created_at')
-    return Response(items)
+
+
+class LeadReportView(APIView):
+    """Count leads grouped by an allowlisted set of non personal FormEntry fields."""
+
+    @rate_limit("lead-report-minute", "30/m", key="user")
+    @rate_limit("lead-report-hour", "300/h", key="user")
+    def get(self, request):
+        lang = get_user_language(request)
+
+        if "Academy" in request.headers:
+            academy_id = get_academy_from_capability({}, request, "read_lead")
+            items = FormEntry.objects.filter(academy__id=academy_id)
+
+        else:
+            logger.warning("Deprecated call to report/lead without the Academy header by user %s", request.user.id)
+            items = localize_query(FormEntry.objects.all(), request)
+
+            locations = _lead_report_list_param(request, "academy")
+            if locations:
+                items = items.filter(location__in=locations)
+
+        group_by = list(dict.fromkeys(_lead_report_list_param(request, "by"))) or list(LEAD_REPORT_DEFAULT_GROUP_BY)
+        invalid_fields = [x for x in group_by if x not in LEAD_REPORT_GROUP_BY_FIELDS]
+        if invalid_fields:
+            allowed = ", ".join(LEAD_REPORT_GROUP_BY_FIELDS)
+            raise _lead_report_error(
+                lang,
+                en=f"Invalid by fields: {', '.join(invalid_fields)}. Allowed fields: {allowed}",
+                es=f"Campos by inválidos: {', '.join(invalid_fields)}. Campos permitidos: {allowed}",
+                slug="invalid-group-by",
+            )
+
+        for name, allowed_values in LEAD_REPORT_CHOICE_FILTERS.items():
+            values = [x.upper() for x in _lead_report_list_param(request, name)]
+            if not values:
+                continue
+
+            invalid_values = [x for x in values if x not in allowed_values]
+            if invalid_values:
+                allowed = ", ".join(sorted(allowed_values))
+                raise _lead_report_error(
+                    lang,
+                    en=f"Invalid {name} values: {', '.join(invalid_values)}. Allowed values: {allowed}",
+                    es=f"Valores de {name} inválidos: {', '.join(invalid_values)}. Valores permitidos: {allowed}",
+                    slug="invalid-filter-value",
+                )
+
+            items = items.filter(**{f"{name}__in": values})
+
+        for name in LEAD_REPORT_TEXT_FILTERS:
+            values = _lead_report_list_param(request, name)
+            if values:
+                items = items.filter(**{f"{name}__in": values})
+
+        start = _lead_report_date_param(request, "start", lang)
+        end = _lead_report_date_param(request, "end", lang) or timezone.localdate()
+        if start is None:
+            start = end - timedelta(days=LEAD_REPORT_MAX_DAYS - 1)
+
+        if start > end:
+            raise _lead_report_error(
+                lang,
+                en="start must be before or equal to end",
+                es="start debe ser anterior o igual a end",
+                slug="invalid-date-range",
+            )
+
+        if (end - start).days + 1 > LEAD_REPORT_MAX_DAYS:
+            raise _lead_report_error(
+                lang,
+                en=f"The date range cannot be longer than {LEAD_REPORT_MAX_DAYS} days",
+                es=f"El rango de fechas no puede ser mayor a {LEAD_REPORT_MAX_DAYS} días",
+                slug="date-range-too-long",
+            )
+
+        items = items.filter(created_at__date__gte=start, created_at__date__lte=end)
+
+        interval = request.GET.get("interval", "day").lower()
+        if interval not in LEAD_REPORT_INTERVALS:
+            raise _lead_report_error(
+                lang,
+                en="interval must be one of: day, week, month",
+                es="interval debe ser uno de: day, week, month",
+                slug="invalid-interval",
+            )
+
+        # the date is grouped through an annotation because `.count()` crashes on grouped `created_at__date` lookups
+        date_key = None
+        if "created_at__date" in group_by:
+            date_key = "period"
+            items = items.annotate(period=LEAD_REPORT_INTERVALS[interval]("created_at", output_field=DateField()))
+            group_by = [date_key if x == "created_at__date" else x for x in group_by]
+
+        limit = request.GET.get("limit")
+        if not limit:
+            limit = LEAD_REPORT_DEFAULT_LIMIT
+        elif not limit.isdigit() or not 1 <= int(limit) <= LEAD_REPORT_MAX_LIMIT:
+            raise _lead_report_error(
+                lang,
+                en=f"limit must be a number between 1 and {LEAD_REPORT_MAX_LIMIT}",
+                es=f"limit debe ser un número entre 1 y {LEAD_REPORT_MAX_LIMIT}",
+                slug="invalid-limit",
+            )
+        else:
+            limit = int(limit)
+
+        ordering = ([date_key] if date_key else []) + ["-total_leads"] + [x for x in group_by if x != date_key]
+        rows = items.values(*group_by).annotate(total_leads=Count("id"))
+
+        total = rows.order_by().count()
+        rows = list(rows.order_by(*ordering)[:limit])
+
+        if date_key and interval == "day":
+            rows = [
+                {
+                    **{("created_at__date" if key == date_key else key): value for key, value in row.items()},
+                    "created_date": row[date_key].strftime("%Y%m%d"),
+                }
+                for row in rows
+            ]
+
+        headers = {"X-Total-Count": str(total), "X-Truncated": "true" if total > len(rows) else "false"}
+        return Response(rows, headers=headers)
 
 
 class AcademyTagView(APIView, GenerateLookupsMixin):

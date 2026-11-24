@@ -73,6 +73,7 @@ Some user requests touch multiple domains. Load ALL listed skills before proceed
 | Create a marketing lead (form, app, staff, or CSV bulk) | [`bc-marketing-create-form-entry`](../bc-marketing-create-form-entry/SKILL.md) |
 | Bulk import leads from CSV | [`bc-marketing-create-form-entry`](../bc-marketing-create-form-entry/SKILL.md) (`PUT /v1/marketing/academy/upload`) |
 | Search, update, delete, or re-process existing form entries | [`bc-marketing-manage-form-entries`](../bc-marketing-manage-form-entries/SKILL.md) |
+| Lead counts or breakdowns (by status, course, UTM, date) | [`bc-marketing-inbound-leads-attribution-and-acquisition`](../bc-marketing-inbound-leads-attribution-and-acquisition/SKILL.md) (Lead report section, `read_lead` + `Academy` header) |
 | Understand ActiveCampaign double sync (salesperson CRM changes reflected on FormEntry) | [`bc-marketing-manage-form-entries`](../bc-marketing-manage-form-entries/SKILL.md) + [`bc-marketing-create-form-entry`](../bc-marketing-create-form-entry/SKILL.md) (outbound half) |
 | Debug FormEntry CRM sync failure (`storage_status=ERROR` / stuck `PENDING`) | [`bc-marketing-debug-form-entry`](../bc-marketing-debug-form-entry/SKILL.md) + [`bc-marketing-create-form-entry`](../bc-marketing-create-form-entry/SKILL.md) (payload requirements) + [`bc-marketing-manage-form-entries`](../bc-marketing-manage-form-entries/SKILL.md) (retry via `process`) |
 | ActiveCampaign double sync not updating FormEntry after salesperson CRM change | [`bc-marketing-debug-form-entry`](../bc-marketing-debug-form-entry/SKILL.md) |
