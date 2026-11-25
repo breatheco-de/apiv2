@@ -262,3 +262,16 @@ class AcademyCopilotTestSuite(ProvisioningTestCase):
 
         response = self.client.get(reverse_lazy("provisioning:me_copilot"))
         self.assertEqual([row["user"]["id"] for row in response.json()], [self.staff.id])  # only own rows
+
+    def test_get_org(self):
+        ProvisioningAcademy.objects.filter(academy_id=self.other_academy.id).update(vendor_settings={"org": "MY-ORG"})
+        url = reverse_lazy("provisioning:academy_copilot_org")
+        data = self.client.get(url).json()
+        self.assertEqual(data["org"], "my-org")
+        self.assertEqual(
+            {academy["id"]: academy["allow_auto_provision"] for academy in data["academies"]},
+            {self.academy_id: False, self.other_academy.id: True},
+        )
+
+        ProvisioningAcademy.objects.all().delete()
+        self.assertEqual(self.client.get(url).json(), {"org": None, "academies": []})

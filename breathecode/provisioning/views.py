@@ -24,8 +24,10 @@ from rest_framework_csv.renderers import CSVRenderer
 
 from breathecode.admissions.models import Academy, Cohort, CohortUser
 from breathecode.authenticate.actions import (
+    _copilot_provisioning_academies,
     _github_org_sibling_academy_ids_for_academy,
     _user_has_copilot_entitlement,
+    copilot_org_sibling_academy_ids,
     get_copilot_settings,
     get_user_language,
     github_academy_user_allows_copilot_in_sibling_academies,
@@ -1796,6 +1798,35 @@ class AcademyCopilotView(APIView):
             .first()
         )
         return Response(CopilotListSerializer(seat).data if seat else None, status=status.HTTP_200_OK)
+
+
+class AcademyCopilotOrgView(APIView):
+    """GET: GitHub org of the academy and the academies sharing it, with their Copilot mode."""
+
+    @capable_of("crud_provisioning_activity")
+    def get(self, request, academy_id=None):
+        _, org, _ = get_copilot_settings(academy_id)
+        academies = Academy.objects.filter(id__in=copilot_org_sibling_academy_ids(org)).order_by("id")
+
+        # Academies without a Copilot ProvisioningAcademy are automatic. Reverse order so the lowest id wins.
+        modes = {
+            pa.academy_id: (pa.vendor_settings or {}).get("allow_auto_provision", True)
+            for pa in _copilot_provisioning_academies().order_by("-id")
+        }
+        return Response(
+            {
+                "org": org,
+                "academies": [
+                    {
+                        "id": academy.id,
+                        "name": academy.name,
+                        "slug": academy.slug,
+                        "allow_auto_provision": modes.get(academy.id, True),
+                    }
+                    for academy in academies
+                ],
+            }
+        )
 
 
 class MeVPSView(APIView):
