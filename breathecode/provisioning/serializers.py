@@ -5,9 +5,16 @@ from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from rest_framework import serializers
 
+from breathecode.authenticate.models import CredentialsGithub
 from breathecode.utils import serpy
 
-from .models import ProvisioningAcademy, ProvisioningBill, ProvisioningContainer, ProvisioningMachineTypes
+from .models import (
+    COPILOT_VENDOR_NAME,
+    ProvisioningAcademy,
+    ProvisioningBill,
+    ProvisioningContainer,
+    ProvisioningMachineTypes,
+)
 
 
 class AcademySerializer(serpy.Serializer):
@@ -476,6 +483,28 @@ class AcademyVPSListSerializer(serpy.Serializer):
         return vps_restart_modes_for_list(obj)
 
 
+class AcademyCopilotCreateSerializer(serializers.Serializer):
+    """Request body for POST academy/copilot (staff assigns a Copilot seat)."""
+
+    user_id = serializers.IntegerField(required=True, min_value=1)
+
+
+class CopilotListSerializer(serpy.Serializer):
+    """Copilot seat row."""
+
+    id = serpy.Field()
+    user = UserTinySerializer()
+    academy = AcademySerializer()
+    org = serpy.Field()
+    github_username = serpy.Field()
+    status = serpy.Field()
+    status_text = serpy.Field()
+    provisioned_at = serpy.Field()
+    deprovisioned_at = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+
+
 # --- Provisioning academy (credentials and settings) ---
 
 
@@ -551,14 +580,16 @@ class GetProvisioningAcademySerializer(serpy.Serializer):
     updated_at = serpy.Field()
 
     def get_credentials_set(self, obj):
-        return bool(obj.credentials_token or obj.credentials_key)
+        has_github_owner = (obj.vendor_settings or {}).get("github_owner_user_id")
+        return bool(obj.credentials_token or obj.credentials_key or has_github_owner)
 
 
 class ProvisioningAcademyCreateSerializer(serializers.Serializer):
     """Request body for POST provisioning academy config."""
 
     vendor_id = serializers.IntegerField(required=True)
-    credentials_token = serializers.CharField(required=True, max_length=200, allow_blank=False)
+    # Required depending on the vendor, see validate_vendor_credentials.
+    credentials_token = serializers.CharField(required=False, max_length=200, allow_blank=True, default="")
     credentials_key = serializers.CharField(required=False, max_length=200, allow_blank=True, default="")
     vendor_settings = serializers.JSONField(required=False, default=dict)
     container_idle_timeout = serializers.IntegerField(required=False, default=15, min_value=1)
@@ -693,7 +724,136 @@ def get_vendor_settings_schema(vendor_name: str) -> Dict[str, Any]:
                 },
             ]
         }
+    if slug == COPILOT_VENDOR_NAME:
+        return {
+            "fields": [
+                {
+                    "options_key": None,
+                    "settings_key": "org",
+                    "selection_key": None,
+                    "label_en": "GitHub organization",
+                    "label_es": "Organización de GitHub",
+                    "type": "string",
+                    "required": True,
+                    "help_text": "GitHub organization (login) with GitHub Copilot Business where seats are assigned.",
+                },
+                {
+                    "options_key": None,
+                    "settings_key": "github_owner_user_id",
+                    "selection_key": None,
+                    "label_en": "GitHub owner user id",
+                    "label_es": "ID del usuario dueño en GitHub",
+                    "type": "integer",
+                    "required": False,
+                    "help_text": "User whose connected GitHub token is used for Copilot admin calls when "
+                    "credentials_token is empty.",
+                },
+                {
+                    "options_key": None,
+                    "settings_key": "allow_auto_provision",
+                    "selection_key": None,
+                    "label_en": "Assign Copilot seats automatically",
+                    "label_es": "Asignar asientos de Copilot automáticamente",
+                    "type": "boolean",
+                    "required": False,
+                    "default": True,
+                    "help_text": "When enabled, Copilot seats are assigned automatically. When disabled, staff must "
+                    "assign each seat manually.",
+                },
+            ]
+        }
     return {"fields": []}
+
+
+def _validate_copilot_vendor_settings(settings: Dict[str, Any], *, lang: str = "en") -> Dict[str, Any]:
+    allowed_keys = {"org", "github_owner_user_id", "allow_auto_provision"}
+    unknown = sorted(set(settings.keys()) - allowed_keys)
+    if unknown:
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Unknown vendor_settings keys: {', '.join(unknown)}.",
+                es=f"Claves desconocidas en vendor_settings: {', '.join(unknown)}.",
+                slug="invalid-vendor-settings-keys",
+            ),
+            code=400,
+        )
+
+    org = str(settings.get("org") or "").strip()
+    if not org:
+        raise ValidationException(
+            translation(
+                lang,
+                en="org is required for GitHub Copilot vendor settings.",
+                es="org es obligatorio para la configuración de vendor de GitHub Copilot.",
+                slug="missing-copilot-org",
+            ),
+            code=400,
+        )
+    settings["org"] = org
+
+    if settings.get("github_owner_user_id") is not None:
+        owner_id = settings["github_owner_user_id"]
+        if isinstance(owner_id, bool) or not isinstance(owner_id, (int, str)) or not str(owner_id).strip().isdigit():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="github_owner_user_id must be an integer.",
+                    es="github_owner_user_id debe ser un entero.",
+                    slug="invalid-vendor-settings-value",
+                ),
+                code=400,
+            )
+        owner_id = int(str(owner_id).strip())
+        if not CredentialsGithub.objects.filter(user_id=owner_id).exclude(token="").exists():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"User {owner_id} (github_owner_user_id) has no GitHub account connected.",
+                    es=f"El usuario {owner_id} (github_owner_user_id) no tiene una cuenta de GitHub conectada.",
+                    slug="copilot-owner-github-not-connected",
+                ),
+                code=400,
+            )
+        settings["github_owner_user_id"] = owner_id
+    elif "github_owner_user_id" in settings:
+        del settings["github_owner_user_id"]
+
+    if "allow_auto_provision" in settings and not isinstance(settings["allow_auto_provision"], bool):
+        raise ValidationException(
+            translation(
+                lang,
+                en="allow_auto_provision must be a boolean.",
+                es="allow_auto_provision debe ser un booleano.",
+                slug="invalid-vendor-settings-value",
+            ),
+            code=400,
+        )
+
+    return settings
+
+
+def validate_vendor_credentials(
+    vendor_name: str, credentials_token: str | None, vendor_settings: Dict[str, Any], *, lang: str = "en"
+) -> None:
+    """Every vendor requires credentials_token; GitHub Copilot also accepts vendor_settings.github_owner_user_id."""
+    if (credentials_token or "").strip():
+        return
+
+    slug = (vendor_name or "").lower().strip()
+    if slug != COPILOT_VENDOR_NAME:
+        raise ValidationException({"credentials_token": ["This field is required."]}, code=400)
+
+    if not (vendor_settings or {}).get("github_owner_user_id"):
+        raise ValidationException(
+            translation(
+                lang,
+                en="GitHub Copilot needs credentials_token or vendor_settings.github_owner_user_id.",
+                es="GitHub Copilot necesita credentials_token o vendor_settings.github_owner_user_id.",
+                slug="missing-copilot-credentials",
+            ),
+            code=400,
+        )
 
 
 def validate_vendor_settings(vendor_name: str, vendor_settings: Dict[str, Any], *, lang: str = "en") -> Dict[str, Any]:
@@ -709,6 +869,9 @@ def validate_vendor_settings(vendor_name: str, vendor_settings: Dict[str, Any], 
             ),
             code=400,
         )
+
+    if slug == COPILOT_VENDOR_NAME:
+        return _validate_copilot_vendor_settings(settings, lang=lang)
 
     if slug not in ("hostinger", "digitalocean", "litellm"):
         return settings

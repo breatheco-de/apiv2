@@ -10,6 +10,11 @@ from task_manager.django.actions import schedule_task
 from breathecode.admissions.models import Academy, CohortUser
 from breathecode.admissions.signals import student_edu_status_updated
 from breathecode.authenticate import tasks
+from breathecode.authenticate.actions import (
+    _append_copilot_storage_log,
+    is_copilot_auto_provision_enabled,
+    save_provisioning_copilot_status,
+)
 from breathecode.payments.models import Service
 from breathecode.payments.models import Consumable
 from breathecode.payments.signals import grant_service_permissions
@@ -296,6 +301,25 @@ def provision_github_copilot_on_service_granted(sender, instance: Consumable, **
         academy_id = instance.subscription.academy_id
     elif instance.plan_financing and instance.plan_financing.academy_id:
         academy_id = instance.plan_financing.academy_id
+    elif instance.standalone_invoice and instance.standalone_invoice.academy_id:
+        academy_id = instance.standalone_invoice.academy_id
+
+    if not is_copilot_auto_provision_enabled(user, academy_id, consumable_academy_id=academy_id):
+        _append_copilot_storage_log(
+            user_id=user.id,
+            academy_id=academy_id,
+            message="Copilot automatic assignment skipped: academy in manual mode",
+        )
+        save_provisioning_copilot_status(
+            user, academy_id, "PENDING", "manual-mode", consumable_academy_id=academy_id
+        )
+        logger.info(
+            "[COPILOT grant_service_permissions] consumable_id=%s user_id=%s academy_id=%s skipped reason=manual_mode",
+            instance.id,
+            user.id,
+            academy_id,
+        )
+        return
 
     logger.info(
         "[COPILOT grant_service_permissions] consumable_id=%s user_id=%s academy_id=%s slug=%s -> provision task",
@@ -361,6 +385,19 @@ def github_academy_user_copilot_react(sender, instance: GithubAcademyUser, creat
             async_result.id,
         )
     elif now_good and (created or not prev_good):
+        if not is_copilot_auto_provision_enabled(instance.user, instance.academy_id):
+            # update() on this same instance: a second copy could be overwritten by a later instance.save()
+            instance.log("Copilot automatic assignment skipped: academy in manual mode")
+            GithubAcademyUser.objects.filter(id=instance.id).update(storage_log=instance.storage_log)
+            save_provisioning_copilot_status(instance.user, instance.academy_id, "PENDING", "manual-mode")
+            logger.info(
+                "[COPILOT GithubAcademyUser post_save] id=%s user_id=%s academy_id=%s skipped reason=manual_mode",
+                instance.id,
+                instance.user_id,
+                instance.academy_id,
+            )
+            return
+
         async_result = tasks.provision_github_copilot_task.delay(instance.user_id, academy_id=instance.academy_id)
         logger.info(
             "[COPILOT GithubAcademyUser post_save] id=%s user_id=%s academy_id=%s eligible -> provision task_id=%s",

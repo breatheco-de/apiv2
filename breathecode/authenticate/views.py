@@ -104,6 +104,9 @@ from .forms import (
     SyncGithubUsersForm,
 )
 from .models import (
+    ADD,
+    INVITE,
+    SYNCHED,
     AcademyAuthSettings,
     Capability,
     CredentialsDiscord,
@@ -4163,6 +4166,7 @@ class AcademyGithubSyncView(APIView, GenerateLookupsMixin):
 
     @capable_of("sync_organization_users")
     def put(self, request, academy_id):
+        """Sync the whole academy or, when the body has user_id, only that user (returns the updated row)."""
 
         settings = AcademyAuthSettings.objects.filter(academy__id=academy_id).first()
         if settings is None:
@@ -4183,10 +4187,59 @@ class AcademyGithubSyncView(APIView, GenerateLookupsMixin):
                 slug="github-sync-off",
             )
 
+        github_user = None
+        sync_kwargs = {}
+
+        # An invalid user_id is an error: it must never end up synching the whole academy.
+        if isinstance(request.data, dict) and "user_id" in request.data:
+            lang = get_user_language(request)
+            user_id = request.data["user_id"]
+            if not str(user_id).isdigit():
+                raise ValidationException(
+                    translation(
+                        lang, en="user_id must be an integer", es="user_id debe ser un entero", slug="invalid-user-id"
+                    ),
+                    code=400,
+                )
+
+            github_user = GithubAcademyUser.objects.filter(academy_id=academy_id, user_id=int(user_id)).first()
+            if github_user is None:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Github User not found for this academy",
+                        es="No se encontró el usuario de Github en esta academia",
+                        slug="githubuser-not-found",
+                    ),
+                    code=404,
+                )
+
+            # force_requeue sets PENDING + ADD, so it would override a DELETE or an IGNORE.
+            if github_user.storage_action not in [ADD, INVITE]:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"This user can't be synched because its action is {github_user.storage_action}, change it to ADD first",
+                        es=f"Este usuario no se puede sincronizar porque su acción es {github_user.storage_action}, cámbiala a ADD primero",
+                        slug="github-user-action-not-allowed",
+                    ),
+                    code=400,
+                )
+
+            # Already confirmed: requeuing it would run the Copilot receivers (revoke check and provision) for nothing.
+            if github_user.storage_status == SYNCHED and github_user.storage_action == ADD:
+                return Response(GithubUserSerializer(github_user, many=False).data, status=status.HTTP_200_OK)
+
+            sync_kwargs = {"github_academy_user_id": github_user.id, "force_requeue": True}
+
         try:
-            result = sync_organization_members(academy_id)
+            result = sync_organization_members(academy_id, **sync_kwargs)
         except Exception as e:
             raise ValidationException(str(e))
+
+        if github_user:
+            github_user.refresh_from_db()
+            return Response(GithubUserSerializer(github_user, many=False).data, status=status.HTTP_200_OK)
 
         _status = status.HTTP_200_OK if result else status.HTTP_400_BAD_REQUEST
         return Response(None, status=_status)
