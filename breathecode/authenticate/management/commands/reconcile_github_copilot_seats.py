@@ -6,8 +6,12 @@ from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
 
 from breathecode.authenticate.actions import (
-    github_academy_user_allows_copilot_in_sibling_academies,
+    _copilot_provisioning_academies,
     _user_has_copilot_entitlement_in_sibling_academies,
+    is_copilot_auto_provision_enabled,
+    copilot_org_sibling_academy_ids,
+    get_copilot_settings,
+    github_academy_user_allows_copilot_in_sibling_academies,
     provision_github_copilot_for_user,
 )
 from breathecode.authenticate.models import (
@@ -41,6 +45,9 @@ def _candidate_user_ids_with_copilot_consumable(sibling_academy_ids: list[int]) 
     ) | Consumable.objects.filter(
         service_item__service__consumer=Service.Consumer.GITHUB_COPILOT,
         plan_financing__academy_id__in=sibling_academy_ids,
+    ) | Consumable.objects.filter(
+        service_item__service__consumer=Service.Consumer.GITHUB_COPILOT,
+        standalone_invoice__academy_id__in=sibling_academy_ids,
     )
 
     user_ids: set[int] = set(base_qs.exclude(user_id__isnull=True).values_list("user_id", flat=True))
@@ -111,32 +118,35 @@ def _format_copilot_list_seats_error(org: str, exc: Exception) -> str:
         return (
             f"GitHub API 404 listing Copilot seats for org {org!r}. "
             "Common causes: the org has no GitHub Copilot Business (paid org seats), "
-            "the org slug in AcademyAuthSettings does not match GitHub, "
+            "the org slug in AcademyAuthSettings / ProvisioningAcademy does not match GitHub, "
             "or the owner token lacks permissions (e.g. org owner / billing admin for Copilot)."
         )
     return str(exc)
 
 
-def _reconcile_copilot_seats_for_academy_settings(
-    settings: AcademyAuthSettings,
+def _reconcile_copilot_seats_for_org(
+    org: str,
+    academy_id: int,
     *,
     dry_run: bool = False,
     stdout: Any | None = None,
 ) -> tuple[int, int, list[dict], list[dict], list[dict], str | None]:
     empty: list[dict] = []
 
-    if not settings.github_owner_id:
-        return 0, 0, empty, empty, empty, None
-
-    owner_creds = CredentialsGithub.objects.filter(user_id=settings.github_owner_id).first()
-    if not owner_creds or not owner_creds.token:
-        return 0, 0, empty, empty, empty, None
-
-    org = (settings.github_username or "").strip()
+    _, resolved_org, token = get_copilot_settings(academy_id)
+    org = (resolved_org or org or "").strip()
     if not org:
         return 0, 0, empty, empty, empty, None
 
-    gb = Github(org=org, token=owner_creds.token)
+    if not token:
+        hint = f"Missing GitHub admin token for Copilot org {org!r} (academy_id={academy_id})."
+        logger.warning("Could not reconcile Copilot seats: %s", hint)
+        if stdout:
+            stdout.write(f"    [{org}] SKIP: {hint}\n")
+            stdout.flush()
+        return 0, 0, empty, empty, empty, hint
+
+    gb = Github(org=org, token=token)
     if stdout:
         stdout.write(f"    [{org}] list seats...\n")
         stdout.flush()
@@ -153,9 +163,7 @@ def _reconcile_copilot_seats_for_academy_settings(
             stdout.flush()
         return 0, 0, empty, empty, empty, hint
 
-    sibling_academy_ids = list(
-        AcademyAuthSettings.objects.filter(github_username__iexact=org).values_list("academy_id", flat=True)
-    )
+    sibling_academy_ids = copilot_org_sibling_academy_ids(org)
     if not sibling_academy_ids:
         return 0, 0, empty, empty, empty, None
 
@@ -231,6 +239,10 @@ def _reconcile_copilot_seats_for_academy_settings(
                     {"org": org, "user_id": user_id, "github_username": gh_username, "reason": "already_has_seat"}
                 )
             continue
+        if not is_copilot_auto_provision_enabled(user, first_sibling_id):
+            if dry_run:
+                would_skip_add.append({"org": org, "user_id": user_id, "reason": "manual_mode"})
+            continue
         entry = {"org": org, "github_username": gh_username, "user_id": user_id}
         if dry_run:
             would_add.append(entry)
@@ -250,6 +262,34 @@ def _reconcile_copilot_seats_for_academy_settings(
     return removed, added, empty, empty, empty, None
 
 
+def _copilot_orgs_to_reconcile() -> dict[str, int]:
+    """
+    Map each resolved Copilot org (lowercased) to a representative academy.
+
+    Candidates: academies with a Copilot ProvisioningAcademy, plus legacy AcademyAuthSettings with an org and an
+    owner (same filter as before). Each candidate's org is resolved with get_copilot_settings.
+    """
+    candidate_ids = list(_copilot_provisioning_academies().order_by("id").values_list("academy_id", flat=True))
+    candidate_ids += list(
+        AcademyAuthSettings.objects.filter(github_owner_id__isnull=False)
+        .exclude(github_username="")
+        .order_by("id")
+        .values_list("academy_id", flat=True)
+    )
+
+    orgs: dict[str, int] = {}
+    seen_academies: set[int] = set()
+    for academy_id in candidate_ids:
+        if academy_id in seen_academies:
+            continue
+        seen_academies.add(academy_id)
+        _, org, _ = get_copilot_settings(academy_id)
+        org = (org or "").strip().lower()
+        if org and org not in orgs:
+            orgs[org] = academy_id
+    return orgs
+
+
 def run_reconcile_github_copilot_seats(
     *,
     dry_run: bool = False,
@@ -262,16 +302,14 @@ def run_reconcile_github_copilot_seats(
     would_add_all: list[dict] = []
     would_skip_add_all: list[dict] = []
     list_errors: list[dict] = []
-    for settings in AcademyAuthSettings.objects.filter(github_owner_id__isnull=False):
-        org = (settings.github_username or "").strip().lower()
-        if not org or org in seen_orgs:
-            continue
+    for org, academy_id in _copilot_orgs_to_reconcile().items():
         seen_orgs.add(org)
         if stdout:
             stdout.write(f"  org {org}\n")
             stdout.flush()
-        removed, added, wr, wa, ws, list_err = _reconcile_copilot_seats_for_academy_settings(
-            settings,
+        removed, added, wr, wa, ws, list_err = _reconcile_copilot_seats_for_org(
+            org,
+            academy_id,
             dry_run=dry_run,
             stdout=stdout,
         )

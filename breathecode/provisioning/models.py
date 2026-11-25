@@ -12,11 +12,15 @@ from breathecode.payments.models import Currency
 logger = logging.getLogger(__name__)
 
 
+COPILOT_VENDOR_NAME = "copilot"
+
+
 class ProvisioningVendor(models.Model):
     class VendorType(models.TextChoices):
         CODING_EDITOR = "CODING_EDITOR", "Coding Editor"
         VPS_SERVER = "VPS_SERVER", "VPS Server"
         LLM = "LLM", "LLM"
+        CODING_ASSISTANT = "CODING_ASSISTANT", "Coding Assistant"
 
     name = models.CharField(max_length=200)
     vendor_type = models.CharField(

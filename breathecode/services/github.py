@@ -429,6 +429,10 @@ class Github:
             json={"selected_usernames": usernames},
         )
 
+    def copilot_billing_summary(self) -> dict:
+        """Copilot Business billing info and seat breakdown for the org (also used as a connection check)."""
+        return self.get(f"/orgs/{self.org}/copilot/billing")
+
     def copilot_list_seat_usernames(self) -> list[str]:
         """GitHub org members currently assigned a Copilot seat (paginated billing API)."""
         usernames: list[str] = []
