@@ -25,8 +25,7 @@ from rest_framework_csv.renderers import CSVRenderer
 from breathecode.admissions.models import Academy, Cohort, CohortUser
 from breathecode.authenticate.actions import (
     _github_org_sibling_academy_ids_for_academy,
-    _user_has_copilot_entitlement_in_sibling_academies,
-    is_copilot_auto_provision_enabled,
+    _user_has_copilot_entitlement,
     get_copilot_settings,
     get_user_language,
     github_academy_user_allows_copilot_in_sibling_academies,
@@ -39,8 +38,10 @@ from breathecode.payments.models import Consumable
 from breathecode.provisioning import tasks
 from breathecode.services.github import Github
 from breathecode.provisioning.serializers import (
+    AcademyCopilotCreateSerializer,
     AcademyVPSCreateSerializer,
     AcademyVPSListSerializer,
+    CopilotListSerializer,
     GetProvisioningAcademySerializer,
     GetProvisioningBillDetailSerializer,
     GetProvisioningBillSmallSerializer,
@@ -82,6 +83,7 @@ from .models import (
     BILL_STATUS,
     ProvisioningAcademy,
     ProvisioningBill,
+    ProvisioningCopilot,
     ProvisioningLLM,
     ProvisioningProfile,
     ProvisioningUserConsumption,
@@ -1654,58 +1656,59 @@ class ProvisioningAcademyTestConnectionView(APIView):
         return Response(serializer.data)
 
 
-class AcademyCopilotSeatView(APIView):
+class MeCopilotView(APIView):
+    """GET: list current user's Copilot seats."""
+
+    extensions = APIViewExtensions(paginate=True)
+
+    def get(self, request):
+        handler = self.extensions(request)
+        items = (
+            ProvisioningCopilot.objects.filter(user=request.user)
+            .select_related("user", "academy")
+            .order_by("-created_at")
+        )
+        items = handler.queryset(items)
+        serializer = CopilotListSerializer(items, many=True)
+        return handler.response(serializer.data)
+
+
+class AcademyCopilotView(APIView):
     """
-    GET: Copilot seat status of a user in the academy's GitHub org.
+    GET: Copilot seats of the academy; optional ?user_id= and ?status= filters.
     POST: assign a Copilot seat manually (works even when the academy is in manual mode).
     """
 
-    @capable_of("read_provisioning_activity")
-    def get(self, request, academy_id=None, user_id=None):
-        lang = get_user_language(request)
-        user = get_user_model().objects.filter(id=user_id).first()
-        if not user:
-            raise ValidationException(
-                translation(lang, en="User not found.", es="Usuario no encontrado.", slug="user-not-found"),
-                code=404,
-            )
-
-        _, org, token = get_copilot_settings(academy_id)
-        sibling_ids = _github_org_sibling_academy_ids_for_academy(academy_id)
-        credentials = CredentialsGithub.objects.filter(user_id=user.id).first()
-        github_username = (credentials.username or "").strip() if credentials else ""
-
-        has_entitlement = _user_has_copilot_entitlement_in_sibling_academies(user, sibling_ids)
-        is_synched = github_academy_user_allows_copilot_in_sibling_academies(user, sibling_ids)
-
-        has_seat = None
-        seat_error = None
-        if org and token and github_username:
-            try:
-                seat_usernames = Github(org=org, token=token).copilot_list_seat_usernames()
-                has_seat = github_username.lower() in {username.lower() for username in seat_usernames}
-            except Exception as e:
-                logging.getLogger(__name__).exception("Could not read Copilot seat for user_id=%s academy_id=%s", user.id, academy_id)
-                seat_error = str(e)
-
-        return Response(
-            {
-                "user_id": user.id,
-                "org": org,
-                "github_username": github_username or None,
-                "eligible": bool(has_entitlement and is_synched and github_username),
-                "has_copilot_entitlement": has_entitlement,
-                "github_synched": is_synched,
-                "allow_auto_provision": is_copilot_auto_provision_enabled(user, academy_id),
-                "has_seat": has_seat,
-                "seat_error": seat_error,
-            }
-        )
+    extensions = APIViewExtensions(paginate=True)
 
     @capable_of("crud_provisioning_activity")
-    def post(self, request, academy_id=None, user_id=None):
+    def get(self, request, academy_id=None):
+        handler = self.extensions(request)
+        qs = (
+            ProvisioningCopilot.objects.filter(academy_id=academy_id)
+            .select_related("user", "academy")
+            .order_by("-created_at")
+        )
+        user_id = request.GET.get("user_id")
+        if user_id:
+            try:
+                qs = qs.filter(user_id=int(user_id))
+            except ValueError:
+                pass
+        seat_status = request.GET.get("status")
+        if seat_status:
+            qs = qs.filter(status=seat_status.upper())
+        items = handler.queryset(qs)
+        serializer = CopilotListSerializer(items, many=True)
+        return handler.response(serializer.data)
+
+    @capable_of("crud_provisioning_activity")
+    def post(self, request, academy_id=None):
         lang = get_user_language(request)
-        user = get_user_model().objects.filter(id=user_id).first()
+        serializer = AcademyCopilotCreateSerializer(data=request.data or {})
+        if not serializer.is_valid():
+            raise ValidationException(serializer.errors, code=400)
+        user = get_user_model().objects.filter(id=serializer.validated_data["user_id"]).first()
         if not user:
             raise ValidationException(
                 translation(lang, en="User not found.", es="Usuario no encontrado.", slug="user-not-found"),
@@ -1726,12 +1729,13 @@ class AcademyCopilotSeatView(APIView):
 
         sibling_ids = _github_org_sibling_academy_ids_for_academy(academy_id)
 
-        if not _user_has_copilot_entitlement_in_sibling_academies(user, sibling_ids):
+        # The seat belongs to the org, but staff only assigns it to users with a consumable in their own academy.
+        if not _user_has_copilot_entitlement(user, academy_id):
             raise ValidationException(
                 translation(
                     lang,
-                    en="The user has no active GitHub Copilot consumable in this academy's GitHub organization.",
-                    es="El usuario no tiene un consumible activo de GitHub Copilot en la organización de GitHub de esta academia.",
+                    en="The user has no active GitHub Copilot consumable in this academy.",
+                    es="El usuario no tiene un consumible activo de GitHub Copilot en esta academia.",
                     slug="no-copilot-entitlement",
                 ),
                 code=400,
@@ -1785,14 +1789,13 @@ class AcademyCopilotSeatView(APIView):
                 code=400,
             )
 
-        return Response(
-            {
-                "user_id": user.id,
-                "org": org,
-                "github_username": github_username,
-            },
-            status=status.HTTP_200_OK,
+        # The row may be missing if saving it failed, but the seat was assigned.
+        seat = (
+            ProvisioningCopilot.objects.filter(user=user, academy_id=academy_id)
+            .select_related("user", "academy")
+            .first()
         )
+        return Response(CopilotListSerializer(seat).data if seat else None, status=status.HTTP_200_OK)
 
 
 class MeVPSView(APIView):

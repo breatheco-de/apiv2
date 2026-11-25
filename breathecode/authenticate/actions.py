@@ -19,6 +19,7 @@ from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import User
 from django.core.handlers.wsgi import WSGIRequest
+from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
@@ -268,6 +269,88 @@ def _copilot_entitlement_ok_for_provision(
     return _user_has_copilot_entitlement(user, academy_id)
 
 
+def save_provisioning_copilot_status(
+    user: User,
+    academy_id: int | None,
+    status: str,
+    status_text: str = "",
+    *,
+    consumable_academy_id: int | None = None,
+    provisioned_at: datetime.datetime | None = None,
+) -> None:
+    """
+    Only place that writes ProvisioningCopilot rows. It never raises: the seat matters more than its record.
+
+    - Creates the missing rows: one per academy of the Copilot org where the user has a Copilot consumable
+      (consumable_academy_id counts without querying, its consumable may not be saved yet).
+    - Applies the status to every row of the user in the org, because they share the seat.
+    - PENDING and ERROR never override ACTIVE: the user still has the seat.
+    """
+    # Local import: provisioning.models -> payments.models -> authenticate.actions.
+    from breathecode.provisioning.models import ProvisioningCopilot
+
+    try:
+        # savepoint: the grant signal runs inside the payment transaction and a database error would break it
+        with transaction.atomic():
+            _, org, _ = get_copilot_settings(academy_id)
+            if not org:
+                return
+
+            sibling_academy_ids = copilot_org_sibling_academy_ids(org)
+            seat_rows = ProvisioningCopilot.objects.filter(user=user, org__iexact=org)
+
+            if status == ProvisioningCopilot.STATUS_DEPROVISIONED:
+                now = timezone.now()
+                seat_rows.exclude(status=status).update(
+                    status=status, status_text="", deprovisioned_at=now, updated_at=now
+                )
+                return
+
+            entitled_academy_ids = [
+                sibling_id
+                for sibling_id in sibling_academy_ids
+                if sibling_id == consumable_academy_id or _user_has_copilot_entitlement(user, sibling_id)
+            ]
+
+            # a user without entitlement isn't waiting for a seat
+            if not entitled_academy_ids and status != ProvisioningCopilot.STATUS_ACTIVE:
+                return
+
+            active_row = seat_rows.filter(status=ProvisioningCopilot.STATUS_ACTIVE).first()
+            if active_row:
+                # a failed attempt doesn't remove the seat, but its error is kept in status_text
+                if status != ProvisioningCopilot.STATUS_ERROR:
+                    status_text = ""
+                status = ProvisioningCopilot.STATUS_ACTIVE
+                provisioned_at = active_row.provisioned_at
+
+            vendor_ids = dict(
+                _copilot_provisioning_academies()
+                .filter(academy_id__in=entitled_academy_ids)
+                .order_by("-id")
+                .values_list("academy_id", "vendor_id")
+            )
+            for entitled_academy_id in entitled_academy_ids:
+                ProvisioningCopilot.objects.update_or_create(
+                    user=user,
+                    academy_id=entitled_academy_id,
+                    defaults={"org": org, "vendor_id": vendor_ids.get(entitled_academy_id)},
+                )
+
+            values = {"status": status, "status_text": status_text, "updated_at": timezone.now()}
+            credentials = CredentialsGithub.objects.filter(user_id=user.id).first()
+            if credentials and credentials.username:
+                values["github_username"] = credentials.username
+            if status == ProvisioningCopilot.STATUS_ACTIVE:
+                values["provisioned_at"] = provisioned_at
+                values["deprovisioned_at"] = None
+            seat_rows.update(**values)
+    except Exception:
+        logger.exception(
+            "[COPILOT table] failed user_id=%s academy_id=%s status=%s", getattr(user, "id", None), academy_id, status
+        )
+
+
 def _get_copilot_client_for_user(user: User, academy_id: int | None = None) -> tuple[Github | None, str | None]:
     _, org, token = get_copilot_settings(academy_id)
     if not org or not token:
@@ -339,6 +422,7 @@ def provision_github_copilot_for_user(
             user_id,
             academy_id,
         )
+        save_provisioning_copilot_status(user, resolved_academy_id, "PENDING", "github-not-synched")
         return False
 
     gh, github_username = _get_copilot_client_for_user(user, resolved_academy_id)
@@ -354,6 +438,7 @@ def provision_github_copilot_for_user(
             user_id,
             academy_id,
         )
+        save_provisioning_copilot_status(user, resolved_academy_id, "PENDING", "missing-github-credentials")
         return False
 
     org = getattr(gh, "org", None)
@@ -379,6 +464,7 @@ def provision_github_copilot_for_user(
             response_for_log,
             source or "",
         )
+        save_provisioning_copilot_status(user, resolved_academy_id, "ACTIVE", provisioned_at=timezone.now())
         return True
     except Exception as e:
         _append_copilot_storage_log(
@@ -395,6 +481,7 @@ def provision_github_copilot_for_user(
             github_username,
             source or "",
         )
+        save_provisioning_copilot_status(user, resolved_academy_id, "ERROR", str(e))
         if raise_exception:
             raise
         return False
@@ -462,6 +549,7 @@ def deprovision_github_copilot_for_user(
             github_username,
             response_for_log,
         )
+        save_provisioning_copilot_status(user, academy_id, "DEPROVISIONED")
         return True
     except Exception as e:
         _append_copilot_storage_log(

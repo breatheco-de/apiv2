@@ -483,6 +483,28 @@ class AcademyVPSListSerializer(serpy.Serializer):
         return vps_restart_modes_for_list(obj)
 
 
+class AcademyCopilotCreateSerializer(serializers.Serializer):
+    """Request body for POST academy/copilot (staff assigns a Copilot seat)."""
+
+    user_id = serializers.IntegerField(required=True, min_value=1)
+
+
+class CopilotListSerializer(serpy.Serializer):
+    """Copilot seat row."""
+
+    id = serpy.Field()
+    user = UserTinySerializer()
+    academy = AcademySerializer()
+    org = serpy.Field()
+    github_username = serpy.Field()
+    status = serpy.Field()
+    status_text = serpy.Field()
+    provisioned_at = serpy.Field()
+    deprovisioned_at = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+
+
 # --- Provisioning academy (credentials and settings) ---
 
 

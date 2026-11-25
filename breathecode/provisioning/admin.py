@@ -16,6 +16,7 @@ from .models import (
     ProvisioningProfile,
     ProvisioningVPS,
     ProvisioningLLM,
+    ProvisioningCopilot,
 )
 
 logger = logging.getLogger(__name__)
@@ -41,6 +42,14 @@ class ProvisioningLLMAdmin(admin.ModelAdmin):
     ]
     search_fields = ["user__email", "academy__name", "vendor__name", "external_user_id"]
     list_filter = ["status", "vendor"]
+
+
+@admin.register(ProvisioningCopilot)
+class ProvisioningCopilotAdmin(admin.ModelAdmin):
+    list_display = ["user", "academy", "org", "github_username", "status", "provisioned_at", "deprovisioned_at"]
+    search_fields = ["user__email", "academy__name", "org", "github_username"]
+    list_filter = ["status", "academy"]
+    raw_id_fields = ["user"]
 
 
 @admin.register(ProvisioningMachineTypes)
