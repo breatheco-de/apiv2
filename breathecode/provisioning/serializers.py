@@ -756,7 +756,9 @@ def get_vendor_settings_schema(vendor_name: str) -> Dict[str, Any]:
                     "label_es": "Asignar asientos de Copilot automáticamente",
                     "type": "boolean",
                     "required": False,
-                    "help_text": "When false, seats are only assigned by staff through the API (default true).",
+                    "default": True,
+                    "help_text": "When enabled, Copilot seats are assigned automatically. When disabled, staff must "
+                    "assign each seat manually.",
                 },
             ]
         }
