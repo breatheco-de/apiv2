@@ -252,7 +252,7 @@ class UserInvite(models.Model):
         default=None,
         blank=True,
         null=True,
-        help_text="Video de bienvenida con preview_image y url. Formato: {'preview_image': 'url', 'url': 'url'}"
+        help_text="Video de bienvenida con preview_image y url. Formato: {'preview_image': 'url', 'url': 'url'}",
     )
 
     student_plan_access = models.JSONField(
@@ -373,7 +373,7 @@ class ProfileAcademy(models.Model):
     def __init__(self, *args, **kwargs):
         super(ProfileAcademy, self).__init__(*args, **kwargs)
         self.__old_status = self.status
-        self.__old_role = self.role if hasattr(self, "role") else None
+        self.__old_role_id = self.__dict__.get("role_id")
 
     user = models.ForeignKey(User, on_delete=models.SET_NULL, default=None, null=True)
 
@@ -426,7 +426,7 @@ class ProfileAcademy(models.Model):
 
         # Update tracked fields after save
         self.__old_status = self.status
-        self.__old_role = self.role
+        self.__old_role_id = self.role_id
 
 
 class CredentialsGithub(models.Model):

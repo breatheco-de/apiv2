@@ -12,11 +12,15 @@ from breathecode.payments.models import Currency
 logger = logging.getLogger(__name__)
 
 
+COPILOT_VENDOR_NAME = "copilot"
+
+
 class ProvisioningVendor(models.Model):
     class VendorType(models.TextChoices):
         CODING_EDITOR = "CODING_EDITOR", "Coding Editor"
         VPS_SERVER = "VPS_SERVER", "VPS Server"
         LLM = "LLM", "LLM"
+        CODING_ASSISTANT = "CODING_ASSISTANT", "Coding Assistant"
 
     name = models.CharField(max_length=200)
     vendor_type = models.CharField(
@@ -356,6 +360,74 @@ class ProvisioningVPS(models.Model):
 
     def __str__(self):
         return f"VPS {self.id} ({self.user_id}, {self.academy_id}, {self.status})"
+
+
+class ProvisioningCopilot(models.Model):
+    """
+    GitHub Copilot seat of a user in an academy.
+
+    There is one seat per user and GitHub organization, so the rows of academies sharing an org share their status.
+    """
+
+    STATUS_PENDING = "PENDING"
+    STATUS_ACTIVE = "ACTIVE"
+    STATUS_DEPROVISIONED = "DEPROVISIONED"
+    STATUS_ERROR = "ERROR"
+
+    STATUS_CHOICES = (
+        (STATUS_PENDING, "Pending"),
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_DEPROVISIONED, "Deprovisioned"),
+        (STATUS_ERROR, "Error"),
+    )
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    vendor = models.ForeignKey(
+        ProvisioningVendor,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Vendor of the academy's Copilot ProvisioningAcademy. Null for legacy academies, which have no Copilot "
+        "ProvisioningAcademy and take org and token from AcademyAuthSettings.",
+    )
+
+    org = models.CharField(max_length=100, help_text="GitHub organization that owns the seat.")
+    github_username = models.CharField(max_length=100, blank=True, default="")
+
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING, db_index=True)
+    status_text = models.TextField(
+        blank=True,
+        default="",
+        help_text="PENDING: slug of why the seat is not assigned yet (manual-mode: staff must assign it). ERROR: GitHub error. "
+        "ACTIVE: usually empty; if a later attempt to assign the seat again failed, its GitHub error until the seat is "
+        "confirmed (the user keeps the seat).",
+    )
+
+    provisioned_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="When the seat was assigned; null if it already existed and was found by the reconciliation.",
+    )
+    deprovisioned_at = models.DateTimeField(null=True, blank=True, default=None)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    class Meta:
+        verbose_name = "Provisioning Copilot"
+        verbose_name_plural = "Provisioning Copilot"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "academy"],
+                name="uniq_provisioning_copilot_per_user_academy",
+            )
+        ]
+
+    def __str__(self):
+        return f"Copilot {self.id} ({self.user_id}, {self.academy_id}, {self.status})"
 
 
 class ProvisioningLLM(models.Model):
